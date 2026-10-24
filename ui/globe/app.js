@@ -33,9 +33,15 @@
     if (state.mode === "exports") return (item.exports && item.exports.list) || [];
     return item.producers || [];
   }
+  // Colouring weight per country (share of world, or relative size when no shares exist).
   function shares() {
-    const t = table(subject());
-    return Object.fromEntries(t.map((r) => [r.iso3, r.share]));
+    return Object.fromEntries(table(subject()).map((r) => [r.iso3, r.w]));
+  }
+  const hasShares = () => table(subject()).some((r) => r.share != null);
+  function unitOf(item) { return state.mode === "exports" ? (item.exports && item.exports.unit) || "" : item.unit || ""; }
+  function fmtRow(r, item) {
+    if (r.share != null) return `${r.approx ? "≈" : ""}${(r.share * 100).toFixed(r.share < 0.1 ? 1 : 0)}%`;
+    return `${r.value}`;
   }
 
   // ---------------------------------------------------------------- oil price maths
@@ -91,7 +97,7 @@
     globe
       .polygonCapColor((f) => {
         const v = s[f.properties.iso3] || 0;
-        if (f.properties.iso3 === sel) return "#ffffff";
+        if (f.properties.iso3 === sel) return "#ffe2b0";
         return v ? mix(0.25 + 0.75 * Math.sqrt(v / max)) : mix(0);
       })
       .polygonAltitude((f) => {
@@ -104,6 +110,9 @@
       .pointAltitude((p) => 0.02 + 0.12 * Math.sqrt(p.share / max));
     drawArcs();
     legend(max);
+    const w = sel && where[sel];
+    globe.ringsData(w ? [{ lat: w.lat, lng: w.lng }] : [])
+      .ringColor(() => (t) => `rgba(255,226,176,${1 - t})`).ringMaxRadius(6).ringPropagationSpeed(2.5).ringRepeatPeriod(1100);
   }
 
   function drawArcs() {
@@ -135,7 +144,8 @@
 
   function legend(max) {
     const lo = mix(0.25), hi = mix(1);
-    $("legend").innerHTML = `<span>0</span><span class="ramp" style="background:linear-gradient(90deg,${lo},${hi})"></span><span>${Math.round(max * 100)}% of world</span>`;
+    const right = hasShares() ? `${Math.round(max * 100)}% of world` : `largest listed (${unitOf(subject())})`;
+    $("legend").innerHTML = `<span>low</span><span class="ramp" style="background:linear-gradient(90deg,${lo},${hi})"></span><span>${right}</span>`;
   }
 
   const tip = $("tip");
@@ -144,17 +154,17 @@
   function hover(f) {
     if (!f) { tip.hidden = true; return; }
     const iso = f.properties.iso3;
-    const v = shares()[iso];
-    tip.innerHTML = `${nameOf(iso)} <b>${v ? (v * 100).toFixed(1) + "%" : "–"}</b>`;
+    const r = table(subject()).find((x) => x.iso3 === iso);
+    tip.innerHTML = `${nameOf(iso)} <b>${r ? fmtRow(r) + (r.share == null ? " " + unitOf(subject()) : "") : "–"}</b>`;
     tip.hidden = false;
   }
 
   // ---------------------------------------------------------------- side card
-  function bars(rows, color, onPick) {
-    const max = Math.max(...rows.map((r) => r.share), 0.01);
-    return `<div class="bars">${rows.slice(0, 6).map((r) => `<button type="button" data-iso="${r.iso3}" title="${nameOf(r.iso3)}">
-      <span class="iso">${r.iso3}</span><span class="track"><span class="fill" style="display:block;width:${r.share / max * 100}%;background:${color}"></span></span>
-      <span class="v">${(r.share * 100).toFixed(0)}%</span></button>`).join("")}</div>`;
+  function bars(rows, color) {
+    const max = Math.max(...rows.map((r) => r.w), 0.01);
+    return `<div class="bars">${rows.slice(0, 7).map((r) => `<button type="button" data-iso="${r.iso3}" title="${nameOf(r.iso3)}">
+      <span class="iso">${r.iso3}</span><span class="track"><span class="fill" style="display:block;width:${r.w / max * 100}%;background:${color}"></span></span>
+      <span class="v">${fmtRow(r)}</span></button>`).join("")}</div>`;
   }
   function priceBlock(m) {
     const p = priceMove(m.oil);
@@ -184,10 +194,12 @@
         ${rows.length ? bars(rows, color) : `<p class="empty">No ${state.mode === "exports" ? "export" : "production"} data yet.</p>`}
         ${srcLine}`;
     } else {
-      const share = shares()[state.country];
       const iso = state.country;
+      const row = rows.find((r) => r.iso3 === iso);
+      const big = !row ? "–" : fmtRow(row);
+      const sub = !row ? `not among the listed ${state.mode === "exports" ? "exporters" : "producers"}` : row.share != null ? `of world ${state.mode === "exports" ? "exports" : "output"}` : unitOf(item);
       let inner = `<div class="head"><span class="chip">${iso}</span><div><div class="t">${nameOf(iso)}</div><div class="s">${item.name}</div></div></div>
-        <div class="big ${state.mode === "exports" ? "ship" : "made"}"><b>${share ? (share * 100).toFixed(1) + "%" : "–"}</b><span>of world ${state.mode === "exports" ? "exports" : "output"}</span></div>`;
+        <div class="big ${state.mode === "exports" ? "ship" : "made"}"><b>${big}</b><span>${sub}</span></div>`;
       if (state.mode === "production") {
         const ins = (state.input ? [state.input] : m.inputs).map((id) => M.inputs[id]).filter(Boolean);
         inner += `<div class="inputs">${ins.map((inp) => {
@@ -195,7 +207,7 @@
           const chips = ls.length ? ls.slice(0, 6).map((l) => `<span class="chip ${l.from === iso ? "dom" : ""}" title="${l.basis || ""} (${l.year || ""})">${l.from} ${Math.round(l.share * 100)}%</span>`).join("")
             : `<span class="fine">No sourced supplier split</span>`;
           return `<div class="input"><div class="top"><span class="name"><span class="dot" style="background:${inp.color}"></span>${inp.name}</span>
-            ${state.input ? "" : `<button type="button" class="go" data-input="${inp.id}" aria-label="Show where ${inp.name} is produced">${svg('<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c3 3 3 15 0 18c-3-3-3-15 0-18z"/>')}</button>`}</div>
+            ${state.input || !(inp.producers.length || (inp.exports && inp.exports.list.length)) ? "" : `<button type="button" class="go" data-input="${inp.id}" aria-label="Show where ${inp.name} is produced">${svg('<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c3 3 3 15 0 18c-3-3-3-15 0-18z"/>')}</button>`}</div>
             <div class="chips">${chips}</div></div>`;
         }).join("")}</div>`;
         if (state.input) inner += `<p class="fine">Globe: who produces ${M.inputs[state.input].name.toLowerCase()} worldwide. Arcs: what reaches ${nameOf(iso)}.</p>`;
@@ -207,7 +219,10 @@
       body.innerHTML = inner + srcLine;
     }
     body.querySelectorAll("[data-iso]").forEach((b) => b.addEventListener("click", () => pickCountry(b.dataset.iso)));
-    body.querySelectorAll("[data-input]").forEach((b) => b.addEventListener("click", () => { state.input = b.dataset.input; update(); }));
+    body.querySelectorAll("[data-input]").forEach((b) => b.addEventListener("click", () => {
+      state.input = b.dataset.input; update();
+      const w = where[state.country]; if (w) globe.pointOfView({ lat: w.lat, lng: w.lng, altitude: 2.8 }, 900);
+    }));
     $("crumbs").querySelectorAll("[data-crumb]").forEach((b) => b.addEventListener("click", () => {
       if (b.dataset.crumb === "mat") { state.country = null; state.input = null; }
       if (b.dataset.crumb === "country") state.input = null;
@@ -223,7 +238,7 @@
         <span>${m.short || m.name}</span><span class="delta ${p ? "" : "none"}">${p ? pct(p.mean) : "?"}</span></button>`;
     }).join("");
     $("rail").querySelectorAll("[data-mat]").forEach((b) => b.addEventListener("click", () => {
-      state.mat = b.dataset.mat; state.country = null; state.input = null; update();
+      state.mat = b.dataset.mat; state.country = null; state.input = null; update(); flyToTop();
     }));
   }
 
@@ -231,8 +246,14 @@
     state.country = iso;
     state.input = null;
     const w = where[iso];
-    if (w) { controls.autoRotate = false; globe.pointOfView({ lat: w.lat, lng: w.lng, altitude: 1.9 }, 900); }
+    if (w) { controls.autoRotate = false; globe.pointOfView({ lat: w.lat, lng: w.lng, altitude: 2.3 }, 900); }
     update();
+  }
+  // Swing the globe to the biggest producer or exporter of whatever is now shown.
+  function flyToTop() {
+    const top = table(subject())[0];
+    const w = top && where[top.iso3];
+    if (w) globe.pointOfView({ lat: Math.max(-40, Math.min(55, w.lat)), lng: w.lng, altitude: 2.4 }, 1100);
   }
 
   function update() { paint(); render(); renderRail(); }
@@ -275,6 +296,7 @@
     state.mode = b.dataset.mode;
     document.querySelectorAll("[data-mode]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
     update();
+    if (!state.country) flyToTop();
   }));
   $("brent").addEventListener("input", (e) => {
     state.brent = Number(e.target.value);

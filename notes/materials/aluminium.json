@@ -1,0 +1,220 @@
+{
+ "material": "aluminium",
+ "unit": "kt primary aluminium",
+ "year": 2025,
+ "source": "USGS MCS 2026 aluminum https://pubs.usgs.gov/periodicals/mcs2026/mcs2026-aluminum.pdf (via https://statranker.org/economy/industry-and-manufacturing/top-10-aluminum-producing-countries-in-2025-global-production-insights/), world 74,000 kt; IAI 2025 total 73.78 Mt https://www.mysteel.net/news/5111608-iai-global-primary-aluminum-output-exceeds-73-million-t-in-2025 (search snippets, accessed 2026-10-24)",
+ "producers": [
+  {
+   "iso3": "CHN",
+   "name": "China",
+   "value": 45000,
+   "share": 0.608
+  },
+  {
+   "iso3": "IND",
+   "name": "India",
+   "value": 4200,
+   "share": 0.057
+  },
+  {
+   "iso3": "RUS",
+   "name": "Russia",
+   "value": 3900,
+   "share": 0.053
+  },
+  {
+   "iso3": "CAN",
+   "name": "Canada",
+   "value": 3300,
+   "share": 0.045
+  },
+  {
+   "iso3": "ARE",
+   "name": "United Arab Emirates",
+   "value": 2700,
+   "share": 0.036
+  },
+  {
+   "iso3": "BHR",
+   "name": "Bahrain",
+   "value": 1600,
+   "share": 0.022
+  },
+  {
+   "iso3": "BRA",
+   "name": "Brazil",
+   "value": 1100,
+   "share": 0.015,
+   "note": "2024 value"
+  }
+ ],
+ "inputs": [
+  {
+   "id": "bauxite",
+   "name": "Bauxite",
+   "unit": "Mt bauxite (world ~440 Mt)",
+   "producers": [
+    {
+     "iso3": "GIN",
+     "share": 0.341
+    },
+    {
+     "iso3": "AUS",
+     "share": 0.22
+    },
+    {
+     "iso3": "CHN",
+     "share": 0.198
+    },
+    {
+     "iso3": "BRA",
+     "share": 0.075
+    },
+    {
+     "iso3": "IND",
+     "share": 0.057
+    },
+    {
+     "iso3": "IDN",
+     "share": 0.023
+    }
+   ],
+   "source": "USGS MCS 2026 bauxite & alumina https://pubs.usgs.gov/periodicals/mcs2026/mcs2026-bauxite-alumina.pdf (via https://measuredworld.com/categories/resources/bauxite-production)",
+   "year": 2025
+  },
+  {
+   "id": "alumina",
+   "name": "Alumina",
+   "unit": "Mt metallurgical alumina (world 145 Mt)",
+   "producers": [
+    {
+     "iso3": "CHN",
+     "share": 0.609
+    },
+    {
+     "iso3": "AUS",
+     "share": 0.124
+    },
+    {
+     "iso3": "BRA",
+     "share": 0.076
+    },
+    {
+     "iso3": "IND",
+     "share": 0.052
+    }
+   ],
+   "source": "IAI via SunSirs https://www.sunsirs.com/uk/detail_news-30371.html (China 88.3 of 145 Mt); AUS/BRA/IND secondary https://www.dollarmetal.com/top-10-aluminum-producing-countries-in-2025/",
+   "year": 2025
+  }
+ ],
+ "links": [
+  {
+   "to": "CHN",
+   "input": "bauxite",
+   "from": "GIN",
+   "share": 0.743,
+   "basis": "share of China's bauxite imports (200.5 Mt); imports ~70% of China's supply",
+   "year": 2025,
+   "source": "https://www.alcircle.com/news/gacc-china-s-bauxite-imports-jump-26-yoy-in-2025-117034"
+  },
+  {
+   "to": "CHN",
+   "input": "bauxite",
+   "from": "AUS",
+   "share": 0.186,
+   "basis": "share of China's bauxite imports",
+   "year": 2025,
+   "source": "https://www.alcircle.com/news/gacc-china-s-bauxite-imports-jump-26-yoy-in-2025-117034"
+  },
+  {
+   "to": "CHN",
+   "input": "bauxite",
+   "from": "CHN",
+   "share": 0.3,
+   "basis": "domestic mine output share of supply (87/(87+200.5), derived)",
+   "year": 2025,
+   "source": "USGS MCS 2026 + GACC via https://www.alcircle.com/news/gacc-china-s-bauxite-imports-jump-26-yoy-in-2025-117034"
+  },
+  {
+   "to": "CHN",
+   "input": "alumina",
+   "from": "CHN",
+   "share": 0.99,
+   "basis": "approx. domestic share; China is a net exporter",
+   "year": 2025,
+   "source": "https://news.metal.com/newscontent/103638869-chinas-october-alumina-imports-surge-21564-mom-shifting-to-net-imports-smm-analysis"
+  },
+  {
+   "to": "RUS",
+   "input": "alumina",
+   "from": "RUS",
+   "share": 0.7,
+   "basis": "Rusal's own refineries (Russia, Ireland, Jamaica, Guinea) share of needs",
+   "year": 2023,
+   "source": "https://oilprice.com/Metals/Commodities/Aluminum-Oxide-Shortage-Pushes-Russia-To-Diversify-Supply-Chain.amp.html"
+  },
+  {
+   "to": "RUS",
+   "input": "alumina",
+   "from": "CHN",
+   "share": 0.25,
+   "basis": "approx. share of Rusal alumina needs (1.68 Mt Jan-Oct 2025 annualised; derived)",
+   "year": 2025,
+   "source": "https://news.metal.com/newscontent/103638869-chinas-october-alumina-imports-surge-21564-mom-shifting-to-net-imports-smm-analysis"
+  },
+  {
+   "to": "IND",
+   "input": "alumina",
+   "from": "IND",
+   "share": 0.98,
+   "basis": "imports only 0.156 Mt in FY2024-25 vs ~7.6 Mt output",
+   "year": 2025,
+   "source": "https://www.alcircle.com/news/bahrain-loses-ground-in-indias-alumina-trade-as-china-and-france-step-up-115006"
+  },
+  {
+   "to": "IND",
+   "input": "bauxite",
+   "from": "IND",
+   "share": 0.85,
+   "basis": "approx: 25 Mt domestic vs ~4.5 Mt imports (derived)",
+   "year": 2025,
+   "source": "https://www.alcircle.com/news/indias-bauxite-imports-jump-129-5-in-h1-2026-quality-gap-refinery-expansion-outpace-25mt-domestic-output-121496"
+  },
+  {
+   "to": "CAN",
+   "input": "alumina",
+   "from": "BRA",
+   "share": 0.82,
+   "basis": "share of Canada's alumina import value",
+   "year": 2022,
+   "source": "https://www.oec.world/en/profile/bilateral-product/62818/reporter/can"
+  },
+  {
+   "to": "CAN",
+   "input": "alumina",
+   "from": "AUS",
+   "share": 0.12,
+   "basis": "share of Canada's alumina import value",
+   "year": 2022,
+   "source": "https://www.oec.world/en/profile/bilateral-product/62818/reporter/can"
+  },
+  {
+   "to": "ARE",
+   "input": "alumina",
+   "from": "ARE",
+   "share": 0.4,
+   "basis": "Al Taweelah refinery share of EGA alumina needs; rest imported (origins unconfirmed)",
+   "year": 2021,
+   "source": "https://www.wam.ae/en/details/1395302853869"
+  }
+ ],
+ "oil_exposure": {
+  "notes": "Electricity ~35-45% of smelter cash cost, alumina ~30-36% (Antaike 2021). GCC smelters (6.16 Mt, ~8.3% of world) run on gas-fired power; anodes use petroleum coke. LME ~$3,157/t on 27 Feb 2026, $3,544 on 9 Mar, ~$3,585 on 31 Mar after the 28 Mar strikes on Alba and EGA Al Taweelah, $3,787.5 four-year high in early June, ~$3,273 Sep average. Qatalum ~60%; Alba cut 19% of capacity. No published oil-to-aluminium pass-through found (asked of Seb in OXH-5).",
+  "sources": [
+   "https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/files/mis-202512-alumi.pdf",
+   "https://www.fastmarkets.com/insights/aluminium-in-energy-crossfire-as-hormuz-uncertainty-drags-on/",
+   "https://www.mining.com/web/column-lme-metals-whipsawed-by-war-and-peace-in-first-half-of-2026/"
+  ]
+ }
+}
