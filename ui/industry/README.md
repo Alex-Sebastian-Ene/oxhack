@@ -3,7 +3,7 @@
 Edward's strait page with his materials globe built in, aimed at industry users: which products an
 oil shock reaches, which countries make and ship them, and what it does to their price.
 Open `index.html` in a browser; it needs no server. It is the same page as the shared artifact
-<https://claude.ai/artifact/84rJe1aD8Vpe7KvAnq8a39> (version 21).
+<https://claude.ai/artifact/84rJe1aD8Vpe7KvAnq8a39> (version 20).
 
 ## What it shows
 
@@ -19,26 +19,6 @@ Open `index.html` in a browser; it needs no server. It is the same page as the s
   - **Click a country:** it floats with a flag tag, a short pop-up gives the main numbers, and the right
     panel has the full analysis in three tabs: Overview (key numbers and the fuel-cost chart), Industries
     (cost impact by industry) and Trade (what it makes, where its inputs come from and where it ships).
-
-## Optional AI brief (off by default)
-
-The country card can ask Gemini for a short brief, through Edward's local proxy
-(`experiments/country_brief.py`, design in `docs/country-briefs.md`). It follows the same rules as his globe:
-
-- **Off by default:** the button only appears with `?brief=1` in the URL, so the published page is unchanged.
-- **The key stays with the proxy,** in `GEMINI_API_KEY` on the machine that runs it. Never put it in the page,
-  git or Linear.
-- **Facts in, labelled text out:** the page sends only the numbers it shows for that country, each with its
-  source. The exposure score is marked as coming from the simulated scenario. The answer is shown as
-  "AI-written by <model>", with its date, "cached" when it is, and "Not checked by the team: verify before quoting".
-  It never changes the numbers, colours or tables.
-
-```bash
-GEMINI_API_KEY=... uv run experiments/country_brief.py
-```
-
-Then open `ui/industry/index.html?brief=1`. `?brief=<url>` points it at another proxy. The proxy only answers
-pages opened from disk or from localhost, so a deployed copy needs a hosted proxy first.
 
 ## Where the numbers come from
 
