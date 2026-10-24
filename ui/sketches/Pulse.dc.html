@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Live pulse</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0B0F14}
+a{color:#7CC0EA}a:hover{color:#A9D6F2}
+</style>
+</helmet>
+<div style="font-family: 'IBM Plex Sans', system-ui, sans-serif; color: #E7ECF2; background: #0B0F14; min-height: 900px; box-sizing: border-box; padding: 24px; display: flex; flex-direction: column; gap: 16px">
+
+<header style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px">
+  <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap">
+    <h1 style="margin: 0; font-size: 26px; font-weight: 600">Live pulse</h1>
+    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 1px; padding: 3px 8px; border-radius: 4px; border: 1px solid #F0A23B; color: #F5BD6E">SYNTHETIC DEMO DATA</span>
+  </div>
+  <button type="button" onClick="{{toggle}}" style="min-height: 44px; padding: 0 16px; border-radius: 6px; border: 1px solid #2B3644; background: #1B2430; color: #E7ECF2; font: inherit; font-size: 14px">{{toggleLabel}}</button>
+</header>
+<p style="margin: -6px 0 0; font-size: 14px; color: #A3AFBD">The strait as a heartbeat: every crossing lands here as it happens, and the flow number updates with it.</p>
+
+<div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px">
+  <div style="background: #121821; border: 1px solid #222C38; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 4px">
+    <span style="font-size: 13px; color: #A3AFBD">Crossings today</span>
+    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 32px">{{crossings}}</span>
+  </div>
+  <div style="background: #121821; border: 1px solid #222C38; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 4px">
+    <span style="font-size: 13px; color: #A3AFBD">Laden outbound</span>
+    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 32px; color: #7CC0EA">{{laden}}</span>
+  </div>
+  <div style="background: #121821; border: 1px solid #222C38; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 4px">
+    <span style="font-size: 13px; color: #A3AFBD">Gone dark</span>
+    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 32px; color: #F5BD6E">{{dark}}</span>
+  </div>
+  <div style="background: #121821; border: 1px solid #222C38; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 4px">
+    <span style="font-size: 13px; color: #A3AFBD">Next radar pass</span>
+    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 32px">{{countdown}}</span>
+  </div>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 16px">
+  <section aria-label="Crossings per hour" style="flex: 999 1 560px; min-width: 0; background: #121821; border: 1px solid #222C38; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 10px">
+    <h2 style="margin: 0; font-size: 16px; font-weight: 600">Barrels crossing, per hour</h2>
+    <div aria-hidden="true" style="display: flex; align-items: flex-end; gap: 6px; height: 260px; border-bottom: 1px solid #2B3644">
+      <sc-for list="{{bars}}" as="b" hint-placeholder-count="24">
+        <div style="flex: 1 1 0; display: flex; flex-direction: column; justify-content: flex-end; height: 100%">
+          <div style="height: {{b.dark}}; background: repeating-linear-gradient(135deg, #F0A23B 0 5px, #8A5B1E 5px 9px); border-radius: 3px 3px 0 0"></div>
+          <div style="height: {{b.seen}}; background: {{b.color}}"></div>
+        </div>
+      </sc-for>
+    </div>
+    <div style="display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #8794A3"><span>24 h ago</span><span>now</span></div>
+    <div style="display: flex; flex-wrap: wrap; gap: 16px; font-size: 13px; color: #A3AFBD"><span>Solid: seen on AIS</span><span>Hatched: estimated hidden</span><span>Brighter: the current hour, filling as ships cross</span></div>
+  </section>
+
+  <section aria-label="Crossing feed" aria-live="polite" style="flex: 1 1 380px; min-width: 0; background: #121821; border: 1px solid #222C38; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 10px">
+    <h2 style="margin: 0; font-size: 16px; font-weight: 600">Crossing feed</h2>
+    <ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 0">
+      <sc-for list="{{feed}}" as="e" hint-placeholder-count="6">
+        <li style="display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 10px; align-items: baseline; padding: 10px 0; border-bottom: 1px solid #222C38; font-size: 14px">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #8794A3">{{e.time}}</span>
+          <span><span style="font-family: 'IBM Plex Mono', monospace">{{e.ship}}</span> · {{e.what}}</span>
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: {{e.color}}">{{e.tag}}</span>
+        </li>
+      </sc-for>
+    </ul>
+    <p style="margin: 0; font-size: 12px; color: #8794A3">Ship ids are made up for the demo. Real build: AIS stream + crossing detector.</p>
+  </section>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+const bars = [];
+for (let i = 0; i < 24; i++) {
+bars.push({ seen: 40 + ((i * 37) % 45), dark: 4 + ((i * 13) % 12) });
+}
+this.state = {
+running: true, tick: 0, crossings: 61, laden: 29, dark: 4, secs: 2 * 3600 + 14 * 60,
+bars,
+feed: [
+{ time: '13:58', ship: 'SYN-4471', what: 'outbound, laden VLCC', tag: 'SEEN', color: '#7CC0EA' },
+{ time: '13:51', ship: 'SYN-0932', what: 'inbound, in ballast', tag: 'SEEN', color: '#7CC0EA' },
+{ time: '13:40', ship: 'SYN-7710', what: 'AIS went silent in lane', tag: 'DARK', color: '#F5BD6E' },
+{ time: '13:32', ship: 'SYN-2218', what: 'outbound, laden Suezmax', tag: 'SEEN', color: '#7CC0EA' },
+{ time: '13:20', ship: 'SYN-5603', what: 'position jump of 40 nm', tag: 'SPOOF?', color: '#F5BD6E' },
+{ time: '13:11', ship: 'SYN-1187', what: 'outbound, laden Aframax', tag: 'SEEN', color: '#7CC0EA' }
+]
+};
+}
+componentDidMount() {
+this.timer = setInterval(() => this.step(), 1200);
+}
+componentWillUnmount() {
+clearInterval(this.timer);
+}
+step() {
+if (!this.state.running) return;
+const s = this.state;
+const t = s.tick + 1;
+const kinds = [
+{ what: 'outbound, laden VLCC', tag: 'SEEN', color: '#7CC0EA', laden: 1, dark: 0 },
+{ what: 'inbound, in ballast', tag: 'SEEN', color: '#7CC0EA', laden: 0, dark: 0 },
+{ what: 'outbound, laden Suezmax', tag: 'SEEN', color: '#7CC0EA', laden: 1, dark: 0 },
+{ what: 'AIS went silent in lane', tag: 'DARK', color: '#F5BD6E', laden: 0, dark: 1 },
+{ what: 'outbound, laden Aframax', tag: 'SEEN', color: '#7CC0EA', laden: 1, dark: 0 }
+];
+const k = kinds[(t * 7) % kinds.length];
+const mins = 59 + t;
+const hh = 13 + Math.floor(mins / 60);
+const mm = mins % 60;
+const time = String(hh).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
+const ship = 'SYN-' + String((t * 7919) % 10000).padStart(4, '0');
+const bars = s.bars.slice();
+const last = { ...bars[23] };
+if (last.seen + last.dark > 92) {
+bars.shift();
+bars.push({ seen: 6, dark: 0 });
+} else {
+last.seen = last.seen + (k.dark ? 0 : 6);
+last.dark = last.dark + (k.dark ? 5 : 0);
+bars[23] = last;
+}
+this.setState({
+tick: t,
+crossings: s.crossings + 1,
+laden: s.laden + k.laden,
+dark: s.dark + k.dark,
+secs: Math.max(0, s.secs - 37),
+bars,
+feed: [{ time, ship, what: k.what, tag: k.tag, color: k.color }].concat(s.feed).slice(0, 6)
+});
+}
+renderVals() {
+const s = this.state;
+const h = Math.floor(s.secs / 3600);
+const m = Math.floor((s.secs % 3600) / 60);
+const bars = s.bars.map((b, i) => ({
+seen: b.seen + '%',
+dark: b.dark + '%',
+color: i === 23 ? '#7CC0EA' : '#3C7FAD'
+}));
+return {
+crossings: s.crossings,
+laden: s.laden,
+dark: s.dark,
+countdown: h + 'h ' + String(m).padStart(2, '0') + 'm',
+bars,
+feed: s.feed,
+toggleLabel: s.running ? 'Pause' : 'Resume',
+toggle: () => this.setState({ running: !s.running })
+};
+}
+}
+</script>
+</body>
+</html>

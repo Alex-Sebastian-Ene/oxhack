@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Spoofing and ship-to-ship detector</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0B0F14}
+a{color:#7CC0EA}a:hover{color:#A9D6F2}
+</style>
+</helmet>
+<div style="font-family: 'IBM Plex Sans', system-ui, sans-serif; color: #E7ECF2; background: #0B0F14; min-height: 900px; box-sizing: border-box; padding: 24px; display: flex; flex-direction: column; gap: 16px">
+
+<header style="display: flex; flex-direction: column; gap: 6px">
+  <h1 style="margin: 0; font-size: 26px; font-weight: 600">Positions that lie, and oil that changes hands at sea</h1>
+  <p style="margin: 0; font-size: 14px; color: #A3AFBD">Gulf GNSS interference is widespread: RICS counted 1,735 interference events affecting 655 vessels, mostly off the UAE (Mar 2026, to verify). We flag bad tracks before they reach the flow count.</p>
+</header>
+
+<div style="display: flex; flex-wrap: wrap; gap: 16px">
+  <section aria-label="Spoofing map" style="flex: 999 1 600px; min-width: 0; background: #121821; border: 1px solid #222C38; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 10px">
+    <h2 style="margin: 0; font-size: 16px; font-weight: 600">Suspect tracks, last 24 h</h2>
+    <svg viewBox="0 0 800 440" role="img" aria-label="Schematic map with a heat grid of suspect areas, a track that jumps onto land, and a circular spoofed track" style="width: 100%; height: auto; display: block; border-radius: 8px; background: #0F1A26">
+      <path d="M0,0 H800 V120 C700,140 600,100 500,126 C420,146 330,116 250,146 C170,176 80,146 0,166 Z" fill="#1C2733" stroke="#2E3B4A"></path>
+      <path d="M0,440 V330 C90,310 170,340 250,312 C300,296 330,360 350,440 Z" fill="#1C2733" stroke="#2E3B4A"></path>
+      <path d="M380,440 C400,360 430,300 470,250 C500,280 520,330 540,380 C552,410 560,430 566,440 Z" fill="#1C2733" stroke="#2E3B4A"></path>
+      <g aria-hidden="true">
+        <rect x="120" y="260" width="40" height="40" fill="#F0A23B" fill-opacity="0.55"></rect>
+        <rect x="160" y="260" width="40" height="40" fill="#F0A23B" fill-opacity="0.35"></rect>
+        <rect x="200" y="260" width="40" height="40" fill="#F0A23B" fill-opacity="0.2"></rect>
+        <rect x="120" y="220" width="40" height="40" fill="#F0A23B" fill-opacity="0.3"></rect>
+        <rect x="160" y="220" width="40" height="40" fill="#F0A23B" fill-opacity="0.45"></rect>
+        <rect x="80" y="260" width="40" height="40" fill="#F0A23B" fill-opacity="0.25"></rect>
+        <rect x="440" y="200" width="40" height="40" fill="#F0A23B" fill-opacity="0.2"></rect>
+      </g>
+      <path d="M560,230 L520,222 L480,218" stroke="#4EA8DE" stroke-width="3" fill="none"></path>
+      <path d="M480,218 L600,70" stroke="#F0A23B" stroke-width="2" stroke-dasharray="4 4" fill="none"></path>
+      <circle cx="600" cy="70" r="6" fill="#F0A23B"></circle>
+      <rect x="612" y="52" width="170" height="40" rx="6" fill="#121821" stroke="#F0A23B"></rect>
+      <text x="622" y="70" fill="#F5BD6E" font-size="12" font-family="IBM Plex Mono, monospace">jump onto land</text>
+      <text x="622" y="86" fill="#C2CBD5" font-size="12" font-family="IBM Plex Mono, monospace">implied [XXX] kn</text>
+      <circle cx="300" cy="210" r="34" stroke="#F0A23B" stroke-width="2" fill="none"></circle>
+      <circle cx="300" cy="210" r="22" stroke="#F0A23B" stroke-width="2" stroke-dasharray="3 3" fill="none"></circle>
+      <rect x="250" y="150" width="140" height="24" rx="6" fill="#121821" stroke="#F0A23B"></rect>
+      <text x="260" y="167" fill="#F5BD6E" font-size="12" font-family="IBM Plex Mono, monospace">circling pattern</text>
+      <g transform="translate(660,300)">
+        <polygon points="0,-7 26,-7 32,0 26,7 0,7" fill="#4EA8DE"></polygon>
+        <polygon points="0,11 26,11 32,18 26,25 0,25" fill="#7CC0EA"></polygon>
+      </g>
+      <rect x="600" y="340" width="190" height="40" rx="6" fill="#121821" stroke="#4EA8DE"></rect>
+      <text x="610" y="358" fill="#CFE6F6" font-size="12" font-family="IBM Plex Mono, monospace">side by side [N] h</text>
+      <text x="610" y="374" fill="#C2CBD5" font-size="12" font-family="IBM Plex Mono, monospace">both under 1 kn</text>
+    </svg>
+    <p style="margin: 0; font-size: 12px; color: #8794A3; font-family: 'IBM Plex Mono', monospace">Heat cells: share of positions failing checks · AIS [provider] · Sketch: schematic, not data</p>
+  </section>
+
+  <aside style="flex: 1 1 380px; min-width: 0; display: flex; flex-direction: column; gap: 16px">
+    <section aria-label="Track checks" style="background: #121821; border: 1px solid #222C38; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 8px">
+      <h2 style="margin: 0; font-size: 16px; font-weight: 600">Checks on every track</h2>
+      <ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; font-size: 14px">
+        <li style="display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid #222C38"><span>Speed a tanker cannot reach</span><span style="font-family: 'IBM Plex Mono', monospace">[N]</span></li>
+        <li style="display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid #222C38"><span>Position on land</span><span style="font-family: 'IBM Plex Mono', monospace">[N]</span></li>
+        <li style="display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid #222C38"><span>Many ships on the same circle</span><span style="font-family: 'IBM Plex Mono', monospace">[N]</span></li>
+        <li style="display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid #222C38"><span>Two ships, one identity (same MMSI)</span><span style="font-family: 'IBM Plex Mono', monospace">[N]</span></li>
+        <li style="display: flex; justify-content: space-between; gap: 12px; padding: 9px 0"><span>Radar disagrees with AIS position</span><span style="font-family: 'IBM Plex Mono', monospace">[N]</span></li>
+      </ul>
+      <p style="margin: 0; font-size: 13px; color: #A3AFBD">Failed tracks are repaired from radar where possible, otherwise dropped from the seen count and shown here.</p>
+    </section>
+    <section aria-label="Ship-to-ship transfer" style="background: #121821; border: 1px solid #222C38; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 8px">
+      <h2 style="margin: 0; font-size: 16px; font-weight: 600">Ship-to-ship transfer, likely</h2>
+      <p style="margin: 0; font-size: 14px; color: #C2CBD5; line-height: 1.5">[Tanker A] and [Tanker B] sat side by side for [N] h off [place]. Afterwards A rode [X.X] m higher and B [X.X] m deeper: about [X.X] million barrels moved from A to B.</p>
+      <a href="Ghost.dc.html" style="font-size: 14px; min-height: 44px; display: inline-flex; align-items: center">Open both ship files</a>
+    </section>
+  </aside>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

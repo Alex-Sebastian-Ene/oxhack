@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Command view</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0B0F14}
+a{color:#7CC0EA}a:hover{color:#A9D6F2}
+</style>
+</helmet>
+<div style="font-family: 'IBM Plex Sans', system-ui, sans-serif; color: #E7ECF2; background: #0B0F14; min-height: 980px; box-sizing: border-box; padding: 24px; display: flex; flex-direction: column; gap: 16px">
+
+<header style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px">
+  <div style="display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap">
+    <h1 style="margin: 0; font-size: 22px; font-weight: 600; letter-spacing: 0.2px">Hormuz Flow</h1>
+    <span style="font-size: 14px; color: #A3AFBD">Strait of Hormuz · positions as of <span style="font-family: 'IBM Plex Mono', monospace">[date HH:MM UTC]</span></span>
+    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 1px; padding: 3px 8px; border-radius: 4px; border: 1px solid #4EA8DE; color: #CFE6F6; font-weight: 500">NEAR-LIVE · [N] h OLD</span>
+  </div>
+  <nav aria-label="Time window" style="display: flex; gap: 6px">
+    <button type="button" style="min-height: 44px; padding: 0 16px; border-radius: 6px; border: 1px solid #2B3644; background: #1B2430; color: #E7ECF2; font: inherit; font-size: 14px">Last 24 h</button>
+    <button type="button" style="min-height: 44px; padding: 0 16px; border-radius: 6px; border: 1px solid #2B3644; background: transparent; color: #A3AFBD; font: inherit; font-size: 14px">7 days</button>
+    <button type="button" style="min-height: 44px; padding: 0 16px; border-radius: 6px; border: 1px solid #2B3644; background: transparent; color: #A3AFBD; font: inherit; font-size: 14px">30 days</button>
+  </nav>
+</header>
+
+<div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: stretch">
+
+  <section aria-label="Strait map" style="flex: 999 1 560px; min-width: 0; background: #121821; border: 1px solid #222C38; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 12px">
+    <div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; align-items: center">
+      <h2 style="margin: 0; font-size: 16px; font-weight: 600">Tankers in and around the strait</h2>
+      <div style="display: flex; flex-wrap: wrap; gap: 6px">
+        <button type="button" style="min-height: 44px; padding: 0 12px; border-radius: 6px; border: 1px solid #4EA8DE; background: transparent; color: #CFE6F6; font: inherit; font-size: 13px">Seen on AIS</button>
+        <button type="button" style="min-height: 44px; padding: 0 12px; border-radius: 6px; border: 1px dashed #F0A23B; background: transparent; color: #F5BD6E; font: inherit; font-size: 13px">Suspected dark</button>
+        <button type="button" style="min-height: 44px; padding: 0 12px; border-radius: 6px; border: 1px solid #2B3644; background: transparent; color: #A3AFBD; font: inherit; font-size: 13px">Satellite hits</button>
+        <button type="button" style="min-height: 44px; padding: 0 12px; border-radius: 6px; border: 1px solid #2B3644; background: transparent; color: #A3AFBD; font: inherit; font-size: 13px">Sanctions list</button>
+      </div>
+    </div>
+
+    <svg viewBox="0 0 800 500" role="img" aria-label="Schematic map of the Strait of Hormuz with shipping lanes, tankers seen on AIS and suspected dark tankers" style="width: 100%; height: auto; display: block; border-radius: 8px; background: #0F1A26">
+      <path d="M0,0 H800 V140 C720,165 640,118 560,146 C490,170 430,134 370,166 C300,200 220,160 150,188 C90,210 40,182 0,200 Z" fill="#1C2733" stroke="#2E3B4A"></path>
+      <path d="M300,500 C322,410 362,352 402,296 C418,272 432,254 444,248 C458,262 462,292 472,322 C502,382 542,430 560,500 Z" fill="#1C2733" stroke="#2E3B4A"></path>
+      <path d="M0,500 V420 C80,400 160,430 230,402 C262,390 282,450 300,500 Z" fill="#1C2733" stroke="#2E3B4A"></path>
+      <text x="560" y="70" fill="#8794A3" font-size="15" letter-spacing="3" font-family="IBM Plex Sans, sans-serif">IRAN</text>
+      <text x="380" y="420" fill="#8794A3" font-size="13" letter-spacing="2" font-family="IBM Plex Sans, sans-serif">OMAN (MUSANDAM)</text>
+      <text x="40" y="470" fill="#8794A3" font-size="13" letter-spacing="2" font-family="IBM Plex Sans, sans-serif">UAE</text>
+      <text x="40" y="250" fill="#6F7E8F" font-size="13" font-style="italic" font-family="IBM Plex Sans, sans-serif">Persian Gulf</text>
+      <text x="650" y="380" fill="#6F7E8F" font-size="13" font-style="italic" font-family="IBM Plex Sans, sans-serif">Gulf of Oman</text>
+      <path d="M800,298 C680,268 560,230 470,216 C380,206 260,250 0,300" fill="none" stroke="#35506B" stroke-width="10" stroke-opacity="0.5"></path>
+      <path d="M0,268 C260,214 380,184 470,190 C560,198 680,238 800,262" fill="none" stroke="#35506B" stroke-width="10" stroke-opacity="0.5"></path>
+      <text x="690" y="236" fill="#6F8BA6" font-size="11" font-family="IBM Plex Mono, monospace">outbound lane</text>
+      <text x="690" y="306" fill="#6F8BA6" font-size="11" font-family="IBM Plex Mono, monospace">inbound lane</text>
+      <g fill="#4EA8DE">
+        <polygon points="0,-7 14,0 0,7" transform="translate(150,236) rotate(-12)"></polygon>
+        <polygon points="0,-7 14,0 0,7" transform="translate(300,206) rotate(-8)"></polygon>
+        <polygon points="0,-7 14,0 0,7" transform="translate(520,196) rotate(10)"></polygon>
+        <polygon points="0,-7 14,0 0,7" transform="translate(640,226) rotate(14)"></polygon>
+        <polygon points="0,-7 14,0 0,7" transform="translate(600,246) rotate(194)"></polygon>
+        <polygon points="0,-7 14,0 0,7" transform="translate(380,214) rotate(178)"></polygon>
+        <polygon points="0,-7 14,0 0,7" transform="translate(220,268) rotate(170)"></polygon>
+      </g>
+      <g fill="none" stroke="#F0A23B" stroke-width="2" stroke-dasharray="4 3">
+        <circle cx="455" cy="205" r="11"></circle>
+        <circle cx="730" cy="258" r="11"></circle>
+        <circle cx="260" cy="232" r="11"></circle>
+      </g>
+      <path d="M560,238 L500,226" stroke="#4EA8DE" stroke-width="2" fill="none"></path>
+      <path d="M500,226 L420,214" stroke="#F0A23B" stroke-width="2" stroke-dasharray="2 5" fill="none"></path>
+      <rect x="452" y="210" width="10" height="10" fill="none" stroke="#E7ECF2" stroke-width="1.5"></rect>
+      <g>
+        <rect x="470" y="122" width="214" height="54" rx="6" fill="#121821" stroke="#F0A23B"></rect>
+        <text x="482" y="143" fill="#F5BD6E" font-size="12" font-family="IBM Plex Mono, monospace">AIS gap · [N] h · VLCC-sized</text>
+        <text x="482" y="163" fill="#C2CBD5" font-size="12" font-family="IBM Plex Mono, monospace">SAR hit, no AIS match</text>
+      </g>
+    </svg>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 16px; font-size: 13px; color: #A3AFBD">
+      <span>Blue triangle: tanker seen on AIS</span>
+      <span>Amber dashed ring: suspected dark tanker</span>
+      <span>White square: satellite radar detection</span>
+    </div>
+    <p style="margin: 0; font-size: 12px; color: #8794A3; font-family: 'IBM Plex Mono', monospace">Sources: AIS [provider] · Sentinel-1 SAR pass [date time] · Sketch: map schematic, positions illustrative</p>
+  </section>
+
+  <aside style="flex: 1 1 360px; min-width: 0; display: flex; flex-direction: column; gap: 16px">
+
+    <section aria-label="Flow estimate" style="background: #121821; border: 1px solid #222C38; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px">
+        <h2 style="margin: 0; font-size: 14px; font-weight: 500; color: #A3AFBD">Oil through the strait, estimated</h2>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 1px; padding: 2px 8px; border-radius: 4px; border: 1px solid #B9A6E8; color: #CBBDF0">MODELLED</span>
+      </div>
+      <div style="display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap">
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 48px; font-weight: 500; color: #F5BD6E; line-height: 1">[X.X]</span>
+        <span style="font-size: 16px; color: #C2CBD5">million barrels / day</span>
+      </div>
+      <p style="margin: 0; font-size: 13px; color: #A3AFBD">Likely range <span style="font-family: 'IBM Plex Mono', monospace; color: #E7ECF2">[low]–[high]</span> · 24 h to <span style="font-family: 'IBM Plex Mono', monospace">[HH:MM]</span></p>
+      <div aria-hidden="true" style="display: flex; height: 14px; border-radius: 4px; overflow: hidden; background: #1B2430">
+        <div style="width: 78%; background: #4EA8DE"></div>
+        <div style="width: 14%; background: repeating-linear-gradient(135deg, #F0A23B 0 6px, #8A5B1E 6px 10px)"></div>
+      </div>
+      <dl style="margin: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; font-size: 14px">
+        <dt style="color: #CFE6F6">Seen on AIS · [N] tankers</dt><dd style="margin: 0; font-family: 'IBM Plex Mono', monospace">[X.X] mb/d</dd>
+        <dt style="color: #F5BD6E">Hidden, estimated · [N] suspects</dt><dd style="margin: 0; font-family: 'IBM Plex Mono', monospace">[X.X] mb/d</dd>
+        <dt style="color: #A3AFBD">Pre-war baseline (EIA, 2024)</dt><dd style="margin: 0; font-family: 'IBM Plex Mono', monospace; color: #A3AFBD">20 mb/d</dd>
+        <dt style="color: #A3AFBD">Other estimates (<a href="Analysts.dc.html">compare</a>)</dt><dd style="margin: 0; font-family: 'IBM Plex Mono', monospace; color: #A3AFBD">3.5–10 mb/d</dd>
+      </dl>
+      <a href="#method" style="font-size: 13px">How we estimate hidden flow</a>
+    </section>
+
+    <section aria-label="Knock-on indicators" style="background: #121821; border: 1px solid #222C38; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 12px">
+      <h2 style="margin: 0; font-size: 14px; font-weight: 500; color: #A3AFBD">What it feeds into</h2>
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px">
+        <div style="display: flex; flex-direction: column; gap: 4px; padding: 10px; border-radius: 8px; background: #1B2430">
+          <span style="font-size: 12px; color: #A3AFBD">Brent</span>
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 18px">[$XX.XX]</span>
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #C2CBD5">CACHED · EIA [date]</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 4px; padding: 10px; border-radius: 8px; background: #1B2430">
+          <span style="font-size: 12px; color: #A3AFBD">US CPI, y/y</span>
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 18px">[X.X%]</span>
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #C2CBD5">CACHED · FRED [month]</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 4px; padding: 10px; border-radius: 8px; background: #1B2430">
+          <span style="font-size: 12px; color: #A3AFBD">Fed funds</span>
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 18px">[X.XX%]</span>
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #C2CBD5">CACHED · FRED [date]</span>
+        </div>
+      </div>
+      <a href="Ripple.dc.html" style="font-size: 14px; min-height: 44px; display: inline-flex; align-items: center">Run a what-if on these</a>
+    </section>
+
+    <section aria-label="Alerts" style="background: #121821; border: 1px solid #222C38; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 10px">
+      <h2 style="margin: 0; font-size: 14px; font-weight: 500; color: #A3AFBD">Alerts</h2>
+      <ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; font-size: 13px">
+        <li style="display: flex; gap: 10px"><span style="font-family: 'IBM Plex Mono', monospace; color: #8794A3">[HH:MM]</span><span>Tanker <a href="Ghost.dc.html">IMO [#######]</a> went dark in the inbound lane</span></li>
+        <li style="display: flex; gap: 10px"><span style="font-family: 'IBM Plex Mono', monospace; color: #8794A3">[HH:MM]</span><span>Outbound laden transits [N]% below 30-day average</span></li>
+        <li style="display: flex; gap: 10px"><span style="font-family: 'IBM Plex Mono', monospace; color: #8794A3">[HH:MM]</span><span>[N] position jumps near [port]: likely GPS spoofing</span></li>
+      </ul>
+    </section>
+  </aside>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":980}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>
