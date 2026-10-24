@@ -42,6 +42,26 @@ def test_mixture_keeps_each_draw_with_its_oil_path():
     assert np.array_equal(mc.mixture(S, np.array([0.0, 1.0, 0.0]), order), S[1])
 
 
+def test_calibration_factor_hits_the_target_coverage():
+    rng = np.random.default_rng(0)
+    y = rng.normal(size=20_000)
+    q = 1.645 * 0.8  # a forecast whose 90% band is 20% too narrow
+    inside = np.array([np.abs(y) <= s * q for s in mc.SPREAD])
+    assert mc.calibration_factor(inside) == pytest.approx(1.25, abs=0.05)
+
+
+def test_empirical_crps_matches_the_sample_formula():
+    rng = np.random.default_rng(1)
+    train = rng.normal(size=(300, 2))
+    train[:10, 1] = np.nan  # missing training outcomes are skipped
+    y = np.array([[0.5, np.nan], [-1.0, 2.0]])
+    out = mc.empirical_crps(train, y)
+    s = train[:, 0]
+    expect = np.mean(np.abs(s - 0.5)) - 0.5 * np.mean(np.abs(s[:, None] - s[None, :]))
+    assert out[0, 0] == pytest.approx(expect, rel=1e-9)
+    assert np.isnan(out[0, 1]) and np.isfinite(out[1, 1])
+
+
 def test_forward_choice_uses_earlier_folds_only():
     score = np.array([[1.0, 0.5, 0.9],   # fold 0
                       [1.0, 0.6, 0.9],   # fold 1
