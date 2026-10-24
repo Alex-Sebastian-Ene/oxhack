@@ -47,20 +47,26 @@ Click a country on the materials globe, then **More**. A sheet opens with:
 ## Run it
 
 ```sh
-GEMINI_API_KEY=... uv run experiments/country_brief.py   # serves http://127.0.0.1:8787
+echo 'GEMINI_API_KEY=<your key>' >> .env   # repo root; .env is git-ignored
+uv run experiments/country_brief.py      # serves http://127.0.0.1:8787
 # then open ui/globe/index.html?brief=1
 ```
 
+A `GEMINI_API_KEY` already set in the environment wins over `.env`.
+
 Without `?brief=1` the page shows no AI button, so the published demo is unchanged. Optional
-settings: `GEMINI_MODEL` (default `gemini-2.5-flash`) and `BRIEF_PORT`. `?brief=<url>` points the
+settings: `GEMINI_MODEL` (default `gemini-3.8-flash`; Google's `gemini-api-dev` skill lists
+`gemini-2.5-*` as deprecated) and `BRIEF_PORT`. `?brief=<url>` points the
 page at another proxy.
 
 ## Not done yet / open questions
 
 - **Untested against the live API.** Our sandbox can't reach `generativelanguage.googleapis.com`,
   and no one has shared a key yet. The tests cover the prompt, the response parsing, the cache and
-  the origin check offline. The first live run should confirm that `gemini-2.5-flash` still accepts
-  the `google_search` tool, or set `GEMINI_MODEL` to a current model.
+  the origin check offline. The first live run should confirm that `generateContent` with the
+  `google_search` tool still answers for `gemini-3.8-flash`. Google now steers new code to the
+  Interactions API (`POST /v1beta/interactions`), where search results arrive as
+  `google_search_result` steps; moving there is the fallback if `generateContent` is refused.
 - **Event rules on AI use.** AGENTS.md still has a TODO for the hackathon's AI-use and provenance
   rules. If they restrict generated content in the demo, keep the button off.
 - **The published artifact** is a page on claude.ai, so it can't reach a localhost proxy. If we
