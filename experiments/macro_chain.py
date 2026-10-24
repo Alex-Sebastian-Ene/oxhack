@@ -49,7 +49,19 @@ RUNS, NOTES = mb.RUNS, mb.NOTES
 MEMBERS = ("bayes_own", "global_lin", "global", "global_tcn")
 MODES = ("whatif", "levy", "bootstrap")
 STEP = 0.25
+# Iridis runs with more networks per variant: CHAIN_SEEDS=20 CHAIN_TAG=s20 (the first 5 networks are
+# the default run's, since seeds are base + 100 * variant + s)
+TAG = os.environ.get("CHAIN_TAG", "")
+SPREAD = np.round(np.arange(0.8, 2.001, 0.05), 2)  # calibration: band widening factors tried
 QUICK = False
+
+
+def stem(j: int, member: str) -> str:
+    return f"chain-{j}-{member}" + (f"-{TAG}" if TAG else "")
+
+
+def suffix() -> str:
+    return f"-{TAG}" if TAG else ""
 
 
 def available() -> tuple[str, ...]:
@@ -76,7 +88,7 @@ def oil_modes(data: dict, j: int, st: mb.Stats, last: int, t: np.ndarray, market
 def fit_nets(data: dict, info: dict, st: mb.Stats, last: int, variant: str, base_seed: int) -> tuple[list, list]:
     """The networks of one variant. Network s gets seed base_seed + 100 * VARIANTS.index(variant) + s,
     as macro_global.fit_nets and run_fold (base_seed = 1000 * fold), so the fold files' networks come back."""
-    seeds = 2 if QUICK else mg.SEEDS
+    seeds = 2 if QUICK else int(os.environ.get("CHAIN_SEEDS", mg.SEEDS))
     if hasattr(mg, "fit_nets"):
         return mg.fit_nets(data, info, st, last, variant, seeds, base_seed)
     months, k, x, y = mg.training_rows(mg.features(data, st), last)
@@ -144,43 +156,93 @@ def forward_choice(score: np.ndarray, fold: int, equal: int) -> int:
 
 # --- report ----------------------------------------------------------------------------------
 
+def empirical_crps(train_y: np.ndarray, y: np.ndarray) -> np.ndarray:
+    """CRPS [origins, outputs] of each output's empirical distribution of training-origin outcomes."""
+    out = np.full(y.shape, np.nan)
+    for c in range(y.shape[1]):
+        s, ok = train_y[:, c][np.isfinite(train_y[:, c])], np.isfinite(y[:, c])
+        if len(s) and ok.any():
+            out[ok, c] = mb.crps_samples(s[:, None], y[ok, c])
+    return out
+
+
+def calibration_factor(inside: np.ndarray, target: float = 0.9) -> float:
+    """inside: [factors, cells] whether each earlier outcome falls in the band widened by each
+    factor in SPREAD; the factor whose coverage is closest to the target."""
+    return float(SPREAD[np.argmin(np.abs(inside.mean(1) - target))])
+
+
 def report() -> None:
-    members = [m for m in MEMBERS if all((RUNS / f"chain-{j}-{m}.npz").exists() for j in range(mn.FOLDS))]
+    members = [m for m in MEMBERS if all((RUNS / f"{stem(j, m)}.npz").exists() for j in range(mn.FOLDS))]
     if not members:
-        raise SystemExit("no complete runs/macro/chain-<fold>-<member>.npz set yet")
+        raise SystemExit(f"no complete runs/macro/{stem(0, '<member>')}.npz set yet")
     W = simplex(len(members))
     equal = int(np.argmin(np.abs(W - 1 / len(members)).sum(1)))
+    data = mn.make_dataset(mn.V1_BLOCKS)
     folds = []
     for j in range(mn.FOLDS):
         v1 = mb.load(f"fold-{j}.json")
-        summ = {m: json.loads((RUNS / f"chain-{j}-{m}.json").read_text()) for m in members}
-        S = {mode: np.stack([np.load(RUNS / f"chain-{j}-{m}.npz")[mode] for m in members]).astype(float) for mode in MODES}
+        summ = {m: json.loads((RUNS / f"{stem(j, m)}.json").read_text()) for m in members}
+        S = {mode: np.stack([np.load(RUNS / f"{stem(j, m)}.npz")[mode] for m in members]).astype(float) for mode in MODES}
         ref = summ[members[0]]
         for m in members:
             assert summ[m]["test_dates"] == ref["test_dates"] and summ[m]["names"] == ref["names"], f"fold {j} {m}: origins differ"
         assert v1["test_dates"] == ref["test_dates"], f"fold {j}: v1 origins differ"
-        folds.append({"summ": summ, "S": S, "y": np.array(ref["y"], float), "clim": np.array(v1["models"]["climatology"]["crps"], float)})
+        train, test = mn.fold_indices(data["dates"], j)
+        y = np.array(ref["y"], float)
+        assert np.allclose(data["Y"][test], y, equal_nan=True), f"fold {j}: targets differ from the dataset"
+        folds.append({"summ": summ, "S": S, "y": y, "clim": np.array(v1["models"]["climatology"]["crps"], float),
+                      "clim_emp": empirical_crps(data["Y"][train], y)})
     names, groups = folds[0]["summ"][members[0]]["names"], np.array(folds[0]["summ"][members[0]]["groups"])
     H = np.array([int(n.split("@")[1]) for n in names])
     scale = np.nanmean(np.vstack([f["clim"] for f in folds]), 0)
+    scale_emp = np.nanmean(np.vstack([f["clim_emp"] for f in folds]), 0)
 
     def cols(grp, h="all"):
         return np.where((groups == grp) & ((H == h) if h != "all" else True))[0]
 
     # CRPS and 90% bands of every weight combination, per fold and mode
     combo = {mode: [] for mode in MODES}
+    eq_samples = {mode: [] for mode in MODES}  # the equal-weight mixture, for calibration
     for j, f in enumerate(folds):
         order = np.random.default_rng(1234 + j).permutation(f["S"]["whatif"].shape[1])
         y = f["y"]
         for mode in MODES:
             crps, lo, hi = [], [], []
-            for w in W:
+            for k, w in enumerate(W):
                 M = mixture(f["S"][mode], w, order)
                 crps.append(np.where(np.isfinite(y), mb.crps_samples(M, np.nan_to_num(y)), np.nan))
                 lo.append(np.quantile(M, 0.05, 0))
                 hi.append(np.quantile(M, 0.95, 0))
+                if k == equal:
+                    eq_samples[mode].append(M)
             combo[mode].append({"crps": np.array(crps), "lo": np.array(lo), "hi": np.array(hi)})
         print(f"report: fold {j} combinations scored", flush=True)
+
+    # Forward conformal calibration of the equal-weight mixture: per group, fold j widens (or narrows)
+    # every draw's distance from the median by the factor that put 90% of earlier folds' outcomes
+    # inside the band (factor 1 for fold 0).
+    factor = {mode: {g: [] for g in mb.GROUPS} for mode in MODES}
+    calibrated = {}
+    for mode in MODES:
+        inside, parts = [], {k: [] for k in ("crps", "lo", "hi")}
+        for j, f in enumerate(folds):
+            M, y = eq_samples[mode][j], f["y"]
+            med, q05, q95 = np.median(M, 0), np.quantile(M, 0.05, 0), np.quantile(M, 0.95, 0)
+            inside.append(np.array([(y >= med + s * (q05 - med)) & (y <= med + s * (q95 - med)) for s in SPREAD]))
+            crps, lo, hi = (np.full(y.shape, np.nan) for _ in range(3))
+            for g in mb.GROUPS:
+                c = cols(g)
+                ok = [np.isfinite(folds[i]["y"][:, c]) for i in range(j)]
+                s = 1.0 if j == 0 else calibration_factor(np.concatenate(
+                    [inside[i][:, :, c][:, ok[i]] for i in range(j)], 1))
+                factor[mode][g].append(s)
+                Ms = med[:, c] + s * (M[:, :, c] - med[:, c])
+                crps[:, c] = np.where(np.isfinite(y[:, c]), mb.crps_samples(Ms, np.nan_to_num(y[:, c])), np.nan)
+                lo[:, c], hi[:, c] = med[:, c] + s * (q05[:, c] - med[:, c]), med[:, c] + s * (q95[:, c] - med[:, c])
+            for k, v in (("crps", crps), ("lo", lo), ("hi", hi)):
+                parts[k].append(v)
+        calibrated[mode] = {k: np.vstack(v) for k, v in parts.items()}
 
     chosen = {mode: {} for mode in MODES}  # mode -> group -> [fold] combination index
     for mode in MODES:
@@ -210,11 +272,13 @@ def report() -> None:
             rows[(mode, m)] = assemble(mode, lambda g, j, s=single: s)
         rows[(mode, "equal")] = assemble(mode, lambda g, j: equal)
         rows[(mode, "forward")] = assemble(mode, lambda g, j, mode=mode: chosen[mode][g][j])
+        rows[(mode, "equal+cal")] = calibrated[mode]
     y_all = np.vstack([f["y"] for f in folds])
-    labels = [*members, "equal", "forward"]
+    labels = [*members, "equal", "equal+cal", "forward"]
 
-    def skill(M, c):
-        return 1 - np.nanmean(np.nanmean(M[:, c], 0) / scale[c])
+    def skill(M, c, ref=None):
+        ref = scale if ref is None else ref
+        return 1 - np.nanmean(np.nanmean(M[:, c], 0) / ref[c])
 
     def diff(A, B, c):
         d = np.nanmean((A[:, c] - B[:, c]) / scale[c], 1)
@@ -253,12 +317,29 @@ def report() -> None:
         out += ["", f"**{mode}: ensembles against each member** (scaled CRPS difference, Newey–West t; "
                 "negative: the ensemble is better)", "", "| Comparison | " + " | ".join(mb.GROUPS) + " |",
                 "|---|" + "---|" * len(mb.GROUPS)]
-        for e, others in (("equal", members), ("forward", [*members, "equal"])):
+        for e, others in (("equal", members), ("equal+cal", ["equal"]), ("forward", [*members, "equal"])):
             for m in others:
                 out.append(f"| {e} vs {m} | " + " | ".join(diff(rows[(mode, e)]['crps'], rows[(mode, m)]['crps'], cols(g))
                                                          for g in mb.GROUPS) + " |")
         out.append("")
-    out += ["## Lévy against bootstrap oil paths (forecast modes)", "",
+    out += ["## Against a stricter yardstick", "",
+            "Skill against the *empirical* distribution of each output's h-month changes over **all** training "
+            "origins of the fold, the yardstick `notes/verification.md` recommends. The v1 climatology above is "
+            "Gaussian and fitted on the first 54–70% of the training origins only.", "",
+            "| Mode | Target | " + " | ".join(labels) + " |", "|---|---|" + "---|" * len(labels)]
+    for mode in ("whatif", "levy"):
+        for grp in mb.GROUPS:
+            out.append(f"| {mode} | {grp} | " + " | ".join(f"{skill(rows[(mode, m)]['crps'], cols(grp), scale_emp):+.3f}"
+                                                         for m in labels) + " |")
+    out += ["", "## Calibration factors of `equal+cal`", "",
+            "Each fold scales every draw's distance from the median by the factor that put 90% of the earlier "
+            "folds' outcomes inside the band (1 for fold 0; grid 0.8–2.0).", "",
+            "| Mode | Target | " + " | ".join(f"fold {j}" for j in range(len(folds))) + " |",
+            "|---|---|" + "---|" * len(folds)]
+    for mode in ("whatif", "levy"):
+        for grp in mb.GROUPS:
+            out.append(f"| {mode} | {grp} | " + " | ".join(f"{s:.2f}" for s in factor[mode][grp]) + " |")
+    out += ["", "## Lévy against bootstrap oil paths (forecast modes)", "",
             "Scaled CRPS difference, levy minus bootstrap, with its Newey–West t (negative: the Lévy paths give the "
             "better knock-on forecast).", "", "| Model | " + " | ".join(mb.GROUPS) + " |", "|---|" + "---|" * len(mb.GROUPS)]
     for m in labels:
@@ -276,20 +357,20 @@ def report() -> None:
             "What-if skill of each member refitted here against its earlier file (same folds, seeds and settings; "
             "only the simulation noise differs).", "",
             "| Member | Earlier file | " + " | ".join(mb.GROUPS) + " |", "|---|---|" + "---|" * len(mb.GROUPS)]
-    for m, stem, get in (("bayes_own", "bayes-own-fold", lambda d: d["modes"]["whatif"]["crps"]),
+    for m, old_stem, get in (("bayes_own", "bayes-own-fold", lambda d: d["modes"]["whatif"]["crps"]),
                          ("global_lin", "global-fold", lambda d: d["models"]["global_lin"]["crps"]),
                          ("global", "global-fold", lambda d: d["models"]["global"]["crps"])):
-        if m not in members or not all(mb.load(f"{stem}-{j}.json") for j in range(len(folds))):
+        if m not in members or not all(mb.load(f"{old_stem}-{j}.json") for j in range(len(folds))):
             continue
-        old = np.vstack([np.array(get(mb.load(f"{stem}-{j}.json")), float) for j in range(len(folds))])
-        out.append(f"| {m} | `{stem}-*.json` | " + " | ".join(
+        old = np.vstack([np.array(get(mb.load(f"{old_stem}-{j}.json")), float) for j in range(len(folds))])
+        out.append(f"| {m} | `{old_stem}-*.json` | " + " | ".join(
             f"{skill(rows[('whatif', m)]['crps'], cols(g)):+.3f} vs {skill(old, cols(g)):+.3f}" for g in mb.GROUPS) + " |")
     # weights for later use (replay, scenarios): the combination with the lowest CRPS over all folds
     best = {mode: {grp: W[forward_choice(np.array([[np.nanmean(combo[mode][j]["crps"][k][:, cols(grp)] / scale[cols(grp)])
                                                      for k in range(len(W))] for j in range(len(folds))]),
                                          len(folds), equal)].tolist()
                    for grp in mb.GROUPS} for mode in MODES}
-    (RUNS / "chain-weights.json").write_text(json.dumps({"members": members, "weights": best,
+    (RUNS / f"chain-weights{suffix()}.json").write_text(json.dumps({"members": members, "weights": best,
                                                          "generated": datetime.now(UTC).isoformat(timespec="seconds")}))
     out += ["", "**Weights for the replay and the scenarios** (lowest CRPS over all 8 folds, on "
             f"({', '.join(members)})): " + "; ".join(f"{mode} " + ", ".join(f"{g} {'/'.join(f'{x:g}' for x in w)}"
@@ -300,8 +381,8 @@ def report() -> None:
         out += ["", f"**Sampler health (bayes_own):** max R-hat {max(d['max_r_hat'] for d in bayes)}, min ESS "
                 f"{min(d['min_ess'] for d in bayes)}, divergences {sum(d['divergences'] for d in bayes)}, "
                 f"{'all folds converged' if all(mb.converged(d) for d in bayes) else 'NOT all folds converged'}."]
-    (NOTES / "macro-chain-results.md").write_text("\n".join(out) + "\n", encoding="utf-8")
-    print(f"wrote {NOTES / 'macro-chain-results.md'}")
+    (NOTES / f"macro-chain-results{suffix()}.md").write_text("\n".join(out) + "\n", encoding="utf-8")
+    print(f"wrote {NOTES / f'macro-chain-results{suffix()}.md'}")
 
 
 # --- the 2026 closure: replay and scenario fan ------------------------------------------------
@@ -420,9 +501,9 @@ def replay(origin: str = REPLAY_ORIGIN) -> None:
 
 def save_member(S: dict, summary: dict, j: int, member: str) -> None:
     RUNS.mkdir(parents=True, exist_ok=True)
-    np.savez_compressed(RUNS / f"chain-{j}-{member}.npz", **S)
+    np.savez_compressed(RUNS / f"{stem(j, member)}.npz", **S)
     meta = {"generated": datetime.now(UTC).isoformat(timespec="seconds"), "job": os.environ.get("SLURM_JOB_ID")}
-    (RUNS / f"chain-{j}-{member}.json").write_text(json.dumps(summary | {"meta": meta}))
+    (RUNS / f"{stem(j, member)}.json").write_text(json.dumps(summary | {"meta": meta}))
 
 
 def main() -> None:
