@@ -7,5 +7,8 @@ for oil prices, the Fed's interest rate and the cost of living.
 - **Event rules and track:** [Context/event-rules.md](Context/event-rules.md)
 - **Design:** [docs/design.md](docs/design.md), with the pitch in [docs/pitch.md](docs/pitch.md)
   and the UI in [docs/ui.md](docs/ui.md)
+- **Technical notes:** the oil-price model in [docs/oil-price-model.md](docs/oil-price-model.md),
+  which knock-on links hold up in [docs/knock-on-validation.md](docs/knock-on-validation.md), and
+  cluster runs in [docs/iridis.md](docs/iridis.md)
 - **How the team works:** [coord/PROTOCOL.md](coord/PROTOCOL.md). New laptop? Start with
   [coord/BOOTSTRAP.md](coord/BOOTSTRAP.md).

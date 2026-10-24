@@ -52,7 +52,10 @@ Two stages, each a separate lane-sized piece:
 2. **Knock-on model.** From a change in flow, estimate the move in oil price, then in inflation,
    then the Fed's likely rate response, then cost-of-living measures. Start simple (elasticities
    or regressions on historical shocks, each link cited) rather than one big model. Users can
-   also drag the flow to run a "what if".
+   also drag the flow to run a "what if". Technical notes: the oil-price distribution model is in
+   `docs/oil-price-model.md`, and the tested links (oil → petrol, energy and headline CPI hold up
+   out of sample; core CPI, the Fed and mortgages are weak or unstable) are in
+   `docs/knock-on-validation.md`.
 
 Open questions: how to validate the hidden-ship estimate; which historical shocks to fit the
 chain on; US-only or also UK.
