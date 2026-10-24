@@ -73,6 +73,48 @@ def test_shock_response_matches_simulation():
     assert e[0, 0, 2] == pytest.approx(first * (1 + 0.5 + 0.25))  # momentum carries the move on
 
 
+def test_scale_floor_holds_in_calm_months():
+    post, st, info, data = toy(n=20_000)
+    post["phi"][:] = 5.0  # calm oil (all zero) makes exp(phi * v) vanish
+    post["nu"][:] = 1e6
+    info["floor"] = np.array([1.0, 1.0])
+    out = mb.simulate(post, st, info, data, np.array([40]), np.zeros((1, 1, 12)), np.random.default_rng(0))
+    assert out[:, 0, 0].std() == pytest.approx(1.0, rel=0.05)  # the floor, not ~0
+
+
+def test_drifting_volatility_grows_with_distance_from_training():
+    post, st, info, data = toy(n=4000)
+    post["nu"][:] = 1e6
+    post["sigma"][:] = 1.0
+    post["omega"], post["h_last"] = np.full((4000, 4), 0.5), np.zeros((4000, 4))
+    info["vgroup"] = np.array([0, 0])
+    st.last = 20
+    near, far = mb.simulate(post, st, info, data, np.array([21, 45]), np.zeros((1, 2, 12)), np.random.default_rng(0)).transpose(1, 0, 2)
+    # 24 more months of log-volatility drift: the median scale stays ~1, the tails fan out
+    tail = lambda x: np.quantile(np.abs(x), 0.95)  # noqa: E731
+    assert tail(far[:, 0]) > 2 * tail(near[:, 0])
+
+
+def test_futures_drift_centres_the_oil_paths():
+    rng = np.random.default_rng(0)
+    data = {"oil_m": np.r_[np.nan, rng.normal(0, 0.05, 200)]}
+    st = SimpleNamespace(x2=float(np.nanmean(data["oil_m"][1:] ** 2)))
+    drift = np.zeros((201, 12))
+    drift[:, 0] = 0.02
+    market = {"ovx": np.full(201, np.nan), "drift": drift}
+    p = mb.oil_paths(data, st, 200, np.array([150]), 20_000, rng, market)
+    assert p[:, 0, 0].mean() == pytest.approx(0.02, abs=0.002)
+    assert abs(p[:, 0, 5].mean()) < 0.002
+
+
+def test_responses_carry_on_past_the_oil_lags():
+    post, st, info, _ = toy(rho=0.5, b0=1.0)
+    e = mb.responses(post, st, info, np.log(1.10), months=36)
+    g = np.log(1.10)
+    assert e.shape[-1] == 36
+    assert e[0, 0, 35] == pytest.approx(g / (1 - 0.5), rel=1e-6)  # the geometric sum of the momentum
+
+
 def test_bootstrap_oil_paths_scale_with_recent_volatility():
     rng = np.random.default_rng(0)
     data = {"oil_m": np.r_[np.nan, rng.normal(0, 0.05, 200), np.full(3, 0.5)]}

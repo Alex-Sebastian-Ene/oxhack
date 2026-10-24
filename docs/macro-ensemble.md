@@ -8,7 +8,7 @@ oil-price layer in [oil-price-model.md](oil-price-model.md).
 |---|---|---|
 | `experiments/macro_data.py` | Fetches and aligns every input (monthly, 2000 on) with publication lags | `notes/macro-panel.md` |
 | `experiments/macro_nn.py` | Deep ensemble, baselines, stacker, folds, diagnostics, oil-shock responses | `notes/macro-nn-results.md` |
-| `experiments/macro_bayes.py` | Bayesian pass-through fitted by MCMC: pooled oil lags, momentum, asymmetry, volatility-state bands; what-if and genuine forecasts | `notes/macro-bayes-results.md` |
+| `experiments/macro_bayes.py` | Bayesian pass-through fitted by MCMC: pooled oil lags, momentum, asymmetry, volatility-driven bands (oil, own, drifting); what-if and genuine forecasts; benchmarks | `notes/macro-bayes-results.md`, `notes/macro-bayes-responses.csv` |
 | `experiments/flow_price.py` | Hormuz flow (AIS) → Brent: regression and 2026 closure event study | `notes/flow-price-link.md` |
 | `experiments/hdi_link.py` | Oil prices against UNDP Human Development Index (annual) | `notes/hdi-link.md` |
 | `cluster/iridis/macro_*.{sh,slurm}` | Iridis environment, 9-task main array, diagnostics array | |
@@ -218,77 +218,111 @@ on each fold's training months. It uses the same data, folds and v1 climatology 
   pooled towards a mean per target group and lag length, so short series borrow from their group.
 - **Momentum:** each series' last monthly change carries on (AR(1) on monthly changes). This is
   what the networks failed to use, and it is where short-horizon skill comes from.
-- **Rockets and feathers:** a per-series asymmetry, so oil rises and falls can pass through at
-  different rates.
-- **Bands:** Student-t errors whose scale grows with recent oil volatility. The band widens in oil
-  turmoil instead of everywhere, which uniform recalibration couldn't do.
-  - The scale has a floor: 5% of the series' sd, and 20% for policy rates, which move in discrete
-    steps and sit still for years. Without it, the ECB deposit rate (flat 2016–2022) split the
-    chains into two modes.
+- **Rockets and feathers:** a per-series asymmetry, so oil rises and falls can pass through with
+  different strength.
+- **Bands:** Student-t errors whose scale moves with:
+  - recent oil volatility (every variant);
+  - each series' own recent volatility, an EWMA of its past absolute changes. This is `--vol own`,
+    observation-driven like GARCH, with its feedback bounded below 0.9 so it stays stationary;
+  - or one drifting volatility per target group, a random walk. This is `--vol cdv`, the common
+    drifting volatility of Carriero, Clark & Marcellino (2016).
+  - The scale has a floor, added after the volatility terms: 5% of the series' sd, and 20% for
+    policy rates, which move in discrete steps and sit still for years. Without it, the ECB
+    deposit rate (flat 2016–2022) split the chains into two modes.
 - **Forecasts:** simulated month by month from each series' last *published* month (so unpublished
   months are nowcast), over 400 posterior draws.
 - **Two oil modes:**
   - *what-if*: the oil path that happened.
-  - *forecast*: oil paths block-bootstrapped from the training months and scaled to the volatility
-    at the origin. Nothing after the origin is known, so this is a genuine forecast.
+  - *forecast*: nothing after the origin is known. Oil paths are block-bootstrapped from the
+    training months, scaled to oil-options implied volatility at the origin (CBOE OVX, FRED
+    `OVXCLS`, from 2007-05) and centred on the WTI futures curve's slope (EIA `RCLC1`–`4`; EIA
+    stopped at 2024-04, so the last 18 origins have no drift).
 
-**Results:** run locally on 2026-10-24, 8 folds, 214 origins (2008-01 to 2025-10). Every fold
-converged: max R-hat 1.021, min ESS 190, no divergences. Skill is against the v1 climatology,
-over all horizons, with every column scored on the same folds.
+**Results:** run locally on 2026-10-24, 8 folds, 214 origins (2008-01 to 2025-10).
+- **Convergence:** Bayes and Bayes+own-vol converged on every fold, over every sampled site with
+  hyperparameters included (max R-hat ≤ 1.04, min ESS ≥ 133, no divergences).
+- **Bayes+CDV did not converge** on folds 3, 6 and 7 or on the all-data fit: its latent states
+  make every NUTS step hit the tree-depth limit at about 8 minutes a fold. It is left out and
+  needs Iridis (`VOL=cdv` in `cluster/iridis/macro_bayes.slurm`).
+- **Scoring:** skill is against the v1 climatology, over all horizons, with every row scored on
+  the same folds.
 
 | | Inflation | Unemployment | Rate | Cost |
 |---|---|---|---|---|
-| **Bayes, what-if** (oil path given) | **+0.211** | −0.013 | **+0.182** | **+0.264** |
-| **Bayes, forecast** (nothing after the origin) | **+0.105** | −0.005 | **+0.178** | +0.095 |
+| **Bayes+own-vol, what-if** (oil path given) | **+0.218** | −0.014 | **+0.217** | **+0.280** |
+| **Bayes+own-vol, forecast** (nothing after the origin) | **+0.106** | +0.007 | **+0.207** | +0.125 |
+| Bayes (oil volatility only), what-if | +0.212 | −0.014 | +0.195 | +0.264 |
 | Anchored ensemble mean (what-if) | +0.119 | −0.079 | −0.136 | +0.242 |
 | v1 ensemble mean (what-if) | +0.007 | +0.039 | +0.023 | +0.004 |
-| 90% coverage, Bayes what-if (target 90%) | 84% | 73% | 81% | 85% |
+| 90% coverage, Bayes+own-vol what-if (target 90%) | 85% | 74% | 84% | 87% |
 
-**Where the skill comes from.** Point-estimate versions of the same model, simulated with the same
-code (what-if, all horizons). These were a one-off check on 2026-10-24 and aren't yet a
-`macro_bayes.py` command.
+**Are the differences real?** These are Diebold–Mariano tests: Newey–West, 12 lags, all horizons.
+- Bayes+own-vol beats the anchored ensemble on inflation (t −4.2), rates (−4.1) and costs (−2.8).
+- Own volatility beats plain Bayes on rates (t −2.9) and costs (−3.8), but not on inflation (−1.2).
 
-| | Momentum only | + oil lags (least squares) | Bayes (MCMC) |
-|---|---|---|---|
-| Inflation | +0.047 | +0.166 | +0.211 |
-| Rate | +0.097 | −0.032 | +0.182 |
-| Cost | +0.056 | +0.250 | +0.264 |
+**Against standard benchmarks** (forecast mode, US CPI over 12 months):
 
-1. **For prices, the oil lags do most of the work.** The Bayesian layer adds about 0.04 skill on
-   inflation and raises 90% coverage from 79% to 84%.
+| | Skill | Bayes+own-vol minus it (t) |
+|---|---|---|
+| **Bayes+own-vol forecast** | **+0.134** | |
+| Cleveland Fed 1-year expected inflation (FRED `EXPINF1YR`) | +0.063 | −0.071 (−1.4) |
+| Michigan 1-year expectations (FRED `MICH`) | −0.001 | −0.135 (−0.9) |
+| Last 12-month pace carries on (random walk) | −0.143 | −0.277 (−2.0) |
+
+- **What this means:** the forecast is on par with the Cleveland Fed's model-based expectations
+  (nominally better, not significantly) and beats the random walk.
+- **A caveat in our favour:** the surveys are real-time, while we're scored on revised data. That
+  flatters us slightly, because seasonally adjusted CPI is revised only through its seasonal factors.
+
+**Where the skill comes from** (what-if, all horizons; least-squares versions of the same mean
+equation, `macro_bayes.py benchmarks`):
+
+| | Momentum only | + oil lags (least squares) | Bayes | Bayes+own-vol |
+|---|---|---|---|---|
+| Inflation | +0.042 | +0.164 | +0.212 | +0.218 |
+| Rate | +0.095 | −0.033 | +0.195 | +0.217 |
+| Cost | +0.057 | +0.250 | +0.264 | +0.280 |
+
+1. **For prices, the oil lags do most of the work.** The Bayesian layer adds about 0.05 skill on
+   inflation and lifts coverage.
 2. **For policy rates, pooling and fat tails turn overfitting into skill.** Least-squares oil lags
-   make rates worse, while the Bayesian version gives +0.18. Most of the gain is at 1 month (+0.26),
-   falling to +0.12 at 12 months: rate cycles carry on.
-3. **It forecasts without being told the oil path.**
-   - Inflation +0.075 at 1 month and +0.15 at 12 months.
-   - Rates +0.18.
-   - Costs about +0.10 at every horizon.
-   - With the oil path given, price skill grows with the horizon: inflation +0.10 at 1 month and
-     +0.30 at 12 months. Long-range price forecasts are therefore mostly a question of the oil
-     scenario.
+   make rates worse. Most of the gain is at 1 month (+0.31), falling to +0.15 at 12 months: rate
+   cycles carry on.
+3. **Horizons:**
+   - With the oil path given, price skill grows with the horizon: inflation +0.11 at 1 month and
+     +0.30 at 12 months, costs +0.20 and +0.36. Long-range price forecasts are mostly a question of
+     the oil scenario.
+   - Without it, inflation gets +0.07 to +0.16 and costs +0.11 to +0.14.
 4. **The 2026 closure** (fold 7, origin 2025-09, oil path given):
 
    | Target | Model | 90% band | Actual |
    |---|---|---|---|
-   | US CPI | ≈ +3.5% | 1.3–5.3% | +3.7% |
-   | US diesel | ≈ $5.01 | up to ≈ $6.58 | $6.29 (inside) |
-   | Jet fuel | +61% | +21% to +118% | +110% |
+   | US CPI | ≈ +3.5% | 2.0–4.9% | +3.7% |
+   | US diesel | ≈ $5.08 | up to ≈ $7.01 | $6.29 (inside) |
+   | Jet fuel | +62% | +22% to +116% | +110% |
 
-   The anchored networks' diesel band stopped at $5.74.
-5. **Responses to a +10% Brent move** (all-data fit, mean and 90% interval, 12 months):
-   - **Prices:** US CPI +0.37 (0.26–0.49), UK +0.37, euro area +0.44, diesel +6.2%, jet +8.2%,
-     fertiliser +6.3%.
+   From the calm origin 2025-03, the US CPI band (0.9–2.9) missed the actual 3.2.
+5. **Responses to a ±10% Brent move** (all-data fit, mean and 90% interval of the average effect,
+   12 months):
+   - **Prices:** US CPI +0.37 (0.27–0.47), UK +0.35, euro area +0.44, diesel +6.2%, jet +8.4%,
+     refineries +8.7%, fertiliser +6.6%.
    - **Rockets and feathers:**
-     - Diesel: asymmetry +0.14 (0.02–0.27), so +6.2% for a rise but −5.2% for a fall.
-     - Euro-area HICP: +0.28 (0.03–0.56).
-     - Paperboard: +0.21 (0.05–0.38).
+     - Diesel: asymmetry +0.18 (0.05–0.32), so +6.2% for a rise but −4.7% for a fall.
+     - Euro-area HICP: +0.27 (0.02–0.54).
+     - Paperboard: +0.23 (0.08–0.40).
+   - **36-month scenario:** the effects mostly settle within a year (US CPI +0.37 at 36 months).
    - **Unemployment** again has the wrong (demand) sign, so it isn't a what-if link.
-   - The per-month table for the what-if is `notes/macro-bayes-responses.csv`.
+   - **The table:** `notes/macro-bayes-responses.csv` has months 1–36. Months 13–36 are marked as
+     untested scenarios, and its interval is uncertainty about the average effect only.
 6. **Not solved:**
    - **Unemployment.** No model here beats the v1 ridge (+0.104). AR(1) on monthly changes can't
      tell survey noise from cycles; a latent trend component is the next thing to try.
-   - **Bands.** They are still short of 90%, worst in 2021–23.
-   - **Data vintages.** Everything is scored on revised data, not real-time vintages.
+   - **Bands.** 74–87% coverage, against 90%.
+   - **Data vintages.** We score on revised data, not real-time vintages.
+   - **Supply vs demand.** Oil moves aren't separated into supply and demand shocks, so the
+     what-if is a conditional forecast, not a causal supply-shock effect.
+   - **Joint ranges.** Series are independent given oil, so a range for a sum of series (a
+     household's cost) would be too narrow.
 
 ## Flow → Brent from AIS (`notes/flow-price-link.md`)
 
@@ -327,9 +361,10 @@ uv run experiments/macro_nn.py ablate no_ais 0            # one diagnostic on on
 uv run experiments/macro_nn.py final --variant v2_all     # oil-shock responses for a variant
 uv run experiments/macro_nn.py report                     # notes/macro-nn-results.md
 uv run experiments/macro_bayes.py check                   # tiny MCMC run
-uv run experiments/macro_bayes.py fold 0                  # ... to 7, and `final`; or on Iridis:
-#   sbatch --array=0-8 cluster/iridis/macro_bayes.slurm
-uv run experiments/macro_bayes.py report                  # notes/macro-bayes-results.md
+uv run experiments/macro_bayes.py fold 0 --vol own        # ... to 7, and `final`; --vol oil|own|cdv; or on Iridis:
+#   VOL=own sbatch --array=0-8 cluster/iridis/macro_bayes.slurm
+uv run experiments/macro_bayes.py benchmarks              # random walk, Cleveland Fed, Michigan, least-squares versions
+uv run experiments/macro_bayes.py report                  # notes/macro-bayes-results.md and macro-bayes-responses.csv
 uv run experiments/flow_price.py
 uv run experiments/hdi_link.py
 uv run --no-project --with pytest --with numpy --with scipy --with pandas --with xlrd --with openpyxl --with torch --with jax --with numpyro pytest -q tests
