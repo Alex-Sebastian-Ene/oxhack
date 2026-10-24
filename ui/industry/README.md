@@ -3,7 +3,7 @@
 Edward's strait page with his materials globe built in, aimed at industry users: which products an
 oil shock reaches, which countries make and ship them, and what it does to their price.
 Open `index.html` in a browser; it needs no server. It is the same page as the shared artifact
-<https://claude.ai/artifact/84rJe1aD8Vpe7KvAnq8a39> (version 20).
+<https://claude.ai/artifact/84rJe1aD8Vpe7KvAnq8a39> (version 23).
 
 ## What it shows
 
@@ -19,6 +19,46 @@ Open `index.html` in a browser; it needs no server. It is the same page as the s
   - **Click a country:** it floats with a flag tag, a short pop-up gives the main numbers, and the right
     panel has the full analysis in three tabs: Overview (key numbers and the fuel-cost chart), Industries
     (cost impact by industry) and Trade (what it makes, where its inputs come from and where it ships).
+
+## Your suppliers (Gemini reads the list, our numbers rate it)
+
+A card in the World view lets a company check its own purchases.
+
+1. **Read the list:** upload a supplier list or bill of materials (PDF, PNG, JPG, WEBP, CSV or text, up to 8 MB).
+   `extract_server.py` asks Gemini to list each item, which of our products it is (steel, jet fuel, aluminium,
+   fertiliser, plastics, crude oil and fuels, or other), the supplier country, the supplier and the quantity.
+   Gemini is told to copy only what the file says and not to guess.
+2. **Rate each item with our numbers only:** the product's 12-month price link (Seb's models), whether the supplier
+   country ships via Hormuz, its rank as a producer or exporter, and its exposure score.
+   - **High:** the supplier ships via Hormuz, or the price link gives +20% or more.
+   - **Medium:** +5% or more, or the supplier country's exposure score is 25 or more.
+   - **Low:** anything else.
+3. **Click an item** to show that product and supplier country on the map.
+
+The page labels the rows as read by Gemini (model, time, cached or not) and asks the reader to check them against the
+file. Gemini never supplies a number. **Try a sample list** uses a made-up list and no AI, so the card also works in the
+published page.
+
+Uploading is off by default. To run it locally, in PowerShell:
+
+```powershell
+$env:GEMINI_API_KEY = "your-key"
+```
+
+```powershell
+uv run ui/industry/extract_server.py
+```
+
+Then open `ui/industry/index.html?suppliers=1`, or `?suppliers=<url>` for a service elsewhere.
+
+- **Key:** stays in the environment of the machine running the service, never in the page, git or Linear.
+- **Origins:** the service answers only pages from disk or localhost. A deployment adds its own address in
+  `EXTRACT_ORIGINS`.
+- **Model:** `GEMINI_MODEL`, default `gemini-3.7-flash`.
+- **Quota:** it uses no Google Search tool, so it runs on the plain free-tier quota. Each file is cached in
+  `data/raw/extract/` (git-ignored), so the same file costs one request.
+
+Offline tests: `uv run --no-project --with pytest pytest -q tests/test_supplier_extract.py`.
 
 ## Where the numbers come from
 
