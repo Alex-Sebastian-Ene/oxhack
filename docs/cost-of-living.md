@@ -71,12 +71,16 @@ items don't overlap, so their weights add up.
 One Bayesian model for all 41 series, on monthly log changes (% of the price level), fitted by
 NUTS (2 chains, 500 warm-up, 1,000 draws per chain):
 
-    y[s,k] = a[k] + season[k, month] + rho[k] y[s-1,k] + E[s,k] (1 + kappa[k] D[s]) + e[s,k]
+    y[s,k] = a[k] + season[k, month] + rho[k] y[s-1,k] + E[s,k] (1 + kappa[k] D[s]) + F[s,k] + e[s,k]
     E[s,k] = sum_l B[k,l] x[s-l] + sum_l G[k,l] g_r(k)[s-l]
+    F[s,k] = sum_l C[k,l] grain[s-l]   (bread and cereals only; 0 for every other series)
     e[s,k] = sigma[k] exp(phi[k] v[s] + psi[k] D[s]) z[s,k],   z ~ Student-t(nu[k])
 
 - **E: energy-cost pass-through.** Brent (x) and the region's gas price (g), lags 0–12, or 0–2
   for motor fuel and air fares.
+- **F: grain prices for bread and cereals** (the mean monthly log change of IMF wheat and maize),
+  lags 0–12, in all three regions. It was added after the comparison below, and is the only food
+  input the main model keeps.
 - **D: supply-disruption months.** 2022-03 to 2022-12 (Russia's invasion and the embargoes) and
   2026-03 onwards (the Hormuz closure).
   - **kappa** is the extra share of energy-cost pass-through in those months. It is pooled across
@@ -90,11 +94,14 @@ NUTS (2 chains, 500 warm-up, 1,000 draws per chain):
 - **Noise in forecasts:** a bootstrap of the fitted standardised residual vectors, one whole month
   at a time. The items keep their cross-correlation, so the composite's band is not artificially
   narrow.
-- **Food-driver version** (`COL_FOOD=1`, runs in `runs/col-food`): adds grain and urea lags 0–12 for
-  the food items, restaurants, the rest of the basket and headline, outside the supply-shock
-  multiplier. It is scored on the same folds and seeds as the base model. Each run also breaks
-  every series' change in the 2022 and 2026 windows into the part each driver group's moves
-  explain: oil, gas, grain, urea.
+- **Versions** (`COL_FOOD`), each with its own runs folder and scored on the same folds and seeds:
+  - `bread`, the default and main model (`runs/col-food-bread`): grain for bread and cereals.
+  - `0`, the base model with oil and gas only (`runs/col`), which the main model replaced.
+  - `1`, grain and urea for every food item, restaurants, the rest of the basket and headline
+    (`runs/col-food`). Tested and rejected.
+- **Contributions:** every run also breaks each series' change in the 2022 and 2026 windows into
+  the part each driver group's moves explain (oil, gas, and grain or urea where the version has
+  them).
 
 **Benchmarks:**
 - **Average link:** OLS on the same oil and gas lags with month terms and normal errors, fitted on
@@ -130,12 +137,39 @@ NUTS (2 chains, 500 warm-up, 1,000 draws per chain):
 | Scenario fans | From Feb 2026: no closure against 25%, 50% and a full 2026-sized closure. How far the band shifts and widens |
 | Sampler health | Fits with R-hat above 1.05 or ESS below 100 are left out of every table |
 
-## Status (2026-10-24)
+## Status (2026-10-25)
 
 - **Done:**
   - Data for 41 series, the weights, and the event analysis.
   - The model, the report and the Iridis scripts.
-  - 12 tests (all passing, with the food switch off and on).
+  - 12 tests (all passing in all three versions).
+- **Main model (adopted 2026-10-25): oil and gas for every series, plus grain prices for bread
+  and cereals.**
+  - Iridis job 1972769; R-hat 1.007–1.028, ESS 166–513, no divergences.
+  - `notes/cost-of-living.md` and the three CSVs now come from it. Out of sample:
+  - **Against the average link:** better at every horizon, −0.18 ± 0.02 at 1 month to −0.08 ± 0.01
+    at 12.
+  - **Composite against direct headline:**
+    - US: better up to 6 months (−0.08 ± 0.02, −0.09 ± 0.02, −0.06 ± 0.02).
+    - Euro area: −0.02 ± 0.01 at 1 month, just under 2 errors.
+    - UK: no difference.
+  - **Brent paths: Lévy is best at 3–12 months.**
+    - Against daily Student-t paths: −0.77 ± 0.51 at 12 months.
+    - Against a monthly GARCH-t: −1.98 ± 1.10 at 12 months.
+    - At 1 month it is level with Student-t and well ahead of the monthly model (CRPS 4.02 against
+      5.28).
+  - **2026 test (fitted to Feb 2026): the bands hold 44 of 44 outcomes,** against 36 without the
+    supply-shock terms and 37 for the average link. The median miss is 2.6 pp, against 3.2 and 3.2.
+    - Motor fuel: UK +23.7% predicted against +27.4% actual; euro area +27.4% against +25.4%; US
+      +34.5% against +30.8%.
+  - **2022 test: still missed.** 14 of 44 outcomes inside the bands, with misses of about 12 pp.
+  - **Calibration:** 73–94% of outcomes inside the 90% bands, against 61–87% for the average link.
+  - **Scenario from Feb 2026, 12 months on.** A 2026-sized closure lifts cost-of-living inflation:
+    - US: from +2.5% to +4.7%.
+    - UK: from +2.6% to +4.3%.
+    - Euro area: from +2.0% to +4.5%.
+    - It widens the 90% band from 3.0–4.3 pp to 6.4–7.8 pp.
+- **History:** the runs below led to the main model.
 - **First full run (Iridis job 1972141): discarded.**
   - The fits that contain supply-disruption months did not converge: the 2026 test fit had R-hat
     2.2, the all-data fit 2.5, with effective sample sizes near 1. The early folds had R-hat
@@ -145,8 +179,9 @@ NUTS (2 chains, 500 warm-up, 1,000 draws per chain):
     the CPI gas index as its "gas price", and the gas item on its own current change. That makes
     the posterior degenerate.
   - Fixed: the driver key is now `henry_hub`, and a test checks that keys never clash.
-- **Rerun (Iridis job 1972228): all 11 fits converged.** It was then refitted at 1,000 draws per
-  chain (job 1972574), and that run is what `notes/cost-of-living.md` reports.
+- **Base model rerun (Iridis job 1972228): all 11 fits converged.** It was then refitted at 1,000
+  draws per chain (job 1972574). This base model, with oil and gas only, is what the main model
+  replaced; the verdicts below are its own.
   - Convergence: R-hat 1.006–1.021, ESS 200–581, no divergences.
   - Iridis reproduced the laptop's fold-1 refit to every digit (same seed and draws).
   - Verdicts:
@@ -217,7 +252,7 @@ NUTS (2 chains, 500 warm-up, 1,000 draws per chain):
   - **Grain → bread** (all data, per sustained +10% grain move, 12 months on): US +0.69% (0.51 to
     0.86), UK +0.66% (0.25 to 1.03), euro area +0.32% (0.14 to 0.51).
   - **Verdict:** unlike the full version it never does worse beyond noise, and it clearly improves
-    US bread. It is a candidate for the main model. The evidence is strongest in the US.
+    US bread. The evidence is strongest in the US. Adopted as the main model on 2026-10-25.
 - **Already clear from the data (no model fit needed):** see the event tables in
   `notes/cost-of-living.md`. In February–September 2026, against the average link given the
   actual oil and gas:
@@ -233,10 +268,11 @@ NUTS (2 chains, 500 warm-up, 1,000 draws per chain):
 
 ```bash
 uv run experiments/cost_of_living.py events            # event misses and fuel ratios (no MCMC)
-uv run experiments/cost_of_living.py fit fold-3        # one fit; names: fold-0..7, event-2022, event-2026, final
+uv run experiments/cost_of_living.py fit fold-3        # one fit of the main model; names: fold-0..7, event-2022, event-2026, final
 uv run experiments/cost_of_living.py check event-2026  # tiny sampler, to smoke-test the pipeline
 uv run experiments/cost_of_living.py report            # notes/cost-of-living.md and the CSVs
-COL_FOOD=1 uv run experiments/cost_of_living.py fit fold-3  # the same fit with grain and urea drivers
+COL_FOOD=0 uv run experiments/cost_of_living.py fit fold-3  # the oil-and-gas-only base
+COL_FOOD=1 uv run experiments/cost_of_living.py fit fold-3  # grain and urea for every food item (rejected)
 ```
 
 Fit on Iridis rather than the laptop: a fold takes about a minute there. Copy up `experiments/`,
@@ -262,7 +298,9 @@ bread-only version (`COL_FOOD=bread`). All use 1,000 draws per chain (`COL_SAMPL
   1–12 months on, in normal and supply-disruption months.
   - Includes its weighted contribution to the region's composite (percentage points of headline).
 - `notes/cost-of-living-contributions.csv`: in the 2022 and 2026 windows, the part of each series'
-  change that each driver's moves explain (oil, gas, grain, urea), month by month, next to the actual.
+  change that each driver's moves explain (oil, gas, and grain for bread), month by month, next to
+  the actual.
+- All three CSVs come from the main model.
   - Columns: `base_month, months_after, series, region, kind, driver, contribution_pp, actual_pp,
     generated`.
 
@@ -277,9 +315,9 @@ bread-only version (`COL_FOOD=bread`). All use 1,000 draws per chain (`COL_SAMPL
   - US fruit and vegetables is one index.
   - Euro-area weights are for the current euro area, while the indices are the 19-country series.
 - **Yearly Lévy fits.** An origin in October uses a fit that ends the previous December.
-- **Food has oil and gas as its only drivers.**
-  - Grain and urea for every food item made forecasts worse, so they stay out of the main model.
-    Grain for bread alone helps US bread and harms nothing beyond noise.
+- **Food is driven by oil, gas and, for bread, grain.**
+  - Grain and urea for every food item made forecasts worse, so they stay out.
+  - Grain for bread alone helps US bread and harms nothing beyond noise, so the main model has it.
   - 2022's food surge is outside what the model can explain, and it shows in the event table.
   - A leaner food term might do better: one 12-month grain change per item, or vegetable oils for
     oils and fats. That is untested.

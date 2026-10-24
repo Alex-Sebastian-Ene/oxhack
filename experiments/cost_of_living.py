@@ -24,11 +24,11 @@ the basket and headline inflation, on their monthly log changes (% of the price 
 - season: month-of-year terms for series that are not seasonally adjusted (UK, euro area).
 - The rest of the basket is headline minus the weighted items, with each region's latest basket
   weights, so the composite (weighted items + rest) adds up to headline inflation exactly.
-- COL_FOOD=1 adds food inputs: the monthly log change of grain prices (the mean of wheat and
-  maize, IMF) and of urea (World Bank), lags 0..12, for the food series, restaurants, the rest of the
-  basket and headline: + sum_l F[k,l] grain[s-l] + sum_l U[k,l] urea[s-l]. Its runs go to
-  runs/col-food, so the two versions are compared on the same folds. COL_FOOD=bread is the targeted
-  version: grain prices for bread and cereals only, no urea (runs/col-food-bread).
+- Bread and cereals also take grain prices (the monthly log change of the mean of IMF wheat and
+  maize), lags 0..12: + sum_l F[k,l] grain[s-l]. This is the main model (COL_FOOD=bread, the default,
+  runs/col-food-bread). It was adopted after beating the oil-and-gas-only base (COL_FOOD=0,
+  runs/col) on the same folds. COL_FOOD=1 gives grain and urea to every food series, restaurants,
+  the rest of the basket and headline (+ sum_l U[k,l] urea[s-l]); it scored worse (runs/col-food).
 
 Forecasts simulate every series month by month. The noise is a bootstrap of the fitted
 standardised residual vectors, so items keep the correlations they had and the composite band is
@@ -72,11 +72,13 @@ import macro_data as md  # noqa: E402
 import oil_chain as oc  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
-# COL_FOOD: 0 = oil and gas only; 1 = grain and urea for every food series; bread = grain prices for
-# bread and cereals only. Each version writes its own runs folder, so all are scored on the same folds.
-FOOD_MODE = os.environ.get("COL_FOOD", "0")
+# COL_FOOD: bread = the main model, oil and gas for every series plus grain prices for bread and
+# cereals; 0 = oil and gas only (the base it was tested against); 1 = grain and urea for every food
+# series (tested, worse). Each version writes its own runs folder, so all are scored on the same folds.
+FOOD_MODE = os.environ.get("COL_FOOD", "bread")
 FOOD = FOOD_MODE != "0"
 RUNS_BASE, RUNS_FOOD, RUNS_BREAD = ROOT / "runs" / "col", ROOT / "runs" / "col-food", ROOT / "runs" / "col-food-bread"
+RUNS_MAIN = RUNS_BREAD
 RUNS = {"0": RUNS_BASE, "1": RUNS_FOOD, "bread": RUNS_BREAD}[FOOD_MODE]
 NOTES, LEVY_RUNS = ROOT / "notes", ROOT / "runs" / "levy"
 START = "2000-01-01"
