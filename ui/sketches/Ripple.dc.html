@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Ripple what-if</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0B0F14}
+a{color:#7CC0EA}a:hover{color:#A9D6F2}
+input[type=range]{accent-color:#F0A23B}
+</style>
+</helmet>
+<div style="font-family: 'IBM Plex Sans', system-ui, sans-serif; color: #E7ECF2; background: #0B0F14; min-height: 980px; box-sizing: border-box; padding: 24px; display: flex; flex-direction: column; gap: 18px">
+
+<header style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px">
+  <div style="display: flex; flex-direction: column; gap: 4px">
+    <h1 style="margin: 0; font-size: 26px; font-weight: 600">What if the flow through Hormuz changes?</h1>
+    <p style="margin: 0; font-size: 14px; color: #A3AFBD">Drag the flow. Every step of the chain shows today's value, the modelled value, and where each comes from.</p>
+  </div>
+  <a href="Main.dc.html" style="font-size: 14px; min-height: 44px; display: inline-flex; align-items: center">Back to live view</a>
+</header>
+
+<section aria-label="Scenario" style="background: #121821; border: 1px solid #222C38; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 14px">
+  <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 20px">
+    <label for="flow" style="font-size: 15px; font-weight: 500">Flow through the strait vs today</label>
+    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 34px; font-weight: 500; color: {{flowColor}}; min-width: 120px">{{flowLabel}}</span>
+    <sc-if value="{{isScenario}}" hint-placeholder-val="{{ false }}">
+      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 1px; padding: 3px 8px; border-radius: 4px; border: 1px solid #F0A23B; color: #F5BD6E">SCENARIO, NOT LIVE</span>
+    </sc-if>
+  </div>
+  <input id="flow" type="range" min="-100" max="20" step="5" value="{{flow}}" onChange="{{onFlow}}" style="width: 100%; min-height: 44px">
+  <div style="display: flex; flex-wrap: wrap; gap: 8px">
+    <button type="button" onClick="{{presetToday}}" style="min-height: 44px; padding: 0 14px; border-radius: 6px; border: 1px solid #2B3644; background: #1B2430; color: #E7ECF2; font: inherit; font-size: 14px">Today</button>
+    <button type="button" onClick="{{presetMinor}}" style="min-height: 44px; padding: 0 14px; border-radius: 6px; border: 1px solid #2B3644; background: #1B2430; color: #E7ECF2; font: inherit; font-size: 14px">Harassment, −20%</button>
+    <button type="button" onClick="{{presetMajor}}" style="min-height: 44px; padding: 0 14px; border-radius: 6px; border: 1px solid #2B3644; background: #1B2430; color: #E7ECF2; font: inherit; font-size: 14px">Major disruption, −50%</button>
+    <button type="button" onClick="{{presetClosed}}" style="min-height: 44px; padding: 0 14px; border-radius: 6px; border: 1px solid #F0A23B; background: #1B2430; color: #F5BD6E; font: inherit; font-size: 14px">Strait closed, −100%</button>
+  </div>
+  <p style="margin: 0; font-size: 13px; color: #A3AFBD">Bypass pipelines (Saudi East–West, UAE Habshan–Fujairah) can carry about <span style="font-family: 'IBM Plex Mono', monospace; color: #E7ECF2">[X.X] mb/d</span> around the strait, so net loss is <span style="font-family: 'IBM Plex Mono', monospace; color: #E7ECF2">[X.X] mb/d</span>. Source: EIA chokepoints, [year].</p>
+</section>
+
+<section aria-label="Knock-on chain" style="display: flex; flex-wrap: wrap; gap: 12px; align-items: stretch">
+  <sc-for list="{{chain}}" as="item" hint-placeholder-count="5">
+    <div style="flex: 1 1 220px; min-width: 0; display: flex; align-items: stretch; gap: 12px">
+      <article style="flex: 1 1 auto; min-width: 0; background: #121821; border: 1px solid #222C38; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 10px">
+        <div style="display: flex; justify-content: space-between; gap: 8px; align-items: center">
+          <h2 style="margin: 0; font-size: 14px; font-weight: 600">{{item.title}}</h2>
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 1px; padding: 2px 6px; border-radius: 4px; border: 1px solid #B9A6E8; color: #CBBDF0">MODELLED</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 2px">
+          <span style="font-size: 12px; color: #A3AFBD">Today</span>
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 18px">{{item.today}}</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 2px">
+          <span style="font-size: 12px; color: #A3AFBD">In this scenario</span>
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 22px; color: {{item.color}}">{{item.scenario}}</span>
+          <span style="font-size: 13px; color: {{item.color}}">{{item.direction}}</span>
+        </div>
+        <div aria-hidden="true" style="height: 8px; border-radius: 4px; background: #1B2430; overflow: hidden">
+          <div style="height: 8px; width: {{item.bar}}; background: {{item.color}}"></div>
+        </div>
+        <p style="margin: 0; font-size: 11px; color: #8794A3; font-family: 'IBM Plex Mono', monospace">{{item.source}}</p>
+      </article>
+      <sc-if value="{{item.notLast}}" hint-placeholder-val="{{ true }}">
+        <div aria-hidden="true" style="display: flex; align-items: center; color: #6F7E8F">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10h12M11 5l5 5-5 5"></path></svg>
+        </div>
+      </sc-if>
+    </div>
+  </sc-for>
+</section>
+<p style="margin: -6px 0 0; font-size: 12px; color: #8794A3">Bars show direction and rough strength only (sketch). Scenario values come from the model once it exists.</p>
+
+<div style="display: flex; flex-wrap: wrap; gap: 16px">
+  <section aria-label="Fed decision" style="flex: 1 1 420px; min-width: 0; background: #121821; border: 1px solid #222C38; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 12px">
+    <h2 style="margin: 0; font-size: 16px; font-weight: 600">Next Fed meeting, [date]</h2>
+    <p style="margin: 0; font-size: 13px; color: #A3AFBD">An oil shock pushes inflation up but slows growth, so the Fed may look through it. We show both our model and what markets are pricing.</p>
+    <div style="display: grid; grid-template-columns: minmax(0, 1fr) repeat(3, minmax(0, 72px)); gap: 8px 12px; font-size: 14px; align-items: center">
+      <span></span><span style="color: #A3AFBD; font-size: 12px">Cut</span><span style="color: #A3AFBD; font-size: 12px">Hold</span><span style="color: #A3AFBD; font-size: 12px">Hike</span>
+      <span>Markets ([source], [date])</span><span style="font-family: 'IBM Plex Mono', monospace">[x%]</span><span style="font-family: 'IBM Plex Mono', monospace">[x%]</span><span style="font-family: 'IBM Plex Mono', monospace">[x%]</span>
+      <span>Our model, this scenario</span><span style="font-family: 'IBM Plex Mono', monospace; color: #F5BD6E">[x%]</span><span style="font-family: 'IBM Plex Mono', monospace; color: #F5BD6E">[x%]</span><span style="font-family: 'IBM Plex Mono', monospace; color: #F5BD6E">[x%]</span>
+    </div>
+  </section>
+
+  <section id="method" aria-label="How each link works" style="flex: 2 1 520px; min-width: 0; background: #121821; border: 1px solid #222C38; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 10px">
+    <h2 style="margin: 0; font-size: 16px; font-weight: 600">How each link is modelled</h2>
+    <div style="overflow-x: auto">
+      <table style="width: 100%; border-collapse: collapse; font-size: 13px; min-width: 520px">
+        <thead><tr style="text-align: left; color: #A3AFBD"><th style="padding: 6px 8px; font-weight: 500">Link</th><th style="padding: 6px 8px; font-weight: 500">Method</th><th style="padding: 6px 8px; font-weight: 500">Data</th><th style="padding: 6px 8px; font-weight: 500">Lag</th></tr></thead>
+        <tbody>
+          <tr style="border-top: 1px solid #222C38"><td style="padding: 8px">Flow → Brent</td><td style="padding: 8px">Price response to past supply shocks</td><td style="padding: 8px; color: #C2CBD5">EIA daily Brent, [shock list]</td><td style="padding: 8px; font-family: 'IBM Plex Mono', monospace">[days]</td></tr>
+          <tr style="border-top: 1px solid #222C38"><td style="padding: 8px">Brent → pump price</td><td style="padding: 8px">Pass-through regression</td><td style="padding: 8px; color: #C2CBD5">EIA weekly retail gasoline</td><td style="padding: 8px; font-family: 'IBM Plex Mono', monospace">[weeks]</td></tr>
+          <tr style="border-top: 1px solid #222C38"><td style="padding: 8px">Energy → CPI</td><td style="padding: 8px">CPI energy weight + second-round effects</td><td style="padding: 8px; color: #C2CBD5">BLS CPI components via FRED</td><td style="padding: 8px; font-family: 'IBM Plex Mono', monospace">[months]</td></tr>
+          <tr style="border-top: 1px solid #222C38"><td style="padding: 8px">CPI → Fed</td><td style="padding: 8px">Policy rule vs market pricing</td><td style="padding: 8px; color: #C2CBD5">FRED fed funds, futures / prediction markets</td><td style="padding: 8px; font-family: 'IBM Plex Mono', monospace">[meetings]</td></tr>
+          <tr style="border-top: 1px solid #222C38"><td style="padding: 8px">Fed → mortgages</td><td style="padding: 8px">Spread over Treasuries</td><td style="padding: 8px; color: #C2CBD5">Freddie Mac 30-year rate via FRED</td><td style="padding: 8px; font-family: 'IBM Plex Mono', monospace">[weeks]</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":980}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { flow: 0 };
+}
+renderVals() {
+const f = this.state.flow;
+const up = f < 0;
+const none = f === 0;
+const amber = '#F5BD6E';
+const blue = '#7CC0EA';
+const grey = '#C2CBD5';
+const color = none ? grey : (up ? amber : blue);
+const sign = f > 0 ? '+' : (f < 0 ? '−' : '');
+const flowLabel = none ? 'Today' : sign + Math.abs(f) + '%';
+const strength = (k) => Math.min(100, Math.round(Math.abs(f) * k)) + '%';
+const dir = (higher, lower) => none ? 'No change' : (up ? higher : lower);
+const steps = [
+{ title: 'Flow through Hormuz', today: '[X.X] mb/d', scenario: none ? '[X.X] mb/d' : flowLabel + ' · [X.X] mb/d', direction: dir('Less oil reaches market', 'More oil reaches market'), bar: strength(1), source: 'Our estimate · AIS + SAR', color: none ? grey : (up ? amber : blue) },
+{ title: 'Brent crude', today: '[$XX.XX]', scenario: '[$XX.XX]', direction: dir('Higher', 'Lower'), bar: strength(0.9), source: 'EIA daily spot · [date]', color },
+{ title: 'Pump and energy prices', today: '[$X.XX]/gal', scenario: '[$X.XX]/gal', direction: dir('Higher in [N] weeks', 'Lower in [N] weeks'), bar: strength(0.7), source: 'EIA weekly retail · [date]', color },
+{ title: 'Inflation (CPI)', today: '[X.X%] y/y', scenario: '[X.X%] y/y', direction: dir('Higher', 'Lower'), bar: strength(0.45), source: 'BLS via FRED · [month]', color },
+{ title: 'Fed rate and mortgages', today: '[X.XX%] · [X.XX%]', scenario: '[X.XX%] · [X.XX%]', direction: dir('Pressure to hold or hike', 'Room to cut'), bar: strength(0.3), source: 'FRED · Freddie Mac · [date]', color }
+];
+const chain = steps.map((s, i) => ({ ...s, notLast: i < steps.length - 1 }));
+const set = (v) => () => this.setState({ flow: v });
+return {
+flow: f,
+flowLabel,
+flowColor: color,
+isScenario: !none,
+chain,
+onFlow: (e) => this.setState({ flow: Number(e.target.value) }),
+presetToday: set(0),
+presetMinor: set(-20),
+presetMajor: set(-50),
+presetClosed: set(-100)
+};
+}
+}
+</script>
+</body>
+</html>

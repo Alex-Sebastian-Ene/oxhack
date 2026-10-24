@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>What it means for you</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0B0F14}
+a{color:#7CC0EA}a:hover{color:#A9D6F2}
+input[type=range]{accent-color:#F0A23B}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; font-family: 'IBM Plex Sans', system-ui, sans-serif; color: #E7ECF2; background: #0B0F14; padding: 20px 16px; display: flex; flex-direction: column; gap: 14px">
+
+<div style="display: flex; flex-direction: column; gap: 4px">
+  <h1 style="margin: 0; font-size: 22px; font-weight: 600">What it means for you</h1>
+  <p style="margin: 0; font-size: 13px; color: #A3AFBD">If less oil gets through Hormuz, here is what changes in your month.</p>
+</div>
+
+<div role="group" aria-label="Country" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px">
+  <button type="button" onClick="{{pickUS}}" style="min-height: 44px; border-radius: 8px; border: 1px solid {{usBorder}}; background: {{usBg}}; color: #E7ECF2; font: inherit; font-size: 14px">United States</button>
+  <button type="button" onClick="{{pickUK}}" style="min-height: 44px; border-radius: 8px; border: 1px solid {{ukBorder}}; background: {{ukBg}}; color: #E7ECF2; font: inherit; font-size: 14px">United Kingdom</button>
+</div>
+
+<div style="background: #121821; border: 1px solid #222C38; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 8px">
+  <div style="display: flex; justify-content: space-between; align-items: baseline">
+    <label for="phoneflow" style="font-size: 14px">Oil through the strait</label>
+    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 20px; color: {{flowColor}}">{{flowLabel}}</span>
+  </div>
+  <input id="phoneflow" type="range" min="-100" max="0" step="10" value="{{flow}}" onChange="{{onFlow}}" style="width: 100%; min-height: 44px">
+  <p style="margin: 0; font-size: 11px; color: #8794A3; font-family: 'IBM Plex Mono', monospace">Today's estimate [X.X] mb/d · MODELLED</p>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 8px">
+  <sc-for list="{{costs}}" as="c" hint-placeholder-count="4">
+    <div style="background: #121821; border: 1px solid #222C38; border-radius: 12px; padding: 12px 14px; display: flex; justify-content: space-between; align-items: center; gap: 10px">
+      <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+        <span style="font-size: 14px; font-weight: 500">{{c.label}}</span>
+        <span style="font-size: 11px; color: #8794A3; font-family: 'IBM Plex Mono', monospace">{{c.source}}</span>
+      </div>
+      <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px">
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; color: {{flowColor}}">{{c.delta}}</span>
+        <span style="font-size: 11px; color: #A3AFBD">{{c.unit}}</span>
+      </div>
+    </div>
+  </sc-for>
+</div>
+
+<div style="background: #1B2430; border-radius: 12px; padding: 14px; display: flex; justify-content: space-between; align-items: center">
+  <span style="font-size: 15px; font-weight: 600">Your month, total</span>
+  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 22px; color: {{flowColor}}">{{total}}</span>
+</div>
+
+<a href="Ripple.dc.html" style="font-size: 14px; min-height: 44px; display: inline-flex; align-items: center">Why? See the whole chain</a>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { flow: -30, country: 'US' };
+}
+renderVals() {
+const f = this.state.flow;
+const us = this.state.country === 'US';
+const cur = us ? '$' : '£';
+const none = f === 0;
+const d = none ? cur + '0' : '+' + cur + '[X]';
+const costs = us ? [
+{ label: 'Petrol', source: 'EIA retail · [date]', delta: d, unit: 'per month, [N] mi/week' },
+{ label: 'Home energy', source: 'EIA / BLS · [date]', delta: d, unit: 'per month' },
+{ label: 'Groceries', source: 'BLS CPI food · [month]', delta: d, unit: 'per month' },
+{ label: 'Mortgage payment', source: 'Freddie Mac via FRED', delta: d, unit: 'per month, [$XXXk] loan' }
+] : [
+{ label: 'Petrol', source: 'UK fuel prices · [date]', delta: d, unit: 'per month, [N] mi/week' },
+{ label: 'Energy bill', source: 'Ofgem price cap · [quarter]', delta: d, unit: 'per month' },
+{ label: 'Groceries', source: 'ONS CPI food · [month]', delta: d, unit: 'per month' },
+{ label: 'Mortgage payment', source: 'Bank of England · [date]', delta: d, unit: 'per month, [£XXXk] loan' }
+];
+return {
+flow: f,
+flowLabel: none ? 'Today' : '−' + Math.abs(f) + '%',
+flowColor: none ? '#C2CBD5' : '#F5BD6E',
+costs,
+total: none ? cur + '0' : '+' + cur + '[XX]',
+usBorder: us ? '#4EA8DE' : '#2B3644',
+usBg: us ? '#14283A' : '#121821',
+ukBorder: us ? '#2B3644' : '#4EA8DE',
+ukBg: us ? '#121821' : '#14283A',
+pickUS: () => this.setState({ country: 'US' }),
+pickUK: () => this.setState({ country: 'UK' }),
+onFlow: (e) => this.setState({ flow: Number(e.target.value) })
+};
+}
+}
+</script>
+</body>
+</html>

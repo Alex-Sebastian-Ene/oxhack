@@ -3,11 +3,18 @@
 Draft. The product itself is in `docs/design.md`; the screens are in `docs/ui.md`. Judging
 criteria and time limits go in `Context/event-rules.md` once we have them (TODO).
 
+## The hook we have now (verify first)
+
+Hormuz is in the news: Iran declared the strait closed in March 2026, and published estimates of
+what still gets through disagree by about three times (trackers ~3.5 mb/d, US officials ~10 mb/d),
+with most traffic reportedly running dark. Sources and caveats are in `docs/ideas.md`. A five-moment
+storyboard is on the design canvas (board Q) and in the "Demo moments" list in `docs/ideas.md`.
+
 ## The story in one breath
 
 Oil runs through everything: fuel, food, inflation, interest rates, the cost of living. Much of
 the world's seaborne oil passes through one narrow strait, Hormuz, and some of the tankers there
-are ghosts: transponders off, positions faked. We watch the strait live, estimate how much oil is
+are ghosts: transponders off, positions faked. We watch the strait from space, estimate how much oil is
 really getting through, and show what a change in that flow means for the Fed's rates and for
 people's bills.
 

@@ -8,6 +8,8 @@ code lands. Nothing else is shared state. The team list lives in `coord/team.tom
 |---|---|---|---|---|
 | Seb | `[seb-claude]` | `agent:seb` | TODO | TODO |
 | Eileen | `[eileen-claude]` | `agent:eileen` | TODO | TODO |
+| Yasmin | `[yasmin-claude]` | `agent:yasmin` | TODO | TODO |
+| Yasmin | `[yasmin-claude]` | `agent:yasmin` | TODO | TODO |
 | TODO | `[<handle>-claude]` | `agent:<handle>` | TODO | TODO |
 
 Shared files (`README.md`, `AGENTS.md`, `CLAUDE.md`, `coord/`, `docs/design.md`, project
@@ -39,8 +41,8 @@ config such as `pyproject.toml`) change only through a PR that says why. Lanes f
 
 ## Research desk
 
-TODO: pick whose Claude has the research tools (web search, docs indexing). Until then, file the
-question as an issue with labels `research` + `human-needed`.
+Edward's Claude is the research desk: web search, docs and dataset checks. File the question as
+an issue with labels `research` + `agent:edward`.
 
 - Title is the question. Body says what you will do with the answer and the format you want
   (table, CSV columns, code snippet, URL list).

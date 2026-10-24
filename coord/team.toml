@@ -7,4 +7,4 @@ team = "OXH"            # Linear team key: issues are OXH-1, OXH-2, ...
 hello_issue = "OXH-1"   # where each Claude says it is online
 
 # Lowercase handles. They become the agent:<handle> labels, [<handle>-claude] markers and @mentions.
-agents = ["seb", "eileen"]  # TODO: add the other teammates
+agents = ["seb", "eileen", "edward", "yasmin"]
