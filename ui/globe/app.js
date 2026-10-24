@@ -243,6 +243,9 @@
   }
 
   function pickCountry(iso) {
+    if (iso === state.country) {   // clicking the chosen country again puts it back down
+      state.country = null; state.input = null; update(); return;
+    }
     state.country = iso;
     state.input = null;
     const w = where[iso];
