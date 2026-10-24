@@ -11,6 +11,8 @@ This page covers how they join, and what the joined chain gets right.
 |---|---|---|
 | `experiments/oil_paths.py` | Monthly Brent paths from the daily GARCH-CGMY model, with an optional Hormuz flow scenario; backtest against the bootstrap paths | `notes/oil-paths-results.md` |
 | `experiments/macro_chain.py` | Every knock-on model on the same oil draws, the ensemble, the forward-chaining backtest, and the 2026 closure replay | `notes/macro-chain-results.md` (4 members, 5 seeds), `notes/macro-chain-results-s20.md` (20 seeds), `notes/chain-replay-2026-3m.md` and `notes/chain-scenarios-3m.csv` (the recommended 3 members), `notes/chain-replay-2026.md` and `notes/chain-scenarios.csv` (4 members) |
+| `experiments/flow_events.py` | Flow → Brent on other chokepoint events (Bab el-Mandeb 2023–24, Hormuz dips, attacks without lost flow), with placebo bands; the premium curve | `notes/flow-events.md`, `notes/flow-premium.csv` |
+| `cluster/iridis/macro_replay.slurm` | The 2026 replay and scenario tables on Iridis (task 0: the 3 recommended members, task 1: all four) | `notes/chain-replay-2026*.md`, `notes/chain-scenarios*.csv` |
 | `cluster/iridis/macro_chain.slurm` | The chain's folds as an Iridis array; `CHAIN_SEEDS`/`CHAIN_TAG` for more networks per variant | `runs/macro/chain-*.{npz,json}` |
 
 ## How the chain is built
@@ -21,12 +23,18 @@ This page covers how they join, and what the joined chain gets right.
       → each knock-on model simulated month by month from each series' last published month
       → an equal-weight mixture of the models' draws
 
-1. **Flow → Brent premium.** From the 2026 closure event study, the log premium per point of lost flow:
-   - ramps to log(1.67)/82 at 20 trading days;
-   - decays to log(1.222)/82 at 120 days;
-   - then stays flat, an assumption because the event study ends there.
+1. **Flow → Brent premium** (`notes/flow-premium.csv`, from `experiments/flow_events.py`; details in `notes/flow-events.md`). The log premium per point of lost Hormuz flow:
+   - starts at 0.28% on day 1 and rises to 0.75% on day 22;
+   - decays with a 9-day half-life to a plateau of 0.39%;
+   - is fitted to all 159 observed trading days of the 2026 closure, and is an assumption (flat at the plateau) beyond them.
 
-   This rests on **one event**, so the link is in sample for 2026.
+   Its 90% band comes from 2019–2025 placebo days. Each scenario path draws one standard-normal score and keeps it on every day: a split normal around the middle of the band, never below zero. So the fan carries the flow link's own uncertainty, not only oil's.
+
+   **What is validated:** the Bab el-Mandeb disruption of 2023–24 is out of sample. Scaled to Hormuz-equivalent flow, the 2026 response predicts its Brent move within noise at every horizon from 5 to 120 trading days, and it shows that rerouted barrels (63% went round the Cape) aren't lost barrels.
+
+   **What isn't:** no other event since 2019 is large enough to test the *size*. A loss under about 26 Hormuz points can't be told from Brent's own 20-day noise. So the size still rests on 2026.
+
+   An earlier, simpler curve (flat at 0.27% per point after 120 days) proved too low. In 2026 the premium rose again (0.70% per point in days 148–159) once the bypass pipelines' exports fell back.
 2. **Brent paths.**
    - Parameters come from `runs/levy/rolling-Y.json`, fitted on daily returns before 1 January of the start month's year.
    - The GARCH volatility is filtered up to the start date.
@@ -99,19 +107,22 @@ A separate audit is in `notes/verification.md` on branch `claude/silly-fermat-ac
 
 ## The 2026 closure replay (`notes/chain-replay-2026-3m.md`)
 
-Every member is fitted on data up to 2026-01 only, then started from 2026-02, the month before the closure. The table counts 65 published outcomes: all 22 series at 1, 3 and 6 months, where published. The numbers below are for the recommended 3 members. With `global_tcn` added (`notes/chain-replay-2026.md`), the what-if catches 86% instead of 91%.
+Every member is fitted on data up to 2026-01 only, then started from 2026-02, the month before the closure. The table counts 65 published outcomes: all 22 series at 1, 3 and 6 months, where published. The numbers below are for the recommended 3 members, refitted on Iridis (job 1972657) with the premium curve of `notes/flow-premium.csv`. With `global_tcn` added (`notes/chain-replay-2026.md`): what-if 86%, scenario 92%.
 
 | Run | What it tests | Actuals inside the 90% band |
 |---|---|---|
-| **What-if:** the Brent path that happened | the knock-on layer on an event it never saw (**out of sample**) | **91% of 65** |
-| Lost 82: GARCH-CGMY paths plus the flow scenario | how the chain composes (**in sample for the flow link**, which was calibrated on this event) | 88% of 65 |
-| Lost 0: GARCH-CGMY paths, no scenario | what a forecaster without the flow link would have said | 57% of 65 |
+| **What-if:** the Brent path that happened | the knock-on layer on an event it never saw (**out of sample**) | **89% of 65** (91% in the laptop fit) |
+| Lost 82: GARCH-CGMY paths plus the flow scenario | how the chain composes (**in sample for the flow link**: the premium curve was fitted to this event) | 97% of 65 (88% with the earlier, simpler curve) |
+| Lost 0: GARCH-CGMY paths, no scenario | what a forecaster without the flow link would have said | 58% of 65 |
+
+- **Laptop versus Iridis:** the what-if difference is one of 65 outcomes crossing its band edge. The Iridis refit lands slightly differently from the laptop's, most likely in the MCMC fit; means move by 0.1–0.5 points. The networks themselves reproduce exactly across machines.
+- **The scenario's wider coverage is partly bought with wider bands.** Each path now carries the flow link's own uncertainty. US CPI after 6 months: +2.5 (−0.1..+6.3) under the scenario, against +2.1 (+0.8..+3.8) given the real Brent path. Diesel after 1 month: +13.7 (+1.5..+29.1) now contains the actual +27.9; the earlier curve's band stopped at +19.1.
 
 - **US CPI after 6 months:** forecast +2.1 (+0.8..+3.8) given the real Brent path; actual +2.0.
-- **UK CPI after 6 months:** +1.9 (+0.2..+3.6); actual +2.5.
-- **Euro-area HICP after 6 months:** +1.7 (+0.2..+3.4); actual +2.9.
+- **UK CPI after 6 months:** +1.9 (+0.3..+3.6); actual +2.5.
+- **Euro-area HICP after 6 months:** +1.7 (−0.2..+3.3); actual +2.9.
 - **Fuels:** the first-month jump in diesel and jet fuel (+28 and +49) is outside the bands (+12 and +26 expected). That's the margin overshoot the audit found. From 3 months on, the bands contain the actuals.
-- **Without the flow link** the chain misses the closure (57%). That's why the flow → Brent step matters, and also why it is the link to validate next: it rests on this one event.
+- **Without the flow link** the chain misses the closure (58%). That is why the flow → Brent step matters. Its sign and the role of rerouting now have an out-of-sample check (Bab el-Mandeb 2023–24), but its size still rests on this one event.
 - **The 65 outcomes aren't independent.** They come from one event and overlapping horizons, so this is one strong look, not 65.
 
 `notes/chain-scenarios-3m.csv` is the slider's table, from the same fits (`notes/chain-scenarios.csv` is the 4-member version): each series' mean, median and 90% band for 0, 25, 50, 82 and 100 points of lost flow, 1–12 months ahead, with the actual where it's published. Its columns are series, group, flow_drop_points, months_ahead, mean, q05, q50, q95, actual, unit, validated, origin, source, fitted_to and generated. Unemployment and rates are marked `validated=no` (forecast only, no causal oil link). Since flow is already near zero in October 2026, a slider started today would need the *reopening* direction, which no data have tested. The demo should replay February 2026.

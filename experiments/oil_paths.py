@@ -18,9 +18,11 @@ At each forecast origin (the end of month t):
 - monthly changes: log of each month's mean price minus the previous month's, month 0 being the
   origin month's actual mean, because the knock-on panel's Brent is the monthly mean of daily spot
   (macro_data._monthly)
-- scenario: an optional premium on the log price for `lost` points of Hormuz flow, from the 2026
-  closure event study (notes/flow-price-link.md: one event). It also enters the GARCH update, so
-  the band widens after the jump as it did in March 2026
+- scenario: an optional premium on the log price for `lost` points of Hormuz flow, from the curve
+  in notes/flow-premium.csv (experiments/flow_events.py: fitted to the 2026 closure, with a 90%
+  band from 2019-2025 placebo days; checked out of sample against Bab el-Mandeb 2023-24). Each
+  path draws its own place in the band. The premium also enters the GARCH update, so the band
+  widens after the jump as it did in March 2026
 
     uv run experiments/oil_paths.py check   # backtest against the bootstrap paths -> notes/oil-paths-results.md
 """
@@ -42,12 +44,9 @@ import macro_nn as mn
 
 INNOV = {"cgmy": ("GARCH-CGMY", "levy"), "t": ("GARCH-Student-t", "student")}
 N_PATHS = mb.DRAWS
-# The 2026 closure (notes/flow-price-link.md, event study from 2026-03-04): the 7-day Hormuz flow
-# share fell 82 points; Brent peaked +67% above its pre-closure level and was +22.2% after 120
-# trading days. As log premia per point of lost flow:
-LOST_2026 = 82.0
-E_PEAK, E_LATE = np.log(1.67) / LOST_2026, np.log(1.222) / LOST_2026
-D_PEAK, D_LATE = 20, 120  # trading days: the peak came about four weeks in (+52.6% at +20 days)
+LOST_2026 = 82.0  # points of Hormuz flow lost in the 2026 closure (notes/flow-price-link.md)
+PREMIUM = mb.NOTES / "flow-premium.csv"  # log premium per point of lost flow, by trading day
+Z90 = 1.6449  # the CSV's band is a central 90% interval
 
 
 def daily_brent() -> tuple[pd.Series, str]:
@@ -80,15 +79,28 @@ def garch_levy(year: int, innov: str = "cgmy") -> tuple[float, float, float, flo
     return mu, omega, alpha, beta, inn, f"refit on returns before {year}-01-01"
 
 
-def premium(lost: float, days: int) -> np.ndarray:
-    """Log premium on Brent on trading days 1..days after a loss of `lost` points of Hormuz flow
-    that lasts the whole path: a ramp to the peak over D_PEAK days, an exponential decay to the
-    120-day level, then flat at that level (an assumption: the event study ends there)."""
-    d = np.arange(1, days + 1, dtype=float)
-    k = np.log(E_PEAK / E_LATE) / (D_LATE - D_PEAK)
-    e = np.where(d <= D_PEAK, E_PEAK * d / D_PEAK,
-                 np.where(d <= D_LATE, E_PEAK * np.exp(-k * (d - D_PEAK)), E_LATE))
-    return lost * e
+@lru_cache(maxsize=None)
+def premium_curve() -> tuple[np.ndarray, np.ndarray, np.ndarray, str]:
+    """(e_low, e_mid, e_high, source) per trading day 1.. from notes/flow-premium.csv. It is fitted
+    to the 2026 closure up to day 159 and an assumption after that; the band is the 2019-2025
+    placebo range."""
+    df = pd.read_csv(PREMIUM)
+    assert (df["trading_day"].values == np.arange(1, len(df) + 1)).all(), "flow-premium.csv: days not 1..n"
+    return (df["e_low"].values, df["e_mid"].values, df["e_high"].values,
+            f"notes/flow-premium.csv (generated {df['generated'].iloc[0]})")
+
+
+def premium(lost: float, days: int, z: np.ndarray) -> np.ndarray:
+    """Log premium on Brent on trading days 1..days for `lost` points of Hormuz flow lost for the
+    whole path, one row per path [len(z), days]. Path i sits at standard-normal score z[i] of the
+    CSV's 90% band on every day (a split normal around e_mid, never below 0), so a path is a high-
+    or a low-premium world throughout; days past the end of the CSV keep its last row."""
+    lo, mid, hi, _ = premium_curve()
+    d = np.minimum(np.arange(days), len(mid) - 1)
+    lo, mid, hi = lo[d], mid[d], hi[d]
+    z = np.asarray(z, float)[:, None]
+    e = np.where(z >= 0, mid + z * (hi - mid) / Z90, mid + z * (mid - lo) / Z90)
+    return lost * np.maximum(e, 0.0)
 
 
 def monthly_paths(prices: pd.Series, months: pd.DatetimeIndex, n: int, rng, innov: str = "cgmy",
@@ -111,15 +123,16 @@ def monthly_paths(prices: pd.Series, months: pd.DatetimeIndex, n: int, rng, inno
         month = (days.year - m.year) * 12 + days.month - m.month - 1  # 0..11
         count = np.bincount(month, minlength=mn.OIL_AHEAD)
         step = drift[i][month] / count[month] if drift is not None else np.zeros(len(days))
-        prem = premium(lost, len(days))
-        jump = np.diff(np.r_[0.0, prem])
+        z = rng.standard_normal(n) if lost else np.zeros(n)  # drawn only with a scenario: lost=0 paths are unchanged
+        prem = premium(lost, len(days), z)  # [n, days]
+        jump = np.diff(np.column_stack([np.zeros(n), prem]), axis=1)
         x, total = np.zeros(n), np.zeros((n, mn.OIL_AHEAD))  # x: log price relative to the last close
         u = rng.random((len(days), n))
         for d in range(len(days)):
             e = np.sqrt(s2) * np.interp(u[d], cdf_tab, x_tab)
             x = x + e + step[d]
-            s2 = omega + alpha * (e + jump[d]) ** 2 + beta * s2  # the scenario's jump is part of the return
-            total[:, month[d]] += np.exp(x + prem[d])
+            s2 = omega + alpha * (e + jump[:, d]) ** 2 + beta * s2  # the scenario's jump is part of the return
+            total[:, month[d]] += np.exp(x + prem[:, d])
         level = np.log(total / count) + logp[logp.index <= end].iloc[-1]
         base = np.log(prices[(prices.index >= m) & (prices.index <= end)].mean())  # month 0: actual mean
         out[:, i] = np.diff(np.column_stack([np.full(n, base), level]), axis=1)
