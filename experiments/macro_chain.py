@@ -73,12 +73,15 @@ def oil_modes(data: dict, j: int, st: mb.Stats, last: int, t: np.ndarray, market
             "bootstrap": mb.oil_paths(data, st, last, t, draws(), np.random.default_rng(901 + j), market)}
 
 
-def fit_nets(data: dict, info: dict, st: mb.Stats, last: int, variant: str, seed0: int) -> tuple[list, list]:
+def fit_nets(data: dict, info: dict, st: mb.Stats, last: int, variant: str, base_seed: int) -> tuple[list, list]:
+    """The networks of one variant. Network s gets seed base_seed + 100 * VARIANTS.index(variant) + s,
+    as macro_global.fit_nets and run_fold (base_seed = 1000 * fold), so the fold files' networks come back."""
+    seeds = 2 if QUICK else mg.SEEDS
     if hasattr(mg, "fit_nets"):
-        return mg.fit_nets(data, info, st, last, variant, 2 if QUICK else mg.SEEDS, seed0)
+        return mg.fit_nets(data, info, st, last, variant, seeds, base_seed)
     months, k, x, y = mg.training_rows(mg.features(data, st), last)
-    fitted = [mg.train(x, k, y, months, info["floor"], variant == "global_lin", seed=seed0 + s)
-              for s in range(2 if QUICK else mg.SEEDS)]
+    seed0 = base_seed + 100 * list(mg.VARIANTS).index(variant)
+    fitted = [mg.train(x, k, y, months, info["floor"], variant == "global_lin", seed=seed0 + s) for s in range(seeds)]
     return [f[0] for f in fitted], [f[1] for f in fitted]
 
 
@@ -95,8 +98,7 @@ def run_member(data: dict, j: int, member: str, market: dict, prices) -> tuple[d
         sim = lambda fut, rng: mb.simulate(post, st, info, data, t, fut, rng)  # noqa: E731
         extra = {"diagnostics": diag}
     else:
-        vi = list(mg.VARIANTS).index(member) if member in mg.VARIANTS else len(mg.VARIANTS)
-        nets, training = fit_nets(data, info, st, last, member, 1000 * j + 100 * vi)  # macro_global.run_fold's seeds
+        nets, training = fit_nets(data, info, st, last, member, 1000 * j)  # macro_global.run_fold's seeds
         sim = lambda fut, rng: mg.simulate(nets, st, info, data, t, fut, rng, n=draws())  # noqa: E731
         extra = {"training": training}
     S = {mode: sim(fut, np.random.default_rng(300 + j)).astype(np.float32) for mode, fut in oil.items()}
@@ -338,8 +340,7 @@ def replay(origin: str = REPLAY_ORIGIN) -> None:
             print(f"replay bayes_own: {diag}", flush=True)
             sim = lambda fut, rng: mb.simulate(post, st_b, info_b, data, t, fut, rng)  # noqa: E731
         else:
-            vi = list(mg.VARIANTS).index(mm) if mm in mg.VARIANTS else len(mg.VARIANTS)
-            nets, _ = fit_nets(data, info, st, last, mm, 90_000 + 100 * vi)
+            nets, _ = fit_nets(data, info, st, last, mm, 90_000)
             sim = lambda fut, rng, nets=nets: mg.simulate(nets, st, info, data, t, fut, rng, n=mb.DRAWS)  # noqa: E731
         for mode, fut in oil.items():
             S[mode].append(sim(fut, np.random.default_rng(300))[:, 0])  # [N, outputs]
