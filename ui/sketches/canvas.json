@@ -1,0 +1,34 @@
+{
+  "v": 3,
+  "createdOnFiles": {"v": 1, "at": "2026-10-24T14:05:00Z"},
+  "title": "Hormuz Oil Flow UI Sketches",
+  "launch": {"view": "canvas"},
+  "pages": [],
+  "boards": {
+    "Main.dc.html": {"x": 0, "y": 0, "w": 1440, "h": 980, "title": "A. Command view: live strait + flow estimate", "expand": "fill"},
+    "Ripple.dc.html": {"x": 1520, "y": 0, "w": 1440, "h": 980, "title": "B. Ripple: what-if flow to rates and cost of living", "expand": "fill", "is_interactive": true},
+    "Ghost.dc.html": {"x": 0, "y": 1100, "w": 1440, "h": 900, "title": "C. Ghost-ship dossier", "expand": "fill"},
+    "Phone.dc.html": {"x": 1520, "y": 1100, "w": 390, "h": 844, "title": "D. Phone: what it means for you", "is_interactive": true},
+    "Replay.dc.html": {"x": 1990, "y": 1100, "w": 1440, "h": 900, "title": "E. Replay a past shock (backtest)", "expand": "fill"},
+    "Pulse.dc.html": {"x": 0, "y": 2400, "w": 1440, "h": 900, "title": "F. Live pulse (animated, synthetic demo data)", "expand": "fill", "is_interactive": true},
+    "Receipt.dc.html": {"x": 1520, "y": 2400, "w": 1440, "h": 900, "title": "G. Number receipt: click any number to see how it was made", "expand": "fill", "is_interactive": true},
+    "Exposure.dc.html": {"x": 0, "y": 3420, "w": 1440, "h": 900, "title": "H. Who is exposed: where Hormuz oil goes", "expand": "fill", "is_interactive": true},
+    "Analyst.dc.html": {"x": 1520, "y": 3420, "w": 1440, "h": 900, "title": "I. Ask the analyst + alerts + daily brief", "expand": "fill"},
+    "Judge.dc.html": {"x": 0, "y": 4440, "w": 1440, "h": 900, "title": "J. Judge mode: the room votes from their phones (big screen)", "expand": "fill", "is_interactive": true},
+    "Spoof.dc.html": {"x": 1520, "y": 4440, "w": 1440, "h": 900, "title": "K. Spoofing and ship-to-ship detector", "expand": "fill"},
+    "Analysts.dc.html": {"x": 3040, "y": 4440, "w": 1440, "h": 900, "title": "L. Us vs the analysts: 2026 flow estimates compared", "expand": "fill", "is_interactive": true},
+    "Snapshot.dc.html": {"x": 3040, "y": 3420, "w": 1440, "h": 900, "title": "M. Radar snapshot to flow rate (Little's law explainer)", "expand": "fill", "is_interactive": true},
+    "Network.dc.html": {"x": 3040, "y": 2400, "w": 1440, "h": 900, "title": "N. Shadow-fleet network"},
+    "Headlines.dc.html": {"x": 0, "y": 5460, "w": 1440, "h": 900, "title": "O. Headlines vs hulls", "expand": "fill", "is_interactive": true},
+    "Swipe.dc.html": {"x": 1520, "y": 5460, "w": 1440, "h": 900, "title": "P. Satellite swipe: AIS picture vs radar picture", "expand": "fill", "is_interactive": true},
+    "Storyboard.dc.html": {"x": 3040, "y": 5460, "w": 1440, "h": 900, "title": "Q. Pitch storyboard: five moments"},
+    "Closure.dc.html": {"x": 0, "y": 6480, "w": 1440, "h": 900, "title": "R. Closure simulator (published inputs)", "expand": "fill", "is_interactive": true},
+    "Fan.dc.html": {"x": 1520, "y": 6480, "w": 1440, "h": 900, "title": "S. Uncertainty down the chain", "expand": "fill", "is_interactive": true}
+  },
+  "order": ["Main.dc.html", "Ripple.dc.html", "Ghost.dc.html", "Phone.dc.html", "Replay.dc.html", "Pulse.dc.html", "Receipt.dc.html", "Exposure.dc.html", "Analyst.dc.html", "Judge.dc.html", "Spoof.dc.html", "Analysts.dc.html", "Snapshot.dc.html", "Network.dc.html", "Headlines.dc.html", "Swipe.dc.html", "Storyboard.dc.html", "Closure.dc.html", "Fan.dc.html"],
+  "notes": {
+    "heading": {"x": 0, "y": -300, "text": "Hormuz oil flow: UI sketches", "kind": "title1", "maxW": 2960},
+    "dynamic": {"x": 0, "y": 2100, "text": "Dynamic features", "kind": "title1", "maxW": 2960}
+  },
+  "designSystems": []
+}

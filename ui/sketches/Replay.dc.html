@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Replay a past shock</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0B0F14}
+a{color:#7CC0EA}a:hover{color:#A9D6F2}
+</style>
+</helmet>
+<div style="font-family: 'IBM Plex Sans', system-ui, sans-serif; color: #E7ECF2; background: #0B0F14; min-height: 900px; box-sizing: border-box; padding: 24px; display: flex; flex-direction: column; gap: 16px">
+
+<header style="display: flex; flex-direction: column; gap: 10px">
+  <h1 style="margin: 0; font-size: 26px; font-weight: 600">Replay a past shock</h1>
+  <p style="margin: 0; font-size: 14px; color: #A3AFBD">Pick an event, press play, and watch ships, prices and rates move day by day. Then see how close our model would have been.</p>
+  <div role="group" aria-label="Event" style="display: flex; flex-wrap: wrap; gap: 8px">
+    <button type="button" style="min-height: 44px; padding: 0 14px; border-radius: 6px; border: 1px solid #F0A23B; background: #2A1F10; color: #F5BD6E; font: inherit; font-size: 14px">Hormuz crisis, 2026</button>
+    <button type="button" style="min-height: 44px; padding: 0 14px; border-radius: 6px; border: 1px solid #2B3644; background: #121821; color: #E7ECF2; font: inherit; font-size: 14px">Gulf of Oman tanker attacks, 2019</button>
+    <button type="button" style="min-height: 44px; padding: 0 14px; border-radius: 6px; border: 1px solid #2B3644; background: #121821; color: #E7ECF2; font: inherit; font-size: 14px">Abqaiq attack, Sept 2019</button>
+    <button type="button" style="min-height: 44px; padding: 0 14px; border-radius: 6px; border: 1px solid #2B3644; background: #121821; color: #E7ECF2; font: inherit; font-size: 14px">Red Sea diversions, 2023–24</button>
+  </div>
+</header>
+
+<div style="display: flex; flex-wrap: wrap; gap: 16px">
+  <section aria-label="Replay charts" style="flex: 999 1 640px; min-width: 0; background: #121821; border: 1px solid #222C38; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 6px">
+    <svg viewBox="0 0 900 470" role="img" aria-label="Three stacked placeholder charts sharing a time axis: tankers per day, Brent price, and US inflation with the Fed rate, with a marker on the event day" style="width: 100%; height: auto; display: block">
+      <g font-family="IBM Plex Sans, sans-serif" font-size="13" fill="#A3AFBD">
+        <text x="0" y="16">Tanker transits per day (AIS archive)</text>
+        <text x="0" y="172">Brent, $/barrel (EIA daily)</text>
+        <text x="0" y="328">US CPI y/y and Fed funds (FRED)</text>
+      </g>
+      <g stroke="#222C38">
+        <line x1="0" y1="140" x2="900" y2="140"></line>
+        <line x1="0" y1="296" x2="900" y2="296"></line>
+        <line x1="0" y1="440" x2="900" y2="440"></line>
+      </g>
+      <path d="M0,70 C120,66 240,74 360,68 C420,66 450,104 480,110 C560,118 640,96 760,84 C820,80 860,78 900,76" fill="none" stroke="#4EA8DE" stroke-width="2.5" stroke-dasharray="7 5"></path>
+      <path d="M0,250 C140,248 280,252 400,246 C440,244 460,206 490,204 C560,202 640,226 760,236 C820,240 860,242 900,242" fill="none" stroke="#F0A23B" stroke-width="2.5" stroke-dasharray="7 5"></path>
+      <path d="M0,404 C200,402 400,400 520,394 C640,388 760,384 900,382" fill="none" stroke="#B9A6E8" stroke-width="2.5" stroke-dasharray="7 5"></path>
+      <path d="M0,420 H560 V412 H900" fill="none" stroke="#C2CBD5" stroke-width="2" stroke-dasharray="3 4"></path>
+      <line x1="460" y1="24" x2="460" y2="440" stroke="#E7ECF2" stroke-width="1.5"></line>
+      <rect x="468" y="26" width="110" height="24" rx="4" fill="#0B0F14" stroke="#E7ECF2"></rect>
+      <text x="478" y="43" fill="#E7ECF2" font-size="12" font-family="IBM Plex Mono, monospace">event day</text>
+      <line x1="610" y1="24" x2="610" y2="440" stroke="#F0A23B" stroke-width="1" stroke-dasharray="2 4"></line>
+      <text x="618" y="43" fill="#F5BD6E" font-size="12" font-family="IBM Plex Mono, monospace">playhead [date]</text>
+      <g font-family="IBM Plex Mono, monospace" font-size="11" fill="#8794A3">
+        <text x="0" y="462">[D-30]</text><text x="440" y="462">[D0]</text><text x="860" y="462">[D+60]</text>
+      </g>
+    </svg>
+    <p style="margin: 0; font-size: 12px; color: #8794A3">Dashed lines are placeholders for the real series; shapes are not data.</p>
+    <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap">
+      <button type="button" aria-label="Play replay" style="min-width: 44px; min-height: 44px; border-radius: 50%; border: 1px solid #F0A23B; background: #F0A23B; color: #1A1206; display: inline-flex; align-items: center; justify-content: center">
+        <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2.5v11l9-5.5z"></path></svg>
+      </button>
+      <label for="scrub" style="font-size: 13px; color: #A3AFBD">Day</label>
+      <input id="scrub" type="range" min="-30" max="60" value="15" style="flex: 1 1 240px; min-height: 44px; accent-color: #F0A23B">
+      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px">[D+15]</span>
+      <button type="button" style="min-height: 44px; padding: 0 12px; border-radius: 6px; border: 1px solid #2B3644; background: transparent; color: #A3AFBD; font: inherit; font-size: 13px">Speed 1 day/s</button>
+    </div>
+  </section>
+
+  <aside style="flex: 1 1 360px; min-width: 0; display: flex; flex-direction: column; gap: 16px">
+    <section aria-label="Backtest" style="background: #121821; border: 1px solid #222C38; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 12px">
+      <h2 style="margin: 0; font-size: 16px; font-weight: 600">Model vs what happened</h2>
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) repeat(2, minmax(0, 90px)); gap: 8px 10px; font-size: 14px; align-items: baseline">
+        <span></span><span style="font-size: 12px; color: #CBBDF0">Model</span><span style="font-size: 12px; color: #A3AFBD">Actual</span>
+        <span>Brent, peak move</span><span style="font-family: 'IBM Plex Mono', monospace">[+X%]</span><span style="font-family: 'IBM Plex Mono', monospace">[+X%]</span>
+        <span>Pump price, 4 weeks</span><span style="font-family: 'IBM Plex Mono', monospace">[+X%]</span><span style="font-family: 'IBM Plex Mono', monospace">[+X%]</span>
+        <span>CPI, 3 months</span><span style="font-family: 'IBM Plex Mono', monospace">[+X.X pt]</span><span style="font-family: 'IBM Plex Mono', monospace">[+X.X pt]</span>
+        <span>Next Fed move</span><span style="font-family: 'IBM Plex Mono', monospace">[hold]</span><span style="font-family: 'IBM Plex Mono', monospace">[hold]</span>
+      </div>
+      <p style="margin: 0; font-size: 12px; color: #8794A3">Model fitted without this event (leave-one-out), so the comparison is fair.</p>
+    </section>
+    <section aria-label="What happened" style="background: #121821; border: 1px solid #222C38; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 10px">
+      <h2 style="margin: 0; font-size: 16px; font-weight: 600">On this day</h2>
+      <ul style="margin: 0; padding: 0 0 0 18px; display: flex; flex-direction: column; gap: 8px; font-size: 14px; color: #C2CBD5">
+        <li>[Headline from GDELT / news archive, date]</li>
+        <li>[Tanker count change vs prior week]</li>
+        <li>[War-risk insurance or freight rate note]</li>
+      </ul>
+    </section>
+  </aside>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

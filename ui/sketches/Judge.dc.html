@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Judge mode</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0B0F14}
+a{color:#7CC0EA}a:hover{color:#A9D6F2}
+</style>
+</helmet>
+<div style="font-family: 'IBM Plex Sans', system-ui, sans-serif; color: #E7ECF2; background: #0B0F14; min-height: 900px; box-sizing: border-box; padding: 32px; display: flex; flex-direction: column; gap: 24px">
+
+<header style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px">
+  <div style="display: flex; flex-direction: column; gap: 6px">
+    <h1 style="margin: 0; font-size: 40px; font-weight: 600">You decide: how much oil gets through?</h1>
+    <p style="margin: 0; font-size: 18px; color: #A3AFBD">Scan, drag the slider on your phone, and watch the room's choice ripple out.</p>
+  </div>
+  <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 1px; padding: 4px 10px; border-radius: 4px; border: 1px solid #F0A23B; color: #F5BD6E">SYNTHETIC VOTES IN THIS SKETCH</span>
+</header>
+
+<div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: stretch">
+  <section aria-label="Join" style="flex: 0 1 260px; background: #121821; border: 1px solid #222C38; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 12px">
+    <div role="img" aria-label="QR code placeholder" style="width: 200px; height: 200px; border-radius: 8px; background: #E7ECF2; color: #0B0F14; display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace; font-size: 14px">[QR code]</div>
+    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px">[short.link/hormuz]</span>
+    <span style="font-size: 15px; color: #A3AFBD"><span style="font-family: 'IBM Plex Mono', monospace; color: #E7ECF2; font-size: 22px">{{phones}}</span> phones connected</span>
+  </section>
+
+  <section aria-label="Room vote" aria-live="polite" style="flex: 999 1 560px; min-width: 0; background: #121821; border: 1px solid #222C38; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 16px">
+    <div style="display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap">
+      <span style="font-size: 18px; color: #A3AFBD">The room says</span>
+      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 72px; font-weight: 500; color: #F5BD6E; line-height: 1">{{avgLabel}}</span>
+      <span style="font-size: 18px; color: #A3AFBD">flow through Hormuz</span>
+    </div>
+    <div aria-hidden="true" style="position: relative; height: 90px; border-bottom: 2px solid #2B3644">
+      <sc-for list="{{dots}}" as="d" hint-placeholder-count="20">
+        <span style="position: absolute; left: {{d.left}}; bottom: {{d.bottom}}; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; background: #4EA8DE"></span>
+      </sc-for>
+      <span style="position: absolute; left: {{avgLeft}}; top: 0; bottom: -10px; width: 3px; margin-left: -1px; background: #F0A23B"></span>
+    </div>
+    <div style="display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #8794A3"><span>closed (−100%)</span><span>−50%</span><span>today</span></div>
+
+    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px">
+      <div style="background: #1B2430; border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 4px">
+        <span style="font-size: 14px; color: #A3AFBD">Brent</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 26px; color: #F5BD6E">[$XXX]</span>
+      </div>
+      <div style="background: #1B2430; border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 4px">
+        <span style="font-size: 14px; color: #A3AFBD">US inflation</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 26px; color: #F5BD6E">[X.X%]</span>
+      </div>
+      <div style="background: #1B2430; border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 4px">
+        <span style="font-size: 14px; color: #A3AFBD">Fed, next meeting</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 26px; color: #F5BD6E">[hold]</span>
+      </div>
+      <div style="background: #1B2430; border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 4px">
+        <span style="font-size: 14px; color: #A3AFBD">Household, monthly</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 26px; color: #F5BD6E">[+$XX]</span>
+      </div>
+    </div>
+    <p style="margin: 0; font-size: 13px; color: #8794A3">Outcome values are MODELLED from the room's average and update as votes arrive.</p>
+  </section>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { votes: [-10, -30, -50, -20, -60, -40] };
+}
+componentDidMount() {
+this.timer = setInterval(() => {
+const v = this.state.votes;
+const n = v.length;
+const next = -10 * ((n * 7 + 3) % 10) - (n % 3 === 0 ? 10 : 0);
+const votes = n >= 28 ? v.slice(1).concat([next]) : v.concat([next]);
+this.setState({ votes });
+}, 900);
+}
+componentWillUnmount() {
+clearInterval(this.timer);
+}
+renderVals() {
+const v = this.state.votes;
+const avg = Math.round(v.reduce((a, b) => a + b, 0) / v.length);
+const pos = (x) => (100 + Math.max(-100, Math.min(0, x))) + '%';
+const counts = {};
+const dots = v.map((x) => {
+const k = String(x);
+counts[k] = (counts[k] || 0) + 1;
+return { left: pos(x), bottom: (counts[k] - 1) * 14 + 'px' };
+});
+return {
+phones: v.length,
+avgLabel: (avg < 0 ? '−' : '') + Math.abs(avg) + '%',
+avgLeft: pos(avg),
+dots
+};
+}
+}
+</script>
+</body>
+</html>

@@ -3,6 +3,10 @@
 Draft. What the product does is in `docs/design.md`; the story the demo has to tell is in
 `docs/pitch.md`. Stack: TODO.
 
+Sketches of every screen below, plus the dynamic features (live pulse, receipts, judge mode,
+satellite swipe, us vs the analysts and more), are on the design canvas; `docs/ideas.md` lists
+them by letter.
+
 ## Screens
 
 1. **Strait map.** Live map of Hormuz and its approaches. Tankers we see on AIS, plus markers for
@@ -18,6 +22,8 @@ Draft. What the product does is in `docs/design.md`; the story the demo has to t
 ## Rules every screen follows
 
 - Every number has a source and a timestamp next to it or one tap away.
+- Free AIS lags in Hormuz, so the header says how old the positions are ("near-live, N h old"),
+  never just "live".
 - Status badge on each data item: **live**, **cached (date)**, **synthetic** or **modelled**.
   Cached data never gets the live badge.
 - Estimates show a range, not just one number.

@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Us vs the analysts</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0B0F14}
+a{color:#7CC0EA}a:hover{color:#A9D6F2}
+</style>
+</helmet>
+<div style="font-family: 'IBM Plex Sans', system-ui, sans-serif; color: #E7ECF2; background: #0B0F14; min-height: 900px; box-sizing: border-box; padding: 24px; display: flex; flex-direction: column; gap: 16px">
+
+<header style="display: flex; flex-direction: column; gap: 6px">
+  <h1 style="margin: 0; font-size: 28px; font-weight: 600">How much oil is getting through? Nobody agrees.</h1>
+  <p style="margin: 0; font-size: 15px; color: #A3AFBD">Published estimates for Hormuz in 2026 differ by about three times. Here is ours beside them, and why they differ. Pick a row.</p>
+</header>
+
+<div style="display: flex; flex-wrap: wrap; gap: 16px">
+  <section aria-label="Estimates compared" style="flex: 999 1 640px; min-width: 0; background: #121821; border: 1px solid #222C38; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 8px">
+    <div style="display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 12px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #8794A3">
+      <span></span>
+      <div style="display: flex; justify-content: space-between"><span>0</span><span>5</span><span>10</span><span>15</span><span>20 mb/d</span></div>
+    </div>
+    <ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px">
+      <sc-for list="{{rows}}" as="r" hint-placeholder-count="6">
+        <li>
+          <button type="button" onClick="{{r.pick}}" aria-pressed="{{r.pressed}}" style="width: 100%; min-height: 56px; display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 12px; align-items: center; padding: 6px 0; border: 0; border-bottom: 1px solid #222C38; background: {{r.bg}}; color: #E7ECF2; font: inherit; text-align: left; cursor: pointer">
+            <span style="display: flex; flex-direction: column; gap: 2px; padding-left: 8px">
+              <span style="font-size: 14px; font-weight: 500">{{r.who}}</span>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #A3AFBD">{{r.when}}</span>
+            </span>
+            <span aria-hidden="true" style="position: relative; height: 24px; display: block; background: linear-gradient(90deg, #222C38 1px, transparent 1px) 0 0 / 25% 100%">
+              <span style="position: absolute; left: {{r.lo}}; width: {{r.span}}; top: 9px; height: 6px; border-radius: 3px; background: {{r.rangeColor}}"></span>
+              <span style="position: absolute; left: {{r.pos}}; top: 4px; width: 16px; height: 16px; margin-left: -8px; border-radius: 50%; background: {{r.color}}"></span>
+            </span>
+          </button>
+        </li>
+      </sc-for>
+    </ul>
+    <p style="margin: 4px 0 0; font-size: 12px; color: #8794A3">Figures from search results on 24 Oct 2026, to verify at each source before the pitch. Ours is a placeholder until the model runs.</p>
+  </section>
+
+  <aside aria-live="polite" style="flex: 1 1 380px; min-width: 0; display: flex; flex-direction: column; gap: 16px">
+    <section aria-label="Selected estimate" style="background: #121821; border: 1px solid {{sel.color}}; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 10px">
+      <h2 style="margin: 0; font-size: 20px; font-weight: 600">{{sel.who}}</h2>
+      <p style="margin: 0; font-family: 'IBM Plex Mono', monospace; font-size: 28px; color: {{sel.color}}">{{sel.value}}</p>
+      <p style="margin: 0; font-size: 14px; color: #C2CBD5; line-height: 1.5">{{sel.how}}</p>
+      <a href="{{sel.url}}" style="font-size: 13px; min-height: 44px; display: inline-flex; align-items: center">{{sel.source}}</a>
+    </section>
+    <section aria-label="Why they differ" style="background: #121821; border: 1px solid #222C38; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 8px">
+      <h2 style="margin: 0; font-size: 16px; font-weight: 600">Why estimates differ</h2>
+      <ul style="margin: 0; padding: 0 0 0 18px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: #C2CBD5; line-height: 1.45">
+        <li>Ships that switch off AIS are missed by anyone counting AIS alone.</li>
+        <li>Spoofed positions create crossings that never happened.</li>
+        <li>Satellite passes are days apart, so each pass is a snapshot.</li>
+        <li>Some figures include oil products and bypass pipelines; some do not.</li>
+      </ul>
+    </section>
+  </aside>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { picked: 0 };
+}
+renderVals() {
+const max = 22;
+const pct = (v) => (v / max * 100).toFixed(1) + '%';
+const list = [
+{ who: 'Our estimate', when: '[date] · AIS + radar', v: 7, lo: 5, hi: 9.5, value: '[X.X] mb/d', color: '#F0A23B', rangeColor: '#8A5B1E', how: 'Seen crossings plus radar-detected ships with no AIS, with a range from the uncertain inputs. Position and range on the chart are placeholders.', source: 'Receipt for this number', url: 'Receipt.dc.html' },
+{ who: 'Vortexa', when: 'August 2026', v: 3.5, value: '~3.5 mb/d', color: '#4EA8DE', rangeColor: 'transparent', how: 'Commercial tanker tracking, as reported by Argus. Method details: [from their note].', source: 'Argus, via search, to verify', url: 'https://www.argusmedia.com/es/news-and-insights/latest-market-news/2867794-us-high-balling-hormuz-energy-flows' },
+{ who: 'Argus', when: 'August 2026', v: 3.7, value: '~3.7 mb/d', color: '#4EA8DE', rangeColor: 'transparent', how: 'Price-reporting agency estimate. Method details: [from their note].', source: 'Argus, via search, to verify', url: 'https://www.argusmedia.com/es/news-and-insights/latest-market-news/2867794-us-high-balling-hormuz-energy-flows' },
+{ who: 'Windward', when: '20–22 Sep 2026', v: 8.9, value: '~8.9 mb/d', color: '#4EA8DE', rangeColor: 'transparent', how: 'Estimated from satellite, per its blog. Windward also reports that 61.2% of logged August transits were false because of spoofing.', source: 'Windward insights, to verify', url: 'https://insights.windward.ai' },
+{ who: 'US officials', when: 'August 2026', v: 10, value: '~10 mb/d', color: '#B9A6E8', rangeColor: 'transparent', how: 'Official claim reported by Argus as high compared with trackers. Method not published.', source: 'Argus, via search, to verify', url: 'https://www.argusmedia.com/es/news-and-insights/latest-market-news/2867794-us-high-balling-hormuz-energy-flows' },
+{ who: 'EIA, before the crisis', when: '2024 average', v: 20, value: '20 mb/d', color: '#C2CBD5', rangeColor: 'transparent', how: 'Pre-war baseline: about 20% of world petroleum liquids consumption.', source: 'EIA Today in Energy, 16 Jun 2025', url: 'https://www.eia.gov/todayinenergy/detail.php?id=65504' }
+];
+const p = this.state.picked;
+const rows = list.map((r, i) => ({
+...r,
+pos: pct(r.v),
+lo: pct(r.lo ?? r.v),
+span: pct((r.hi ?? r.v) - (r.lo ?? r.v)),
+bg: i === p ? '#1B2430' : 'transparent',
+pressed: i === p ? 'true' : 'false',
+pick: () => this.setState({ picked: i })
+}));
+return { rows, sel: list[p] };
+}
+}
+</script>
+</body>
+</html>
