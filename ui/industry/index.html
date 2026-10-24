@@ -419,14 +419,6 @@ select { padding: 0 8px; }
 #world-stage .pbars button { min-height: 36px; font-size: 13.5px; }
 #world-stage #m-band { font-size: 13px; line-height: 1.6; }
 #world-stage #m-hormuz { font-size: 14px; line-height: 1.6; }
-
-.brief { display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: 12px; border: 1px dashed #b9a6ec; background: #f6f2ff; }
-.brief .bh { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
-.brief .go-brief { align-self: flex-start; min-height: 36px; }
-.brief .btext { font-size: 14px; line-height: 1.6; color: var(--text); }
-.brief .srcs { display: flex; flex-wrap: wrap; gap: 6px; }
-.brief .srcl { font-size: 12px; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--line2); color: var(--seen); text-decoration: none; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.brief .warn { color: #8a4b00 !important; font-size: 12.5px; }
 </style>
 <div class="app">
   <header class="bar">
@@ -1970,7 +1962,6 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
   function select(name, anchor) {
     st.sel = name && name === st.sel ? null : name;
     if (st.sel && typeof setCTab === "function" && $("ctabs")) setCTab(st.mat ? "trade" : "overview");
-    resetBrief();
     const w = st.sel && isoOf[st.sel] && where[isoOf[st.sel]];
     st.pop = st.sel ? anchor || (w ? [w.lng, w.lat] : null) : null;
     if (w && G3 && st.wview === "3d" && !anchor) G3.pointOfView({ lat: w.lat, lng: w.lng, altitude: 2 }, 800);
@@ -2013,74 +2004,6 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
       const on = id === k, b = $(`ctab-${id}`), pn = $(`cpane-${id}`);
       if (b) { b.setAttribute("aria-selected", String(on)); b.setAttribute("aria-pressed", String(on)); b.tabIndex = on ? 0 : -1; }
       if (pn) pn.hidden = !on;
-    }
-  }
-  // ------------------------------------------------------------ optional AI brief (Edward's Gemini proxy)
-  // Off unless the URL has ?brief=1 (proxy on http://127.0.0.1:8787) or ?brief=<proxy url>.
-  const BRIEF = (() => { try { const b = new URLSearchParams(location.search).get("brief"); return b ? (b === "1" ? "http://127.0.0.1:8787" : b) : null; } catch (e) { return null; } })();
-  let briefFor = "";
-  (function buildBrief() {
-    const cc = $("country-card");
-    if (!BRIEF || !cc || $("brief")) return;
-    const d = document.createElement("div");
-    d.className = "brief"; d.id = "brief";
-    d.innerHTML = `<div class="bh"><span class="label">AI brief</span><span class="fine">Gemini with Google Search, written on request</span></div>
-      <button type="button" class="go-brief" id="brief-go"></button><div id="brief-out" aria-live="polite"></div>`;
-    cc.appendChild(d);
-    $("brief-go").addEventListener("click", () => writeBrief());
-  })();
-  function resetBrief() {
-    if (!BRIEF || !$("brief")) return;
-    const key = `${st.sel || ""}|${st.mat || ""}`;
-    if (key === briefFor) return;
-    briefFor = key;
-    $("brief-out").innerHTML = "";
-    const b = $("brief-go"); b.disabled = false;
-    const nm = st.sel === "United States of America" ? "United States" : st.sel || "";
-    b.textContent = st.mat ? `Write a brief on ${nm} and ${mats[st.mat].short || mats[st.mat].name}` : `Write a brief on ${nm} and the oil shock`;
-  }
-  // the facts are the numbers this page shows for the country, each with where it comes from
-  function briefFacts(name) {
-    const iso = isoOf[name], k = calc(name), out = [];
-    const scen = `this page's ${st.key} scenario, simulated: Brent $${st.brent} vs $${BRENT0} pre-war, Hormuz flow ${st.flow.toFixed(1)} mb/d`;
-    out.push(`Exposure score ${fmtS(k.score)} on a -40 to +65 scale (${scen})`);
-    out.push(`Fuel cost ${pct(k.fuel)} vs pre-war (Brent to retail fuel link validated on FRED 1991-2008, tested 2009-2026, plus an assumed shortage premium)`);
-    if (k.d.c) out.push(`About ${(k.hz * 100).toFixed(0)}% of its oil use comes through Hormuz (this page's country table)`);
-    const m = mats[st.mat];
-    if (m) {
-      const pm = priceMoveM(m);
-      if (pm) out.push(`${m.name} price ${pctP(pm.mean)} in 12 months at that Brent (${m.oil.series}; ${m.oil.source})`);
-      for (const mode of ["production", "exports"]) {
-        const rows = tableOf(m, mode), i = rows.findIndex((r) => r.iso3 === iso), src = mode === "exports" ? m.exports || {} : m;
-        if (i >= 0) out.push(`${m.name} ${mode === "exports" ? "exports" : "production"}: ${shareTxt(rows[i])}${rows[i].share != null ? " of world" : ""}, rank ${i + 1} (${src.year || m.year}; ${String(src.source || m.source || "").slice(0, 160)})`);
-      }
-      for (const l of m.links.filter((x) => x.to === iso)) {
-        const inp = MAT.inputs[l.input];
-        out.push(`${m.name}: ${Math.round(l.share * 100)}% of ${nmIso(iso)}'s ${inp ? inp.name : l.input} from ${nmIso(l.from)} (${l.basis || ""}; ${l.year || ""}; ${String(l.source || "").slice(0, 120)})`);
-      }
-    }
-    return out;
-  }
-  async function writeBrief() {
-    const name = st.sel, iso = isoOf[name], out = $("brief-out"), btn = $("brief-go");
-    if (!name || !iso) return;
-    const ask = `${st.sel || ""}|${st.mat || ""}`;
-    btn.disabled = true;
-    out.innerHTML = '<p class="fine">Writing…</p>';
-    try {
-      const res = await fetch(`${BRIEF}/brief`, { method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ iso3: iso, country: name, material: st.mat ? mats[st.mat].name : "crude oil and oil products", facts: briefFacts(name) }) });
-      const b = await res.json();
-      if (!res.ok) throw new Error(b.error || res.statusText);
-      if (ask !== `${st.sel || ""}|${st.mat || ""}`) return;   // the reader moved on
-      const when = new Date(b.generated_at).toLocaleString();
-      const host = (u) => { try { return new URL(u).hostname; } catch (e) { return u; } };
-      out.innerHTML = `<div class="btext">${escH(b.text).replace(/^\s*[*-]\s+/gm, "• ").replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/\n/g, "<br>")}</div>
-        ${b.sources && b.sources.length ? `<div class="srcs">${b.sources.map((x) => `<a class="srcl" href="${escH(x.uri)}" target="_blank" rel="noopener" title="${escH(x.uri)}">${escH(x.title || host(x.uri))}</a>`).join("")}</div>` : ""}
-        <p class="fine warn">AI-written by ${escH(b.model)}${b.cached ? `, cached, written ${escH(when)}` : `, ${escH(when)}`}. Not checked by the team: verify before quoting.</p>`;
-    } catch (e) {
-      out.innerHTML = `<p class="fine warn">No brief: ${escH(String(e.message || e))}. Is <code>uv run experiments/country_brief.py</code> running with a GEMINI_API_KEY?</p>`;
-      btn.disabled = false;
     }
   }
   function renderCountry() {
@@ -2279,7 +2202,6 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
   $("cp-more").addEventListener("click", () => { if ($("ctabs")) setCTab(st.mat ? "trade" : "overview"); const c = $("country-card"); c.scrollIntoView({ behavior: "smooth", block: "start" }); c.setAttribute("tabindex", "-1"); c.focus({ preventScroll: true }); });
   function pickMat(id) {
     st.mat = id;
-    resetBrief();
     st.qOpen = false;
     if (id && G3 && st.wview === "3d" && !st.sel) {
       const top = tableOf(mats[id], st.mode)[0], w = top && where[top.iso3];
@@ -2375,7 +2297,6 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
       <li><b>Price, 12 months:</b> Seb's Bayesian pass-through model (<code>notes/macro-bayes-responses.csv</code>), using the +10% response for rises and the −10% one for falls, scaled to the Brent setting. The band is the 90% interval of the average effect only; single moves vary more. Steel and aluminium use Seb's linear links instead (OXH-5, <code>notes/steel-aluminium-responses.csv</code>): US PPI steel mill products +3.7 ± 1.0 and aluminium mill shapes +2.0 ± 0.5 after 12 months per 10% Brent, the same size up or down; validated in 7/8 and 8/8 forward folds. These are US mill-product prices and the upper end for a supply shock.</li>
       <li><b>What it costs buyers:</b> the product's share of a buyer industry's costs × its price change. Shares are sourced for airlines (IATA) and farming (CIBC); others show "no data".</li>
       <li><b>Colours, one job each:</b> amber = oil and Hormuz (routes, the strait, Gulf producers that ship through it) · red = harm (exposure, cost rises) · teal = gain · each product its own colour (steel blue, jet-fuel orange, aluminium cyan, fertiliser green, plastic magenta) · yellow = every line: oil routes out of Hormuz, or where ingredients and trade go, blinking where they land · dark outline = what you selected · grey = no data.</li>
-      <li><b>AI brief (off by default):</b> with <code>?brief=1</code> and Edward's local proxy (<code>experiments/country_brief.py</code>) running, the country card can ask Gemini for a short brief. It gets only the numbers shown here, with their sources, and is labelled AI-written and not checked by the team.</li>
       <li><b>Bundled:</b> globe.gl 2.41.4 (MIT), flag-icons 7.6.0 (MIT), Natural Earth 1:110m (public domain). Nothing here is live.</li></ul>` },
     model: { title: "How the world view works", html: `<p>The Hormuz flow comes from the estimator in the Strait view for the chosen scenario. Brent is a scenario assumption you can change. For reference, Brent traded around $109 on 18 October 2026.</p>
       <ul><li><b>Lines:</b> the main tanker routes from the strait to each importer. Faint lines show pre-war volume, bright dotted lines show today's estimated flow.</li>

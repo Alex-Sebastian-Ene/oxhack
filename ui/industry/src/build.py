@@ -15,7 +15,6 @@ STEPS = [
     "patch_strait.py",   # Strait view on the same palette
     "patch_metals.py",   # Seb's OXH-5 steel and aluminium links
     "patch_panel.py",    # roomier right panel, country card in tabs (Overview, Industries, Trade)
-    "patch_brief.py",    # optional AI brief from Edward's Gemini proxy, off unless ?brief=1
 ]
 for step in STEPS:
     r = subprocess.run([sys.executable, "-I", str(here / step)], capture_output=True, text=True)
