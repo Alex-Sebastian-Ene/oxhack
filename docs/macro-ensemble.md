@@ -9,6 +9,7 @@ oil-price layer in [oil-price-model.md](oil-price-model.md).
 | `experiments/macro_data.py` | Fetches and aligns every input (monthly, 2000 on) with publication lags | `notes/macro-panel.md` |
 | `experiments/macro_nn.py` | Deep ensemble, baselines, stacker, folds, diagnostics, oil-shock responses | `notes/macro-nn-results.md` |
 | `experiments/macro_bayes.py` | Bayesian pass-through fitted by MCMC: pooled oil lags, momentum, asymmetry, volatility-driven bands (oil, own, drifting); what-if and genuine forecasts; benchmarks | `notes/macro-bayes-results.md`, `notes/macro-bayes-responses.csv` |
+| `experiments/macro_global.py` | One network shared by the 22 targets, one month ahead (own lags, oil lags, series embedding, Student-t head), simulated like the Bayesian model; least-squares benchmark on the same inputs | `notes/macro-global-results.md` |
 | `experiments/flow_price.py` | Hormuz flow (AIS) → Brent: regression and 2026 closure event study | `notes/flow-price-link.md` |
 | `experiments/hdi_link.py` | Oil prices against UNDP Human Development Index (annual) | `notes/hdi-link.md` |
 | `cluster/iridis/macro_*.{sh,slurm}` | Iridis environment, 9-task main array, diagnostics array | |
@@ -350,6 +351,42 @@ That is demand-driven comovement: oil rises in global booms, and both fell in 20
 a 10% oil move is about 0.1 thousandths of HDI, against normal growth of 3–8 thousandths a year.
 HDI is a context card, not a link in the monthly chain.
 
+## The global one-step network (`notes/macro-global-results.md`)
+
+`experiments/macro_global.py` fits one network shared by the 22 target series. It predicts next month's change of one series and is simulated forward like the Bayesian model. It tests whether the networks above failed because of their architecture or because of the problem they were given.
+
+- **Why the windowed networks failed:** their validation loss was lowest after 1–2 epochs (median over seeds and folds, base sizes), so early stopping kept weights close to initialisation, which forecast like climatology. With 33–174 training origins, 1,248 inputs and about 20k–150k parameters, every later epoch fitted noise.
+- **Inputs:** the series' own last 12 monthly changes, Brent's monthly change at lags 0–12, the Bayesian model's oil volatility state, and an 8-dimensional series embedding. Every (month, series) pair is a training row: 1,682 rows in fold 0 up to 5,818 in fold 7.
+- **Network:** a 2-layer MLP (64 wide) with a Student-t head, whose scale sits above the Bayesian model's floor and whose tail index is at least 2.5. `global_lin` adds a per-series linear term to the location. Each variant has 5 seeds. Training stops early on the last quarter of the training months, then refits on all of them.
+- **It trains:** best epochs are 3–37 from fold 2 on, and 2–8 in folds 0–1.
+- **Benchmark:** per-series least squares on the same inputs (OLS), simulated the same way.
+
+**Results:** what-if, 8 folds, 214 origins, run locally on 2026-10-24. The Bayesian reference is the fold files regenerated the same evening with the working copy of `macro_bayes.py`. Skill is against the v1 climatology, over all horizons.
+
+| | Inflation | Unemployment | Rate | Cost |
+|---|---|---|---|---|
+| global | +0.272 | +0.038 | **+0.224** | +0.245 |
+| global_lin | **+0.286** | **+0.055** | +0.182 | **+0.268** |
+| OLS, same inputs | +0.214 | −0.016 | −0.097 | +0.187 |
+| Bayes what-if | +0.212 | −0.014 | +0.195 | +0.264 |
+| 90% coverage (global / global_lin / Bayes) | 85 / 82 / 84% | 74 / 77 / 72% | 86 / 85 / 83% | 85 / 83 / 85% |
+
+1. **The shared network matches or beats the Bayesian model.**
+   - Inflation: `global_lin` is better by 0.075 in scaled CRPS (Diebold–Mariano t = −2.8), and `global` by 0.061 (t = −1.9).
+   - Most of the gain is at short horizons: inflation at 1 month scores +0.234 against +0.104.
+   - Rates, costs and unemployment are level with Bayes (|t| < 1).
+2. **The network makes the gain, not the extra lags.** OLS on the same inputs only matches Bayes on inflation, and on rates it falls apart (−0.097, t = +2.5 against Bayes). Sharing one model across the series is what makes 12 own lags usable.
+3. **Oil responses are close to the validated links but about 20% smaller.** For +10% Brent, after 12 months, mean over folds (Bayes all-data fit in brackets):
+   - US CPI +0.29 pp (+0.38);
+   - diesel +5.0% (+6.2%);
+   - jet fuel +8.1% (+8.1%).
+
+   Unemployment and rates show small responses with no validated link, so in the what-if they stay at 0 or show a range, as before.
+4. **Not solved:**
+   - Unemployment still trails the v1 ridge (+0.104).
+   - The network's oil response depends on the state, so a single shock table needs an all-data fit, which hasn't been run yet.
+   - Coverage is still short of 90%.
+
 ## Reproduce
 
 ```bash
@@ -365,6 +402,10 @@ uv run experiments/macro_bayes.py fold 0 --vol own        # ... to 7, and `final
 #   VOL=own sbatch --array=0-8 cluster/iridis/macro_bayes.slurm
 uv run experiments/macro_bayes.py benchmarks              # random walk, Cleveland Fed, Michigan, least-squares versions
 uv run experiments/macro_bayes.py report                  # notes/macro-bayes-results.md and macro-bayes-responses.csv
+uv run experiments/macro_global.py check                  # tiny end-to-end run
+uv run experiments/macro_global.py fold 0                 # ... to 7 (3-11 min each locally)
+uv run experiments/macro_global.py ols                    # least-squares benchmark, all folds
+uv run experiments/macro_global.py report                 # notes/macro-global-results.md
 uv run experiments/flow_price.py
 uv run experiments/hdi_link.py
 uv run --no-project --with pytest --with numpy --with scipy --with pandas --with xlrd --with openpyxl --with torch --with jax --with numpyro pytest -q tests
