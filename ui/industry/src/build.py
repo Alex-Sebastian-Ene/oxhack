@@ -14,6 +14,7 @@ STEPS = [
     "patch_pulse.py",    # yellow lines, blinking destinations, Hormuz routes on the globe
     "patch_strait.py",   # Strait view on the same palette
     "patch_metals.py",   # Seb's OXH-5 steel and aluminium links
+    "patch_panel.py",    # roomier right panel, country card in tabs (Overview, Industries, Trade)
 ]
 for step in STEPS:
     r = subprocess.run([sys.executable, "-I", str(here / step)], capture_output=True, text=True)

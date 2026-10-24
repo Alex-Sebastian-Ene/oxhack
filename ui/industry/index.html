@@ -380,6 +380,45 @@ select { padding: 0 8px; }
 #world .arc { filter: drop-shadow(0 0 1.2px rgba(20,32,46,.9)); }
 #world .route.dim { opacity: .3; }
 .legendbar .flowkey i { border-top-color: #ffd60a !important; filter: drop-shadow(0 0 1px rgba(20,32,46,.9)); }
+
+@media (min-width: 861px) { #world-stage .hud { flex: 0 0 430px; width: 430px; max-width: 430px; } }
+#world-stage .hud { gap: 14px; }
+#world-stage .hud .card { padding: 18px 20px; gap: 12px; }
+#world-stage .hud .label { font: 600 11.5px var(--sans); letter-spacing: .7px; text-transform: uppercase; color: var(--muted); }
+#world-stage .hud .sub { font-size: 14px; line-height: 1.6; color: var(--muted); }
+#world-stage .hud .faint { font-size: 13px; line-height: 1.55; }
+#world-stage .ctitle h2 { font-size: 21px; }
+/* tabs */
+.ctabs { display: flex; width: 100%; margin-top: 2px; }
+.ctabs button { flex: 1 1 0; min-height: 38px; font-size: 13px; padding: 0 6px; white-space: nowrap; }
+.cpane { display: flex; flex-direction: column; gap: 16px; padding-top: 4px; }
+/* overview numbers */
+#world-stage .kpis { gap: 8px; }
+#world-stage .kpis div { padding: 12px 10px; gap: 4px; }
+#world-stage .kpis b { font-size: 24px; }
+#world-stage .kpis span { font-size: 12.5px; line-height: 1.4; color: var(--muted); }
+/* industries and buyers: one row each, the reason on its own line */
+#world-stage .inds { gap: 0; }
+#world-stage .inds li { padding: 12px 0; border-top: 1px solid var(--line); gap: 6px 12px; }
+#world-stage .inds li:first-child { border-top: 0; padding-top: 4px; }
+#world-stage .inds .nm { font-size: 14.5px; font-weight: 600; }
+#world-stage .inds .lv { font-size: 12.5px; }
+#world-stage .inds .tr { height: 8px; border-radius: 4px; }
+#world-stage .inds .why { font-size: 13px; line-height: 1.55; color: var(--muted); }
+/* products and trade */
+#world-stage .tmat { padding: 14px 0; gap: 10px; }
+#world-stage .tmat:first-child { border-top: 0; padding-top: 4px; }
+#world-stage .tmat .th { font-size: 15px; font-weight: 600; }
+#world-stage .tmat .th .rl { font-size: 12.5px; font-weight: 400; }
+#world-stage .tmat .tl { gap: 6px; font-size: 13px; }
+#world-stage .tmat .tl > span { font: 600 11px var(--sans); letter-spacing: .7px; }
+#world-stage .ichips { gap: 6px; }
+#world-stage .ichip { font: 12.5px var(--sans); padding: 4px 9px; gap: 5px; }
+#world-stage .ichip .dot { box-shadow: 0 0 0 1px rgba(20,32,46,.35); }
+/* product card */
+#world-stage .pbars button { min-height: 36px; font-size: 13.5px; }
+#world-stage #m-band { font-size: 13px; line-height: 1.6; }
+#world-stage #m-hormuz { font-size: 14px; line-height: 1.6; }
 </style>
 <div class="app">
   <header class="bar">
@@ -1922,6 +1961,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
   // anchor = [lng, lat] the pop-up points at: where you clicked, or the country's centre
   function select(name, anchor) {
     st.sel = name && name === st.sel ? null : name;
+    if (st.sel && typeof setCTab === "function" && $("ctabs")) setCTab(st.mat ? "trade" : "overview");
     const w = st.sel && isoOf[st.sel] && where[isoOf[st.sel]];
     st.pop = st.sel ? anchor || (w ? [w.lng, w.lat] : null) : null;
     if (w && G3 && st.wview === "3d" && !anchor) G3.pointOfView({ lat: w.lat, lng: w.lng, altitude: 2 }, 800);
@@ -1929,6 +1969,42 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
     renderCountry();
     renderRank();
     renderMat();
+  }
+  // country card: three tabs instead of one long column (the sections keep their ids; render code is unchanged)
+  const CTABS = [["overview", "Overview"], ["inds", "Industries"], ["trade", "Trade"]];
+  let ctab = "overview";
+  (function buildCTabs() {
+    const cc = $("country-card"), sub = $("c-sub");
+    if (!cc || !sub || $("ctabs")) return;
+    const bar = document.createElement("div");
+    bar.className = "seg ctabs"; bar.id = "ctabs"; bar.setAttribute("role", "tablist"); bar.setAttribute("aria-label", "Country detail");
+    bar.innerHTML = CTABS.map(([k, t]) => `<button type="button" role="tab" id="ctab-${k}" data-ctab="${k}" aria-controls="cpane-${k}">${t}</button>`).join("");
+    sub.after(bar);
+    const pane = (k, nodes) => {
+      const d = document.createElement("div");
+      d.className = "cpane"; d.id = `cpane-${k}`; d.setAttribute("role", "tabpanel"); d.setAttribute("aria-labelledby", `ctab-${k}`);
+      nodes.filter(Boolean).forEach((n) => d.appendChild(n));
+      return d;
+    };
+    const kpis = cc.querySelector(".kpis"), chart = $("c-chartbox") && $("c-chartbox").parentElement, inds = $("c-inds") && $("c-inds").parentElement;
+    const panes = [pane("overview", [kpis, chart]), pane("inds", [inds]), pane("trade", [$("t-sec")])];
+    let at = bar;
+    for (const d of panes) { at.after(d); at = d; }
+    bar.addEventListener("click", (e) => { const b = e.target.closest("[data-ctab]"); if (b) setCTab(b.dataset.ctab); });
+    bar.addEventListener("keydown", (e) => {
+      const i = CTABS.findIndex(([k]) => k === ctab), d = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
+      if (!d) return;
+      e.preventDefault(); setCTab(CTABS[(i + d + CTABS.length) % CTABS.length][0]); $(`ctab-${ctab}`).focus();
+    });
+    setCTab("overview");
+  })();
+  function setCTab(k) {
+    ctab = k;
+    for (const [id] of CTABS) {
+      const on = id === k, b = $(`ctab-${id}`), pn = $(`cpane-${id}`);
+      if (b) { b.setAttribute("aria-selected", String(on)); b.setAttribute("aria-pressed", String(on)); b.tabIndex = on ? 0 : -1; }
+      if (pn) pn.hidden = !on;
+    }
   }
   function renderCountry() {
     $("country-card").hidden = !st.sel;
@@ -2123,7 +2199,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
     pop.style.top = `${top}px`;
   }
   $("cp-close").addEventListener("click", () => select(st.sel));
-  $("cp-more").addEventListener("click", () => { const c = $("country-card"); c.scrollIntoView({ behavior: "smooth", block: "start" }); c.setAttribute("tabindex", "-1"); c.focus({ preventScroll: true }); });
+  $("cp-more").addEventListener("click", () => { if ($("ctabs")) setCTab(st.mat ? "trade" : "overview"); const c = $("country-card"); c.scrollIntoView({ behavior: "smooth", block: "start" }); c.setAttribute("tabindex", "-1"); c.focus({ preventScroll: true }); });
   function pickMat(id) {
     st.mat = id;
     st.qOpen = false;

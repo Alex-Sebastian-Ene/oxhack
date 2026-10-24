@@ -3,7 +3,7 @@
 Edward's strait page with his materials globe built in, aimed at industry users: which products an
 oil shock reaches, which countries make and ship them, and what it does to their price.
 Open `index.html` in a browser; it needs no server. It is the same page as the shared artifact
-<https://claude.ai/artifact/84rJe1aD8Vpe7KvAnq8a39> (version 19).
+<https://claude.ai/artifact/84rJe1aD8Vpe7KvAnq8a39> (version 20).
 
 ## What it shows
 
@@ -17,7 +17,8 @@ Open `index.html` in a browser; it needs no server. It is the same page as the s
     colour. Gulf producers that ship through Hormuz have an amber outline. Pick one from the icons or the
     search at the top.
   - **Click a country:** it floats with a flag tag, a short pop-up gives the main numbers, and the right
-    panel has the full analysis: what it makes, where its inputs come from (yellow arcs) and where it ships.
+    panel has the full analysis in three tabs: Overview (key numbers and the fuel-cost chart), Industries
+    (cost impact by industry) and Trade (what it makes, where its inputs come from and where it ships).
 
 ## Where the numbers come from
 
