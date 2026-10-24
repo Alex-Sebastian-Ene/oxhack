@@ -151,3 +151,55 @@ def test_stacker_returns_a_convex_combination_of_the_means():
     mus = torch.tensor([[0.0, 1.0, 2.0]] * 5)
     mu, logvar = st(mus, torch.zeros(5, 3), torch.randn(5, 6), torch.arange(5) % 4)
     assert torch.all(mu >= 0.0) and torch.all(mu <= 2.0) and torch.isfinite(logvar).all()
+
+
+def synthetic_anchor_data(seed=0, T=300, beta=(0.3, 0.2, 0.1)):
+    """Monthly oil changes and two targets: one with a known 0-2 lag pass-through, one with none."""
+    rng = np.random.default_rng(seed)
+    oil = rng.normal(0, 0.08, T)
+    oil[0] = np.nan  # a log change has no first month, as in the panel
+    o = np.nan_to_num(oil)
+    linked = sum(b * np.concatenate([np.zeros(l), o[:T - l]]) for l, b in enumerate(beta)) * 100 + rng.normal(0, 0.2, T)
+    t = np.arange(23, T - 12)
+    OIL = np.stack([o[i + 1:i + 13] for i in t])
+    return {"oil_m": oil, "dM": np.column_stack([linked, rng.normal(0, 0.2, T)]), "target_keys": ["linked", "none"],
+            "target_lags": [2, 2], "t": t, "OIL": OIL, "names": [f"{k}@{h}" for k in ("linked", "none") for h in mn.HORIZONS],
+            "dates": pd.date_range("2000-01-01", periods=len(t), freq="MS"), "Y": np.zeros((len(t), 8))}
+
+
+def test_anchor_recovers_the_pass_through_and_drops_links_that_fail_validation():
+    data = synthetic_anchor_data()
+    anchor = mn.Anchor(data, last_month=250)
+    np.testing.assert_allclose(anchor.beta[0], [30, 20, 10], atol=1.5)  # target units: x100 log points
+    assert anchor.info[0]["anchored"] and not anchor.info[1]["anchored"]
+    assert np.all(anchor.beta[1] == 0)
+
+
+def test_anchor_uses_training_months_only_and_sums_lags_over_the_horizon():
+    data = synthetic_anchor_data()
+    a = mn.Anchor(data, last_month=200)
+    data["dM"][201:] += 1000.0  # months after the training window must not matter
+    b = mn.Anchor(data, last_month=200)
+    np.testing.assert_allclose(a.beta[0], b.beta[0])
+    i = 50
+    t, beta = data["t"][i], a.beta[0]
+    path = {s: data["oil_m"][s] for s in range(t - 2, t + 1)} | {t + 1 + j: data["OIL"][i, j] for j in range(12)}
+    manual = [sum(sum(beta[l] * path[m - l] for l in range(3)) for m in range(t + 1, t + h + 1)) for h in mn.HORIZONS]
+    np.testing.assert_allclose(a.predict(data, np.array([i]))[0, :4], manual, rtol=1e-10)
+
+
+def test_residual_data_removes_the_anchor_and_the_oil_path():
+    data = synthetic_anchor_data()
+    anchor = mn.Anchor(data, last_month=250)
+    res = mn.residual_data(data, anchor)
+    assert np.all(res["OIL"] == 0)
+    np.testing.assert_allclose(res["Y"] + anchor.predict(data, np.arange(len(data["dates"]))), data["Y"])
+
+
+def test_calibration_rescales_variances_that_are_too_narrow():
+    rng = np.random.default_rng(3)
+    y = rng.normal(0, 2, (400, 8))  # true variance 4 everywhere
+    b_val = (None, None, torch.tensor(y, dtype=torch.float32))
+    names = [f"s{k}@{h}" for k in range(2) for h in mn.HORIZONS]
+    scales = mn.calibrate({"narrow": lambda b: (np.zeros((400, 8)), np.ones((400, 8)))}, b_val, names)
+    np.testing.assert_allclose(scales["narrow"], 4.0, rtol=0.15)

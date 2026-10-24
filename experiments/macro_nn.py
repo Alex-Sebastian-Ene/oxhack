@@ -60,6 +60,9 @@ ARCHS = ("tcn", "transformer", "tcn_transformer", "lstm", "nbeats")
 SIZES = {"base": {"d": 64, "layers": 2}, "small": {"d": 24, "layers": 1}}
 TRAIN = {"epochs": 400, "patience": 40, "lr": 2e-3, "wd": 1e-2, "batch": 32, "dropout": 0.1}
 QUICK = False
+ANCHOR_LAGS = {"inflation": 12, "unemployment": 12, "rate": 12, "cost": 2}  # as in oil_chain.py
+ANCHOR_Z = 2.0  # a target is anchored only if its summed pass-through exceeds this many HAC errors
+CALIB_PRIOR = 20.0  # validation points' worth of pull towards the series-wide variance scale
 torch.set_num_threads(int(os.environ.get("SLURM_CPUS_PER_TASK", 2)))
 
 
@@ -87,8 +90,13 @@ def make_dataset(blocks=md.BLOCKS, ignore_lags: bool = False, drop=()) -> dict:
         OIL[:-(j + 1), j] = oil[j + 1:]
     X = F.values.astype(float)
     t = np.arange(WINDOW - 1, len(F) - OIL_AHEAD)  # full window behind, full oil path ahead
+    scale = {k: 100.0 if reg[k].transform == "dlog" else 1.0 for k in targets}
     return {"dates": F.index[t], "X": X, "t": t, "Y": Y[t], "OIL": OIL[t], "names": names, "groups": groups,
-            "features": list(F.columns)}
+            "features": list(F.columns),
+            # Monthly series for the linear oil anchor (true values, not lagged).
+            "oil_m": oil, "target_keys": targets,
+            "dM": np.column_stack([L[k].diff().values * scale[k] for k in targets]),
+            "target_lags": [reg[k].anchor_lags or ANCHOR_LAGS[reg[k].target] for k in targets]}
 
 
 class Scaler:
@@ -343,6 +351,77 @@ def gaussian_crps(mu, var, y):
     return sd * (z * (2 * norm.cdf(z) - 1) + 2 * norm.pdf(z) - 1 / np.sqrt(np.pi))
 
 
+class Anchor:
+    """The validated linear oil pass-through for each target series, fitted on training months only.
+
+    For each series it is oil_chain.py's link: the monthly change of the target on the current and
+    lagged monthly log change of Brent (lags 0..L), with a Newey-West error on the summed effect.
+    Only links whose summed effect clears ANCHOR_Z errors are kept; the rest anchor at 0. The anchor
+    of an h-month forecast from origin t is the sum over months t+1..t+h of the lagged oil terms,
+    using known oil up to t and the oil path after it.
+    """
+
+    def __init__(self, data: dict, last_month: int) -> None:
+        import oil_chain as oc
+
+        oil = data["oil_m"]
+        self.beta, self.info = [], []
+        for k, (key, lags) in enumerate(zip(data["target_keys"], data["target_lags"])):
+            lagged = np.column_stack([np.concatenate([np.full(lag, np.nan), oil[:len(oil) - lag]])
+                                      for lag in range(lags + 1)])
+            y = data["dM"][:, k]
+            ok = np.isfinite(y) & np.isfinite(lagged).all(1)
+            ok[last_month + 1:] = False
+            X = np.column_stack([np.ones(ok.sum()), lagged[ok]])
+            b, cov = oc.ols_hac(y[ok], X, max(lags, 6))
+            total, se = b[1:].sum(), float(np.sqrt(np.ones(lags + 1) @ cov[1:, 1:] @ np.ones(lags + 1)))
+            keep = abs(total) > ANCHOR_Z * se
+            self.beta.append(b[1:] if keep else np.zeros(lags + 1))
+            self.info.append({"target": key, "lags": lags, "months": int(ok.sum()), "total": float(total),
+                              "se": se, "anchored": bool(keep)})
+        self.horizons = HORIZONS
+
+    def predict(self, data: dict, idx: np.ndarray, oil_future: np.ndarray | None = None) -> np.ndarray:
+        """Anchor for every output (target-major, horizon-minor, as data['names']) at origins idx."""
+        future = data["OIL"][idx] if oil_future is None else oil_future
+        oil = data["oil_m"]
+        out = np.zeros((len(idx), len(self.beta) * len(self.horizons)))
+        Lmax = max(len(b) for b in self.beta)
+        for i, (t, fut) in enumerate(zip(data["t"][idx], future)):
+            first = t - Lmax + 1
+            past = np.concatenate([np.zeros(max(-first, 0)), oil[max(first, 0):t + 1]])
+            path = np.concatenate([np.nan_to_num(past), fut])  # path[Lmax - 1] is month t
+            for k, b in enumerate(self.beta):
+                lags = len(b)
+                monthly = [b @ path[Lmax - 1 + j - np.arange(lags)] for j in range(1, max(self.horizons) + 1)]
+                cum = np.cumsum(monthly)
+                for hi, h in enumerate(self.horizons):
+                    out[i, k * len(self.horizons) + hi] = cum[h - 1]
+        return out
+
+
+def residual_data(data: dict, anchor: Anchor) -> dict:
+    """What the networks learn in anchored mode: targets minus the anchor, and no oil path."""
+    return dict(data, Y=data["Y"] - anchor.predict(data, np.arange(len(data["dates"]))),
+                OIL=np.zeros_like(data["OIL"]))
+
+
+def calibrate(models: dict, b_val, names: list[str]) -> dict:
+    """Per-output variance scale so validation z^2 averages 1, pulled towards the series' own scale."""
+    y = b_val[2].numpy()
+    series = np.array([n.split("@")[0] for n in names])
+    scales = {}
+    for name, m in models.items():
+        mu, var = m(b_val)
+        z2 = (y - mu) ** 2 / var
+        n = np.sum(np.isfinite(z2), 0)
+        own = np.nanmean(np.where(np.isfinite(z2), z2, np.nan), 0)
+        prior = np.array([np.nanmean(z2[:, series == s]) for s in series])
+        s2 = (n * np.nan_to_num(own, nan=1.0) + CALIB_PRIOR * prior) / (n + CALIB_PRIOR)
+        scales[name] = np.clip(np.nan_to_num(s2, nan=1.0), 0.25, 25.0)
+    return scales
+
+
 def fit_all(data: dict, train: np.ndarray, log=print):
     """Train every model on `train` origins (last quarter held out for early stopping and the stacker)."""
     gap = max(HORIZONS)
@@ -380,6 +459,7 @@ def fit_all(data: dict, train: np.ndarray, log=print):
     stack_inputs = [m for m in models if m not in ("nn_mean",)]
     stacker = train_stacker({m: models[m](b_val) for m in stack_inputs}, b_val)
     models["stack"] = lambda b: stacker({m: models[m](b) for m in stack_inputs}, b)
+    info["calibration"] = calibrate(models, b_val, data["names"])
     return models, sc, info
 
 
@@ -390,30 +470,64 @@ def fold_indices(dates, j: int) -> tuple[np.ndarray, np.ndarray]:
     return np.arange(max(test[0] - max(HORIZONS), 0)), test
 
 
-def run_fold(data: dict, j: int) -> dict:
+def run_fold(data: dict, j: int, anchored: bool = False) -> dict:
+    """Fit on fold j's training origins and score its test block.
+
+    anchored: the oil pass-through comes from an Anchor fitted on the training months; every model
+    then learns the residual without seeing the oil path, and its forecast is anchor + residual
+    ("no_change" stays a true zero-change forecast, and "anchor" is the anchor alone).
+    Every model is scored with its raw variance and with the validation-recalibrated one.
+    """
     dates = data["dates"]
     train, test = fold_indices(dates, j)
     print(f"fold {j}: train {dates[train[0]]:%Y-%m}..{dates[train[-1]]:%Y-%m} ({len(train)}), "
-          f"test {dates[test[0]]:%Y-%m}..{dates[test[-1]]:%Y-%m} ({len(test)})", flush=True)
-    models, sc, info = fit_all(data, train)
+          f"test {dates[test[0]]:%Y-%m}..{dates[test[-1]]:%Y-%m} ({len(test)})"
+          + (" [anchored]" if anchored else ""), flush=True)
+    anchor = Anchor(data, data["t"][train[-1]] + max(HORIZONS)) if anchored else None
+    work = residual_data(data, anchor) if anchored else data
+    models, sc, info = fit_all(work, train)
+    calib = info.pop("calibration")
     info["n_train"] = len(train)
-    b = sc.batch(data, test)
+    b = sc.batch(work, test)
     y = data["Y"][test]
-    out = {"fold": j, "test_dates": [f"{d:%Y-%m}" for d in dates[test]], "names": data["names"],
-           "groups": data["groups"], "y": y.tolist(), "info": info, "models": {}}
-    for name, m in models.items():
+    A = anchor.predict(data, test) if anchored else np.zeros_like(y)
+    out = {"fold": j, "anchored": anchored, "test_dates": [f"{d:%Y-%m}" for d in dates[test]],
+           "names": data["names"], "groups": data["groups"], "y": y.tolist(), "info": info,
+           "anchor": anchor.info if anchored else None, "models": {}}
+    entries = list(models.items()) + ([("anchor", models["no_change"])] if anchored else [])
+    for name, m in entries:
         mu, var = m(b)
+        s2 = calib["no_change" if name == "anchor" else name]
         mu, var = mu * sc.ys + sc.ym, var * sc.ys ** 2  # back to real units
-        out["models"][name] = {"mu": mu.tolist(), "var": var.tolist(),
-                               "crps": np.where(np.isnan(y), np.nan, gaussian_crps(mu, var, np.nan_to_num(y))).tolist()}
+        if anchored and name != "no_change":
+            mu = mu + A
+        if anchored and name == "no_change":
+            mu = np.zeros_like(mu)  # a true no-change forecast, not anchor + zero residual
+        score = lambda v: np.where(np.isnan(y), np.nan, gaussian_crps(mu, v, np.nan_to_num(y))).tolist()  # noqa: E731
+        out["models"][name] = {"mu": mu.tolist(), "var": (var * s2).tolist(), "var_raw": var.tolist(),
+                               "crps": score(var * s2), "crps_raw": score(var)}
     return out
 
 
-def run_final(data: dict, shock: float = np.log(1.10), recent: int = 24) -> dict:
-    """Fit on all origins; response of every output to a +10% oil move in the first month ahead."""
+def run_final(data: dict, shock: float = np.log(1.10), recent: int = 24, anchored: bool = False) -> dict:
+    """Fit on all origins; response of every output to a +10% oil move in the first month ahead.
+
+    anchored: the networks never see the oil path, so every model's response is the anchor's.
+    """
     train = np.arange(len(data["dates"]))
-    models, sc, info = fit_all(data, train)
     idx = train[-recent:]
+    if anchored:
+        anchor = Anchor(data, len(data["oil_m"]) - 1)
+        fut = data["OIL"][idx].copy()
+        shocked = fut.copy()
+        shocked[:, 0] += shock
+        d = anchor.predict(data, idx, shocked) - anchor.predict(data, idx, fut)
+        resp = {"anchor": {"mean": d.mean(0).tolist(), "sd_over_origins": d.std(0).tolist()}}
+        return {"names": data["names"], "groups": data["groups"], "origins": [f"{data['dates'][i]:%Y-%m}" for i in idx],
+                "shock": "Brent +10% in the first month ahead, rest of the path unchanged", "anchored": True,
+                "responses": resp, "anchor": anchor.info}
+    models, sc, info = fit_all(data, train)
+    info.pop("calibration")
     base = sc.batch(data, idx)
     shocked = (base[0], base[1].clone(), base[2])
     shocked[1][:, 0] += shock / sc.os
@@ -445,6 +559,9 @@ VARIANTS = {
     "v2_no_pipeline": {"blocks": tuple(b for b in md.BLOCKS if b != "pipeline"), "archs": V2_ARCHS},
     "v2_no_drivers": {"blocks": tuple(b for b in md.BLOCKS if b != "drivers"), "archs": V2_ARCHS},
     "v2_no_ais_pipeline": {"blocks": tuple(b for b in md.BLOCKS if b not in ("ais", "pipeline")), "archs": V2_ARCHS},
+    # The anchored model on the reduced set: compare with `full` and `no_ais` above.
+    "anchored": {"anchored": True},
+    "anchored_no_ais": {"blocks": tuple(b for b in V1_BLOCKS if b != "ais"), "anchored": True},
 }
 ABLATION_MODELS = {"archs": ("lstm", "tcn_transformer"), "sizes": ("small",), "seeds": 3}
 
@@ -468,7 +585,7 @@ def run_ablation(variant: str, j: int) -> dict:
         train, _ = fold_indices(data["dates"], j)
         data["Y"] = data["Y"].copy()
         data["Y"][train] = data["Y"][np.random.default_rng(j).permutation(train)]
-    out = run_fold(data, j)
+    out = run_fold(data, j, anchored=v.get("anchored", False))
     out["variant"] = variant
     return out
 
@@ -530,8 +647,93 @@ def ablation_section() -> list[str]:
     return out
 
 
+def anchored_section(v1_folds: list[dict]) -> list[str]:
+    """Anchored model against v1 on the same test origins, scored against v1's climatology."""
+    files = sorted(RUNS.glob("fold-anchored-*.json"))
+    if not files:
+        return []
+    folds = [json.loads(p.read_text(encoding="utf-8")) for p in files]
+    groups, names = np.array(folds[0]["groups"]), folds[0]["names"]
+    shared = {f["fold"] for f in folds} & {f["fold"] for f in v1_folds}
+    v1 = [f for f in v1_folds if f["fold"] in shared]
+    an = sorted([f for f in folds if f["fold"] in shared], key=lambda f: f["fold"])
+    v1 = sorted(v1, key=lambda f: f["fold"])
+
+    def stack(fs, m, key):
+        return np.concatenate([np.array(f["models"][m][key], dtype=float) for f in fs])
+
+    clim = stack(v1, "climatology", "crps")
+    shock = np.log(1.10)
+    out = ["", "## Anchored model: the oil pass-through fixed to the validated linear links", "",
+           f"_{len(an)} folds (Iridis job {an[0]['meta'].get('slurm_job')}), same test origins as above. Each fold "
+           f"fits, on its training months only, the `oil_chain.py` link for every target series (monthly change on "
+           f"Brent lags 0–12 for inflation, unemployment, rates and materials, 0–2 for fuel and freight) and anchors "
+           f"it only if the summed effect clears {ANCHOR_Z:g} Newey–West errors. The networks and baselines then "
+           "learn the residual without seeing the oil path, and every interval is rescaled on the validation set. "
+           "Skill is against the *unanchored* climatology, so both runs share one yardstick._", "",
+           "**Which links are anchored** (folds where the link cleared the bar; effect of a sustained +10% Brent "
+           "move on the summed monthly changes, in the target's units, mean over anchored folds):", "",
+           "| Target | Lags | Folds anchored | Effect of +10% oil |", "|---|---|---|---|"]
+    for k, info in enumerate(an[0]["anchor"]):
+        per = [f["anchor"][k] for f in an]
+        hits = [p for p in per if p["anchored"]]
+        eff = f"{np.mean([p['total'] for p in hits]) * shock:+.3f}" if hits else "not anchored"
+        out.append(f"| {info['target']} | 0–{info['lags']} | {len(hits)}/{len(per)} | {eff} |")
+    out += ["", "**Skill vs the unanchored climatology, all horizons** (v1 = unanchored run above; raw = anchored with "
+                "the networks' own variances; recalibrated = anchored with validation-rescaled variances):", "",
+            "| Model | " + " | ".join(f"{g}: v1 / raw / recal." for g in ("inflation", "unemployment", "rate", "cost")) + " |",
+            "|---|" + "---|" * 4]
+    for m in ("anchor", "stack", "nn_mean", "ridge", "climatology", "lstm_base", "lstm_small", "tcn_transformer_base",
+              "transformer_base", "no_change"):
+        if m not in an[0]["models"]:
+            continue
+        cells = []
+        for g in ("inflation", "unemployment", "rate", "cost"):
+            cols = groups == g
+            base = np.nanmean(clim[:, cols])
+            v = f"{1 - np.nanmean(stack(v1, m, 'crps')[:, cols]) / base:+.3f}" if m in v1[0]["models"] else "-"
+            raw = 1 - np.nanmean(stack(an, m, "crps_raw")[:, cols]) / base
+            cal = 1 - np.nanmean(stack(an, m, "crps")[:, cols]) / base
+            cells.append(f"{v} / {raw:+.3f} / **{cal:+.3f}**")
+        out.append(f"| {m} | " + " | ".join(cells) + " |")
+    from scipy.stats import norm
+    y = np.concatenate([np.array(f["y"], dtype=float) for f in an])
+    out += ["", "**Calibration: share inside the central 90% interval** (target 90%), anchored raw → recalibrated:", "",
+            "| Model | inflation | unemployment | rate | cost |", "|---|---|---|---|---|"]
+    for m in ("anchor", "stack", "nn_mean", "ridge", "lstm_base", "tcn_transformer_base"):
+        if m not in an[0]["models"]:
+            continue
+        mu = stack(an, m, "mu")
+        cells = []
+        for g in ("inflation", "unemployment", "rate", "cost"):
+            cols = groups == g
+            got = []
+            for key in ("var_raw", "var"):
+                inside = np.abs(y - mu) <= norm.ppf(0.95) * np.sqrt(stack(an, m, key))
+                got.append(np.nanmean(np.where(np.isnan(y[:, cols]), np.nan, inside[:, cols])))
+            cells.append(f"{got[0]:.0%} → **{got[1]:.0%}**")
+        out.append(f"| {m} | " + " | ".join(cells) + " |")
+    final = RUNS / "final-anchored.json"
+    if final.exists():
+        fin = json.loads(final.read_text(encoding="utf-8"))
+        r = fin["responses"]["anchor"]["mean"]
+        v1fin = json.loads((RUNS / "final.json").read_text(encoding="utf-8")) if (RUNS / "final.json").exists() else None
+        out += ["", "**Response to a +10% Brent move in the next month, 12 months ahead** (anchored = every model, "
+                    "fitted on all data; v1 = the unanchored ensemble mean and stacker):", "",
+                "| Output | anchored | v1 nn_mean | v1 stack | anchored in final fit |", "|---|---|---|---|---|"]
+        anchored_keys = {i["target"]: i["anchored"] for i in fin["anchor"]}
+        for i, n in enumerate(fin["names"]):
+            if n.endswith("@12"):
+                v1r = (f"{v1fin['responses']['nn_mean']['mean'][i]:+.3f} | {v1fin['responses']['stack']['mean'][i]:+.3f}"
+                       if v1fin else "- | -")
+                out.append(f"| {n[:-3]} | **{r[i]:+.3f}** | {v1r} | {'yes' if anchored_keys[n[:-3]] else 'no'} |")
+        out.append("")
+        out.append("Linear link for comparison (`notes/oil-chain-links.md`, US, 1991–2008 fit): headline CPI +0.36 pp.")
+    return out
+
+
 def write_report() -> None:
-    folds = [json.loads(p.read_text(encoding="utf-8")) for p in sorted(RUNS.glob("fold-*.json"))]
+    folds = [json.loads(p.read_text(encoding="utf-8")) for p in sorted(RUNS.glob("fold-[0-9]*.json"))]
     names, groups = folds[0]["names"], np.array(folds[0]["groups"])
     models = list(folds[0]["models"])
     crps = {m: np.concatenate([np.array(f["models"][m]["crps"], dtype=float) for f in folds]) for m in models}
@@ -622,6 +824,7 @@ def write_report() -> None:
             for rows in (~in_crisis, in_crisis):
                 cells.append(f"{1 - np.nanmean(crps[m][rows][:, cols]) / np.nanmean(clim[rows][:, cols]):+.3f}")
         out.append(f"| {m} | " + " | ".join(cells) + " |")
+    out += anchored_section(folds)
     out += ablation_section()
     final = RUNS / "final.json"
     if final.exists():
@@ -671,6 +874,8 @@ def main() -> None:
     sub.add_parser("report")
     for q in (f, a, fi):
         q.add_argument("--quick", action="store_true")
+    for q in (f, fi, sub.choices["check"]):
+        q.add_argument("--anchored", action="store_true", help="oil pass-through from the linear anchor")
     args = p.parse_args()
     if args.cmd == "report":
         write_report()
@@ -680,18 +885,21 @@ def main() -> None:
         save(run_ablation(args.variant, args.j), f"ablate-{args.variant}-fold-{args.j}")
         return
     if args.cmd == "final" and args.variant:
-        save(run_final(variant_data(args.variant)), f"final-{args.variant}")
+        v = VARIANTS[args.variant]
+        save(run_final(variant_data(args.variant), anchored=v.get("anchored", False)), f"final-{args.variant}")
         return
     if args.cmd == "check":
         SEEDS = 2
     data = make_dataset(V1_BLOCKS)
     print(f"dataset: {len(data['dates'])} origins {data['dates'][0]:%Y-%m}..{data['dates'][-1]:%Y-%m}, "
           f"{len(data['features'])} inputs, {len(data['names'])} outputs", flush=True)
+    tag = "anchored-" if args.anchored else ""
     if args.cmd in ("fold", "check"):
         j = getattr(args, "j", FOLDS - 1)
-        save(run_fold(data, j), f"fold-{j}" if args.cmd == "fold" else "check")
+        save(run_fold(data, j, anchored=args.anchored),
+             f"fold-{tag}{j}" if args.cmd == "fold" else ("check-anchored" if args.anchored else "check"))
     else:
-        save(run_final(data), "final")
+        save(run_final(data, anchored=args.anchored), f"final{'-anchored' if args.anchored else ''}")
 
 
 if __name__ == "__main__":
