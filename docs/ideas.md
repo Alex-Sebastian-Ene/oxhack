@@ -60,8 +60,8 @@ A command view · B what-if ripple · C ghost-ship file · D phone "what it mean
 E replay + backtest · F live pulse · G number receipt · H who is exposed · I analyst chat, alerts,
 brief · J judge mode · K spoofing + ship-to-ship · L us vs the analysts · M radar snapshot to flow
 rate · N shadow-fleet network · O headlines vs hulls · P satellite swipe · Q pitch storyboard ·
-R closure simulator (published inputs only).
-B, D, F, G, H, J, L, M, O, P and R are clickable or animated.
+R closure simulator (published inputs only) · S uncertainty down the chain.
+B, D, F, G, H, J, L, M, O, P, R and S are clickable or animated.
 
 ## Wilder ideas (parking lot)
 
