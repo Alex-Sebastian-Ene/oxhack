@@ -12,6 +12,7 @@ This page covers how they join, and what the joined chain gets right.
 | `experiments/oil_paths.py` | Monthly Brent paths from the daily GARCH-CGMY model, with an optional Hormuz flow scenario; backtest against the bootstrap paths | `notes/oil-paths-results.md` |
 | `experiments/macro_chain.py` | Every knock-on model on the same oil draws, the ensemble, the forward-chaining backtest, and the 2026 closure replay | `notes/macro-chain-results.md` (4 members, 5 seeds), `notes/macro-chain-results-s20.md` (20 seeds), `notes/chain-replay-2026-3m.md` and `notes/chain-scenarios-3m.csv` (the recommended 3 members), `notes/chain-replay-2026.md` and `notes/chain-scenarios.csv` (4 members) |
 | `cluster/iridis/macro_chain.slurm` | The chain's folds as an Iridis array; `CHAIN_SEEDS`/`CHAIN_TAG` for more networks per variant | `runs/macro/chain-*.{npz,json}` |
+| `experiments/margins.py` | Refined-product margins (crack spreads) between Brent and the fuel targets, scored on the chain's own fold draws and the 2026 replay | `notes/margins-results.md`, `notes/margins-monthly.csv`, `notes/margin-scenarios.csv`, `notes/chain-fuel-scenarios-margins.csv` |
 
 ## How the chain is built
 
@@ -116,6 +117,51 @@ Every member is fitted on data up to 2026-01 only, then started from 2026-02, th
 
 `notes/chain-scenarios-3m.csv` is the slider's table, from the same fits (`notes/chain-scenarios.csv` is the 4-member version): each series' mean, median and 90% band for 0, 25, 50, 82 and 100 points of lost flow, 1–12 months ahead, with the actual where it's published. Its columns are series, group, flow_drop_points, months_ahead, mean, q05, q50, q95, actual, unit, validated, origin, source, fitted_to and generated. Unemployment and rates are marked `validated=no` (forecast only, no causal oil link). Since flow is already near zero in October 2026, a slider started today would need the *reopening* direction, which no data have tested. The demo should replay February 2026.
 
+## Refined-product margins (`notes/margins-results.md`)
+
+The fuel targets were driven by Brent alone, and in 2026 they rose 9–26 points more than every member expected. `experiments/margins.py` puts product prices between Brent and those targets.
+
+- **Data:** daily EIA spot prices: New York Harbor ULSD (New York Harbor heating oil before 2006-06), US Gulf Coast jet fuel, US Gulf Coast conventional gasoline and Los Angeles RBOB. Crack spread = product − Brent in $/bbl, monthly means, in `notes/margins-monthly.csv`.
+- **Margin model,** per product, on the log ratio r = log(product / Brent):
+  - reversion to the five-year mean (half-life 2–3 months);
+  - a sticky-dollar response to Brent, and seasonality;
+  - Brent volatility widens the band;
+  - a crisis term: the excess margin path after each earlier IEA collective action (1990, 2005, 2011, 2022). Each draw takes one past crisis.
+- **Into the chain:** each fuel target maps onto its products:
+  - jet fuel spot is an identity;
+  - retail diesel follows New York Harbor ULSD at lags 0–1;
+  - the refinery PPI follows diesel, gasoline and jet.
+
+  The **margin member** is that mapping driven by Brent path n plus a simulated margin path. It is mixed in as a fourth, equal-weight member for the three fuel targets only.
+
+Fuel targets on the 8 folds (skill against the v1 climatology, all horizons, the three targets together; Iridis jobs 1972719–1972727):
+
+| | What-if | Forecast (Lévy oil) |
+|---|---|---|
+| Chain (3 members) | +0.562 | +0.154 |
+| **+ margin member** | **+0.611** (t −3.8; better in 8 of 8 folds) | **+0.179** (t −3.5; 7 of 8) |
+| + the same member on a neutral margin | +0.596 | +0.168 |
+| Margin news added to the chain instead | +0.557 | +0.159 |
+
+- **Where the gain comes from:**
+  - Most of it is structure: about two thirds given the real Brent path, and half with Lévy oil. The members pass fuel prices through from Brent too weakly (jet fuel +8.4 for +10% Brent at 12 months in Bayes), while jet fuel spot is Brent plus its margin by definition.
+  - The margin's own state (its gap to the five-year mean, its season, crises) adds the rest, mostly from 2019 on.
+  - Adding the margin as a correction to the members' draws helps from 2019 on and hurts in 2008–2016, so it isn't used.
+- **2022 (out of sample in fold 6, trained to 2021-06):** the earlier crises' term is far too weak. The diesel crack reached $82/bbl in May 2022 against a forecast of $20 (4..40).
+- **2026 (out of sample in the replay, trained to 2026-01; 2022 is in sample there):** the overshoot after 1 month shrinks only a little.
+  - Jet fuel: +23.2 → +21.6 points.
+  - Retail diesel: +15.9 → +15.3.
+  - Refinery PPI: +6.6 → +5.9.
+
+  The 1-month bands still miss diesel and jet fuel. The replay catches 89% of 65 with or without the margin member. (On Iridis the chain alone catches 89%, against 91% in the laptop run above: the Bayes sampler's floating point moves one outcome across a band edge.)
+
+  The reason the overshoot barely moves: the diesel crack went from $34 to $63 in March 2026. The average of the four earlier crises gives $39 (23..56); only 2022 widened margins on this scale.
+- **Scenario:** `notes/margin-scenarios.csv` gives the crack fan for 0–100 points of lost flow from 2026-02.
+  - The crisis term is scaled by lost flow / 82, an assumption.
+  - It comes in two versions: the pre-2026 crises (validated against 2026), and with 2026's own path added (in sample, for a forward scenario).
+  - `notes/chain-fuel-scenarios-margins.csv` gives the fuel targets with the margin member, in the columns of `notes/chain-scenarios-3m.csv`.
+- **Not in `macro_chain.py` yet.** `margins.ChainMargins(data, last)` is the interface (`member_draws`, `correct`). Hooking it into `macro_chain.py` waits for its owner.
+
 ## Reproduce
 
 ```bash
@@ -126,6 +172,10 @@ uv run experiments/macro_chain.py report                  # notes/macro-chain-re
 uv run experiments/macro_chain.py replay                  # notes/chain-replay-2026.md, notes/chain-scenarios.csv
 CHAIN_MEMBERS=bayes_own,global_lin,global CHAIN_TAG=3m uv run experiments/macro_chain.py replay   # the recommended 3
 CHAIN_TAG=s20 uv run experiments/macro_chain.py report    # after the 20-seed Iridis run below
+uv run experiments/margins.py data                        # EIA spot prices -> notes/margins-monthly.csv
+uv run experiments/margins.py fold                        # all 8 folds, against runs/macro/chain-J-<member>.npz
+uv run experiments/margins.py replay                      # the 2026 replay (refits the 3 members once, then cached)
+uv run experiments/margins.py report                      # notes/margins-results.md and the scenario CSVs
 ```
 
 On Iridis (`docs/iridis.md` for access). Copy `experiments/`, `cluster/`, `scripts/`, `data/raw/`, `notes/industry/` and `runs/levy/` to a fresh `/scratch/$USER/<folder>`, then:
@@ -134,6 +184,7 @@ On Iridis (`docs/iridis.md` for access). Copy `experiments/`, `cluster/`, `scrip
 bash cluster/iridis/macro_env.sh                                       # once (torch, jax, numpyro)
 sbatch --array=0-7 cluster/iridis/macro_chain.slurm                    # every member, 5 seeds
 CHAIN_SEEDS=20 CHAIN_TAG=s20 sbatch --array=0-7 --time=08:00:00 cluster/iridis/macro_chain.slurm
+sbatch --array=0-8 cluster/iridis/margins.slurm                        # margins: folds 0-7, task 8 the replay
 ```
 
 The runs for this page are jobs 1972484 (`MEMBERS=global_tcn`) and 1972485 (20 seeds) on `amd_student`, 2026-10-24. `notes/industry/fred_series.csv` must be copied up: `macro_data.py` reads the industry series list from it.
