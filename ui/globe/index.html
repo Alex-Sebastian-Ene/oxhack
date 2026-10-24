@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Materials Globe</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="stage" id="stage">
+  <div id="globe" aria-label="3D globe of where materials and their ingredients come from"></div>
+
+  <header class="bar">
+    <div class="brand">
+      <svg class="logo" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c3 3 3 15 0 18c-3-3-3-15 0-18z"/></svg>
+      <h1>Materials Globe</h1>
+      <button type="button" class="ib" data-info="about" aria-label="About this map"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><path d="M12 7.5v.5"/></svg></button>
+    </div>
+    <div class="seg" role="group" aria-label="Show production or exports">
+      <button type="button" data-mode="production" aria-pressed="true" title="Who produces it"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21V10l6 4V10l6 4V5h6v16z"/></svg><span>Made</span></button>
+      <button type="button" data-mode="exports" aria-pressed="false" title="Who exports it"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 16h18l-3 5H6z"/><path d="M7 16V9h7l3 7"/><path d="M10 9V5"/></svg><span>Shipped</span></button>
+    </div>
+  </header>
+
+  <nav class="rail" aria-label="Materials" id="rail"></nav>
+
+  <div class="oil">
+    <label for="brent" class="oil-label"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c3 4 6 7 6 11a6 6 0 0 1-12 0c0-4 3-7 6-11z"/></svg> Brent</label>
+    <input id="brent" type="range" min="-50" max="100" step="5" value="60">
+    <span id="brent-label" class="mono">+60%</span>
+  </div>
+
+  <aside class="card" id="card" aria-live="polite">
+    <nav class="crumbs" id="crumbs" aria-label="Path"></nav>
+    <div id="card-body"></div>
+  </aside>
+
+  <div class="legend" id="legend" aria-hidden="true"></div>
+  <div class="tip" id="tip" hidden></div>
+</div>
+
+<div class="sheet" id="sheet" role="dialog" aria-labelledby="sheet-title" hidden>
+  <div class="row between"><h2 id="sheet-title"></h2><button type="button" class="x" id="sheet-close" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div id="sheet-body"></div>
+</div>
+
+<script src="vendor/globe.gl.min.js"></script>
+<script src="data/countries.js"></script>
+<script src="data/materials.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
