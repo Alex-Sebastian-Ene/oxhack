@@ -39,12 +39,19 @@
   }
 
   // ---------------------------------------------------------------- oil price maths
-  const scale = (x) => Math.log(1 + x / 100) / Math.log(1.1);   // a +10% Brent move = 1
+  // Rises use the +10% row and falls the -10% row (they differ), scaled in log terms.
   function priceMove(oil) {
-    if (!oil || oil.mean == null) return null;
-    const f = scale(state.brent);
-    const a = oil.lo * f, b = oil.hi * f;
-    return { mean: oil.mean * f, lo: Math.min(a, b), hi: Math.max(a, b) };
+    if (!oil || !oil.up) return null;
+    const x = state.brent / 100;
+    const [row, base] = x >= 0 ? [oil.up, 1.1] : [oil.down, 0.9];
+    const f = Math.log(1 + x) / Math.log(base);
+    const a = row[1] * f, b = row[2] * f;
+    return { mean: row[0] * f, lo: Math.min(a, b), hi: Math.max(a, b) };
+  }
+  function shockRange(oil) {   // event-based range, given per +10% Brent
+    if (!oil || !oil.disruption || state.brent <= 0) return null;
+    const f = Math.log(1 + state.brent / 100) / Math.log(1.1);
+    return { lo: oil.disruption.lo * f, hi: oil.disruption.hi * f };
   }
   const pct = (x, d = 0) => `${x >= 0 ? "+" : "−"}${Math.abs(x).toFixed(d)}%`;
 
@@ -152,8 +159,8 @@
   function priceBlock(m) {
     const p = priceMove(m.oil);
     if (!p) return `<div class="price">${svg(ICON[m.id])}<div><b class="none">?</b><small>No fitted oil link yet${m.oil && m.oil.note ? ` · ${m.oil.note}` : ""}</small></div></div>`;
-    const d = m.oil.disruption ? priceMove({ mean: (m.oil.disruption.lo + m.oil.disruption.hi) / 2, lo: m.oil.disruption.lo, hi: m.oil.disruption.hi }) : null;
-    return `<div class="price"><div><b>${pct(p.mean)}</b><small>price if Brent ${pct(state.brent)} · range ${pct(p.lo)} to ${pct(p.hi)}${m.oil.validated ? "" : " · not validated"}</small>
+    const d = shockRange(m.oil);
+    return `<div class="price"><div><b>${pct(p.mean)}</b><small>price in 12 months if Brent ${pct(state.brent)} · 90%: ${pct(p.lo)} to ${pct(p.hi)}${m.oil.validated ? "" : " · not validated"}</small>
       ${d ? `<small>supply shock: ${pct(d.lo)} to ${pct(d.hi)}</small>` : ""}</div></div>`;
   }
 
@@ -236,7 +243,7 @@
     for (const m of M.materials) {
       rows.push([m.name, "production", m.year, m.source]);
       if (m.exports) rows.push([m.name, "exports", m.exports.year, m.exports.source]);
-      if (m.oil && m.oil.source) rows.push([m.name, "oil → price", m.oil.horizon || "", m.oil.source]);
+      if (m.oil && m.oil.source) rows.push([m.name, "oil → price", m.oil.horizon || "", `${m.oil.series}. ${m.oil.source}`]);
     }
     for (const i of Object.values(M.inputs)) {
       rows.push([i.name, "production", i.year, i.source]);
@@ -248,7 +255,7 @@
   }
   const INFO = {
     about: () => ({ title: "Materials Globe", html: `<p>Pick a material on the left. Countries rise and glow by their share of world output (<b>Made</b>) or exports (<b>Shipped</b>). Click a country to see where its ingredients come from, then the ${svg('<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/>')} button on an ingredient to see who makes that.</p>
-      <p>The Brent slider scales each material's price response from the team's fitted links: a +10% oil move is scaled by ln(1+x)/ln(1.1). "?" means no fitted link yet. Supply-shock ranges come from past disruptions (OXH-4).</p>
+      <p>The Brent slider scales each material's 12-month price response from the team's Bayesian pass-through model: rises use the +10% response and falls the −10% one, scaled in log terms, with the 90% interval. "?" means no fitted link yet. Supply-shock ranges come from past disruptions (OXH-4).</p>
       <p>Coastlines: ${C.source}. Every figure is from a published source with its year; nothing here is live.</p>` }),
     sources: () => ({ title: "Sources", html: sourcesHtml() }),
   };

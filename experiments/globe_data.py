@@ -7,8 +7,8 @@ Inputs, all in notes/materials/ and each citing its sources:
   <material>.json  production by country, inputs, supplier links (one file per material)
   exports.json     exporters and the biggest bilateral flows, per material and input
 
-Oil -> price links come from Seb's validated table (OXH-3 handoff, branch seb/macro-nn): the summed
-12-month effect of a sustained +10% Brent move, +/- 2 standard errors as the range.
+Oil -> price links come from Seb's Bayesian pass-through table (OXH-3 handoff, branch seb/macro-nn):
+the 12-month response to a one-off +10% or -10% Brent move, with its 90% interval.
 
     uv run experiments/globe_data.py
 """
@@ -33,16 +33,21 @@ INPUT_COLOR = {"iron_ore": "#e07a5f", "coking_coal": "#9aa5b1", "scrap": "#c9b37
                "bauxite": "#d9822b", "alumina": "#f2c6a0", "natural_gas": "#5cb8f0", "lng": "#5cb8f0",
                "naphtha": "#b39ddb", "ethane": "#7fd3a8", "electricity": "#ffe08a"}
 
-SEB = "Seb's validated links, OXH-3 handoff (FRED series, 8 forward-chaining folds, fetched 2026-10-24)"
-OIL = {  # % price change per sustained +10% Brent, 12 months; range = mean +/- 2 s.e.
-    "jet_fuel": {"mean": 9.2, "lo": 8.4, "hi": 10.0, "horizon": "12 months", "validated": True,
-                 "source": f"{SEB}: jet fuel, US Gulf", "disruption": {"lo": 13, "hi": 15, "note": "OXH-4 event table"}},
-    "fertiliser": {"mean": 5.8, "lo": 2.8, "hi": 8.8, "horizon": "12 months", "validated": True,
-                   "source": f"{SEB}: PPI nitrogen fertiliser"},
-    "polyethylene": {"mean": 2.3, "lo": 1.5, "hi": 3.1, "horizon": "12 months", "validated": True,
-                     "source": f"{SEB}: PPI plastics resin"},
-    "steel": {"mean": None, "note": "requested from Seb (OXH-5)"},
-    "aluminium": {"mean": None, "note": "requested from Seb (OXH-5)"},
+SEB = ("Seb's Bayesian pass-through model, notes/macro-bayes-responses.csv on seb/macro-nn "
+       "(experiments/macro_bayes.py; FRED series fetched 2026-10-24)")
+# % price change 12 months after a one-off Brent move of +10% (up) or -10% (down): posterior mean and
+# 90% interval. Rises and falls differ, so the page uses the matching row and scales by
+# ln(1+x)/ln(1.1) or ln(1+x)/ln(0.9).
+OIL = {
+    "jet_fuel": {"up": [8.17, 7.18, 9.12], "down": [-9.47, -10.47, -8.68], "series": "FRED DJFUELUSGULF (US Gulf jet)",
+                 "validated": True, "horizon": "12 months", "source": SEB,
+                 "disruption": {"lo": 13, "hi": 15, "note": "event-based range from past supply shocks (OXH-4)"}},
+    "fertiliser": {"up": [6.30, 3.93, 8.86], "down": [-7.48, -9.80, -5.33], "series": "FRED PCU325311325311 (PPI nitrogen fertiliser)",
+                   "validated": True, "horizon": "12 months", "source": SEB},
+    "polyethylene": {"up": [2.32, 1.51, 3.14], "down": [-2.53, -3.27, -1.82], "series": "FRED PCU325211325211 (PPI plastics resin)",
+                     "validated": True, "horizon": "12 months", "source": SEB},
+    "steel": {"note": "requested from Seb (OXH-5)"},
+    "aluminium": {"note": "requested from Seb (OXH-5)"},
 }
 
 
