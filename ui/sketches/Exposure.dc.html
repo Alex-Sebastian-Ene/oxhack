@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Who is exposed</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0B0F14}
+a{color:#7CC0EA}a:hover{color:#A9D6F2}
+</style>
+</helmet>
+<div style="font-family: 'IBM Plex Sans', system-ui, sans-serif; color: #E7ECF2; background: #0B0F14; min-height: 900px; box-sizing: border-box; padding: 24px; display: flex; flex-direction: column; gap: 16px">
+
+<header style="display: flex; flex-direction: column; gap: 4px">
+  <h1 style="margin: 0; font-size: 26px; font-weight: 600">Who is exposed?</h1>
+  <p style="margin: 0; font-size: 14px; color: #A3AFBD">Where the oil crossing Hormuz goes, and what each importer has to fall back on. Pick a country.</p>
+</header>
+
+<div style="display: flex; flex-wrap: wrap; gap: 16px">
+  <section aria-label="Destinations" style="flex: 999 1 560px; min-width: 0; background: #121821; border: 1px solid #222C38; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 12px">
+    <h2 style="margin: 0; font-size: 16px; font-weight: 600">Share of Hormuz flow by destination</h2>
+    <ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px">
+      <sc-for list="{{rows}}" as="r" hint-placeholder-count="7">
+        <li>
+          <button type="button" onClick="{{r.pick}}" aria-pressed="{{r.pressed}}" style="width: 100%; min-height: 52px; display: grid; grid-template-columns: 150px minmax(0, 1fr) 80px; gap: 12px; align-items: center; padding: 6px 10px; border-radius: 8px; border: 1px solid {{r.border}}; background: {{r.bg}}; color: #E7ECF2; font: inherit; font-size: 14px; text-align: left; cursor: pointer">
+            <span>{{r.name}}</span>
+            <span aria-hidden="true" style="height: 14px; border-radius: 3px; background: #1B2430; overflow: hidden; display: block"><span style="display: block; height: 14px; width: {{r.width}}; background: {{r.color}}"></span></span>
+            <span style="font-family: 'IBM Plex Mono', monospace; text-align: right">[X%]</span>
+          </button>
+        </li>
+      </sc-for>
+    </ul>
+    <p style="margin: 0; font-size: 12px; color: #8794A3; font-family: 'IBM Plex Mono', monospace">Source: [EIA / Kpler / our AIS destinations] · [period] · Bar lengths are placeholders</p>
+  </section>
+
+  <aside aria-live="polite" style="flex: 1 1 400px; min-width: 0; display: flex; flex-direction: column; gap: 16px">
+    <section aria-label="Country detail" style="background: #121821; border: 1px solid #F0A23B; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 12px">
+      <h2 style="margin: 0; font-size: 22px; font-weight: 600">{{sel.name}}</h2>
+      <dl style="margin: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px 16px; font-size: 14px">
+        <dt style="color: #A3AFBD">Oil imports that pass Hormuz</dt><dd style="margin: 0; font-family: 'IBM Plex Mono', monospace">[X%]</dd>
+        <dt style="color: #A3AFBD">Strategic reserve cover</dt><dd style="margin: 0; font-family: 'IBM Plex Mono', monospace">[N] days</dd>
+        <dt style="color: #A3AFBD">Other routes / suppliers</dt><dd style="margin: 0; font-family: 'IBM Plex Mono', monospace">[list]</dd>
+      </dl>
+      <p style="margin: 0; font-size: 14px; color: #C2CBD5; line-height: 1.5">{{sel.note}}</p>
+    </section>
+    <section aria-label="Key insight" style="background: #121821; border: 1px solid #222C38; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 8px">
+      <h2 style="margin: 0; font-size: 16px; font-weight: 600">Barrels are local, prices are global</h2>
+      <p style="margin: 0; font-size: 14px; color: #C2CBD5; line-height: 1.5">A country can import almost nothing through Hormuz and still pay more at the pump, because crude trades at one world price. That is why a US household feels a shock in a strait it does not use.</p>
+    </section>
+  </aside>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { picked: 0 };
+}
+renderVals() {
+const list = [
+{ name: 'China', w: 90, note: 'Largest buyer of Gulf crude. Watch for flows shifting to dark tankers, which our hidden estimate would catch first.' },
+{ name: 'India', w: 70, note: 'Heavy reliance on Gulf crude with limited reserve cover: pump prices are regulated, so stress shows up in public finances.' },
+{ name: 'Japan', w: 55, note: 'Very high dependence on Middle East crude, but large strategic and commercial stocks to draw on.' },
+{ name: 'South Korea', w: 50, note: 'Similar profile to Japan: high dependence, sizeable reserves, refiners re-export products across Asia.' },
+{ name: 'Rest of Asia', w: 45, note: 'Many smaller importers with thin reserves: the first places to ration in a long closure.' },
+{ name: 'Europe', w: 20, note: 'Small direct share, but LNG from Qatar also passes Hormuz, so gas and power bills are exposed too.' },
+{ name: 'United States', w: 10, note: 'Small direct share. Exposure is through the world oil price, then inflation and the Fed.' }
+];
+const p = this.state.picked;
+const rows = list.map((c, i) => ({
+name: c.name,
+width: c.w + '%',
+color: i === p ? '#F0A23B' : '#3C7FAD',
+border: i === p ? '#F0A23B' : '#222C38',
+bg: i === p ? '#1F1A12' : '#121821',
+pressed: i === p ? 'true' : 'false',
+pick: () => this.setState({ picked: i })
+}));
+return { rows, sel: list[p] };
+}
+}
+</script>
+</body>
+</html>

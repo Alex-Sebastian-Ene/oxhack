@@ -27,13 +27,14 @@ prices". UI detail lives in `docs/ui.md`.
 ## 3. Data
 
 Every number carries its source and collection time; synthetic is labelled synthetic; cached is
-never shown as live (see `AGENTS.md`). Nothing below is chosen yet; check licence, cost and
-freshness before building on it.
+never shown as live (see `AGENTS.md`). The checked version of this table (Gulf coverage, cost,
+licence, 2026 context) is in `docs/ideas.md`; the key finding is that **no free live AIS feed
+covers Hormuz**, so the app is near-live and says how old each view is.
 
-| Need | Candidate sources (unverified) | Notes |
+| Need | Sources (checks in `docs/ideas.md`) | Notes |
 |---|---|---|
-| Live ship positions in and around Hormuz | AIS feeds (free: AISStream.io; paid: Spire, MarineTraffic, Kpler) | Free coverage of the Gulf may be thin |
-| Ships with AIS off (ghost / dark fleet) | Sentinel-1 radar via Copernicus; Global Fishing Watch dark-vessel detections | Revisit time is days, not minutes |
+| Ship positions and counts in and around Hormuz | IMF PortWatch (daily transits); GFW AIS presence (hourly, ~3-day lag) | AISStream has no receivers in Hormuz; paid feeds are enterprise-only |
+| Ships with AIS off (ghost / dark fleet) | GFW SAR detections unmatched to AIS; Sentinel-1 via Copernicus | Revisit time is days, not minutes |
 | Tanker size to convert ships into barrels | Vessel registry fields in AIS (type, deadweight, draught) | Draught change hints laden vs. ballast |
 | Baseline flow through the strait | EIA "World Oil Transit Chokepoints" | Use to sanity-check our estimate |
 | Oil prices | EIA API (Brent, WTI daily); FRED | |
