@@ -31,7 +31,7 @@ NAMES = {"steel": "Crude steel", "jet_fuel": "Jet fuel", "aluminium": "Primary a
          "fertiliser": "Nitrogen fertiliser", "polyethylene": "Polyethylene"}
 INPUT_COLOR = {"iron_ore": "#e07a5f", "coking_coal": "#9aa5b1", "scrap": "#c9b37e", "crude_oil": "#f0a23b",
                "bauxite": "#d9822b", "alumina": "#f2c6a0", "natural_gas": "#5cb8f0", "lng": "#5cb8f0",
-               "naphtha": "#b39ddb", "ethane": "#7fd3a8", "electricity": "#ffe08a"}
+               "naphtha": "#b39ddb", "ethane": "#7fd3a8", "electricity": "#ffe08a", "urea": "#9fd36b"}
 
 SEB = ("Seb's Bayesian pass-through model, notes/macro-bayes-responses.csv on seb/macro-nn "
        "(experiments/macro_bayes.py; FRED series fetched 2026-10-24)")
@@ -46,7 +46,7 @@ OIL = {
                    "validated": True, "horizon": "12 months", "source": SEB},
     "polyethylene": {"up": [2.32, 1.51, 3.14], "down": [-2.53, -3.27, -1.82], "series": "FRED PCU325211325211 (PPI plastics resin)",
                      "validated": True, "horizon": "12 months", "source": SEB},
-    "steel": {"note": "requested from Seb (OXH-5)"},
+    "steel": {"note": "requested from Seb (OXH-5)"},  # no fitted link yet
     "aluminium": {"note": "requested from Seb (OXH-5)"},
 }
 
@@ -58,16 +58,29 @@ def known_codes() -> set[str]:
 
 
 def clean_rows(rows, codes, where, warn) -> list[dict]:
+    """Rows with a share of world, or failing that a value. `w` (0-1) is what the globe colours by:
+    the share; a share estimated from the table's own share/value ratio (marked approx); or, when
+    the table has no shares at all, the value relative to the largest."""
     out = []
     for r in rows or []:
-        iso, share = r.get("iso3"), r.get("share")
+        iso = r.get("iso3")
         if iso not in codes:
             warn.append(f"{where}: unknown code {iso}")
             continue
-        if share is None or share <= 0:
+        share, value = r.get("share"), r.get("value")
+        if (share is None or share <= 0) and value is None:
             continue
-        out.append({"iso3": iso, "share": round(float(share), 4), **({"value": r["value"]} if r.get("value") is not None else {})})
-    return sorted(out, key=lambda r: -r["share"])
+        out.append({"iso3": iso, "share": None if share is None else round(float(share), 4), "value": value})
+    ratios = sorted(r["share"] / r["value"] for r in out if r["share"] and r["value"])
+    top = max((r["value"] or 0 for r in out), default=0)
+    for r in out:
+        if r["share"] is not None:
+            r["w"] = r["share"]
+        elif ratios:
+            r["w"], r["share"], r["approx"] = (round(r["value"] * ratios[len(ratios) // 2], 4),) * 2 + (True,)
+        else:
+            r["w"] = round(r["value"] / top, 4) if top else 0
+    return sorted(out, key=lambda r: -r["w"])
 
 
 def main() -> None:
@@ -76,7 +89,7 @@ def main() -> None:
     exports = {e["id"]: e for e in json.loads((NOTES / "exports.json").read_text())} if (NOTES / "exports.json").exists() else {}
 
     def export_block(eid, where):
-        e = exports.get(eid)
+        e = exports.get({"natural_gas": "lng"}.get(eid, eid))  # gas trades by sea as LNG
         if not e:
             return None, []
         flows = [f for f in e.get("flows", []) if f.get("from") in codes and f.get("to") in codes]
