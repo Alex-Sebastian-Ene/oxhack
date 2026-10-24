@@ -14,7 +14,7 @@ storyboard is on the design canvas (board Q) and in the "Demo moments" list in `
 
 Oil runs through everything: fuel, food, inflation, interest rates, the cost of living. Much of
 the world's seaborne oil passes through one narrow strait, Hormuz, and some of the tankers there
-are ghosts: transponders off, positions faked. We watch the strait live, estimate how much oil is
+are ghosts: transponders off, positions faked. We watch the strait from space, estimate how much oil is
 really getting through, and show what a change in that flow means for the Fed's rates and for
 people's bills.
 
