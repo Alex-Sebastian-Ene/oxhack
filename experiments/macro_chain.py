@@ -40,14 +40,18 @@ from datetime import UTC, datetime
 
 import numpy as np
 
+import copula as cp
 import macro_bayes as mb
 import macro_global as mg
 import macro_nn as mn
+import macro_xattn as mx
 import oil_paths as op
 
 RUNS, NOTES = mb.RUNS, mb.NOTES
-MEMBERS = ("bayes_own", "global_lin", "global", "global_tcn")
+MEMBERS = ("bayes_own", "global_lin", "global", "global_tcn", "xattn")
+RECOMMENDED = ("bayes_own", "global_lin", "global")  # the ensemble the earlier runs chose (docs/chain.md)
 MODES = ("whatif", "levy", "bootstrap")
+JOINT_MODES = ("whatif", "levy")  # modes scored jointly, with independent and copula shocks
 STEP = 0.25
 # Iridis runs with more networks per variant: CHAIN_SEEDS=20 CHAIN_TAG=s20 (the first 5 networks are
 # the default run's, since seeds are base + 100 * variant + s)
@@ -65,7 +69,7 @@ def suffix() -> str:
 
 
 def available() -> tuple[str, ...]:
-    """Members this checkout can fit: global_tcn needs macro_global.fit_nets."""
+    """Members this checkout can fit: global_tcn needs macro_global.fit_nets; xattn is macro_xattn.py."""
     return tuple(m for m in MEMBERS if m != "global_tcn" or "global_tcn" in getattr(mg, "VARIANTS", ()))
 
 
@@ -97,25 +101,40 @@ def fit_nets(data: dict, info: dict, st: mb.Stats, last: int, variant: str, base
     return [f[0] for f in fitted], [f[1] for f in fitted]
 
 
+def member_simulator(data: dict, info: dict, st: mb.Stats, last: int, t: np.ndarray, member: str, base_seed: int,
+                     bayes_seed: int):
+    """Fit one member on months 13..last; return (simulate(future, rng) -> [N, origins, outputs], extra info)."""
+    if member == "bayes_own":
+        post, st_b, info_b, diag = mb.fit(data, last, seed=bayes_seed, vol="own")
+        return (lambda fut, rng: mb.simulate(post, st_b, info_b, data, t, fut, rng)), {"diagnostics": diag}
+    if member == "xattn":
+        nets, training, state = mx.fit_xattn(data, info, st, last, 2 if QUICK else int(os.environ.get("CHAIN_SEEDS", mx.SEEDS)),
+                                             base_seed)
+        return (lambda fut, rng: mx.simulate(nets, state, st, info, data, t, fut, rng, n=draws())), \
+            {"training": training, "context": state["ctx"]["codes"], "context_fetched": state["ctx"]["fetched"]}
+    nets, training = fit_nets(data, info, st, last, member, base_seed)
+    return (lambda fut, rng: mg.simulate(nets, st, info, data, t, fut, rng, n=draws())), {"training": training}
+
+
 def run_member(data: dict, j: int, member: str, market: dict, prices) -> tuple[dict, dict]:
-    """Samples [N, origins, outputs] per oil mode for one member on fold j, and its summary."""
+    """Samples [N, origins, outputs] per oil mode for one member on fold j, and its summary. Every
+    mode is simulated twice from the same seed: with independent shocks (mode) and with shocks
+    correlated across the series by the fold's t-copula (mode + "_cop")."""
     _, test, last = mb.fold_window(data, j)
     t, Y = data["t"][test], data["Y"][test]
     st = mb.Stats(data, last)
     info = mb.series_info(data)
     oil = oil_modes(data, j, st, last, t, market, prices)
+    cop = cp.fit(data, st, last, info)
     t0 = time.time()
-    if member == "bayes_own":
-        post, st, info, diag = mb.fit(data, last, seed=j, vol="own")  # the seed of macro_bayes.run_fold
-        sim = lambda fut, rng: mb.simulate(post, st, info, data, t, fut, rng)  # noqa: E731
-        extra = {"diagnostics": diag}
-    else:
-        nets, training = fit_nets(data, info, st, last, member, 1000 * j)  # macro_global.run_fold's seeds
-        sim = lambda fut, rng: mg.simulate(nets, st, info, data, t, fut, rng, n=draws())  # noqa: E731
-        extra = {"training": training}
-    S = {mode: sim(fut, np.random.default_rng(300 + j)).astype(np.float32) for mode, fut in oil.items()}
+    sim, extra = member_simulator(data, info, st, last, t, member, 1000 * j, bayes_seed=j)  # the seeds of run_fold
+    S = {}
+    for mode, fut in oil.items():
+        S[mode] = sim(fut, np.random.default_rng(300 + j)).astype(np.float32)
+        S[f"{mode}_cop"] = sim(fut, cp.CopulaRNG(np.random.default_rng(300 + j), cop)).astype(np.float32)
     summary = {"fold": j, "member": member, "test_dates": [f"{d:%Y-%m}" for d in data["dates"][test]],
                "names": data["names"], "groups": data["groups"], "y": Y.tolist(), "seconds": round(time.time() - t0, 1),
+               "copula": {k: v for k, v in cop.items() if k not in ("R", "L")},
                "modes": {mode: mb.summarise(s.astype(float), Y) for mode, s in S.items()}} | extra
     return S, summary
 
@@ -186,12 +205,19 @@ def report() -> None:
             w[i] = 0.0
             loo[m] = len(W)
             W = np.vstack([W, w])
+    named = {}  # fixed ensembles worth naming: the earlier recommendation, and it plus the transformer
+    for label, ms in (("rec", RECOMMENDED), ("rec+xattn", (*RECOMMENDED, "xattn"))):
+        if all(m in members for m in ms) and len(ms) < len(members):
+            named[label] = len(W)
+            W = np.vstack([W, [1 / len(ms) if m in ms else 0.0 for m in members]])
     data = mn.make_dataset(mn.V1_BLOCKS)
     folds = []
     for j in range(mn.FOLDS):
         v1 = mb.load(f"fold-{j}.json")
         summ = {m: json.loads((RUNS / f"{stem(j, m)}.json").read_text()) for m in members}
-        S = {mode: np.stack([np.load(RUNS / f"{stem(j, m)}.npz")[mode] for m in members]).astype(float) for mode in MODES}
+        npz = {m: np.load(RUNS / f"{stem(j, m)}.npz") for m in members}
+        keys = [k for k in (*MODES, *(f"{x}_cop" for x in JOINT_MODES)) if all(k in npz[m].files for m in members)]
+        S = {mode: np.stack([npz[m][mode] for m in members]) for mode in keys}  # float32, as stored
         ref = summ[members[0]]
         for m in members:
             assert summ[m]["test_dates"] == ref["test_dates"] and summ[m]["names"] == ref["names"], f"fold {j} {m}: origins differ"
@@ -297,8 +323,28 @@ def report() -> None:
         rows[(mode, "equal+cal_vol")] = calibrated[("vol", mode)]
         for m, k in loo.items():
             rows[(mode, f"without {m}")] = assemble(mode, lambda g, j, k=k: k)
+        for label, k in named.items():
+            rows[(mode, label)] = assemble(mode, lambda g, j, k=k: k)
     y_all = np.vstack([f["y"] for f in folds])
-    labels = [*members, "equal", "equal+cal", "equal+cal_vol", "forward"]
+    labels = [*members, "equal", *named, "equal+cal", "equal+cal_vol", "forward"]
+
+    # Joint forecasts: energy and variogram scores of all series at each horizon, with independent and
+    # with copula-correlated shocks (the same draws otherwise), for each member and the ensembles.
+    has_cop = all(f"{m}_cop" in folds[0]["S"] for m in JOINT_MODES)
+    joint, jlabels = {}, [*members, "equal", *named]
+    if has_cop:
+        pick = {m: int(np.argmax(W[:, i])) for i, m in enumerate(members)} | {"equal": equal} | named
+        for mode in JOINT_MODES:
+            for var in ("", "_cop"):
+                for label in jlabels:
+                    es, vs = [], []
+                    for j, f in enumerate(folds):
+                        order = np.random.default_rng(1234 + j).permutation(f["S"]["whatif"].shape[1])
+                        e, v = cp.joint_scores(mixture(f["S"][mode + var], W[pick[label]], order), f["y"], scale, H, mn.HORIZONS)
+                        es.append(e)
+                        vs.append(v)
+                    joint[(mode, var, label)] = (np.vstack(es), np.vstack(vs))
+            print(f"report: joint scores for {mode}", flush=True)
 
     def skill(M, c, ref=None):
         ref = scale if ref is None else ref
@@ -341,8 +387,9 @@ def report() -> None:
         out += ["", f"**{mode}: ensembles against each member** (scaled CRPS difference, Newey–West t; "
                 "negative: the ensemble is better)", "", "| Comparison | " + " | ".join(mb.GROUPS) + " |",
                 "|---|" + "---|" * len(mb.GROUPS)]
-        for e, others in (("equal", members), ("equal+cal", ["equal"]), ("equal+cal_vol", ["equal"]),
-                          ("forward", [*members, "equal"])):
+        pairs = [("equal", members), ("equal+cal", ["equal"]), ("equal+cal_vol", ["equal"]), ("forward", [*members, "equal"])]
+        pairs += [("rec", ["equal"])] * ("rec" in named) + [("rec+xattn", ["rec", "equal"])] * ("rec+xattn" in named)
+        for e, others in pairs:
             for m in others:
                 out.append(f"| {e} vs {m} | " + " | ".join(diff(rows[(mode, e)]['crps'], rows[(mode, m)]['crps'], cols(g))
                                                          for g in mb.GROUPS) + " |")
@@ -362,6 +409,36 @@ def report() -> None:
             for m in loo:
                 out.append(f"| {mode} | without {m} | " + " | ".join(f"{skill(rows[(mode, f'without {m}')]['crps'], cols(g)):+.3f}"
                                                                     for g in mb.GROUPS) + " |")
+        out.append("")
+    if has_cop:
+        cops = [f["summ"][members[0]]["copula"] for f in folds]
+        out += ["## Joint forecasts: shocks correlated across the series (t-copula)", "",
+                "The same draws with independent shocks and with shocks correlated across the 22 series by each fold's "
+                "t-copula (`copula.py`: rank normal scores of the training months' one-step residuals, correlation "
+                f"shrunk {cp.SHRINK:.0%} towards the identity, tail index by maximum likelihood). Each series' own "
+                "distribution is unchanged; only the dependence changes. Scores: the energy score (ES) and the "
+                "variogram score (VS, order 0.5) of all series at each horizon, every output divided by its "
+                "climatology CRPS; mean over origins and horizons; lower is better. Δ: copula minus independent, with "
+                "the Newey–West t of the per-origin difference (negative: the copula is better).", "",
+                "Copula per fold (tail index ν; mean and largest absolute correlation; months with every series "
+                "observed): " + "; ".join(f"fold {j} ν {c['nu']:g}, {c['mean_abs_corr']:.2f} / {c['max_corr']:.2f}, "
+                                         f"{c['complete_months']}" for j, c in enumerate(cops)) + ".", "",
+                "| Mode | Model | ES independent | ES copula | Δ ES (t) | VS independent | VS copula | Δ VS (t) |",
+                "|---|---|---|---|---|---|---|---|"]
+        for mode in JOINT_MODES:
+            for label in jlabels:
+                (ei, vi), (ec, vc) = joint[(mode, "", label)], joint[(mode, "_cop", label)]
+                de, dv = np.nanmean(ec - ei, 1), np.nanmean(vc - vi, 1)
+                out.append(f"| {mode} | {label} | {np.nanmean(ei):.3f} | {np.nanmean(ec):.3f} | {np.nanmean(de):+.3f} "
+                           f"(t {mb.nw_t(de):+.1f}) | {np.nanmean(vi):.2f} | {np.nanmean(vc):.2f} | "
+                           f"{np.nanmean(dv):+.2f} (t {mb.nw_t(dv):+.1f}) |")
+        if "rec+xattn" in named:
+            out += ["", "**Does the transformer help the joint forecast?** `rec+xattn` minus `rec`, copula shocks: "
+                    + "; ".join(f"{mode} ES {np.nanmean(np.nanmean(joint[(mode, '_cop', 'rec+xattn')][0] - joint[(mode, '_cop', 'rec')][0], 1)):+.3f} "
+                                f"(t {mb.nw_t(np.nanmean(joint[(mode, '_cop', 'rec+xattn')][0] - joint[(mode, '_cop', 'rec')][0], 1)):+.1f}), "
+                                f"VS {np.nanmean(np.nanmean(joint[(mode, '_cop', 'rec+xattn')][1] - joint[(mode, '_cop', 'rec')][1], 1)):+.2f} "
+                                f"(t {mb.nw_t(np.nanmean(joint[(mode, '_cop', 'rec+xattn')][1] - joint[(mode, '_cop', 'rec')][1], 1)):+.1f})"
+                                for mode in JOINT_MODES) + "."]
         out.append("")
     out += ["## Against a stricter yardstick", "",
             "Skill against the *empirical* distribution of each output's h-month changes over **all** training "
@@ -460,22 +537,23 @@ def replay(origin: str = REPLAY_ORIGIN) -> None:
     for lost in LOSTS:
         oil[f"lost {lost:g}"] = op.monthly_paths(prices, idx[t], mb.DRAWS, np.random.default_rng(900), "cgmy",
                                                  market["drift"][t], lost=lost)
+    cop = cp.fit(data, st, last, info)
     S = {mode: [] for mode in oil}
+    S_cop = {mode: [] for mode in ("whatif", f"lost {op.LOST_2026:g}")}
     for mm in members:
-        if mm == "bayes_own":
-            post, st_b, info_b, diag = mb.fit(data, last, seed=99, vol="own")
-            print(f"replay bayes_own: {diag}", flush=True)
-            sim = lambda fut, rng: mb.simulate(post, st_b, info_b, data, t, fut, rng)  # noqa: E731
-        else:
-            nets, _ = fit_nets(data, info, st, last, mm, 90_000)
-            sim = lambda fut, rng, nets=nets: mg.simulate(nets, st, info, data, t, fut, rng, n=mb.DRAWS)  # noqa: E731
+        sim, extra = member_simulator(data, info, st, last, t, mm, 90_000, bayes_seed=99)
+        if "diagnostics" in extra:
+            print(f"replay {mm}: {extra['diagnostics']}", flush=True)
         for mode, fut in oil.items():
             S[mode].append(sim(fut, np.random.default_rng(300))[:, 0])  # [N, outputs]
+            if mode in S_cop:
+                S_cop[mode].append(sim(fut, cp.CopulaRNG(np.random.default_rng(300), cop))[:, 0])
     names, groups = data["names"], np.array(data["groups"])
     order = np.random.default_rng(1234).permutation(mb.DRAWS)
     ens = {}
     for mode, parts in S.items():
         ens[mode] = mixture(np.stack(parts), equal, order)  # [N, outputs]
+    ens_cop = {mode: mixture(np.stack(parts), equal, order) for mode, parts in S_cop.items()}
     # what happened: the change over h months after the origin, where every month is published
     dM = data["dM"]
     actual = {}
@@ -525,6 +603,21 @@ def replay(origin: str = REPLAY_ORIGIN) -> None:
                 inside[mode].append(lo <= actual[nm] <= hi)
     lines += ["", "**Every series, horizons 1–6 with published outcomes:** share of actuals inside the 90% interval: "
               + ", ".join(f"{mode} {np.mean(v):.0%} of {len(v)}" for mode, v in inside.items()) + "."]
+    # the joint forecast of every series, independent against copula shocks (outputs scaled by the
+    # sd of their training-origin outcomes, so the series count alike)
+    H = np.array([int(nm.split("@")[1]) for nm in names])
+    y_rep = np.array([[actual[nm] for nm in names]])
+    rows_tr = np.flatnonzero(data["t"] + max(mn.HORIZONS) <= last)
+    sd = np.nanstd(data["Y"][rows_tr], 0)
+    lines += ["", f"**Joint forecast of all series** (t-copula fitted on months to {idx[last]:%Y-%m}: tail index "
+              f"{cop['nu']:g}, mean absolute correlation {cop['mean_abs_corr']:.2f}). Energy / variogram score of every "
+              "published series at each horizon, each scaled by its training spread; lower is better.", "",
+              "| Run | h | ES independent | ES copula | VS independent | VS copula |", "|---|---|---|---|---|---|"]
+    for mode in S_cop:
+        ei, vi = cp.joint_scores(ens[mode][:, None], y_rep, sd, H, (1, 3, 6))
+        ec, vc = cp.joint_scores(ens_cop[mode][:, None], y_rep, sd, H, (1, 3, 6))
+        for hi, h in enumerate((1, 3, 6)):
+            lines.append(f"| {mode} | {h} | {ei[0, hi]:.3f} | {ec[0, hi]:.3f} | {vi[0, hi]:.2f} | {vc[0, hi]:.2f} |")
     (NOTES / f"chain-replay-2026{suffix()}.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
     rows = ["series,group,flow_drop_points,months_ahead,mean,q05,q50,q95,actual,unit,validated,origin,source,fitted_to,generated"]
@@ -568,11 +661,11 @@ def main() -> None:
     data = mn.make_dataset(mn.V1_BLOCKS)
     market, (prices, _) = mb.market_inputs(data), op.daily_brent()
     if a.cmd == "check":
-        QUICK = mb.QUICK = mg.QUICK = True
-        for m in ("bayes_own", "global_lin"):
+        QUICK = mb.QUICK = mg.QUICK = mx.QUICK = True
+        for m in ("bayes_own", "global_lin", "xattn"):
             S, summ = run_member(data, mn.FOLDS - 1, m, market, prices)
             print(m, {mode: round(float(np.nanmean(v["crps"])), 4) for mode, v in summ["modes"].items()},
-                  {mode: s.shape for mode, s in S.items()})
+                  {mode: s.shape for mode, s in S.items()}, summ["copula"], flush=True)
         return
     for m in a.members or available():
         assert m in available(), f"{m} is not available in this checkout"
