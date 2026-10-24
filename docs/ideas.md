@@ -54,6 +54,31 @@ on one recorded example, labelled as cached.
 4. Click a number on screen: the receipt shows exactly where it came from.
 5. Close on the backtest: "on the 2019 tanker attacks, we were within X% of what happened".
 
+## Sketches on the canvas
+
+A command view · B what-if ripple · C ghost-ship file · D phone "what it means for you" ·
+E replay + backtest · F live pulse · G number receipt · H who is exposed · I analyst chat, alerts,
+brief · J judge mode · K spoofing + ship-to-ship · L us vs the analysts · M radar snapshot to flow
+rate · N shadow-fleet network · O headlines vs hulls · P satellite swipe.
+B, D, F, G, H, J, L, M, O and P are clickable or animated.
+
+## Wilder ideas (parking lot)
+
+- **Your fill-up's receipt:** of the petrol you just bought, roughly how much came through
+  Hormuz, and what the strait added to the price.
+- **Not just fuel:** the Gulf also ships fertiliser (urea) and petrochemicals through Hormuz
+  (verify shares): a second chain to food prices and plastics.
+- **Jet fuel → flights:** airline fuel costs to ticket prices; a hook for students.
+- **Fear gauges:** war-risk insurance premiums and tanker freight rates as a "how scared is the
+  market" dial next to the flow.
+- **Prediction game:** judges guess next week's flow; we score them against our estimate when
+  the data lands. A leaderboard keeps people coming back.
+- **Agent investigator:** each new dark-ship suspect gets an automatic file (evidence, links,
+  confidence) for a human to confirm, which also trains the detector.
+- **Sound of the strait:** each crossing plays a note, hidden ones a lower note; silence when
+  the strait is shut. Memorable for the opening ten seconds.
+- **Bot alerts:** Telegram or Discord messages when hidden flow jumps.
+
 ## How we could estimate hidden flow
 
 Stack several independent signals, then combine them with honest ranges. Each one alone is weak;
