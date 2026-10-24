@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[codz]
+*.egg-info/
+build/
+dist/
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+.ipynb_checkpoints/
+
+# Secrets: keys stay in your shell or these untracked files (this repo is public)
+.env
+.env.*
+.envrc
+.streamlit/secrets.toml
+
+# Coordination watcher state and the Linear key (coord/linear_bus.py)
+.coord/
+
+# Editors and OS
+.idea/
+.DS_Store
+Thumbs.db
