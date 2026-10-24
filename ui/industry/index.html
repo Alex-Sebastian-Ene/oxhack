@@ -419,6 +419,51 @@ select { padding: 0 8px; }
 #world-stage .pbars button { min-height: 36px; font-size: 13.5px; }
 #world-stage #m-band { font-size: 13px; line-height: 1.6; }
 #world-stage #m-hormuz { font-size: 14px; line-height: 1.6; }
+
+/* "The shock" card in three numbered steps: what the scenario sets, what the slider sets, what follows. */
+.step { display: flex; flex-direction: column; gap: 8px; }
+.step + .step { border-top: 1px solid var(--line); padding-top: 12px; }
+.stephead { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.stephead .num { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: var(--panel2); border: 1px solid var(--line2); font: 600 11.5px var(--mono); color: var(--text); flex: none; }
+.stephead.you { color: var(--text); font-weight: 600; }
+.stephead.you .num { background: var(--oil); border-color: var(--oil); color: #fff; }
+.stephead .hint { margin-left: auto; font-size: 12px; font-weight: 400; color: var(--faint); text-align: right; }
+.kpis.kpis2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.ask { margin: 0; font-size: 14px; color: var(--text); }
+.pricebig { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.pricebig b { font: 500 36px/1 var(--mono); color: var(--oil-soft); }
+.pricebig span { font-size: 13px; color: var(--muted); }
+.pricebig .delta { font: 500 13px var(--mono); padding: 2px 8px; border-radius: 999px; background: var(--panel2); }
+.pricebig .delta.hurt { background: #fde3d6; color: var(--harm); }
+.pricebig .delta.gain { background: #d9f3ee; color: var(--gain-soft); }
+.slidewrap { position: relative; padding-bottom: 32px; }
+.slidewrap input { width: 100%; margin: 0; accent-color: var(--oil); min-height: 32px; display: block; }
+.marks { position: absolute; left: 8px; right: 8px; top: 30px; height: 30px; }
+.marks span { position: absolute; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; font: 11px/1.25 var(--mono); color: var(--faint); white-space: nowrap; }
+.marks span::before { content: ""; width: 1px; height: 6px; background: var(--line2); margin-bottom: 2px; }
+.marks span.last { transform: translateX(-100%); align-items: flex-end; }
+.presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.presets button { min-height: 34px; font-size: 13px; padding: 0 12px; border-radius: 999px; background: var(--panel); }
+.presets button[aria-pressed="true"] { background: var(--text); border-color: var(--text); color: #fff; }
+.explain { margin: 0; padding: 12px 14px; border-radius: 10px; background: var(--panel2); border-left: 3px solid var(--oil); font-size: 14px; line-height: 1.55; color: var(--text); }
+.explain b { font-family: var(--mono); font-weight: 600; }
+@keyframes bump { 0% { background: #ffe0c2; } 100% { background: var(--panel2); } }
+.kpis div.bump { animation: bump .7s ease-out; }
+@media (prefers-reduced-motion: reduce) { .kpis div.bump { animation: none; } }
+
+/* Economy tab: prices and unemployment for the country's economy over 36 months. */
+.eco-who { display: flex; flex-direction: column; gap: 8px; }
+.eseg { display: flex; width: 100%; }
+.eseg button { flex: 1 1 0; min-height: 34px; font-size: 13px; }
+.eseg button:disabled { opacity: .45; cursor: default; }
+.eco-block { display: flex; flex-direction: column; gap: 6px; }
+.eco-head { margin: 0; font-size: 14px; line-height: 1.55; color: var(--text); }
+.chart .eco-scen { fill: rgba(20,32,46,0.045); }
+.chart.eco-grey .base { stroke: var(--faint); stroke-dasharray: 4 3; }
+.chart.eco-grey .band { fill: rgba(104,118,138,0.16); }
+.chart.eco-grey .end { fill: var(--faint); }
+.chart.eco-grey .endlab { fill: var(--muted); font-weight: 500; }
+.legend2 i.eco-sc { background: rgba(20,32,46,0.09); }
 </style>
 <div class="app">
   <header class="bar">
@@ -475,43 +520,6 @@ select { padding: 0 8px; }
     </section>
 
     <aside class="hud">
-      <section class="card" id="prod-card" hidden>
-        <div class="row between">
-          <span class="label"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg> Product</span>
-          <button type="button" class="ib" data-winfo="materials" aria-label="About the materials data"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><path d="M12 7.5v.5"/></svg></button>
-        </div>
-        <div id="mdetail" hidden>
-          <div class="mhead"><span class="mi" id="m-icon"></span><span class="grow"><b id="m-name"></b><span class="sub" id="m-sub" style="display:block"></span></span>
-            <button type="button" class="ib" id="m-close" aria-label="Close product details"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
-          <div class="row between" style="align-items:baseline;margin-top:8px"><b class="pprice" id="m-price">–</b><span class="sub">price in 12 months</span></div>
-          <p class="faint" id="m-band"></p>
-          <div class="seg mseg" role="group" aria-label="Who makes it or who ships it"><button type="button" data-mmode="production" aria-pressed="true">Made</button><button type="button" data-mmode="exports" aria-pressed="false">Shipped</button></div>
-          <div class="pbars" id="m-bars"></div>
-          <p class="sub" id="m-hormuz"></p>
-          <span class="label" style="margin-top:4px">What it costs buyers</span>
-          <ul class="inds" id="m-buyers"></ul>
-        </div>
-      </section>
-
-      <section class="card">
-        <div class="row between">
-          <span class="label"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c3 4 6 7 6 11a6 6 0 0 1-12 0c0-4 3-7 6-11z"/></svg> The shock</span>
-          <button type="button" class="ib" data-winfo="model" aria-label="About the model"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><path d="M12 7.5v.5"/></svg></button>
-        </div>
-        <div class="kpis">
-          <div><b id="w-flow" class="hurt">–</b><span>mb/d through Hormuz (est.)</span></div>
-          <div><b id="w-miss" class="hurt">–</b><span>mb/d missing vs pre-war 20</span></div>
-          <div><b id="w-brent">–</b><span>Brent, vs $70 pre-war</span></div>
-        </div>
-        <label class="price" for="brent">Brent assumption <input id="brent" type="range" min="60" max="150" step="1" value="104"> <b id="brent-v">$104</b></label>
-        <div class="kpis">
-          <div><b id="w-petrol">–</b><span id="w-petrol-r">Petrol and diesel</span></div>
-          <div><b id="w-ecpi">–</b><span id="w-ecpi-r">Energy prices (CPI)</span></div>
-          <div><b id="w-cpi">–</b><span id="w-cpi-r">Headline inflation, 12 months</span></div>
-        </div>
-        <p class="faint">US pass-through validated on FRED data: fitted 1991–2008, tested on 2009–2026. Core inflation, the Fed and mortgages barely move, so they aren't shown.</p>
-      </section>
-
       <section class="card" id="country-card" aria-live="polite" hidden>
         <div class="ctitle"><h2 id="c-name">–</h2><span class="row"><span class="tag" id="c-tag"></span><button type="button" class="ib" id="c-close" aria-label="Close country details"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></span></div>
         <p class="sub" id="c-sub"></p>
@@ -530,7 +538,88 @@ select { padding: 0 8px; }
           <span class="label" style="margin-bottom:8px">Fuel cost impact by industry, share of operating costs</span>
           <ul class="inds" id="c-inds"></ul>
         </div>
+        <div id="e-sec">
+          <div class="eco-who"><span class="sub" id="e-who"></span>
+            <div class="seg eseg" role="group" aria-label="Which economy"><button type="button" data-eco="us">US</button><button type="button" data-eco="uk">UK</button><button type="button" data-eco="ea">Euro area</button></div>
+          </div>
+          <div class="eco-block">
+            <span class="label">Prices (consumer price index)</span>
+            <p class="eco-head" id="e-cpi-head"></p>
+            <div class="chartbox" id="e-cpi-chart"></div>
+          </div>
+          <div class="eco-block">
+            <span class="label">Unemployment</span>
+            <p class="eco-head" id="e-un-head"></p>
+            <div class="chartbox" id="e-un-chart"></div>
+            <p class="sub" id="e-un-note"></p>
+          </div>
+          <div class="legend2"><span><i style="background:var(--oil)"></i>Average effect</span><span><i style="background:rgba(242,107,0,0.22)"></i>90% range</span><span><i class="eco-sc"></i>Months 13 to 36: scenario, not tested</span></div>
+          <p class="faint" id="e-src"></p>
+        </div>
       </section>
+
+      <section class="card">
+        <div class="row between">
+          <span class="label"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c3 4 6 7 6 11a6 6 0 0 1-12 0c0-4 3-7 6-11z"/></svg> The shock</span>
+          <button type="button" class="ib" data-winfo="model" aria-label="About the model"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><path d="M12 7.5v.5"/></svg></button>
+        </div>
+        <div class="step">
+          <div class="stephead"><span class="num">1</span> How much oil is getting through <span class="hint">set by the scenario menu</span></div>
+          <div class="kpis kpis2">
+            <div><b id="w-flow" class="hurt">–</b><span>million barrels a day through Hormuz now (est.)</span></div>
+            <div><b id="w-miss" class="hurt">–</b><span>million barrels a day missing vs the pre-war 20</span></div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="stephead you"><span class="num">2</span> You choose: the price of oil <span class="hint">drag the slider</span></div>
+          <p class="ask">What if a barrel of Brent crude cost…</p>
+          <div class="pricebig"><b id="brent-v">$104</b><span class="delta" id="w-brent">–</span><span>a barrel</span></div>
+          <div class="slidewrap">
+            <label for="brent" class="sr">Brent crude price, dollars a barrel</label>
+            <input id="brent" type="range" min="60" max="150" step="1" value="104" aria-describedby="shock-explain">
+            <div class="marks" aria-hidden="true">
+              <span style="left:11.1%">$70<br>pre-war</span>
+              <span style="left:54.4%">$109<br>18 Oct</span>
+              <span class="last" style="left:100%">$150</span>
+            </div>
+          </div>
+          <div class="presets" role="group" aria-label="Quick prices">
+            <button type="button" data-brent="70" aria-pressed="false">Pre-war · $70</button>
+            <button type="button" data-brent="109" aria-pressed="false">18 Oct · $109</button>
+            <button type="button" data-brent="140" aria-pressed="false">Severe · $140</button>
+          </div>
+        </div>
+        <div class="step">
+          <div class="stephead"><span class="num">3</span> What that does over the next 12 months <span class="hint">follows the slider</span></div>
+          <div class="kpis">
+            <div><b id="w-petrol">–</b><span id="w-petrol-r">Petrol and diesel at the pump</span></div>
+            <div><b id="w-ecpi">–</b><span id="w-ecpi-r">Energy bills</span></div>
+            <div><b id="w-cpi">–</b><span id="w-cpi-r">Overall inflation, in points</span></div>
+          </div>
+          <p class="explain" id="shock-explain" aria-live="polite"></p>
+        </div>
+        <p class="faint">US figures (FRED): fitted on 1991–2008, tested on 2009–2026. The range under each number is the gap between those two fits. Core inflation, interest rates and mortgages barely move, so they aren't shown. Brent on 18 Oct 2026: about $109.</p>
+      </section>
+
+      <section class="card" id="prod-card" hidden>
+        <div class="row between">
+          <span class="label"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg> Product</span>
+          <button type="button" class="ib" data-winfo="materials" aria-label="About the materials data"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><path d="M12 7.5v.5"/></svg></button>
+        </div>
+        <div id="mdetail" hidden>
+          <div class="mhead"><span class="mi" id="m-icon"></span><span class="grow"><b id="m-name"></b><span class="sub" id="m-sub" style="display:block"></span></span>
+            <button type="button" class="ib" id="m-close" aria-label="Close product details"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+          <div class="row between" style="align-items:baseline;margin-top:8px"><b class="pprice" id="m-price">–</b><span class="sub">price in 12 months</span></div>
+          <p class="faint" id="m-band"></p>
+          <div class="seg mseg" role="group" aria-label="Who makes it or who ships it"><button type="button" data-mmode="production" aria-pressed="true">Made</button><button type="button" data-mmode="exports" aria-pressed="false">Shipped</button></div>
+          <div class="pbars" id="m-bars"></div>
+          <p class="sub" id="m-hormuz"></p>
+          <span class="label" style="margin-top:4px">What it costs buyers</span>
+          <ul class="inds" id="m-buyers"></ul>
+        </div>
+      </section>
+
+
 
       <section class="card">
         <span class="label"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg> Most exposed</span>
@@ -1971,7 +2060,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
     renderMat();
   }
   // country card: three tabs instead of one long column (the sections keep their ids; render code is unchanged)
-  const CTABS = [["overview", "Overview"], ["inds", "Industries"], ["trade", "Trade"]];
+  const CTABS = [["overview", "Overview"], ["inds", "Industries"], ["trade", "Trade"], ["econ", "Economy"]];
   let ctab = "overview";
   (function buildCTabs() {
     const cc = $("country-card"), sub = $("c-sub");
@@ -1987,7 +2076,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
       return d;
     };
     const kpis = cc.querySelector(".kpis"), chart = $("c-chartbox") && $("c-chartbox").parentElement, inds = $("c-inds") && $("c-inds").parentElement;
-    const panes = [pane("overview", [kpis, chart]), pane("inds", [inds]), pane("trade", [$("t-sec")])];
+    const panes = [pane("overview", [kpis, chart]), pane("inds", [inds]), pane("trade", [$("t-sec")]), pane("econ", [$("e-sec")])];
     let at = bar;
     for (const d of panes) { at.after(d); at = d; }
     bar.addEventListener("click", (e) => { const b = e.target.closest("[data-ctab]"); if (b) setCTab(b.dataset.ctab); });
@@ -2006,7 +2095,74 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
       if (pn) pn.hidden = !on;
     }
   }
+  // Seb's Bayesian responses to a 10% Brent move (notes/macro-bayes-responses.csv), months 1 to 36: [mean, q05, q95].
+  const MACRO = {"us_cpi":{"up":[[0.1225,0.0966,0.1493],[0.2277,0.1815,0.275],[0.2593,0.2043,0.313],[0.2644,0.2039,0.3253],[0.2813,0.2143,0.3511],[0.2851,0.2128,0.3602],[0.3042,0.2271,0.3837],[0.3256,0.2475,0.4105],[0.3265,0.2423,0.4154],[0.3316,0.2409,0.4271],[0.3393,0.2452,0.4355],[0.3714,0.2704,0.4743],[0.371,0.2633,0.4851],[0.3709,0.2607,0.4882],[0.3709,0.2603,0.4882],[0.3709,0.2602,0.4882],[0.3709,0.2602,0.4882],[0.3709,0.2602,0.4882],[0.3709,0.2602,0.4882],[0.3709,0.2602,0.4882],[0.3709,0.2602,0.4882],[0.3709,0.2602,0.4882],[0.3709,0.2602,0.4882],[0.3709,0.2602,0.4882],[0.3709,0.2602,0.4882],[0.3709,0.2602,0.4882],[0.3709,0.2602,0.4882],[0.3709,0.2602,0.4882],[0.3709,0.2602,0.4882],[0.3709,0.2602,0.4882],[0.3709,0.2602,0.4882],[0.3709,0.2602,0.4882],[0.3709,0.2602,0.4882],[0.3709,0.2602,0.4882],[0.3709,0.2602,0.4882],[0.3709,0.2602,0.4882]],"down":[[-0.1141,-0.141,-0.0883],[-0.2121,-0.2568,-0.1681],[-0.2415,-0.2926,-0.1904],[-0.246,-0.3029,-0.1908],[-0.2614,-0.3233,-0.2019],[-0.2648,-0.3336,-0.2022],[-0.2826,-0.3545,-0.2172],[-0.3026,-0.3829,-0.2333],[-0.3033,-0.3877,-0.2333],[-0.3079,-0.3909,-0.2323],[-0.315,-0.3964,-0.2348],[-0.3447,-0.4325,-0.2587],[-0.3439,-0.4362,-0.2599],[-0.3436,-0.4361,-0.2614],[-0.3436,-0.4361,-0.2617],[-0.3436,-0.4361,-0.2614],[-0.3436,-0.4361,-0.2613],[-0.3436,-0.4361,-0.2613],[-0.3436,-0.4361,-0.2613],[-0.3436,-0.4361,-0.2613],[-0.3436,-0.4361,-0.2613],[-0.3436,-0.4361,-0.2613],[-0.3436,-0.4361,-0.2613],[-0.3436,-0.4361,-0.2613],[-0.3436,-0.4361,-0.2613],[-0.3436,-0.4361,-0.2613],[-0.3436,-0.4361,-0.2613],[-0.3436,-0.4361,-0.2613],[-0.3436,-0.4361,-0.2613],[-0.3436,-0.4361,-0.2613],[-0.3436,-0.4361,-0.2613],[-0.3436,-0.4361,-0.2613],[-0.3436,-0.4361,-0.2613],[-0.3436,-0.4361,-0.2613],[-0.3436,-0.4361,-0.2613],[-0.3436,-0.4361,-0.2613]]},"us_unemp":{"up":[[-0.012,-0.029,0.0019],[-0.0104,-0.0303,0.0099],[-0.0332,-0.0651,-0.0099],[-0.0333,-0.0669,-0.0047],[-0.0441,-0.0814,-0.0115],[-0.0514,-0.0892,-0.0157],[-0.0579,-0.1053,-0.0177],[-0.0577,-0.1018,-0.0164],[-0.066,-0.1195,-0.02],[-0.0653,-0.1206,-0.0184],[-0.077,-0.1373,-0.0286],[-0.0744,-0.1354,-0.0253],[-0.0869,-0.1532,-0.0331],[-0.0873,-0.1552,-0.0331],[-0.0873,-0.1552,-0.0331],[-0.0874,-0.1552,-0.0331],[-0.0874,-0.1552,-0.0331],[-0.0874,-0.1552,-0.0331],[-0.0874,-0.1552,-0.0331],[-0.0874,-0.1552,-0.0331],[-0.0874,-0.1552,-0.0331],[-0.0874,-0.1552,-0.0331],[-0.0874,-0.1552,-0.0331],[-0.0874,-0.1552,-0.0331],[-0.0874,-0.1552,-0.0331],[-0.0874,-0.1552,-0.0331],[-0.0874,-0.1552,-0.0331],[-0.0874,-0.1552,-0.0331],[-0.0874,-0.1552,-0.0331],[-0.0874,-0.1552,-0.0331],[-0.0874,-0.1552,-0.0331],[-0.0874,-0.1552,-0.0331],[-0.0874,-0.1552,-0.0331],[-0.0874,-0.1552,-0.0331],[-0.0874,-0.1552,-0.0331],[-0.0874,-0.1552,-0.0331]],"down":[[0.0189,-0.0027,0.0435],[0.0195,-0.0088,0.0534],[0.0534,0.0101,0.1029],[0.056,0.0041,0.1147],[0.0727,0.0101,0.1396],[0.085,0.014,0.1637],[0.0959,0.0155,0.1896],[0.0958,0.0129,0.1882],[0.1071,0.0206,0.1994],[0.1072,0.0138,0.2057],[0.1232,0.0268,0.2329],[0.1198,0.028,0.223],[0.1372,0.0295,0.2482],[0.1377,0.0305,0.2487],[0.1378,0.0308,0.2487],[0.1378,0.0308,0.2487],[0.1378,0.0308,0.2487],[0.1378,0.0308,0.2487],[0.1378,0.0308,0.2487],[0.1378,0.0308,0.2487],[0.1378,0.0308,0.2487],[0.1378,0.0308,0.2487],[0.1378,0.0308,0.2487],[0.1378,0.0308,0.2487],[0.1378,0.0308,0.2487],[0.1378,0.0308,0.2487],[0.1378,0.0308,0.2487],[0.1378,0.0308,0.2487],[0.1378,0.0308,0.2487],[0.1378,0.0308,0.2487],[0.1378,0.0308,0.2487],[0.1378,0.0308,0.2487],[0.1378,0.0308,0.2487],[0.1378,0.0308,0.2487],[0.1378,0.0308,0.2487],[0.1378,0.0308,0.2487]]},"uk_cpi":{"up":[[0.0819,0.0501,0.1182],[0.1466,0.1016,0.1962],[0.1725,0.127,0.2263],[0.167,0.1159,0.2255],[0.2122,0.1466,0.2759],[0.2041,0.1365,0.2732],[0.2085,0.1365,0.2844],[0.2407,0.1577,0.3204],[0.2645,0.177,0.3547],[0.2793,0.1872,0.3688],[0.3139,0.2185,0.4124],[0.3534,0.2447,0.4679],[0.3745,0.265,0.4902],[0.3723,0.264,0.4864],[0.3726,0.2641,0.4869],[0.3725,0.2641,0.4869],[0.3725,0.2641,0.4869],[0.3725,0.2641,0.4869],[0.3725,0.2641,0.4869],[0.3725,0.2641,0.4869],[0.3725,0.2641,0.4869],[0.3725,0.2641,0.4869],[0.3725,0.2641,0.4869],[0.3725,0.2641,0.4869],[0.3725,0.2641,0.4869],[0.3725,0.2641,0.4869],[0.3725,0.2641,0.4869],[0.3725,0.2641,0.4869],[0.3725,0.2641,0.4869],[0.3725,0.2641,0.4869],[0.3725,0.2641,0.4869],[0.3725,0.2641,0.4869],[0.3725,0.2641,0.4869],[0.3725,0.2641,0.4869],[0.3725,0.2641,0.4869],[0.3725,0.2641,0.4869]],"down":[[-0.0709,-0.1015,-0.0409],[-0.1267,-0.175,-0.0791],[-0.1495,-0.2028,-0.0933],[-0.145,-0.2056,-0.0839],[-0.1839,-0.2529,-0.1141],[-0.1767,-0.2477,-0.1065],[-0.1811,-0.2546,-0.1047],[-0.2088,-0.2907,-0.1276],[-0.2292,-0.3168,-0.1386],[-0.2418,-0.3388,-0.1453],[-0.2721,-0.3806,-0.1657],[-0.305,-0.4121,-0.1941],[-0.3229,-0.4314,-0.2075],[-0.3211,-0.4273,-0.2064],[-0.3213,-0.4292,-0.2065],[-0.3213,-0.4288,-0.2065],[-0.3213,-0.4289,-0.2065],[-0.3213,-0.4289,-0.2065],[-0.3213,-0.4289,-0.2065],[-0.3213,-0.4289,-0.2065],[-0.3213,-0.4289,-0.2065],[-0.3213,-0.4289,-0.2065],[-0.3213,-0.4289,-0.2065],[-0.3213,-0.4289,-0.2065],[-0.3213,-0.4289,-0.2065],[-0.3213,-0.4289,-0.2065],[-0.3213,-0.4289,-0.2065],[-0.3213,-0.4289,-0.2065],[-0.3213,-0.4289,-0.2065],[-0.3213,-0.4289,-0.2065],[-0.3213,-0.4289,-0.2065],[-0.3213,-0.4289,-0.2065],[-0.3213,-0.4289,-0.2065],[-0.3213,-0.4289,-0.2065],[-0.3213,-0.4289,-0.2065],[-0.3213,-0.4289,-0.2065]]},"uk_unemp":{"up":[[-0.0014,-0.0045,0.0006],[-0.0006,-0.0049,0.0024],[-0.0043,-0.01,-0.0006],[-0.0052,-0.0122,-0.0004],[-0.0095,-0.0189,-0.0029],[-0.0134,-0.025,-0.005],[-0.0147,-0.0282,-0.0056],[-0.0161,-0.0317,-0.0057],[-0.016,-0.0309,-0.0057],[-0.0153,-0.0298,-0.0049],[-0.0146,-0.0287,-0.0044],[-0.0132,-0.0276,-0.003],[-0.0127,-0.0277,-0.0023],[-0.0126,-0.0279,-0.0021],[-0.0126,-0.0279,-0.0021],[-0.0126,-0.028,-0.0021],[-0.0126,-0.028,-0.0021],[-0.0125,-0.028,-0.0021],[-0.0125,-0.028,-0.0021],[-0.0125,-0.028,-0.0021],[-0.0125,-0.028,-0.0021],[-0.0125,-0.028,-0.0021],[-0.0125,-0.028,-0.0021],[-0.0125,-0.028,-0.0021],[-0.0125,-0.028,-0.0021],[-0.0125,-0.028,-0.0021],[-0.0125,-0.028,-0.0021],[-0.0125,-0.028,-0.0021],[-0.0125,-0.028,-0.0021],[-0.0125,-0.028,-0.0021],[-0.0125,-0.028,-0.0021],[-0.0125,-0.028,-0.0021],[-0.0125,-0.028,-0.0021],[-0.0125,-0.028,-0.0021],[-0.0125,-0.028,-0.0021],[-0.0125,-0.028,-0.0021]],"down":[[0.0058,-0.0026,0.015],[0.0023,-0.0108,0.0161],[0.0186,0.0022,0.0368],[0.0219,0.0019,0.0447],[0.0408,0.0157,0.0684],[0.0579,0.0257,0.0913],[0.0635,0.0272,0.0971],[0.0694,0.0286,0.1077],[0.0688,0.0275,0.109],[0.0656,0.0253,0.1072],[0.0625,0.0229,0.1013],[0.057,0.0178,0.0981],[0.0544,0.0123,0.0946],[0.0537,0.0117,0.0959],[0.0536,0.0112,0.0964],[0.0535,0.011,0.0964],[0.0535,0.011,0.0963],[0.0535,0.011,0.0963],[0.0535,0.011,0.0963],[0.0535,0.011,0.0963],[0.0535,0.011,0.0963],[0.0535,0.011,0.0963],[0.0535,0.011,0.0963],[0.0535,0.011,0.0963],[0.0535,0.011,0.0963],[0.0535,0.011,0.0963],[0.0535,0.011,0.0963],[0.0535,0.011,0.0963],[0.0535,0.011,0.0963],[0.0535,0.011,0.0963],[0.0535,0.011,0.0963],[0.0535,0.011,0.0963],[0.0535,0.011,0.0963],[0.0535,0.011,0.0963],[0.0535,0.011,0.0963],[0.0535,0.011,0.0963]]},"ea_cpi":{"up":[[0.1491,0.1013,0.2052],[0.2318,0.1664,0.3149],[0.2549,0.1741,0.3483],[0.2383,0.1606,0.3264],[0.2619,0.1652,0.3701],[0.2539,0.1571,0.3586],[0.2557,0.1441,0.3659],[0.2965,0.1924,0.4052],[0.3385,0.2311,0.4476],[0.3654,0.2461,0.4802],[0.3974,0.2712,0.5218],[0.4405,0.2996,0.5758],[0.4513,0.3066,0.5935],[0.4516,0.3069,0.5954],[0.4516,0.3069,0.5955],[0.4516,0.3069,0.5955],[0.4516,0.3069,0.5955],[0.4516,0.3069,0.5955],[0.4516,0.3069,0.5955],[0.4516,0.3069,0.5955],[0.4516,0.3069,0.5955],[0.4516,0.3069,0.5955],[0.4516,0.3069,0.5955],[0.4516,0.3069,0.5955],[0.4516,0.3069,0.5955],[0.4516,0.3069,0.5955],[0.4516,0.3069,0.5955],[0.4516,0.3069,0.5955],[0.4516,0.3069,0.5955],[0.4516,0.3069,0.5955],[0.4516,0.3069,0.5955],[0.4516,0.3069,0.5955],[0.4516,0.3069,0.5955],[0.4516,0.3069,0.5955],[0.4516,0.3069,0.5955],[0.4516,0.3069,0.5955]],"down":[[-0.0948,-0.1377,-0.0561],[-0.1473,-0.2141,-0.0923],[-0.1623,-0.2434,-0.0955],[-0.1527,-0.2369,-0.0853],[-0.1676,-0.2579,-0.0947],[-0.1632,-0.2564,-0.0856],[-0.1649,-0.2621,-0.08],[-0.1918,-0.3003,-0.0944],[-0.2193,-0.3468,-0.1145],[-0.2364,-0.3687,-0.1221],[-0.2562,-0.398,-0.1336],[-0.2835,-0.4402,-0.1546],[-0.2898,-0.4341,-0.158],[-0.29,-0.4342,-0.1579],[-0.29,-0.4342,-0.1579],[-0.29,-0.4342,-0.1579],[-0.29,-0.4342,-0.1579],[-0.29,-0.4342,-0.1579],[-0.29,-0.4342,-0.1579],[-0.29,-0.4342,-0.1579],[-0.29,-0.4342,-0.1579],[-0.29,-0.4342,-0.1579],[-0.29,-0.4342,-0.1579],[-0.29,-0.4342,-0.1579],[-0.29,-0.4342,-0.1579],[-0.29,-0.4342,-0.1579],[-0.29,-0.4342,-0.1579],[-0.29,-0.4342,-0.1579],[-0.29,-0.4342,-0.1579],[-0.29,-0.4342,-0.1579],[-0.29,-0.4342,-0.1579],[-0.29,-0.4342,-0.1579],[-0.29,-0.4342,-0.1579],[-0.29,-0.4342,-0.1579],[-0.29,-0.4342,-0.1579],[-0.29,-0.4342,-0.1579]]},"ea_unemp":{"up":[[-0.0003,-0.0043,0.0044],[-0.0003,-0.0069,0.0083],[-0.0071,-0.0179,0.0009],[-0.0098,-0.0232,0.0012],[-0.0166,-0.0333,-0.0049],[-0.0211,-0.041,-0.007],[-0.0208,-0.0418,-0.0057],[-0.0218,-0.0466,-0.0052],[-0.0222,-0.0495,-0.0047],[-0.0209,-0.049,-0.0009],[-0.0231,-0.0522,-0.0036],[-0.0214,-0.0517,-0.0015],[-0.0239,-0.0545,-0.0028],[-0.0249,-0.0566,-0.0024],[-0.0253,-0.0581,-0.0027],[-0.0254,-0.0586,-0.0028],[-0.0255,-0.0588,-0.0028],[-0.0255,-0.0589,-0.0029],[-0.0255,-0.059,-0.0029],[-0.0255,-0.059,-0.0029],[-0.0255,-0.059,-0.0029],[-0.0255,-0.059,-0.0029],[-0.0255,-0.059,-0.0029],[-0.0255,-0.059,-0.0029],[-0.0255,-0.059,-0.0029],[-0.0255,-0.059,-0.0029],[-0.0255,-0.059,-0.0029],[-0.0255,-0.059,-0.0029],[-0.0255,-0.059,-0.0029],[-0.0255,-0.059,-0.0029],[-0.0255,-0.059,-0.0029],[-0.0255,-0.059,-0.0029],[-0.0255,-0.059,-0.0029],[-0.0255,-0.059,-0.0029],[-0.0255,-0.059,-0.0029],[-0.0255,-0.059,-0.0029]],"down":[[0.001,-0.0065,0.0087],[0.002,-0.009,0.0137],[0.0145,-0.001,0.0326],[0.02,-0.0014,0.044],[0.033,0.005,0.0658],[0.0409,0.0078,0.0775],[0.0398,0.0073,0.0782],[0.0411,0.0065,0.0811],[0.0418,0.0068,0.0847],[0.0397,0.0004,0.0833],[0.0435,0.0026,0.0909],[0.0403,0.0025,0.0864],[0.0442,0.0038,0.0902],[0.0457,0.005,0.0932],[0.0463,0.0051,0.0937],[0.0465,0.0048,0.0942],[0.0466,0.0045,0.0945],[0.0466,0.0044,0.0947],[0.0467,0.0043,0.0948],[0.0467,0.0043,0.0948],[0.0467,0.0043,0.0948],[0.0467,0.0043,0.0948],[0.0467,0.0043,0.0948],[0.0467,0.0043,0.0948],[0.0467,0.0043,0.0948],[0.0467,0.0043,0.0948],[0.0467,0.0043,0.0948],[0.0467,0.0043,0.0948],[0.0467,0.0043,0.0948],[0.0467,0.0043,0.0948],[0.0467,0.0043,0.0948],[0.0467,0.0043,0.0948],[0.0467,0.0043,0.0948],[0.0467,0.0043,0.0948],[0.0467,0.0043,0.0948],[0.0467,0.0043,0.0948]]}};
+  const MACRO_META = {"fitted_to": "2026-10", "generated": "2026-10-24", "source": "experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md)", "interval": "average effect only (parameter uncertainty; excludes month-to-month noise)"};
+  // Which economy a country's numbers come from. Others fall back to a choice of the three, labelled as such.
+  const EURO = new Set(["Austria", "Belgium", "Bulgaria", "Croatia", "Cyprus", "Estonia", "Finland", "France", "Germany", "Greece", "Ireland",
+    "Italy", "Latvia", "Lithuania", "Luxembourg", "Malta", "Netherlands", "Portugal", "Slovakia", "Slovenia", "Spain"]);
+  const ECO_NAME = { us: "the United States", uk: "the United Kingdom", ea: "the euro area" };
+  const ecoOf = (n) => (n === "United States of America" ? "us" : n === "United Kingdom" ? "uk" : EURO.has(n) ? "ea" : null);
+  let ecoPick = "us";
+  // path of [mean, lo, hi] for months 0..36 at the current Brent, scaled like the product prices
+  function ecoPath(series) {
+    const x = st.brent / BRENT0 - 1;
+    if (Math.abs(x) < 1e-9) return Array.from({ length: 37 }, () => [0, 0, 0]);
+    const [rowsM, base] = x >= 0 ? [MACRO[series].up, 1.1] : [MACRO[series].down, 0.9];
+    const f = Math.log(1 + x) / Math.log(base);
+    return [[0, 0, 0]].concat(rowsM.map(([m, a, b]) => { const p = a * f, q = b * f; return [m * f, Math.min(p, q), Math.max(p, q)]; }));
+  }
+  function ecoChart(box, pts, { unit, grey }) {
+    const W = 340, H = 170, L = 40, Rr = 52, T = 12, B = 24;
+    const all = pts.flatMap((p) => [p[1], p[2]]).concat([0]);
+    let lo = Math.min(...all), hi = Math.max(...all);
+    const pad = Math.max((hi - lo) * 0.12, unit === "%" ? 0.1 : 0.02);
+    lo -= pad; hi += pad;
+    const x = (i) => L + i / 36 * (W - L - Rr), y = (v) => T + (hi - v) / (hi - lo) * (H - T - B);
+    const step = [0.01, 0.02, 0.05, 0.1, 0.2, 0.25, 0.5, 1, 2, 5].find((st_) => (hi - lo) / st_ <= 5) || 10;
+    const fmt = (v) => `${v > 0.0001 ? "+" : v < -0.0001 ? "−" : ""}${Math.abs(v).toFixed(step < 0.1 ? 2 : 1)}`;
+    let g = "";
+    for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-9; v += step) g += `<line class="gl" x1="${L}" x2="${W - Rr}" y1="${y(v)}" y2="${y(v)}"/><text class="ax" x="${L - 6}" y="${y(v) + 3.5}" text-anchor="end">${fmt(v)}</text>`;
+    [[0, "now"], [12, "12 mo"], [24, "24"], [36, "36"]].forEach(([i, t]) => (g += `<text class="ax" x="${x(i)}" y="${H - 6}" text-anchor="middle">${t}</text>`));
+    const band = `M${pts.map((p, i) => `${x(i)},${y(p[2])}`).join("L")}L${pts.map((p, i) => [i, p[1]]).reverse().map(([i, v]) => `${x(i)},${y(v)}`).join("L")}Z`;
+    const line = `M${pts.map((p, i) => `${x(i)},${y(p[0])}`).join("L")}`;
+    const m12 = pts[12][0], m36 = pts[36][0];
+    box.innerHTML = `<svg class="chart${grey ? " eco-grey" : ""}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${unit === "%" ? "Price level" : "Unemployment rate"} change: ${fmt(m12)}${unit} after 12 months, ${fmt(m36)}${unit} after 36 months">
+      <rect class="eco-scen" x="${x(12)}" y="${T}" width="${x(36) - x(12)}" height="${H - T - B}"/>
+      ${g}<line class="ref" x1="${L}" x2="${W - Rr}" y1="${y(0)}" y2="${y(0)}"/>
+      <text class="reflab" x="${W - Rr + 6}" y="${y(0) + 3.5}">${grey ? "what-if: 0" : "no change"}</text>
+      <path class="band" d="${band}"/><path class="base" d="${line}"/>
+      <circle class="end" cx="${x(12)}" cy="${y(m12)}" r="3.5"/>
+      <text class="endlab" x="${x(12)}" y="${y(m12) + (m12 >= 0 ? -8 : 15)}" text-anchor="middle">${fmt(m12)}${unit}</text>
+      <circle class="end" cx="${x(36)}" cy="${y(m36)}" r="3.5"/>
+      <text class="endlab" x="${x(36) + 7}" y="${y(m36) + 4}">${fmt(m36)}${unit}</text></svg>`;
+  }
+  function renderEcon() {
+    if (!st.sel || !$("e-sec")) return;
+    const own = ecoOf(st.sel), eco = own || ecoPick, nm = st.sel === "United States of America" ? "the United States" : st.sel;
+    $("e-who").innerHTML = own
+      ? (own === "ea" ? `${nm} uses the euro, so these are <b>euro-area</b> figures.` : `Figures for <b>${ECO_NAME[own]}</b>.`)
+      : `The model covers only the US, the UK and the euro area, not ${nm}. Showing <b>${ECO_NAME[eco]}</b> for comparison.`;
+    document.querySelectorAll("[data-eco]").forEach((b) => { const on = b.dataset.eco === eco; b.setAttribute("aria-pressed", String(on)); b.disabled = !!own && !on; });
+    const cpi = ecoPath(`${eco}_cpi`), un = ecoPath(`${eco}_unemp`);
+    const pct = (st.brent / BRENT0 - 1) * 100, sg = (v) => (v > 0.005 ? "+" : v < -0.005 ? "−" : ""), a = Math.abs;
+    const c12 = cpi[12];
+    $("e-cpi-head").innerHTML = a(pct) < 0.5
+      ? `At $${st.brent}, oil is at its pre-war price, so there is no knock-on to prices.`
+      : `At <b>$${st.brent}</b> a barrel, prices in ${ECO_NAME[eco]} end up about <b>${a(c12[0]).toFixed(1)}% ${c12[0] >= 0 ? "higher" : "lower"}</b> after 12 months than they would otherwise be (range ${sg(c12[1])}${a(c12[1]).toFixed(1)} to ${sg(c12[2])}${a(c12[2]).toFixed(1)}%). That adds roughly that much to the year's inflation rate.`;
+    ecoChart($("e-cpi-chart"), cpi, { unit: "%" });
+    const u12 = un[12];
+    $("e-un-head").innerHTML = `<b>No reliable effect.</b> The team's what-if keeps unemployment unchanged.`;
+    ecoChart($("e-un-chart"), un, { unit: " pts", grey: true });
+    $("e-un-note").textContent = a(pct) < 0.5 ? "" :
+      `In the historical data, unemployment in ${ECO_NAME[eco]} moved ${u12[0] < 0 ? "down" : "up"} by about ${a(u12[0]).toFixed(2)} points when oil ${pct > 0 ? "rose" : "fell"} this much (grey line). ` +
+      `That's because oil usually rises in booms, when demand is strong: it is demand, not a supply shock like a Hormuz closure, so it isn't used as a forecast (docs/macro-ensemble.md).`;
+    $("e-src").textContent = `Seb's Bayesian model, notes/macro-bayes-responses.csv (${MACRO_META.source}; data to ${MACRO_META.fitted_to}, generated ${MACRO_META.generated}). ` +
+      `Changes against no oil move, at the slider's Brent price. The range is the ${MACRO_META.interval}. Tested up to 12 months; 13 to 36 months is a scenario.`;
+  }
+  document.querySelectorAll("[data-eco]").forEach((b) => b.addEventListener("click", () => { ecoPick = b.dataset.eco; renderEcon(); }));
   function renderCountry() {
+    renderShockExplain();
     $("country-card").hidden = !st.sel;
     if (!st.sel) return;
     const name = st.sel, k = calc(name), d = k.d;
@@ -2040,6 +2196,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
         <span class="why">Range ${pct(i.lo / 100, 1)} to ${pct(i.hi / 100, 1)}. Reaches costs ${i.lag}. Share: ${i.src}.</span></li>`;
     }).join("");
     renderTrade();
+    renderEcon();
   }
 
   function renderChart(name) {
@@ -2102,21 +2259,46 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
     $("w-miss").className = miss > 0.05 ? "hurt" : "";
     $("w-flow").className = miss > 0.05 ? "hurt" : "";
     const pct = (st.brent / BRENT0 - 1) * 100;
-    $("w-brent").textContent = `$${st.brent}`;
-    $("w-brent").className = pct > 2 ? "hurt" : pct < -2 ? "gain" : "";
+    $("w-brent").textContent = Math.abs(pct) < 0.5 ? "same as pre-war" : `${pct > 0 ? "+" : "−"}${Math.abs(pct).toFixed(0)}% vs pre-war`;
+    $("w-brent").className = "delta " + (pct > 2 ? "hurt" : pct < -2 ? "gain" : "");
     const dl = Math.log(st.brent / BRENT0);
+    const sign = (x) => (x > 0.05 ? "+" : x < -0.05 ? "−" : "");
     const show = (id, key, unit, label) => {
       const [lo, hi] = rangeOf(key, dl), v = viaLink(key, dl, 0);
-      const sign = (x) => (x > 0.05 ? "+" : x < -0.05 ? "−" : "");
-      $(id).textContent = `${sign(v)}${Math.abs(v).toFixed(1)}${unit}`;
+      const txt = `${sign(v)}${Math.abs(v).toFixed(1)}${unit}`;
+      if ($(id).textContent !== txt && $(id).textContent !== "–") shockFlash($(id).parentElement);
+      $(id).textContent = txt;
       $(id).className = v > 0.05 ? "hurt" : v < -0.05 ? "gain" : "";
-      $(`${id}-r`).textContent = `${label} · ${sign(lo)}${Math.abs(lo).toFixed(1)} to ${sign(hi)}${Math.abs(hi).toFixed(1)}`;
+      $(`${id}-r`).textContent = Math.abs(hi - lo) < 0.05 ? label : `${label} · range ${sign(lo)}${Math.abs(lo).toFixed(1)} to ${sign(hi)}${Math.abs(hi).toFixed(1)}${unit}`;
     };
-    show("w-petrol", "petrol", "%", "Petrol and diesel");
-    show("w-ecpi", "ecpi", "%", "Energy prices (CPI)");
-    show("w-cpi", "cpi12", " pp", "Headline inflation, 12 mo");
+    show("w-petrol", "petrol", "%", "Petrol and diesel at the pump");
+    show("w-ecpi", "ecpi", "%", "Energy bills");
+    show("w-cpi", "cpi12", "", "Overall inflation, in points");
     $("brent-v").textContent = `$${st.brent}`;
+    document.querySelectorAll("[data-brent]").forEach((b) => b.setAttribute("aria-pressed", String(Number(b.dataset.brent) === st.brent)));
+    renderShockExplain();
   }
+  // The same numbers in one plain-English sentence, plus the selected country when there is one.
+  function renderShockExplain() {
+    const dl = Math.log(st.brent / BRENT0), pct = (st.brent / BRENT0 - 1) * 100;
+    const petrol = viaLink("petrol", dl, 0), ecpi = viaLink("ecpi", dl, 0), cpi = viaLink("cpi12", dl, 0);
+    const a = Math.abs, f0 = (x) => a(x).toFixed(0), f1 = (x) => a(x).toFixed(1);
+    const out = [];
+    if (a(pct) < 0.5) out.push(`At <b>$${st.brent}</b> a barrel, oil costs about what it did before the war, so pump prices, energy bills and inflation barely move from the price alone.`);
+    else {
+      const up = pct > 0, rise = up ? "up" : "down";
+      out.push(`At <b>$${st.brent}</b> a barrel, oil costs <b>${f0(pct)}% ${up ? "more" : "less"}</b> than before the war.`);
+      out.push(`Within a year that pushes petrol and diesel <b>${rise} about ${f0(petrol)}%</b>, energy bills <b>${rise} about ${f0(ecpi)}%</b>, and overall inflation <b>${rise} about ${f1(cpi)} points</b> (US figures).`);
+    }
+    if (st.sel) {
+      const k = calc(st.sel), nm = st.sel === "United States of America" ? "the United States" : st.sel;
+      if (k.kind === "gulf") out.push(`${nm} is a Gulf producer: what hurts it is oil it can't ship, not the price.`);
+      else if (k.kind === "exp") out.push(`${nm} sells oil abroad, so a higher price helps it.`);
+      else if (a(k.fuel) >= 0.005) out.push(`For ${nm}, fuel would cost about <b>${f0(k.fuel * 100)}% ${k.fuel > 0 ? "more" : "less"}</b> than before the war${k.hz > 0.01 ? `, with an extra shortage premium because ${f0(k.hz * 100)}% of its oil came through Hormuz` : ""}.`);
+    }
+    $("shock-explain").innerHTML = out.join(" ");
+  }
+  function shockFlash(el) { el.classList.remove("bump"); void el.offsetWidth; el.classList.add("bump"); }
   function update() { renderShock(); paint(); renderCountry(); renderRank(); renderMat(); }
 
   function loadScenario(key) {
@@ -2129,6 +2311,9 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
   }
   $("scenario").addEventListener("change", (e) => loadScenario(e.target.value));
   $("brent").addEventListener("input", (e) => { st.brent = Number(e.target.value); update(); });
+  document.querySelectorAll("[data-brent]").forEach((b) => b.addEventListener("click", () => {
+    st.brent = Number(b.dataset.brent); $("brent").value = st.brent; update();
+  }));
 
   // ------------------------------------------------------------ materials: rail, search, product pane, country trade
   // the clicked point on the flat map, as [lng, lat]
