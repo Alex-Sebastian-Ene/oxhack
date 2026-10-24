@@ -41,6 +41,42 @@ Chained for a 10% oil rise with the 1991–2008 links:
 - core CPI about 0, so the Taylor-rule Fed response is −1 bp ± 5;
 - the mortgage effect through fed funds is about 0.
 
+## Fold-level split testing (k = 8 to 16)
+
+A single split depends on where the cut falls. `uv run experiments/oil_chain.py cv` cuts each
+link's whole window (1991–2026; 2003–2026 for breakevens) into k contiguous blocks, for every k
+from 8 to 16: 108 folds per link.
+- **Blocked:** each block is held out once, and the link is fitted on the rest, with a gap the
+  length of the lags either side of the block.
+- **Forward:** each block is predicted from earlier blocks only, as a time-honest check.
+
+Full output: [notes/oil-chain-cv.md](../notes/oil-chain-cv.md).
+
+| Link | Single split R² | Blocked pooled R², k = 8–16 | Forward pooled R² | Folds with R² > 0 | Fold effects, median [5%, 95%] | Verdict |
+|---|---|---|---|---|---|---|
+| Oil → petrol | +0.52 | +0.53 to +0.54 | +0.52 to +0.54 | 92% | +5.8% [+5.4, +6.5] | **Holds at every k** |
+| Oil → energy CPI | +0.48 | +0.48 to +0.50 | +0.47 to +0.49 | 90% | +2.8% [+2.5, +3.0] | **Holds at every k** |
+| Oil → headline CPI | +0.40 | +0.36 to +0.37 | +0.31 to +0.34 | 74% | +0.40 pp [+0.31, +0.43] | **Holds on average**; calm years add little |
+| Oil → core CPI | −0.12 | −0.14 to −0.12 | −0.20 to −0.13 | 16% | +0.12 pp [−0.00, +0.13] | **Fails at every k** |
+| Oil → 5y inflation expectations | +0.02 | +0.20 to +0.21 | +0.17 to +0.24 | 91% | +0.11 pp [+0.09, +0.13] | **Holds at every k**; the single split understated it |
+| 10y yield → mortgage rate | +0.71 | +0.76 | +0.72 to +0.75 | 97% | +0.92 [+0.87, +0.95] | **Holds at every k** |
+| Fed funds → mortgage, holding the 10y | (same regression) | (same regression) | | | −0.02 [−0.04, +0.01] | **No effect**; the range straddles 0 |
+
+The Taylor-rule coefficient on core inflation has a median of 0.50–0.57 across k, but it ranges
+from **0.23 to 1.77** depending on which block is held out: the Fed link is unstable at every k.
+
+**What it changes:**
+- The conclusions don't depend on the cut: every link's R² is flat from k = 8 to k = 16, and the
+  blocked and forward versions agree.
+- The one link the single split got wrong is **oil → inflation expectations**. Its 2003–2013
+  training window held the 2008 crash, which made the 2014–2026 test look like a failure
+  (R² 0.02). Across 108 folds it predicts consistently (R² 0.20), with a stable effect of about
+  +0.11 pp per 10% oil rise. So the mortgage route, oil → expectations → 10-year yield → mortgage,
+  is weak in size but real.
+- **For the industry series (splits B and C):** the same `cv_link()` runs on any series with the
+  same arguments as `link()`, so splits B and C can be checked the same way. With 2004–2026 data,
+  k = 8 to 16 gives blocks of 17–33 months.
+
 ## What this means for the product
 
 1. **The trustworthy part of the chain is oil → petrol → energy → headline CPI.** These links are
@@ -52,8 +88,9 @@ Chained for a 10% oil rise with the 1991–2008 links:
    looks through oil shocks", rather than as a point forecast. This inverts the fallback order
    in design section 7, "oil price → CPI → Fed rate first".
 3. **Mortgages follow long yields, not the policy rate.** For a cost-of-living card, the route is
-   oil → inflation expectations → 10-year yield → mortgage. The expectations step is itself weak,
-   so the honest mortgage effect of an oil shock is small.
+   oil → inflation expectations → 10-year yield → mortgage. The expectations step is small (about
+   +0.11 pp per 10% oil rise) but holds across all 108 folds, so the honest mortgage effect of an
+   oil shock is real but small.
 4. **Flow → oil price is not tested here.** We have no historical flow series yet. The link
    needs a supply-shock event study (dates and barrels from a cited source; ask the research
    desk), and the oil-price layer in [oil-price-model.md](oil-price-model.md) supplies the
