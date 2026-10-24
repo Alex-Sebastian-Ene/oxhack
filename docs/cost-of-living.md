@@ -127,7 +127,7 @@ NUTS (2 chains, 500 warm-up, 500 draws):
 - **Done:**
   - Data for 41 series, the weights, and the event analysis.
   - The model, the report and the Iridis scripts.
-  - 9 tests (all passing).
+  - 10 tests (all passing).
 - **First full run (Iridis job 1972141): discarded.**
   - The fits that contain supply-disruption months did not converge: the 2026 test fit had R-hat
     2.2, the all-data fit 2.5, with effective sample sizes near 1. The early folds had R-hat
@@ -137,7 +137,39 @@ NUTS (2 chains, 500 warm-up, 500 draws):
     the CPI gas index as its "gas price", and the gas item on its own current change. That makes
     the posterior degenerate.
   - Fixed: the driver key is now `henry_hub`, and a test checks that keys never clash.
-  - Rerun as Iridis job 1972228. Its fits are reported only if they clear the convergence bar.
+- **Rerun (Iridis job 1972228): all 11 fits converged.** R-hat 1.01–1.03, ESS 122–238, no
+  divergences. Fold 1 first reached ESS 96, so it was refitted with 1,000 draws per chain (ESS 201).
+  Full tables are in `notes/cost-of-living.md`. Verdicts:
+  - **Bayesian item model against the average link: keep.** It is better at every horizon: −0.18 ±
+    0.02 at 1 month to −0.08 ± 0.01 at 12, in units of climatology CRPS.
+  - **Lévy Brent paths: keep.**
+    - On Brent itself they score best at every horizon.
+    - Against daily Student-t paths: −0.68 ± 0.52 at 12 months, not significant.
+    - Against a monthly GARCH-t: −2.01 ± 1.11, and clearly better at 1 month (CRPS 4.00 against
+      5.29).
+    - On the items they tie with Student-t, and beat the monthly model at 1 month (−0.005 ± 0.002).
+  - **Composite against direct headline: keep, region by region.**
+    - US: better up to 6 months (−0.08 ± 0.02 at 1 and 3 months, −0.06 ± 0.03 at 6).
+    - Euro area: better at 1 month (−0.03 ± 0.01).
+    - UK: no difference.
+  - **Supply-shock terms: keep, on the 2026 test.**
+    - The folds can't judge them, because their only supply months are in 2022.
+    - Fitted to Feb 2026 with kappa learned from 2022 alone, the bands cover 44 of 44 outcomes by
+      Sep 2026. That compares with 37 of 44 without the terms and 36 of 44 for the average link.
+      The median miss is 2.7 pp, against 3.4 and 3.3.
+    - Motor fuel: UK +24.6% predicted against +27.4% actual (+10.9% without the terms); euro area
+      +26.6% against +25.4% (+13.3%); US +36.8% against +30.8% (+18.0%).
+    - The cost is wide bands on some items (US air fares −35% to +40%).
+  - **2022: nothing predicts it.** At best 15 of 44 outcomes are inside the bands, with misses of
+    about 11 pp. It was a gas and grain shock outside the model's drivers.
+  - **Calibration is still short of 90%** for several groups out of sample (restaurants 73%,
+    euro-area headline 73–74%). That is better than the average link (61–87%), but the bands need
+    recalibrating.
+  - **Scenario from Feb 2026.** A 2026-sized closure lifts 12-month cost-of-living inflation:
+    - US: from +2.5% to +4.6%.
+    - UK: from +2.5% to +4.1%.
+    - Euro area: from +2.0% to +4.2%.
+    - It also widens the 90% band from 3–4 pp to 6–9 pp.
 - **Already clear from the data (no model fit needed):** see the event tables in
   `notes/cost-of-living.md`. In February–September 2026, against the average link given the
   actual oil and gas:
