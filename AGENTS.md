@@ -23,4 +23,9 @@ Ground rules:
   links, and never an AI tool as author or committer.
 - **TODO:** add the event's rules on AI use and provenance once we have them.
 
-Commands: TODO once there is code.
+Commands (oil-price and knock-on experiments; see `docs/oil-price-model.md`):
+
+- Tests: `uv run --no-project --with pytest --with numpy --with scipy --with pandas pytest -q tests`
+- Lévy models: `uv run experiments/non_gaussian.py`, `uv run experiments/levy_fourier.py check|fit|rolling|report`
+- Knock-on links: `uv run experiments/oil_chain.py`
+- Cluster runs: `docs/iridis.md`
