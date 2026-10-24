@@ -178,6 +178,14 @@ def report() -> None:
         raise SystemExit(f"no complete runs/macro/{stem(0, '<member>')}.npz set yet")
     W = simplex(len(members))
     equal = int(np.argmin(np.abs(W - 1 / len(members)).sum(1)))
+    # leave-one-out: equal weights on every member but one (does each member earn its place?)
+    loo = {}
+    if len(members) >= 3:
+        for i, m in enumerate(members):
+            w = np.full(len(members), 1 / (len(members) - 1))
+            w[i] = 0.0
+            loo[m] = len(W)
+            W = np.vstack([W, w])
     data = mn.make_dataset(mn.V1_BLOCKS)
     folds = []
     for j in range(mn.FOLDS):
@@ -287,6 +295,8 @@ def report() -> None:
         rows[(mode, "forward")] = assemble(mode, lambda g, j, mode=mode: chosen[mode][g][j])
         rows[(mode, "equal+cal")] = calibrated[("const", mode)]
         rows[(mode, "equal+cal_vol")] = calibrated[("vol", mode)]
+        for m, k in loo.items():
+            rows[(mode, f"without {m}")] = assemble(mode, lambda g, j, k=k: k)
     y_all = np.vstack([f["y"] for f in folds])
     labels = [*members, "equal", "equal+cal", "equal+cal_vol", "forward"]
 
@@ -336,6 +346,22 @@ def report() -> None:
             for m in others:
                 out.append(f"| {e} vs {m} | " + " | ".join(diff(rows[(mode, e)]['crps'], rows[(mode, m)]['crps'], cols(g))
                                                          for g in mb.GROUPS) + " |")
+        out.append("")
+    if loo:
+        out += ["## Does each member earn its place?", "",
+                "The equal-weight mixture of all members against the equal-weight mixture without one of them: "
+                "scaled CRPS difference (all minus without), Newey–West t. Negative: the member helps.", "",
+                "| Mode | Member left out | " + " | ".join(mb.GROUPS) + " |", "|---|---|" + "---|" * len(mb.GROUPS)]
+        for mode in ("whatif", "levy"):
+            for m in loo:
+                out.append(f"| {mode} | {m} | " + " | ".join(diff(rows[(mode, 'equal')]['crps'], rows[(mode, f'without {m}')]['crps'], cols(g))
+                                                           for g in mb.GROUPS) + " |")
+        out += ["", "Skill of each leave-one-out mixture (all horizons; the full mixture is the `equal` column above):", "",
+                "| Mode | Mixture | " + " | ".join(mb.GROUPS) + " |", "|---|---|" + "---|" * len(mb.GROUPS)]
+        for mode in ("whatif", "levy"):
+            for m in loo:
+                out.append(f"| {mode} | without {m} | " + " | ".join(f"{skill(rows[(mode, f'without {m}')]['crps'], cols(g)):+.3f}"
+                                                                    for g in mb.GROUPS) + " |")
         out.append("")
     out += ["## Against a stricter yardstick", "",
             "Skill against the *empirical* distribution of each output's h-month changes over **all** training "
@@ -425,7 +451,8 @@ def replay(origin: str = REPLAY_ORIGIN) -> None:
     m = int(idx.get_loc(pd.Timestamp(origin)))
     last, t = m - 1, np.array([m])
     st, info = mb.Stats(data, last), mb.series_info(data)
-    members = list(available())
+    members = os.environ.get("CHAIN_MEMBERS", ",".join(available())).split(",")  # e.g. CHAIN_MEMBERS=bayes_own,global_lin,global
+    assert all(m in available() for m in members), f"{members}: not all available ({available()})"
     equal = np.full(len(members), 1 / len(members))
     real = data["oil_m"][m + 1:m + 1 + mn.OIL_AHEAD]
     seen = int(np.isfinite(real).sum())
@@ -496,7 +523,7 @@ def replay(origin: str = REPLAY_ORIGIN) -> None:
                 inside[mode].append(lo <= actual[nm] <= hi)
     lines += ["", "**Every series, horizons 1–6 with published outcomes:** share of actuals inside the 90% interval: "
               + ", ".join(f"{mode} {np.mean(v):.0%} of {len(v)}" for mode, v in inside.items()) + "."]
-    (NOTES / "chain-replay-2026.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    (NOTES / f"chain-replay-2026{suffix()}.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
     rows = ["series,group,flow_drop_points,months_ahead,mean,q05,q50,q95,actual,unit,validated,origin,source,fitted_to,generated"]
     for c, nm in enumerate(names):
@@ -512,8 +539,8 @@ def replay(origin: str = REPLAY_ORIGIN) -> None:
                         f"{'' if not np.isfinite(a) else f'{a:.4f}'},{unit},{validated},{origin},"
                         "experiments/macro_chain.py replay (oil: GARCH-CGMY + 2026 closure premium; "
                         f"models: {'+'.join(members)}),{idx[last]:%Y-%m},{gen}")
-    (NOTES / "chain-scenarios.csv").write_text("\n".join(rows) + "\n", encoding="utf-8")
-    print(f"wrote {NOTES / 'chain-replay-2026.md'} and {NOTES / 'chain-scenarios.csv'}")
+    (NOTES / f"chain-scenarios{suffix()}.csv").write_text("\n".join(rows) + "\n", encoding="utf-8")
+    print(f"wrote {NOTES / f'chain-replay-2026{suffix()}.md'} and {NOTES / f'chain-scenarios{suffix()}.csv'}")
 
 
 # --- entry -----------------------------------------------------------------------------------
