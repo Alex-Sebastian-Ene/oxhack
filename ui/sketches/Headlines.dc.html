@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Headlines vs hulls</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0B0F14}
+a{color:#7CC0EA}a:hover{color:#A9D6F2}
+</style>
+</helmet>
+<div style="font-family: 'IBM Plex Sans', system-ui, sans-serif; color: #E7ECF2; background: #0B0F14; min-height: 900px; box-sizing: border-box; padding: 24px; display: flex; flex-direction: column; gap: 16px">
+
+<header style="display: flex; flex-direction: column; gap: 6px">
+  <h1 style="margin: 0; font-size: 28px; font-weight: 600">Headlines vs hulls</h1>
+  <p style="margin: 0; font-size: 15px; color: #A3AFBD; max-width: 920px">What the news said, against what the ships did. Pick a headline to see how many days it took tankers to react, if they did at all.</p>
+</header>
+
+<section aria-label="Timeline" style="background: #121821; border: 1px solid #222C38; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 8px">
+  <div role="group" aria-label="Headlines" style="position: relative; height: 96px">
+    <sc-for list="{{events}}" as="e" hint-placeholder-count="4">
+      <button type="button" onClick="{{e.pick}}" aria-pressed="{{e.pressed}}" style="position: absolute; left: {{e.left}}; top: {{e.top}}; transform: translateX(-50%); min-height: 44px; max-width: 220px; padding: 6px 10px; border-radius: 6px; border: 1px solid {{e.border}}; background: {{e.bg}}; color: #E7ECF2; font: inherit; font-size: 13px; text-align: left; cursor: pointer"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #A3AFBD">{{e.date}}</span><br>{{e.title}}</button>
+    </sc-for>
+  </div>
+  <svg viewBox="0 0 1000 300" role="img" aria-label="Placeholder chart of daily tanker crossings over 2026 with markers at each headline" style="width: 100%; height: auto; display: block">
+    <g stroke="#222C38"><line x1="0" y1="60" x2="1000" y2="60"></line><line x1="0" y1="150" x2="1000" y2="150"></line><line x1="0" y1="240" x2="1000" y2="240"></line></g>
+    <path d="M0,70 C60,68 110,72 160,70 C175,70 185,200 210,230 C260,250 320,246 380,240 C400,238 420,180 460,170 C520,160 600,190 640,205 C660,212 700,200 760,186 C840,170 920,160 1000,156" fill="none" stroke="#4EA8DE" stroke-width="3" stroke-dasharray="8 6"></path>
+    <path d="M0,74 C60,72 110,76 160,74 C190,74 200,150 230,170 C280,190 330,186 380,180 C410,176 430,140 470,134 C530,128 600,150 640,160 C670,166 710,150 760,140 C840,124 920,118 1000,116" fill="none" stroke="#F0A23B" stroke-width="3" stroke-dasharray="8 6"></path>
+    <g stroke="#E7ECF2" stroke-width="1"><line x1="{{x0}}" y1="0" x2="{{x0}}" y2="270"></line></g>
+    <g font-family="IBM Plex Mono, monospace" font-size="12" fill="#8794A3"><text x="0" y="292">Jan 2026</text><text x="460" y="292">Jun</text><text x="930" y="292">Oct</text></g>
+  </svg>
+  <div style="display: flex; flex-wrap: wrap; gap: 16px; font-size: 13px; color: #A3AFBD"><span>Blue dashed: crossings seen on AIS (PortWatch)</span><span>Amber dashed: our total incl. hidden</span><span>Lines are placeholders, not data</span></div>
+</section>
+
+<div style="display: flex; flex-wrap: wrap; gap: 16px">
+  <section aria-label="Selected headline" aria-live="polite" style="flex: 2 1 560px; min-width: 0; background: #121821; border: 1px solid #F0A23B; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 10px">
+    <p style="margin: 0; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #A3AFBD">{{sel.date}} · {{sel.src}}</p>
+    <h2 style="margin: 0; font-size: 22px; font-weight: 600">{{sel.title}}</h2>
+    <dl style="margin: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px">
+      <div><dt style="font-size: 12px; color: #A3AFBD">Ships reacted after</dt><dd style="margin: 0; font-family: 'IBM Plex Mono', monospace; font-size: 22px">[N] days</dd></div>
+      <div><dt style="font-size: 12px; color: #A3AFBD">Crossings change, 2 weeks</dt><dd style="margin: 0; font-family: 'IBM Plex Mono', monospace; font-size: 22px">[±X%]</dd></div>
+      <div><dt style="font-size: 12px; color: #A3AFBD">Brent change, 2 days</dt><dd style="margin: 0; font-family: 'IBM Plex Mono', monospace; font-size: 22px">[±X%]</dd></div>
+    </dl>
+  </section>
+  <section aria-label="Finding" style="flex: 1 1 360px; min-width: 0; background: #121821; border: 1px solid #222C38; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 8px">
+    <h2 style="margin: 0; font-size: 16px; font-weight: 600">The finding we'd want to show</h2>
+    <p style="margin: 0; font-size: 14px; color: #C2CBD5; line-height: 1.5">Prices move on headlines within hours; hulls move over days, and hidden flow keeps going when visible flow stops. [To confirm with the data.]</p>
+  </section>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { picked: 1 };
+}
+renderVals() {
+const list = [
+{ date: '~28 Feb 2026', title: 'Strikes on Iran', x: 16, src: 'CRS R45281, to verify' },
+{ date: '4 Mar 2026', title: 'Iran declares the strait closed', x: 18, src: 'CRS / CNBC, to verify' },
+{ date: '8 Apr 2026', title: 'Ceasefire announced', x: 30, src: 'CNBC timeline, to verify' },
+{ date: 'Jul 2026', title: 'Attacks on shipping resume', x: 62, src: 'CRS R45281, to verify' }
+];
+const p = this.state.picked;
+const events = list.map((e, i) => ({
+...e,
+left: e.x + '%',
+top: (i % 2) * 46 + 'px',
+border: i === p ? '#F0A23B' : '#2B3644',
+bg: i === p ? '#1F1A12' : '#121821',
+pressed: i === p ? 'true' : 'false',
+pick: () => this.setState({ picked: i })
+}));
+return { events, sel: list[p], x0: list[p].x * 10 };
+}
+}
+</script>
+</body>
+</html>
