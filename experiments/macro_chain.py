@@ -191,8 +191,9 @@ def report() -> None:
         train, test = mn.fold_indices(data["dates"], j)
         y = np.array(ref["y"], float)
         assert np.allclose(data["Y"][test], y, equal_nan=True), f"fold {j}: targets differ from the dataset"
+        vol = np.array([np.nanmean(np.abs(data["oil_m"][i - 2:i + 1])) for i in data["t"][test]])  # Brent turmoil at the origin
         folds.append({"summ": summ, "S": S, "y": y, "clim": np.array(v1["models"]["climatology"]["crps"], float),
-                      "clim_emp": empirical_crps(data["Y"][train], y)})
+                      "clim_emp": empirical_crps(data["Y"][train], y), "vol": vol})
     names, groups = folds[0]["summ"][members[0]]["names"], np.array(folds[0]["summ"][members[0]]["groups"])
     H = np.array([int(n.split("@")[1]) for n in names])
     scale = np.nanmean(np.vstack([f["clim"] for f in folds]), 0)
@@ -221,28 +222,40 @@ def report() -> None:
 
     # Forward conformal calibration of the equal-weight mixture: per group, fold j widens (or narrows)
     # every draw's distance from the median by the factor that put 90% of earlier folds' outcomes
-    # inside the band (factor 1 for fold 0).
-    factor = {mode: {g: [] for g in mb.GROUPS} for mode in MODES}
+    # inside the band (factor 1 for fold 0). `const`: one factor; `vol`: one factor for calm and one
+    # for turbulent origins (Brent's mean |monthly change| over the last 3 months above the median of
+    # earlier folds' origins), since the bands were too wide in calm years and too narrow in crises.
+    factor = {(var, mode): {g: [] for g in mb.GROUPS} for var in ("const", "vol") for mode in MODES}
     calibrated = {}
     for mode in MODES:
-        inside, parts = [], {k: [] for k in ("crps", "lo", "hi")}
-        for j, f in enumerate(folds):
-            M, y = eq_samples[mode][j], f["y"]
+        stats, inside = [], []
+        for f, M in zip(folds, eq_samples[mode]):
             med, q05, q95 = np.median(M, 0), np.quantile(M, 0.05, 0), np.quantile(M, 0.95, 0)
-            inside.append(np.array([(y >= med + s * (q05 - med)) & (y <= med + s * (q95 - med)) for s in SPREAD]))
-            crps, lo, hi = (np.full(y.shape, np.nan) for _ in range(3))
-            for g in mb.GROUPS:
-                c = cols(g)
-                ok = [np.isfinite(folds[i]["y"][:, c]) for i in range(j)]
-                s = 1.0 if j == 0 else calibration_factor(np.concatenate(
-                    [inside[i][:, :, c][:, ok[i]] for i in range(j)], 1))
-                factor[mode][g].append(s)
-                Ms = med[:, c] + s * (M[:, :, c] - med[:, c])
-                crps[:, c] = np.where(np.isfinite(y[:, c]), mb.crps_samples(Ms, np.nan_to_num(y[:, c])), np.nan)
-                lo[:, c], hi[:, c] = med[:, c] + s * (q05[:, c] - med[:, c]), med[:, c] + s * (q95[:, c] - med[:, c])
-            for k, v in (("crps", crps), ("lo", lo), ("hi", hi)):
-                parts[k].append(v)
-        calibrated[mode] = {k: np.vstack(v) for k, v in parts.items()}
+            stats.append((med, q05, q95))
+            inside.append(np.array([(f["y"] >= med + s * (q05 - med)) & (f["y"] <= med + s * (q95 - med)) for s in SPREAD]))
+        for var in ("const", "vol"):
+            parts = {k: [] for k in ("crps", "lo", "hi")}
+            for j, (f, M) in enumerate(zip(folds, eq_samples[mode])):
+                (med, q05, q95), y = stats[j], f["y"]
+                cut = np.median(np.concatenate([folds[i]["vol"] for i in range(j)])) if j and var == "vol" else np.inf
+                hot = f["vol"] > cut
+                crps, lo, hi = (np.full(y.shape, np.nan) for _ in range(3))
+                for g in mb.GROUPS:
+                    c = cols(g)
+                    s_reg = {}
+                    for r in (False, True):
+                        cells = [inside[i][:, (folds[i]["vol"] > cut) == r][:, :, c][:, np.isfinite(folds[i]["y"][(folds[i]["vol"] > cut) == r][:, c])]
+                                 for i in range(j)]
+                        cells = np.concatenate(cells, 1) if cells else np.zeros((len(SPREAD), 0))
+                        s_reg[r] = calibration_factor(cells) if cells.shape[1] else 1.0
+                    factor[(var, mode)][g].append(s_reg[False] if var == "const" else (s_reg[False], s_reg[True]))
+                    s = np.where(hot, s_reg[True], s_reg[False])[:, None]  # [origins, 1]
+                    Ms = med[:, c] + s * (M[:, :, c] - med[:, c])
+                    crps[:, c] = np.where(np.isfinite(y[:, c]), mb.crps_samples(Ms, np.nan_to_num(y[:, c])), np.nan)
+                    lo[:, c], hi[:, c] = med[:, c] + s * (q05[:, c] - med[:, c]), med[:, c] + s * (q95[:, c] - med[:, c])
+                for k, v in (("crps", crps), ("lo", lo), ("hi", hi)):
+                    parts[k].append(v)
+            calibrated[(var, mode)] = {k: np.vstack(v) for k, v in parts.items()}
 
     chosen = {mode: {} for mode in MODES}  # mode -> group -> [fold] combination index
     for mode in MODES:
@@ -272,9 +285,10 @@ def report() -> None:
             rows[(mode, m)] = assemble(mode, lambda g, j, s=single: s)
         rows[(mode, "equal")] = assemble(mode, lambda g, j: equal)
         rows[(mode, "forward")] = assemble(mode, lambda g, j, mode=mode: chosen[mode][g][j])
-        rows[(mode, "equal+cal")] = calibrated[mode]
+        rows[(mode, "equal+cal")] = calibrated[("const", mode)]
+        rows[(mode, "equal+cal_vol")] = calibrated[("vol", mode)]
     y_all = np.vstack([f["y"] for f in folds])
-    labels = [*members, "equal", "equal+cal", "forward"]
+    labels = [*members, "equal", "equal+cal", "equal+cal_vol", "forward"]
 
     def skill(M, c, ref=None):
         ref = scale if ref is None else ref
@@ -317,7 +331,8 @@ def report() -> None:
         out += ["", f"**{mode}: ensembles against each member** (scaled CRPS difference, Newey–West t; "
                 "negative: the ensemble is better)", "", "| Comparison | " + " | ".join(mb.GROUPS) + " |",
                 "|---|" + "---|" * len(mb.GROUPS)]
-        for e, others in (("equal", members), ("equal+cal", ["equal"]), ("forward", [*members, "equal"])):
+        for e, others in (("equal", members), ("equal+cal", ["equal"]), ("equal+cal_vol", ["equal"]),
+                          ("forward", [*members, "equal"])):
             for m in others:
                 out.append(f"| {e} vs {m} | " + " | ".join(diff(rows[(mode, e)]['crps'], rows[(mode, m)]['crps'], cols(g))
                                                          for g in mb.GROUPS) + " |")
@@ -331,14 +346,18 @@ def report() -> None:
         for grp in mb.GROUPS:
             out.append(f"| {mode} | {grp} | " + " | ".join(f"{skill(rows[(mode, m)]['crps'], cols(grp), scale_emp):+.3f}"
                                                          for m in labels) + " |")
-    out += ["", "## Calibration factors of `equal+cal`", "",
+    out += ["", "## Calibration factors", "",
             "Each fold scales every draw's distance from the median by the factor that put 90% of the earlier "
-            "folds' outcomes inside the band (1 for fold 0; grid 0.8–2.0).", "",
-            "| Mode | Target | " + " | ".join(f"fold {j}" for j in range(len(folds))) + " |",
-            "|---|---|" + "---|" * len(folds)]
-    for mode in ("whatif", "levy"):
-        for grp in mb.GROUPS:
-            out.append(f"| {mode} | {grp} | " + " | ".join(f"{s:.2f}" for s in factor[mode][grp]) + " |")
+            "folds' outcomes inside the band (1 for fold 0; grid 0.8–2.0). `equal+cal`: one factor per group; "
+            "`equal+cal_vol`: calm / turbulent origins (Brent's mean absolute monthly change over the last 3 months "
+            "above the median of earlier folds' origins).", "",
+            "| Variant | Mode | Target | " + " | ".join(f"fold {j}" for j in range(len(folds))) + " |",
+            "|---|---|---|" + "---|" * len(folds)]
+    for var, label in (("const", "equal+cal"), ("vol", "equal+cal_vol")):
+        for mode in ("whatif", "levy"):
+            for grp in mb.GROUPS:
+                cells = [f"{s:.2f}" if var == "const" else f"{s[0]:.2f} / {s[1]:.2f}" for s in factor[(var, mode)][grp]]
+                out.append(f"| {label} | {mode} | {grp} | " + " | ".join(cells) + " |")
     out += ["", "## Lévy against bootstrap oil paths (forecast modes)", "",
             "Scaled CRPS difference, levy minus bootstrap, with its Newey–West t (negative: the Lévy paths give the "
             "better knock-on forecast).", "", "| Model | " + " | ".join(mb.GROUPS) + " |", "|---|" + "---|" * len(mb.GROUPS)]
