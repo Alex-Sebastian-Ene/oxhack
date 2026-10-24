@@ -2,7 +2,8 @@
 # requires-python = ">=3.11"
 # dependencies = ["numpy>=1.26", "pandas>=2.1", "xlrd>=2.0", "openpyxl>=3.1"]
 # ///
-"""Monthly macro panel for the knock-on models: oil, AIS flows, regions (US, UK, euro area), industry.
+"""Monthly macro panel for the knock-on models: oil, AIS flows, regions (US, UK, euro area), industry;
+and, for the sector runs, industries by country and world metal prices (SECTOR_BLOCKS).
 
 Every series is registered once in SERIES with its source, its transform, how many months after the
 month it describes it is published (`lag`, so a forecast made at the end of month t only sees what
@@ -16,7 +17,8 @@ Sources (all free, no keys):
   IMF PortWatch                   daily chokepoint transits from AIS (ArcGIS feature service), 2019 on
   Caldara & Iacoviello            geopolitical risk index (monthly XLS)
   UNDP                            Human Development Index (annual CSV; see hdi_link.py)
-Industry series are read from notes/industry/fred_series.csv (Eileen's list), not copied.
+Industry series are read from notes/industry/fred_series.csv (Eileen's list), not copied. The sector
+rows (industry x country) are generated from SECTORS and COUNTRIES.
 
     uv run experiments/macro_data.py   # fetches everything into data/raw/, writes notes/macro-panel.md
 """
@@ -142,9 +144,64 @@ SERIES = [
     Series("import_prices", "fred", "IR", "drivers", "dlog", 1, name="US import price index (BLS)"),
     Series("shelter", "fred", "CUSR0000SAH1", "drivers", "dlog", 1, name="US CPI shelter (BLS)"),
     Series("wages", "fred", "ECIWAG", "drivers", "dlog", 2, name="US employment cost index, wages (BLS)", freq="Q"),
+    # World mineral and metal prices (IMF primary commodity prices via FRED, monthly averages):
+    # targets of the sector runs (experiments/sector_global.py), not of the macro models.
+    Series("copper", "fred", "PCOPPUSDM", "commodities", "dlog", 1, "commodity", "Copper, $/t (IMF via FRED)"),
+    Series("aluminium", "fred", "PALUMUSDM", "commodities", "dlog", 1, "commodity", "Aluminium, $/t (IMF via FRED)"),
+    Series("nickel", "fred", "PNICKUSDM", "commodities", "dlog", 1, "commodity", "Nickel, $/t (IMF via FRED)"),
+    Series("zinc", "fred", "PZINCUSDM", "commodities", "dlog", 1, "commodity", "Zinc, $/t (IMF via FRED)"),
+    Series("lead", "fred", "PLEADUSDM", "commodities", "dlog", 1, "commodity", "Lead, $/t (IMF via FRED)"),
+    Series("tin", "fred", "PTINUSDM", "commodities", "dlog", 1, "commodity", "Tin, $/t (IMF via FRED)"),
+    Series("iron_ore", "fred", "PIORECRUSDM", "commodities", "dlog", 1, "commodity", "Iron ore, $/t (IMF via FRED)"),
+    Series("coal", "fred", "PCOALAUUSDM", "commodities", "dlog", 1, "commodity", "Coal, Australia, $/t (IMF via FRED)"),
+    Series("uranium", "fred", "PURANUSDM", "commodities", "dlog", 1, "commodity", "Uranium, $/lb (IMF via FRED)"),
 ]
 BLOCKS = ("oil", "ais", "pipeline", "fuel", "drivers", "us", "uk", "ea", "industry")
+SECTOR_BLOCKS = ("oil", "sectors", "commodities")  # the sector runs: industries by country, world metal prices
+ALL_BLOCKS = BLOCKS + SECTOR_BLOCKS[1:]
 MASKED = ("ais", "pipeline")  # blocks that start late (2019) and get an availability flag
+
+# Industries by country (the `sectors` block): producer prices and output of mining, refining, metals
+# and other energy-heavy industries. Eurostat covers the European countries (NACE Rev. 2); the US
+# series are the closest NAICS industries on FRED (BLS PPIs, Fed industrial production), which do
+# not match NACE exactly (US "smelting and refining" excludes aluminium, for example).
+SECTORS = [  # (NACE code, industry, US PPI on FRED, US industrial production on FRED)
+    ("B05", "Coal mining", "PCU21212121", "IPN2121S"),
+    ("B06", "Crude oil and gas extraction", "PCU211211", "IPG211S"),
+    ("B07", "Metal ore mining", "PCU21222122", "IPG2122S"),
+    ("B08", "Other mining and quarrying", "PCU21232123", "IPG2123S"),
+    ("C", "Manufacturing, total", "PCUOMFGOMFG", "IPMAN"),
+    ("C17", "Paper", "PCU322322", "IPG322S"),
+    ("C19", "Oil refining (coke and refined petroleum)", "PCU324324", "IPG324S"),
+    ("C20", "Chemicals", "PCU325325", "IPG325S"),
+    ("C2015", "Fertilisers", "PCU32533253", "IPG3253S"),
+    ("C22", "Rubber and plastics", "PCU326326", "IPG326S"),
+    ("C23", "Glass, cement and ceramics", "PCU327327", "IPG327S"),
+    ("C235", "Cement and lime", "PCU327310327310", "IPG3273S"),
+    ("C24", "Basic metals", "PCU331331", "IPG331S"),
+    ("C241", "Iron and steel", "PCU331110331110", "IPG3311A2S"),
+    ("C244", "Non-ferrous metal refining and smelting", "PCU331410331410", "IPG3314S"),
+    ("C2442", "Aluminium", "PCU33133313", "IPG3313S"),
+    ("C2443", "Lead, zinc and tin", None, None),
+    ("C2444", "Copper", "PCU331420331420", None),
+    ("C245", "Foundries", "PCU33153315", "IPG3315S"),
+    ("D35", "Electricity and gas supply", "PCU22112211", "IPG2211S"),
+]
+COUNTRIES = {  # Eurostat geo codes; aggregates (EU27, EA20) are left out so no country counts twice
+    "AT": "Austria", "BE": "Belgium", "BG": "Bulgaria", "CY": "Cyprus", "CZ": "Czechia", "DE": "Germany",
+    "DK": "Denmark", "EE": "Estonia", "EL": "Greece", "ES": "Spain", "FI": "Finland", "FR": "France",
+    "HR": "Croatia", "HU": "Hungary", "IE": "Ireland", "IT": "Italy", "LT": "Lithuania", "LU": "Luxembourg",
+    "LV": "Latvia", "MT": "Malta", "NL": "Netherlands", "PL": "Poland", "PT": "Portugal", "RO": "Romania",
+    "SE": "Sweden", "SI": "Slovenia", "SK": "Slovakia", "NO": "Norway", "CH": "Switzerland", "IS": "Iceland",
+    "UK": "United Kingdom", "TR": "Türkiye", "RS": "Serbia", "MK": "North Macedonia", "BA": "Bosnia and Herzegovina",
+    "ME": "Montenegro", "AL": "Albania",
+}
+# Producer prices: domestic market, not seasonally adjusted (prices barely are). Output: volume
+# index, seasonally and calendar adjusted. Both are 2021 = 100. Most countries' latest month on
+# 2026-10-24 was 2026-08, so both are published two months on.
+EUROSTAT_SECTORS = {"price": "sts_inppd_m?unit=I21&s_adj=NSA&indic_bt=PRC_PRR_DOM&freq=M",
+                    "output": "sts_inpr_m?unit=I21&s_adj=SCA&indic_bt=PRD&freq=M"}
+SECTOR_MIN_MONTHS, SECTOR_LIVE_FROM = 120, "2025-01-01"  # a generated sector row needs both to enter the panel
 
 
 def industry_series() -> list[Series]:
@@ -156,6 +213,24 @@ def industry_series() -> list[Series]:
     return [Series(f"ind_{r.fred_id.lower()}", "fred", r.fred_id, "industry", "dlog",
                    0 if r.frequency in ("daily", "weekly") else 1, "cost", r.name,
                    anchor_lags=12 if r.layer == "materials" else 2) for r in rows.itertuples()]
+
+
+def sector_series() -> list[Series]:
+    """Producer prices (target "price") and output (target "output") of every SECTORS industry in
+    every country: Eurostat for COUNTRIES, FRED for the US. Pairs a country doesn't publish, or
+    publishes too briefly, are skipped by build_panel."""
+    rows = []
+    for nace, industry, us_ppi, us_ip in SECTORS:
+        for kind, what in (("price", "producer prices"), ("output", "output")):
+            dataset = EUROSTAT_SECTORS[kind].split("?")[0]
+            rows += [Series(f"{kind}_{geo.lower()}_{nace.lower()}", "eurostat_sectors", f"{kind}:{geo}:{nace}",
+                            "sectors", "dlog", 2, kind, f"{country}: {industry} {what} (Eurostat {dataset}, {nace})")
+                     for geo, country in COUNTRIES.items()]
+        for kind, code, what in (("price", us_ppi, "producer prices (BLS PPI"), ("output", us_ip, "output (Fed")):
+            if code:
+                rows.append(Series(f"{kind}_us_{nace.lower()}", "fred", code, "sectors", "dlog", 1, kind,
+                                   f"United States: {industry} {what} {code}, closest NAICS)"))
+    return rows
 
 
 # --- fetching (cached under data/raw/macro/, git-ignored) -----------------------------------
@@ -212,6 +287,42 @@ def fetch_eurostat(query: str) -> pd.Series:
     if not vals:
         raise ValueError(f"Eurostat returned no values for {query}")
     return pd.Series(vals).sort_index()
+
+
+def jsonstat_frame(j: dict) -> pd.DataFrame:
+    """A Eurostat JSON-stat payload as one column per (geo, nace_r2), one row per month. Values are
+    stored flat, keyed by their position in row-major order over the dimensions in j['id']."""
+    ids, size = j["id"], j["size"]
+    cats = {}
+    for d in ids:
+        index = j["dimension"][d]["category"]["index"]
+        cats[d] = np.array(sorted(index, key=index.get) if isinstance(index, dict) else index)
+    pos = np.unravel_index(np.array([int(k) for k in j["value"]], dtype=np.int64), size)
+    df = pd.DataFrame({d: cats[d][p] for d, p in zip(ids, pos)})
+    df["value"] = np.array(list(j["value"].values()), dtype=float)
+    df["time"] = pd.to_datetime(df["time"] + "-01")
+    return df.pivot_table(index="time", columns=["geo", "nace_r2"], values="value", aggfunc="first")
+
+
+_SECTOR_FRAMES: dict[str, pd.DataFrame] = {}
+
+
+def fetch_eurostat_sectors(code: str) -> pd.Series:
+    """One country and industry from the Eurostat sector datasets, which are fetched once for every
+    country and SECTORS industry (one request per dataset). Index values <= 0 (an industry that
+    stopped, e.g. Lithuanian steel, reported as 0) are missing."""
+    kind, geo, nace = code.split(":")
+    if kind not in _SECTOR_FRAMES:
+        dataset, params = EUROSTAT_SECTORS[kind].split("?")
+        params += "".join(f"&nace_r2={s[0]}" for s in SECTORS) + "&sinceTimePeriod=1998-01"
+        path = _get(EUROSTAT.format(dataset, params), RAW / f"eurostat_sectors_{dataset}.json")
+        _SECTOR_FRAMES[kind] = jsonstat_frame(json.loads(path.read_text(encoding="utf-8")))
+    frame = _SECTOR_FRAMES[kind]
+    x = frame[(geo, nace)] if (geo, nace) in frame else pd.Series(dtype=float)
+    x = x.where(x > 0).dropna()
+    if x.empty:
+        raise ValueError("not published")
+    return x
 
 
 def fetch_portwatch(code: str) -> pd.Series:
@@ -288,9 +399,11 @@ def fetch_gpr(code: str) -> pd.Series:
 
 
 FETCH = {"fred": fetch_fred, "ons": fetch_ons, "eurostat": fetch_eurostat, "portwatch": fetch_portwatch,
-         "gpr": fetch_gpr, "eia": fetch_eia, "ports": fetch_ports, "gscpi": fetch_gscpi}
+         "gpr": fetch_gpr, "eia": fetch_eia, "ports": fetch_ports, "gscpi": fetch_gscpi,
+         "eurostat_sectors": fetch_eurostat_sectors}
 URLS = {"fred": "https://fred.stlouisfed.org/series/{}", "ons": "https://www.ons.gov.uk{}",
         "eurostat": "https://ec.europa.eu/eurostat/databrowser/view/{}", "portwatch": "https://portwatch.imf.org",
+        "eurostat_sectors": "https://ec.europa.eu/eurostat/databrowser/view/sts_inppd_m (prices), sts_inpr_m (output)",
         "gpr": "https://www.matteoiacoviello.com/gpr.htm", "eia": "https://www.eia.gov/petroleum/data.php",
         "ports": "https://portwatch.imf.org", "gscpi": "https://www.newyorkfed.org/research/policy/gscpi"}
 
@@ -299,7 +412,7 @@ URLS = {"fred": "https://fred.stlouisfed.org/series/{}", "ons": "https://www.ons
 
 def registry(blocks=BLOCKS) -> list[Series]:
     reg = [s for s in SERIES if s.block in blocks]
-    return reg + (industry_series() if "industry" in blocks else [])
+    return reg + (industry_series() if "industry" in blocks else []) + (sector_series() if "sectors" in blocks else [])
 
 
 def build_panel(blocks=BLOCKS, ignore_lags: bool = False):
@@ -319,6 +432,11 @@ def build_panel(blocks=BLOCKS, ignore_lags: bool = False):
             x = FETCH[s.source](s.code)
         except Exception as err:  # a dead source should not take the whole panel down
             prov.append({"series": s, "error": str(err)[:120]})
+            continue
+        if s.block == "sectors" and (x.dropna().loc[START:].size < SECTOR_MIN_MONTHS
+                                     or x.dropna().index.max() < pd.Timestamp(SECTOR_LIVE_FROM)):
+            prov.append({"series": s, "error": f"skipped: {x.dropna().loc[START:].size} months from {START[:7]}, "
+                                               f"last {x.dropna().index.max():%Y-%m}"})
             continue
         if s.freq == "Q":
             x = x.resample("QS").mean()
