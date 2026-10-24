@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Pitch storyboard</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0B0F14}
+a{color:#7CC0EA}a:hover{color:#A9D6F2}
+</style>
+</helmet>
+<div style="width: 1440px; height: 900px; box-sizing: border-box; padding: 56px 64px; background: #0B0F14; color: #E7ECF2; font-family: 'IBM Plex Sans', system-ui, sans-serif; display: flex; flex-direction: column; gap: 28px">
+  <div style="display: flex; flex-direction: column; gap: 8px">
+    <h1 style="margin: 0; font-size: 36px; font-weight: 600">Three-minute pitch, five moments</h1>
+    <p style="margin: 0; font-size: 17px; color: #A3AFBD">Each moment is one screen. Timings assume a 3-minute slot: [confirm the event's limit].</p>
+  </div>
+  <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; flex: 1 1 auto">
+    <article style="background: #121821; border: 1px solid #222C38; border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 12px">
+      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #F5BD6E">0:00–0:25</span>
+      <h2 style="margin: 0; font-size: 20px; font-weight: 600">The strait went dark</h2>
+      <p style="margin: 0; font-size: 15px; color: #C2CBD5; line-height: 1.5">Open on the pulse: a fifth of the world's oil used to pass here. Now most ships hide, and the estimates disagree by three times.</p>
+      <a href="Pulse.dc.html" style="margin-top: auto; font-size: 14px; min-height: 44px; display: inline-flex; align-items: center">Screen: F live pulse</a>
+    </article>
+    <article style="background: #121821; border: 1px solid #222C38; border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 12px">
+      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #F5BD6E">0:25–1:05</span>
+      <h2 style="margin: 0; font-size: 20px; font-weight: 600">We see the ghosts</h2>
+      <p style="margin: 0; font-size: 15px; color: #C2CBD5; line-height: 1.5">Swipe AIS against radar: ships appear that aren't on any tracker. One snapshot becomes a flow rate.</p>
+      <a href="Swipe.dc.html" style="margin-top: auto; font-size: 14px; min-height: 44px; display: inline-flex; align-items: center">Screens: P swipe, M snapshot</a>
+    </article>
+    <article style="background: #121821; border: 1px solid #222C38; border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 12px">
+      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #F5BD6E">1:05–1:50</span>
+      <h2 style="margin: 0; font-size: 20px; font-weight: 600">You close the strait</h2>
+      <p style="margin: 0; font-size: 15px; color: #C2CBD5; line-height: 1.5">QR code: judges drag the slider on their phones. The big screen ripples to Brent, inflation, the Fed and a monthly bill.</p>
+      <a href="Judge.dc.html" style="margin-top: auto; font-size: 14px; min-height: 44px; display: inline-flex; align-items: center">Screens: J judge mode, D phone</a>
+    </article>
+    <article style="background: #121821; border: 1px solid #222C38; border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 12px">
+      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #F5BD6E">1:50–2:30</span>
+      <h2 style="margin: 0; font-size: 20px; font-weight: 600">Every number has a receipt</h2>
+      <p style="margin: 0; font-size: 15px; color: #C2CBD5; line-height: 1.5">Click the flow number: inputs, steps, the command to rerun it. Then our estimate beside Vortexa, Argus, Windward and Washington.</p>
+      <a href="Receipt.dc.html" style="margin-top: auto; font-size: 14px; min-height: 44px; display: inline-flex; align-items: center">Screens: G receipt, L analysts</a>
+    </article>
+    <article style="background: #121821; border: 1px solid #222C38; border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 12px">
+      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #F5BD6E">2:30–3:00</span>
+      <h2 style="margin: 0; font-size: 20px; font-weight: 600">It would have worked</h2>
+      <p style="margin: 0; font-size: 15px; color: #C2CBD5; line-height: 1.5">Replay the 2026 closure: model vs what happened. Close on who it's for and the one line we want remembered.</p>
+      <a href="Replay.dc.html" style="margin-top: auto; font-size: 14px; min-height: 44px; display: inline-flex; align-items: center">Screen: E replay</a>
+    </article>
+  </div>
+  <p style="margin: 0; font-size: 14px; color: #8794A3">Backup if Wi-Fi fails: every screen runs on cached snapshots, labelled CACHED with their date.</p>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>
