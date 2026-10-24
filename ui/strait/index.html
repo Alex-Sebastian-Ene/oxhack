@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hormuz Flow</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+  <header class="bar">
+    <div class="brand">
+      <svg class="logo" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 15c3-1 4-5 9-5s6 4 9 5"/><path d="M3 19c3-1 4-3 9-3s6 2 9 3"/><circle cx="12" cy="6" r="2"/></svg>
+      <h1>Hormuz Flow</h1>
+      <button type="button" class="pill sim" data-info="sim" aria-label="About this data">SIMULATED</button>
+    </div>
+    <div class="tools">
+      <label for="scenario" class="sr">Scenario</label>
+      <select id="scenario"></select>
+      <div class="seg" role="group" aria-label="What to show">
+        <button type="button" data-view="ais" aria-pressed="false" title="What AIS shows" aria-label="What AIS shows"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
+        <button type="button" data-view="truth" aria-pressed="true" title="Everything, including dark ships" aria-label="Everything, including dark ships"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10l6-6 4 4-6 6z"/><path d="M14 14l6-6"/><path d="M12 16l4 4"/><path d="M3 21c2-4 4-6 7-7"/></svg></button>
+      </div>
+    </div>
+  </header>
+
+  <main class="stage">
+    <section class="mapwrap" aria-label="Map of the Strait of Hormuz">
+      <canvas id="map" tabindex="0" aria-label="Animated map of tankers crossing the Strait of Hormuz. Drag to pan, scroll or use the buttons to zoom."></canvas>
+
+      <button type="button" class="fab info-map" data-info="legend" aria-label="Map key"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><path d="M12 7.5v.5"/></svg></button>
+      <div class="radar-flag" id="radar-flag" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10l6-6 4 4-6 6z"/><path d="M14 14l6-6"/><path d="M12 16l4 4"/><path d="M3 21c2-4 4-6 7-7"/></svg><span id="radar-text"></span></div>
+
+      <div class="zoom" role="group" aria-label="Zoom">
+        <button type="button" id="zin" aria-label="Zoom in"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+        <button type="button" id="zout" aria-label="Zoom out"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/></svg></button>
+        <button type="button" id="zreset" aria-label="Fit the whole strait"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+      </div>
+
+      <div class="timebar">
+        <button type="button" id="play" aria-label="Pause"><svg viewBox="0 0 24 24" aria-hidden="true" id="play-icon"><path d="M8 5v14M16 5v14"/></svg></button>
+        <label for="clock" class="sr">Time</label>
+        <input id="clock" type="range" min="0" max="48" step="0.01" value="0">
+        <span id="clock-label" class="mono"></span>
+        <button type="button" id="speed" class="mono" aria-label="Playback speed">1×</button>
+      </div>
+
+      <div class="popup" id="popup" hidden>
+        <div class="row between">
+          <span class="flagcode mono" id="p-flag"></span>
+          <button type="button" class="x" id="p-close" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+        </div>
+        <p class="pname" id="p-name"></p>
+        <div class="picons" id="p-icons"></div>
+        <div class="meter" aria-hidden="true"><div id="p-meter"></div></div>
+        <div class="row between"><span class="muted">Ghost risk</span><span class="mono" id="p-score"></span></div>
+        <button type="button" class="more" id="p-more" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><path d="M12 7.5v.5"/></svg> Why</button>
+        <div id="p-detail" hidden>
+          <dl class="kv" id="p-kv"></dl>
+          <ul id="p-reasons"></ul>
+        </div>
+      </div>
+    </section>
+
+    <aside class="hud">
+      <section class="card">
+        <div class="row between">
+          <span class="label"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c3 4 6 7 6 11a6 6 0 0 1-12 0c0-4 3-7 6-11z"/></svg> Oil through the strait</span>
+          <button type="button" class="ib" data-info="estimate" aria-label="How this is estimated"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><path d="M12 7.5v.5"/></svg></button>
+        </div>
+        <p class="big"><span id="est-p50" class="mono">–</span><span class="unit">mb/d</span></p>
+        <div class="range" aria-hidden="true"><div id="range-band"></div><div id="range-mid"></div></div>
+        <p class="mono faint" id="est-range"></p>
+        <div class="chips">
+          <span class="chip seen" title="Seen on AIS"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><b id="est-seen" class="mono"></b></span>
+          <span class="chip bridged" title="AIS switched off across the strait (gap bridged)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h5M16 12h5"/><path d="M10 9l4 6"/></svg><b id="est-bridged" class="mono"></b></span>
+          <span class="chip hidden" title="Never on AIS: radar detections"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><path d="M4 4l16 16"/></svg><b id="est-hidden" class="mono"></b></span>
+        </div>
+        <p class="truth mono" title="True value in this simulation"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg> <span id="truth"></span></p>
+      </section>
+
+      <section class="card">
+        <div class="counters">
+          <div title="Laden tankers out of the Gulf so far"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 15h18l-3 5H6z"/><path d="M7 15V9h7l3 6"/><path d="M10 9V5"/></svg><b class="mono" id="c-all">0</b></div>
+          <div title="Visible on AIS" class="seen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><b class="mono" id="c-ais">0</b></div>
+          <div title="Dark (AIS off)" class="dark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><path d="M4 4l16 16"/></svg><b class="mono" id="c-dark">0</b></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="row between">
+          <span class="label"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c3 3 3 15 0 18c-3-3-3-15 0-18z"/></svg> World</span>
+          <button type="button" class="ib" data-info="global" aria-label="About the global figures"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><path d="M12 7.5v.5"/></svg></button>
+        </div>
+        <div class="globals">
+          <div title="Share of world oil demand"><b class="mono" id="g-world"></b><span>of demand</span></div>
+          <div title="Missing compared with the pre-war 20 mb/d"><b class="mono dark" id="g-missing"></b><span>vs pre-war</span></div>
+        </div>
+        <div id="published" class="pub" aria-label="Published estimates compared with ours"></div>
+      </section>
+    </aside>
+  </main>
+</div>
+
+<div class="sheet" id="sheet" role="dialog" aria-modal="false" aria-labelledby="sheet-title" hidden>
+  <div class="row between"><h2 id="sheet-title"></h2><button type="button" class="x" id="sheet-close" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div id="sheet-body"></div>
+</div>
+
+<script src="data/scenarios.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
