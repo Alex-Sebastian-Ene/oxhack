@@ -9,6 +9,8 @@ for oil prices, the Fed's interest rate and the cost of living.
   and the UI in [docs/ui.md](docs/ui.md)
 - **Technical notes:** the oil-price model in [docs/oil-price-model.md](docs/oil-price-model.md),
   which knock-on links hold up in [docs/knock-on-validation.md](docs/knock-on-validation.md), and
-  cluster runs in [docs/iridis.md](docs/iridis.md)
+  cluster runs in [docs/iridis.md](docs/iridis.md); the multi-region ensemble with industry, AIS,
+  pipeline and fuel-flow inputs, the AIS flow → Brent link and HDI in
+  [docs/macro-ensemble.md](docs/macro-ensemble.md)
 - **How the team works:** [coord/PROTOCOL.md](coord/PROTOCOL.md). New laptop? Start with
   [coord/BOOTSTRAP.md](coord/BOOTSTRAP.md).
