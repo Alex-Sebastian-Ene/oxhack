@@ -1,0 +1,25 @@
+fred_id,name,layer,frequency,checked_on
+DCOILBRENTEU,Crude Oil Prices: Brent - Europe,oil,daily,2026-10-24
+DCOILWTICO,Crude Oil Prices: WTI - Cushing,oil,daily,2026-10-24
+GASDESW,US Diesel Sales Price,fuel,weekly,2026-10-24
+GASREGW,US Regular All Formulations Gas Price,fuel,weekly,2026-10-24
+DJFUELUSGULF,Kerosene-Type Jet Fuel Prices: US Gulf Coast,fuel,daily,2026-10-24
+PCU484121484121,PPI: General Freight Trucking Long-Distance Truckload,freight,monthly,2026-10-24
+PCU4841248412,PPI: General Freight Trucking Long-Distance,freight,monthly,2026-10-24
+PCU483111483111,PPI: Deep Sea Freight Transportation,freight,monthly,2026-10-24
+PCU481112481112,PPI: Scheduled Freight Air Transportation,freight,monthly,2026-10-24
+PCU325211325211,PPI: Plastics Material and Resin Manufacturing,materials,monthly,2026-10-24
+PCU3261132611,PPI: Unsupported Plastics Film Sheet and Bag Manufacturing,materials,monthly,2026-10-24
+PCU326160326160,PPI: Plastics Bottle Manufacturing,materials,monthly,2026-10-24
+WPU0915,PPI: Converted Paper and Paperboard Products,materials,monthly,2026-10-24
+PCU325311325311,PPI: Nitrogenous Fertilizer Manufacturing,materials,monthly,2026-10-24
+PCU324110324110,PPI: Petroleum Refineries,industry,monthly,2026-10-24
+PCU481111481111,PPI: Scheduled Passenger Air Transportation,industry,monthly,2026-10-24
+CPIAUCSL,CPI: All Items,inflation,monthly,2026-10-24
+CPILFESL,CPI: All Items Less Food and Energy,inflation,monthly,2026-10-24
+CPIENGSL,CPI: Energy,inflation,monthly,2026-10-24
+CPIUFDSL,CPI: Food,inflation,monthly,2026-10-24
+CUSR0000SETG01,CPI: Airline Fares,inflation,monthly,2026-10-24
+PPIACO,PPI: All Commodities,inflation,monthly,2026-10-24
+T5YIE,5-Year Breakeven Inflation Rate,expectations,daily,2026-10-24
+IGREA,Index of Global Real Economic Activity (Kilian),cause_signal,monthly,2026-10-24
