@@ -28,4 +28,6 @@ Commands (oil-price and knock-on experiments; see `docs/oil-price-model.md`):
 - Tests: `uv run --no-project --with pytest --with numpy --with scipy --with pandas pytest -q tests`
 - Lévy models: `uv run experiments/non_gaussian.py`, `uv run experiments/levy_fourier.py check|fit|rolling|report`
 - Knock-on links: `uv run experiments/oil_chain.py`
+- Regions, industry, AIS and fuel flows: `uv run experiments/macro_data.py`, `uv run experiments/macro_nn.py check|fold|ablate|final|report`,
+  `uv run experiments/flow_price.py`, `uv run experiments/hdi_link.py` (see `docs/macro-ensemble.md`)
 - Cluster runs: `docs/iridis.md`
