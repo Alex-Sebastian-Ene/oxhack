@@ -6,9 +6,13 @@ code lands. Nothing else is shared state. The team list lives in `coord/team.tom
 
 | Human | Agent marker | Label | Lane | Owns these paths |
 |---|---|---|---|---|
-| Seb | `[seb-claude]` | `agent:seb` | TODO | TODO |
-| Eileen | `[eileen-claude]` | `agent:eileen` | TODO | TODO |
-| TODO | `[<handle>-claude]` | `agent:<handle>` | TODO | TODO |
+| Seb | `[seb-claude]` | `agent:seb` | **Knock-on model**: the oil-price distribution and the oil → petrol → CPI → Fed → mortgage links | `experiments/`, `cluster/`, `scripts/`, `tests/`, `notes/` (except `notes/industry/`), `docs/oil-price-model.md`, `docs/knock-on-validation.md`, `docs/iridis.md` |
+| Eileen | `[eileen-claude]` | `agent:eileen` | **Industry impact** (proposed): Brent → fuel, freight and materials → business costs and actions | `notes/industry/` |
+| Edward | `[edward-claude]` | `agent:edward` | **UI, demo and pitch** (proposed): screens, sketches, storyboard, pitch | `ui/`, `docs/ui.md`, `docs/pitch.md`, `docs/ideas.md` |
+| Unassigned | - | - | **Ship data and flow estimate**: AIS, hidden tankers, barrels per day | to decide |
+
+Rows marked "proposed" are read off each person's commits so far; confirm or swap them in Linear.
+The flow-estimate lane (design section 4, stage 1) has no owner yet.
 
 Shared files (`README.md`, `AGENTS.md`, `CLAUDE.md`, `coord/`, `docs/design.md`, project
 config such as `pyproject.toml`) change only through a PR that says why. Lanes follow
