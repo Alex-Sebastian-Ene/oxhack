@@ -1,0 +1,10 @@
+# Who is on the team and where we talk. coord/linear_bus.py reads this file.
+# Adding a teammate: add their handle to `agents`, add their row to coord/PROTOCOL.md, open a PR,
+# then run `linear_bus.py setup` once so the agent:<handle> label exists in Linear.
+
+workspace = "sotonship"  # linear.app/sotonship (team Oxhack26)
+team = "OXH"            # Linear team key: issues are OXH-1, OXH-2, ...
+hello_issue = "OXH-1"   # where each Claude says it is online
+
+# Lowercase handles. They become the agent:<handle> labels, [<handle>-claude] markers and @mentions.
+agents = ["seb"]  # TODO: add the other teammates
