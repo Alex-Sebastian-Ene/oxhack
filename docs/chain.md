@@ -12,6 +12,8 @@ This page covers how they join, and what the joined chain gets right.
 | `experiments/oil_paths.py` | Monthly Brent paths from the daily GARCH-CGMY model, with an optional Hormuz flow scenario; backtest against the bootstrap paths | `notes/oil-paths-results.md` |
 | `experiments/macro_chain.py` | Every knock-on model on the same oil draws, the ensemble, the forward-chaining backtest, and the 2026 closure replay | `notes/macro-chain-results.md` (4 members, 5 seeds), `notes/macro-chain-results-s20.md` (20 seeds), `notes/chain-replay-2026-3m.md` and `notes/chain-scenarios-3m.csv` (the recommended 3 members), `notes/chain-replay-2026.md` and `notes/chain-scenarios.csv` (4 members) |
 | `experiments/flow_events.py` | Flow → Brent on other chokepoint events (Bab el-Mandeb 2023–24, Hormuz dips, attacks without lost flow), with placebo bands; the premium curve | `notes/flow-events.md`, `notes/flow-premium.csv` |
+| `experiments/macro_xattn.py` | Cross-series transformer member: one token per target series and per context series (VIX, credit spread, NASDAQ, breakevens, yields, FX), attention across them | `runs/macro/chain-*-xattn-v3.*` |
+| `experiments/copula.py` | t-copula shocks across the series, fitted per fold; energy and variogram scores of joint forecasts | `notes/macro-chain-results-v3.md` |
 | `cluster/iridis/macro_replay.slurm` | The 2026 replay and scenario tables on Iridis (task 0: the 3 recommended members, task 1: all four) | `notes/chain-replay-2026*.md`, `notes/chain-scenarios*.csv` |
 | `cluster/iridis/macro_chain.slurm` | The chain's folds as an Iridis array; `CHAIN_SEEDS`/`CHAIN_TAG` for more networks per variant | `runs/macro/chain-*.{npz,json}` |
 
@@ -45,8 +47,10 @@ This page covers how they join, and what the joined chain gets right.
    - `bayes_own`, the Bayesian pass-through with own-volatility bands (MCMC);
    - `global_lin` and `global`, the shared one-step MLP networks;
    - `global_tcn`, a shared one-step TCN over the last 24 months. It was tested as a fourth member and doesn't earn its place (below).
+   - `xattn`, a cross-series transformer with asset-price context. It was tested as a fifth member and doesn't earn its place either (below).
 
    Every member gets the same oil draws: draw n always uses oil path n.
+5. **Correlated shocks.** Each fold fits a t-copula to the training months' one-step residuals. Every member then draws its monthly surprises through it, so the series' surprises move together the way they did historically. Each series' own forecast stays the same.
 4. **Ensemble.** A mixture: each draw index goes to one member, so its oil path stays paired with it.
    - Weights chosen on earlier folds (a simplex grid) did *worse* than equal weights, so the chain uses **equal weights**.
    - **Recommended:** `bayes_own` + `global_lin` + `global`.
@@ -86,6 +90,46 @@ This page covers how they join, and what the joined chain gets right.
   - The `global_tcn` member run on Iridis (job 1972484) gives exactly the CRPS of the laptop runs (fold 0: 3.5813).
 - **Lévy oil paths help the knock-on forecasts only a little** (scaled CRPS −0.005 to −0.011, not significant). Over 1–12 months, the knock-on uncertainty is mostly the models' own, not oil's. The Lévy layer earns its place in the scenario fan, where the size of the shock drives the band.
 
+## The cross-series transformer and correlated shocks (`notes/macro-chain-results-v3.md`)
+
+Run on Iridis: job 1972767 for the folds, 1972803 for the report, 1972768 for the replays (2026-10-25). All five members, every oil mode, each with independent and with copula shocks.
+
+**`xattn`, the cross-series transformer.**
+- **Tokens:** each month, one token per target series (22) and per context series (8). The context series come from FRED, fetched 2026-10-25: VIX (VIXCLS), the BAA–Treasury spread (BAA10Y), NASDAQ (NASDAQCOM), 5-year breakevens (T5YIE, from 2003), the US and UK 10-year yields, GBP/USD and EUR/USD.
+- **Token inputs:** its own last 12 changes, Brent lags 0–12, the oil volatility state, an availability flag and an embedding.
+- **Network:** a 2-layer, 4-head transformer (width 32) attends across the tokens of a month. Each token gets a Student-t for its next change, plus a per-token linear term. It has 19.5k parameters.
+- **Simulation:** the context series are predicted too, so in a what-if only Brent's path is given.
+- **A test** checks that attention picks up an effect carried by another series alone.
+
+| What-if skill | Inflation | Unemployment | Rate | Cost |
+|---|---|---|---|---|
+| `xattn` alone | +0.249 | +0.072 | +0.170 | +0.229 |
+| Recommended 3 (`rec`) | **+0.293** | +0.085 | **+0.250** | **+0.302** |
+| `rec` + `xattn` | +0.288 | **+0.095** | +0.239 | +0.293 |
+
+- **Alone, `xattn` is competitive:** it's better than Bayes on inflation and level with the TCN elsewhere. So attention across series trains and works in this framing.
+- **But it doesn't add to the ensemble.**
+  - Added to the recommended three, it makes costs worse (t +2.2) and the joint forecast worse (variogram score t +2.3).
+  - It helps only unemployment (t −1.2).
+  - In the 2026 replay it lowers the what-if coverage from 89% to 86%; all five members together get 83%.
+- **Our reading:** at a 1–12-month horizon, the asset-price context carries little beyond what Brent and each series' own history already give. And about 280 months aren't enough to learn the cross-series interactions reliably.
+
+**Correlated shocks: the t-copula.**
+- **Fit:** per fold, rank normal scores of each series' one-step residual (momentum and oil lags), their correlation shrunk 20% towards the identity, and the tail index by maximum likelihood.
+- **What it finds:** small correlations on average (mean absolute 0.07–0.11) with a few strong pairs (up to 0.60–0.68). The tail index is 8–30.
+
+| Recommended 3, mean over origins and horizons | Energy score | Variogram score |
+|---|---|---|
+| What-if, independent → copula | 4.489 → 4.481 (t −2.1) | 68.36 → 67.97 (**t −3.3**) |
+| Forecast with Lévy oil, independent → copula | 4.993 → 4.988 (t −1.1) | 72.12 → 71.83 (**t −2.3**) |
+
+- **The variogram score improves for every member and every ensemble** (t −1.5 to −4.3). That's the score that checks whether the series' relative moves are right. The energy score barely moves, as expected, because it's known to be insensitive to dependence.
+- **Each series' own CRPS is unchanged**, within simulation noise.
+- **So the copula makes the joint answers more coherent at no cost to any single series.** That matters for anything that adds series together, such as a household bill or a basket of costs.
+- **In the single 2026 replay** the joint scores are mixed: slightly worse at 1 and 3 months, better at 6. One event can't settle it; the folds do.
+
+**Recommended model now:** the 3-member equal ensemble (`bayes_own`, `global_lin`, `global`) with copula shocks.
+
 ## Independent verification
 
 A separate audit is in `notes/verification.md` on branch `claude/silly-fermat-ac28f6`, with its scripts in `notes/verification/`. It found:
@@ -107,7 +151,7 @@ A separate audit is in `notes/verification.md` on branch `claude/silly-fermat-ac
 
 ## The 2026 closure replay (`notes/chain-replay-2026-3m.md`)
 
-Every member is fitted on data up to 2026-01 only, then started from 2026-02, the month before the closure. The table counts 65 published outcomes: all 22 series at 1, 3 and 6 months, where published. The numbers below are for the recommended 3 members, refitted on Iridis (job 1972657) with the premium curve of `notes/flow-premium.csv`. With `global_tcn` added (`notes/chain-replay-2026.md`): what-if 86%, scenario 92%.
+Every member is fitted on data up to 2026-01 only, then started from 2026-02, the month before the closure. The table counts 65 published outcomes: all 22 series at 1, 3 and 6 months, where published. The numbers below are for the recommended 3 members, refitted on Iridis with the premium curve of `notes/flow-premium.csv` (jobs 1972657 and 1972768 give the same numbers). Adding `xattn` (`notes/chain-replay-2026-4x.md`) gives what-if 86% and scenario 94%; all five members (`notes/chain-replay-2026.md`) give 83% and 94%. Each replay note also has the joint scores with and without copula shocks.
 
 | Run | What it tests | Actuals inside the 90% band |
 |---|---|---|
@@ -137,6 +181,7 @@ uv run experiments/macro_chain.py report                  # notes/macro-chain-re
 uv run experiments/macro_chain.py replay                  # notes/chain-replay-2026.md, notes/chain-scenarios.csv
 CHAIN_MEMBERS=bayes_own,global_lin,global CHAIN_TAG=3m uv run experiments/macro_chain.py replay   # the recommended 3
 CHAIN_TAG=s20 uv run experiments/macro_chain.py report    # after the 20-seed Iridis run below
+CHAIN_TAG=v3 uv run experiments/macro_chain.py report     # five members, independent and copula shocks (notes/macro-chain-results-v3.md)
 ```
 
 On Iridis (`docs/iridis.md` for access). Copy `experiments/`, `cluster/`, `scripts/`, `data/raw/`, `notes/industry/` and `runs/levy/` to a fresh `/scratch/$USER/<folder>`, then:
@@ -145,6 +190,19 @@ On Iridis (`docs/iridis.md` for access). Copy `experiments/`, `cluster/`, `scrip
 bash cluster/iridis/macro_env.sh                                       # once (torch, jax, numpyro)
 sbatch --array=0-7 cluster/iridis/macro_chain.slurm                    # every member, 5 seeds
 CHAIN_SEEDS=20 CHAIN_TAG=s20 sbatch --array=0-7 --time=08:00:00 cluster/iridis/macro_chain.slurm
+CHAIN_TAG=v3 sbatch --array=0-7 --time=04:00:00 cluster/iridis/macro_chain.slurm   # five members, with copula shocks
+sbatch --array=0-2 cluster/iridis/macro_replay.slurm                     # the replays: rec, all, rec + xattn
 ```
 
-The runs for this page are jobs 1972484 (`MEMBERS=global_tcn`) and 1972485 (20 seeds) on `amd_student`, 2026-10-24. `notes/industry/fred_series.csv` must be copied up: `macro_data.py` reads the industry series list from it.
+The runs for this page are all on `amd_student`:
+- jobs 1972484 (`MEMBERS=global_tcn`) and 1972485 (20 seeds), 2026-10-24;
+- jobs 1972767 (v3 folds), 1972768 (replays) and 1972803 (v3 report), 2026-10-25.
+
+**Files to copy up as well:**
+- `notes/industry/fred_series.csv`: `macro_data.py` reads the industry series list from it.
+- `notes/flow-premium.csv`, for the scenario premium.
+- `data/raw/macro/`, with the context series.
+
+**The v3 report runs on Iridis too.** Its results come to 817 MB, so rather than download them, copy `runs/macro/fold-*.json` up and run `CHAIN_TAG=v3 sbatch --nodes=1 --partition=amd_student --mem=24G --wrap ".venv-nn/bin/python -u experiments/macro_chain.py report"`; it takes about 2 minutes.
+
+If `loginx001` drops a transfer, use `loginx002`; its banner recommends that node for jobs that need no GPU.
