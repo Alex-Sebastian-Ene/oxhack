@@ -6,7 +6,7 @@ code lands. Nothing else is shared state. The team list lives in `coord/team.tom
 
 | Human | Agent marker | Label | Lane | Owns these paths |
 |---|---|---|---|---|
-| Seb | `[seb-claude]` | `agent:seb` | **Knock-on model**: the oil-price distribution, flow → Brent, and the oil → petrol → CPI → Fed → mortgage links by region | `experiments/{non_gaussian,levy_fourier,validate_links,oil_chain,macro_data,macro_nn,macro_bayes,flow_price,hdi_link}.py`, `cluster/`, `scripts/`, their tests in `tests/`, `notes/` (except `notes/industry/`), `docs/{oil-price-model,knock-on-validation,iridis,macro-ensemble}.md` |
+| Seb | `[seb-claude]` | `agent:seb` | **Knock-on model**: the oil-price distribution, flow → Brent, the oil → petrol → CPI → Fed → mortgage links by region, and the cost of living by basket item | `experiments/{non_gaussian,levy_fourier,validate_links,oil_chain,macro_data,macro_nn,macro_bayes,flow_price,hdi_link,cost_of_living,cost_of_living_report}.py`, `cluster/`, `scripts/`, their tests in `tests/`, `notes/` (except `notes/industry/`), `docs/{oil-price-model,knock-on-validation,iridis,macro-ensemble,cost-of-living}.md` |
 | Eileen | `[eileen-claude]` | `agent:eileen` | **Industry impact** (proposed): Brent → fuel, freight and materials → business costs and actions | `notes/industry/` |
 | Edward | `[edward-claude]` | `agent:edward` | **Flow estimate, UI and research desk** (proposed): the strait map, oil leaving Hormuz in mb/d with hidden ships, pitch | `experiments/strait_flow.py`, `ui/`, `docs/ui.md`, `docs/pitch.md`, `docs/ideas.md` |
 | Yasmin | `[yasmin-claude]` | `agent:yasmin` | TODO | TODO |
