@@ -24,7 +24,8 @@ def toy_data(y=None, x=None):
     for r in col.REGIONS:
         w[f"{r}_rest"] = 1 - sum(v for k, v in w.items() if k.startswith(f"{r}_"))
     return {"months": months, "x": np.zeros(T) if x is None else x, "g_us": np.zeros(T), "g_eu": np.zeros(T),
-            "y": np.zeros((T, K)) if y is None else y, "D": np.zeros(T), "weights": {"w": w}}
+            "g_grain": np.zeros(T), "g_urea": np.zeros(T), "y": np.zeros((T, K)) if y is None else y,
+            "D": np.zeros(T), "weights": {"w": w}}
 
 
 def toy_post(n=2, a=0.0):
@@ -34,14 +35,13 @@ def toy_post(n=2, a=0.0):
             "sigma": np.full((n, K), 1e-12), "nu": np.full((n, K), 5.0)}
 
 
-UNIT = SimpleNamespace(xs=1.0, gus=1.0, geu=1.0, vm=0.0, vs=1.0, ym=np.zeros(K), ys=np.ones(K))
+UNIT = SimpleNamespace(sd={c: 1.0 for c in col.CHANNELS}, xs=1.0, vm=0.0, vs=1.0, ym=np.zeros(K), ys=np.ones(K))
 
 
 def run(post, data, x0=0.0, D=0.0, regime=True):
     x = np.zeros((1, 1, col.H))
     x[..., 0] = x0
-    zero = np.zeros((1, 1, col.H))
-    return col.simulate(post, UNIT, data, np.array([30]), x, zero, zero, np.full((1, col.H), D), np.zeros((5, K)),
+    return col.simulate(post, UNIT, data, np.array([30]), {"x": x}, np.full((1, col.H), D), np.zeros((5, K)),
                         np.random.default_rng(0), regime)[0, 0]  # [H, K], first draw
 
 
@@ -98,6 +98,30 @@ def test_oil_pass_through_and_the_supply_term():
     assert calm[-1, k] == pytest.approx(0.2)
     assert hit[-1, k] == pytest.approx(0.4)
     assert off[-1, k] == pytest.approx(0.2)
+
+
+def test_driver_contributions_add_up_to_the_modelled_change():
+    post = toy_post()
+    post["Bm"][:, :, 0] = 2.0
+    post["Gm"][:, :, 1] = -1.0
+    post["rho"][:] = 0.3  # momentum carries each driver's effect on, but stays linear
+    fut = {c: np.zeros((1, 1, col.H)) for c in col.CHANNELS}
+    fut["x"][..., :3] = [0.1, -0.05, 0.02]
+    fut["g_eu"][..., 0] = 0.2
+    fut["g_us"][..., 0] = -0.1
+    parts = col.decompose(post, UNIT, toy_data(), 30, fut, np.zeros((1, col.H)))
+    total = np.array(parts["all_drivers"])
+    groups = sum(np.array(parts[g]) for g in ("oil", "gas"))
+    assert np.allclose(groups, total, atol=1e-3)
+    assert np.abs(np.array(parts["gas"])).max() > 0.01
+
+
+@pytest.mark.skipif(not (col.md.RAW / col.PINK_FILE).exists(), reason="needs the cached World Bank Pink Sheet")
+def test_pinksheet_urea_parses_as_a_monthly_price():
+    s = col.fetch_pinksheet("Urea")
+    assert s.index.min() <= pd.Timestamp("2000-01-01")
+    assert s.loc["2022-01-01":"2022-12-01"].notna().all()
+    assert 50 < s.loc["2019-06-01"] < 1000  # $/t
 
 
 def test_sample_crps_matches_the_normal_formula():

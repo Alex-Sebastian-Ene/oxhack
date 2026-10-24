@@ -24,6 +24,10 @@ the basket and headline inflation, on their monthly log changes (% of the price 
 - season: month-of-year terms for series that are not seasonally adjusted (UK, euro area).
 - The rest of the basket is headline minus the weighted items, with each region's latest basket
   weights, so the composite (weighted items + rest) adds up to headline inflation exactly.
+- COL_FOOD=1 adds food inputs: the monthly log change of grain prices (the mean of wheat and
+  maize, IMF) and of urea (World Bank), lags 0..12, for the food series, restaurants, the rest of the
+  basket and headline: + sum_l F[k,l] grain[s-l] + sum_l U[k,l] urea[s-l]. Its runs go to
+  runs/col-food, so the two versions are compared on the same folds.
 
 Forecasts simulate every series month by month. The noise is a bootstrap of the fitted
 standardised residual vectors, so items keep the correlations they had and the composite band is
@@ -67,7 +71,9 @@ import macro_data as md  # noqa: E402
 import oil_chain as oc  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
-RUNS, NOTES, LEVY_RUNS = ROOT / "runs" / "col", ROOT / "notes", ROOT / "runs" / "levy"
+FOOD = os.environ.get("COL_FOOD", "0") == "1"  # grain and urea prices as extra drivers of the food series
+RUNS_BASE, RUNS_FOOD = ROOT / "runs" / "col", ROOT / "runs" / "col-food"
+RUNS, NOTES, LEVY_RUNS = (RUNS_FOOD if FOOD else RUNS_BASE), ROOT / "notes", ROOT / "runs" / "levy"
 START = "2000-01-01"
 LAGS = 13  # oil and gas lags 0..12
 H = 12  # months ahead
@@ -171,7 +177,16 @@ US_WEIGHTS_SOURCE = "BLS relative importance, CPI-U, December 2025 (collected 20
 # Driver keys must not clash with series keys (load() puts both in one table).
 DRIVERS = {"brent": ("fred", "DCOILBRENTEU", "Brent spot, $/bbl (EIA via FRED)"),
            "henry_hub": ("fred", "MHHNGSP", "Henry Hub natural gas spot, monthly (EIA via FRED)"),
-           "eu_gas": ("fred", "PNGASEUUSDM", "EU natural gas price (IMF via FRED)")}
+           "eu_gas": ("fred", "PNGASEUUSDM", "EU natural gas price (IMF via FRED)"),
+           "wheat": ("fred", "PWHEAMTUSDM", "Global price of wheat, $/t (IMF via FRED)"),
+           "maize": ("fred", "PMAIZMTUSDM", "Global price of maize, $/t (IMF via FRED)"),
+           "urea": ("pinksheet", "Urea", "Urea, $/t (World Bank Pink Sheet)")}
+# Series whose prices grain and fertiliser can reach (food, restaurants, and the aggregates).
+FOOD_KINDS = ("bread", "meat", "dairy", "oils_fats", "fruit_veg", "sugar", "restaurants", "rest", "all")
+# The World Bank moves this file with every monthly update; the cached copy is what the fits used.
+PINK_URL = ("https://thedocs.worldbank.org/en/doc/74e8be41ceb20fa0da750cda2f6b9e4e-0050012026/related/"
+            "CMO-Historical-Data-Monthly.xlsx")
+PINK_FILE = "worldbank_CMO-Historical-Data-Monthly.xlsx"
 SUPPLY = [("2022-03-01", "2022-12-01", "Russia's invasion of Ukraine and the embargoes"),
           ("2026-03-01", "2026-12-01", "Hormuz closure")]
 CLOSURE = ("2026-03-01", "2026-09-01")  # the closure months used as the scenario template
@@ -181,9 +196,28 @@ EVENTS = [("2022 Russia", "2022-02-01", "2022-12-01"), ("2026 Hormuz", "2026-02-
 # --- data ------------------------------------------------------------------------------------
 
 def fetched(it: Item) -> str:
-    name = f"fred_{it.code}.csv" if it.source == "fred" else f"ons_{it.code.strip('/').split('/')[-2]}.csv"
+    if it.source == "fred":
+        name = f"fred_{it.code}.csv"
+    elif it.source == "pinksheet":
+        name = PINK_FILE
+    else:
+        name = f"ons_{it.code.strip('/').split('/')[-2]}.csv"
     p = md.RAW / name
     return datetime.fromtimestamp(p.stat().st_mtime, UTC).date().isoformat() if p.exists() else "-"
+
+
+def fetch_pinksheet(column: str) -> pd.Series:
+    """A monthly price from the World Bank Pink Sheet ("Monthly Prices"; names on the 5th row)."""
+    path = md._get(PINK_URL, md.RAW / PINK_FILE)
+    df = pd.read_excel(path, "Monthly Prices", header=None, skiprows=4)
+    col = [str(c).strip() for c in df.iloc[0]].index(column)
+    rows = df.iloc[2:]
+    s = pd.to_numeric(rows[col], errors="coerce")
+    s.index = pd.to_datetime(rows[0].astype(str).str.replace("M", "-") + "-01", errors="coerce")
+    return s[s.index.notna()].dropna()
+
+
+FETCH = md.FETCH | {"pinksheet": fetch_pinksheet}
 
 
 def ons_annual(cdid: str) -> pd.Series:
@@ -242,7 +276,7 @@ def derive_rest(ch: pd.DataFrame, w: dict) -> pd.DataFrame:
 
 def load() -> dict:
     """Monthly log changes (x100) of every series from START to the last month all items share."""
-    raw = {k: md.FETCH[src](code) for k, (src, code, _) in DRIVERS.items()}
+    raw = {k: FETCH[src](code) for k, (src, code, _) in DRIVERS.items()}
     raw |= {it.key: md.FETCH[it.source](it.code) for it in ITEMS + list(HEADLINE.values())}
     end = min(raw[it.key].dropna().index.max() for it in ITEMS + list(HEADLINE.values()))
     idx = pd.date_range(START, end, freq="MS")
@@ -255,7 +289,8 @@ def load() -> dict:
         D[(idx >= a) & (idx <= b)] = 1.0
     prov = {k: (f"{v.dropna().index.min():%Y-%m}", f"{v.dropna().index.max():%Y-%m}") for k, v in raw.items()}
     return {"months": idx, "keys": keys, "y": ch[keys].values, "x": ch["brent"].values / 100,
-            "g_us": ch["henry_hub"].values / 100, "g_eu": ch["eu_gas"].values / 100, "D": D, "prov": prov,
+            "g_us": ch["henry_hub"].values / 100, "g_eu": ch["eu_gas"].values / 100,
+            "g_grain": (ch["wheat"] + ch["maize"]).values / 200, "g_urea": ch["urea"].values / 100, "D": D, "prov": prov,
             "weights": wt, "brent_level": np.exp(lv["brent"].values)}
 
 
@@ -358,14 +393,19 @@ def fuel_average_links() -> dict:
 
 # --- the Bayesian model ----------------------------------------------------------------------
 
+ENERGY = ("x", "g_us", "g_eu")  # Brent and the two gas prices: the energy-cost pass-through
+FOODIN = ("g_grain", "g_urea") if FOOD else ()  # grains (wheat and maize) and urea: food inputs
+CHANNELS = ENERGY + FOODIN
+GROUPS = {"oil": ("x",), "gas": ("g_us", "g_eu"), "grain": ("g_grain",), "urea": ("g_urea",)}
+
+
 class Stats:
     """Standardisation from training months only."""
 
     def __init__(self, data: dict, last: int) -> None:
         sl = slice(1, last + 1)
-        self.xs = float(np.nanstd(data["x"][sl]))
-        self.gus = float(np.nanstd(data["g_us"][sl]))
-        self.geu = float(np.nanstd(data["g_eu"][sl]))
+        self.sd = {c: float(np.nanstd(data[c][sl])) for c in CHANNELS}
+        self.xs = self.sd["x"]
         lv = log_vol(np.nan_to_num(data["x"]) / self.xs)[LAGS:last + 1]
         self.vm, self.vs = float(lv.mean()), float(lv.std())
         y = data["y"][LAGS:last + 1]
@@ -378,9 +418,10 @@ def log_vol(z: np.ndarray) -> np.ndarray:
 
 
 def standardised(data: dict, st: Stats) -> dict:
-    zx = np.nan_to_num(data["x"]) / st.xs
-    return {"zx": zx, "zus": np.nan_to_num(data["g_us"]) / st.gus, "zeu": np.nan_to_num(data["g_eu"]) / st.geu,
-            "v": (log_vol(zx) - st.vm) / st.vs, "y": (data["y"] - st.ym) / st.ys}
+    z = {c: np.nan_to_num(data[c]) / st.sd[c] for c in CHANNELS}
+    z["v"] = (log_vol(z["x"]) - st.vm) / st.vs
+    z["y"] = (data["y"] - st.ym) / st.ys
+    return z
 
 
 def series_arrays() -> dict:
@@ -388,10 +429,11 @@ def series_arrays() -> dict:
     return {"lagmask": (np.arange(LAGS)[None, :] <= lags[:, None]).astype(float),
             "gsel": np.array([s.region == "us" for s in SERIES]),
             "nsa": np.array([s.nsa for s in SERIES], float),
-            "kind": np.array([KINDS.index(s.kind) for s in SERIES])}
+            "kind": np.array([KINDS.index(s.kind) for s in SERIES]),
+            "fmask": np.array([s.kind in FOOD_KINDS for s in SERIES], float)}
 
 
-def model(Zx, Zus, Zeu, mon, D, v, yprev, y, lagmask, gsel, nsa, kind):
+def model(Zx, Zus, Zeu, mon, D, v, yprev, y, lagmask, gsel, nsa, kind, fmask, Zgr=None, Zur=None):
     K = y.shape[1]
     B = numpyro.deterministic("Bm", numpyro.sample("B", dist.Normal(0, 0.3).expand([K, LAGS]).to_event(2)) * lagmask)
     G = numpyro.deterministic("Gm", numpyro.sample("G", dist.Normal(0, 0.3).expand([K, LAGS]).to_event(2)) * lagmask)
@@ -409,21 +451,29 @@ def model(Zx, Zus, Zeu, mon, D, v, yprev, y, lagmask, gsel, nsa, kind):
     nu = numpyro.deterministic("nu", NU_MIN + numpyro.sample("nu_m", dist.Gamma(2, 0.1).expand([K]).to_event(1)))
     energy = Zx @ B.T + jnp.where(gsel[None, :], Zus @ G.T, Zeu @ G.T)
     m = a + S[:, mon].T + rho * jnp.nan_to_num(yprev) + energy * (1 + kappa * D[:, None])
+    if Zgr is not None:  # grain and urea pass-through, for the food series only
+        food = lagmask * fmask[:, None]
+        Fg = numpyro.deterministic("Fg", numpyro.sample("Fgr", dist.Normal(0, 0.3).expand([K, LAGS]).to_event(2)) * food)
+        Fu = numpyro.deterministic("Fu", numpyro.sample("Fur", dist.Normal(0, 0.3).expand([K, LAGS]).to_event(2)) * food)
+        m = m + Zgr @ Fg.T + Zur @ Fu.T
     scale = sigma * jnp.exp(phi * v[:, None] + psi * D[:, None])
     ok = jnp.isfinite(y) & jnp.isfinite(yprev)
     with numpyro.handlers.mask(mask=ok):
         numpyro.sample("y", dist.StudentT(nu, m, scale), obs=jnp.nan_to_num(y))
 
 
-KEEP = ("Bm", "Gm", "a", "S", "rho", "kappa", "mu_kappa", "phi", "psi", "sigma", "nu")
+KEEP = ("Bm", "Gm", "Fg", "Fu", "a", "S", "rho", "kappa", "mu_kappa", "phi", "psi", "sigma", "nu")
 
 
 def fit_inputs(data: dict, st: Stats, last: int) -> dict:
     z = standardised(data, st)
     rows = np.arange(LAGS, last + 1)
-    return {"Zx": lagmat(z["zx"], fill=0.0)[rows], "Zus": lagmat(z["zus"], fill=0.0)[rows],
-            "Zeu": lagmat(z["zeu"], fill=0.0)[rows], "mon": data["months"].month.values[rows] - 1,
-            "D": data["D"][rows], "v": z["v"][rows], "yprev": z["y"][rows - 1], "y": z["y"][rows]}
+    inp = {"Zx": lagmat(z["x"], fill=0.0)[rows], "Zus": lagmat(z["g_us"], fill=0.0)[rows],
+           "Zeu": lagmat(z["g_eu"], fill=0.0)[rows], "mon": data["months"].month.values[rows] - 1,
+           "D": data["D"][rows], "v": z["v"][rows], "yprev": z["y"][rows - 1], "y": z["y"][rows]}
+    if FOOD:
+        inp |= {"Zgr": lagmat(z["g_grain"], fill=0.0)[rows], "Zur": lagmat(z["g_urea"], fill=0.0)[rows]}
+    return inp
 
 
 def residuals(post: dict, inp: dict) -> np.ndarray:
@@ -433,6 +483,8 @@ def residuals(post: dict, inp: dict) -> np.ndarray:
     energy = inp["Zx"] @ p["Bm"].T + np.where(arr["gsel"][None, :], inp["Zus"] @ p["Gm"].T, inp["Zeu"] @ p["Gm"].T)
     m = (p["a"] + p["S"][:, inp["mon"]].T + p["rho"] * np.nan_to_num(inp["yprev"])
          + energy * (1 + p["kappa"] * inp["D"][:, None]))
+    if "Fg" in p:
+        m = m + inp["Zgr"] @ p["Fg"].T + inp["Zur"] @ p["Fu"].T
     scale = p["sigma"] * np.exp(p["phi"] * inp["v"][:, None] + p["psi"] * inp["D"][:, None])
     z = (inp["y"] - m) / scale
     z[~(np.isfinite(inp["y"]) & np.isfinite(inp["yprev"]))] = np.nan
@@ -451,13 +503,18 @@ def fit(data: dict, last: int, seed: int = 0) -> tuple[dict, Stats, dict, np.nda
     mcmc.run(jax.random.PRNGKey(seed), extra_fields=("diverging",),
              **{k: jnp.asarray(v) for k, v in inp.items()}, **{k: jnp.asarray(v) for k, v in arr.items()})
     grouped = mcmc.get_samples(group_by_chain=True)
-    summ = numpyro.diagnostics.summary({k: np.asarray(grouped[k]) for k in ("B", "G", "a", "rho_raw", "kz", "mu_kappa",
-                                                                            "psi", "sigma_raw", "phi")})
+    sites = ("B", "G", "a", "rho_raw", "kz", "mu_kappa", "psi", "sigma_raw", "phi") + (("Fgr", "Fur") if FOOD else ())
+    summ = numpyro.diagnostics.summary({k: np.asarray(grouped[k]) for k in sites})
+    if FOOD:  # the coefficients of non-food series on grain and urea are masked out, so prior-only: skip them
+        keep = series_arrays()["fmask"] > 0
+        for k in ("Fgr", "Fur"):
+            summ[k] = {s: np.asarray(v)[keep] for s, v in summ[k].items()}
     diag = {"seconds": round(time.time() - t0, 1), "chains": CHAINS, "warmup": warm, "samples": samp,
             "divergences": int(np.sum(mcmc.get_extra_fields()["diverging"])),
             "max_r_hat": round(max(float(np.nanmax(s["r_hat"])) for s in summ.values()), 3),
             "min_ess": round(min(float(np.nanmin(s["n_eff"])) for s in summ.values()), 1),
-            "months": int(len(inp["y"])), "supply_months": int(inp["D"].sum()), "last": f"{data['months'][last]:%Y-%m}"}
+            "months": int(len(inp["y"])), "supply_months": int(inp["D"].sum()), "last": f"{data['months'][last]:%Y-%m}",
+            "food_drivers": FOOD}
     post = {k: np.asarray(v) for k, v in mcmc.get_samples().items() if k in KEEP}
     pick = np.random.default_rng(seed).choice(len(post["a"]), size=min(50 if QUICK else DRAWS, len(post["a"])),
                                               replace=False)
@@ -465,35 +522,37 @@ def fit(data: dict, last: int, seed: int = 0) -> tuple[dict, Stats, dict, np.nda
     return post, st, diag, residuals(post, inp)
 
 
-def simulate(post: dict, st: Stats, data: dict, t0: np.ndarray, x, gus, geu, Dfut: np.ndarray, zres: np.ndarray, rng,
+def simulate(post: dict, st: Stats, data: dict, t0: np.ndarray, fut: dict, Dfut: np.ndarray, zres: np.ndarray, rng,
              regime: bool = True) -> np.ndarray:
     """Draws of the cumulative change (% of the price level) of every series 1..H months after each
-    origin t0 [O]: [N, O, H, K]. x, gus, geu: future monthly log changes [N or 1, O, H]; Dfut [O, H].
+    origin t0 [O]: [N, O, H, K]. fut: future monthly log changes of each driver channel,
+    [N or 1, O, H] (a missing channel is held flat); Dfut [O, H].
     Noise: whole standardised residual vectors drawn from the training months (zres), so the series
     keep their cross-correlation; a missing entry falls back to a Student-t draw.
     regime=False switches the supply-disruption terms off (kappa = psi = 0) for the ablation."""
     N, K, O = len(post["a"]), len(SERIES), len(t0)
     z = standardised(data, st)
     arr = series_arrays()
-    zx, zus, zeu = (np.broadcast_to(np.nan_to_num(f) / s, (N, O, H)) for f, s in ((x, st.xs), (gus, st.gus), (geu, st.geu)))
-    past = lambda a: np.stack([a[t0 - l] for l in range(LAGS)], -1)[None].repeat(N, 0)  # noqa: E731  [N, O, LAGS]
-    bx, bus, beu = past(z["zx"]), past(z["zus"]), past(z["zeu"])
+    f = {c: np.broadcast_to(np.nan_to_num(fut.get(c, np.zeros((1, O, H)))) / st.sd[c], (N, O, H)) for c in CHANNELS}
+    buf = {c: np.stack([z[c][t0 - l] for l in range(LAGS)], -1)[None].repeat(N, 0) for c in CHANNELS}  # [N, O, LAGS]
     yprev = np.nan_to_num(z["y"][t0])[None].repeat(N, 0)  # [N, O, K]
     B, G, a, S, rho = post["Bm"], post["Gm"], post["a"], post["S"], post["rho"]
     kappa, psi = (post["kappa"], post["psi"]) if regime else (np.zeros_like(post["kappa"]), np.zeros_like(post["psi"]))
     phi, sig, nu = post["phi"], post["sigma"], post["nu"]
+    food = "Fg" in post and "g_grain" in CHANNELS
     cum, out = np.zeros((N, O, K)), np.zeros((N, O, H, K))
     first = data["months"][0]
+    lag = lambda b, M: np.einsum("nol,nkl->nok", b, M)  # noqa: E731
     for j in range(H):
-        bx = np.concatenate([zx[..., j:j + 1], bx[..., :-1]], -1)
-        bus = np.concatenate([zus[..., j:j + 1], bus[..., :-1]], -1)
-        beu = np.concatenate([zeu[..., j:j + 1], beu[..., :-1]], -1)
-        v = (np.log(np.abs(bx[..., :3]).mean(-1) + VOL_FLOOR) - st.vm) / st.vs  # [N, O]
-        energy = (np.einsum("nol,nkl->nok", bx, B)
-                  + np.where(arr["gsel"][None, None], np.einsum("nol,nkl->nok", bus, G), np.einsum("nol,nkl->nok", beu, G)))
+        for c in CHANNELS:
+            buf[c] = np.concatenate([f[c][..., j:j + 1], buf[c][..., :-1]], -1)
+        v = (np.log(np.abs(buf["x"][..., :3]).mean(-1) + VOL_FLOOR) - st.vm) / st.vs  # [N, O]
+        energy = lag(buf["x"], B) + np.where(arr["gsel"][None, None], lag(buf["g_us"], G), lag(buf["g_eu"], G))
         mon = np.array([(first + pd.DateOffset(months=int(t) + j + 1)).month - 1 for t in t0])
         d = Dfut[:, j][None, :, None]  # [1, O, 1]
         m = a[:, None] + S[:, :, mon].transpose(0, 2, 1) + rho[:, None] * yprev + energy * (1 + kappa[:, None] * d)
+        if food:
+            m = m + lag(buf["g_grain"], post["Fg"]) + lag(buf["g_urea"], post["Fu"])
         scale = sig[:, None] * np.exp(phi[:, None] * v[..., None] + psi[:, None] * d)
         e = zres[rng.integers(0, len(zres), size=(N, O))]  # [N, O, K]
         e = np.where(np.isfinite(e), e, rng.standard_t(nu[:, None, :], size=(N, O, K)))
@@ -512,6 +571,24 @@ def with_composites(S: np.ndarray, data: dict) -> np.ndarray:
         idx, keys = composite_index(r)
         comps.append(np.tensordot(S[..., idx], np.array([w[k] for k in keys]), axes=([-1], [0])))
     return np.concatenate([S, np.stack(comps, -1)], -1)
+
+
+def decompose(post: dict, st: Stats, data: dict, t: int, fut: dict, D: np.ndarray) -> dict:
+    """Mean contribution of each driver group's moves after month t to every series' cumulative
+    change, given the moves in `fut` and the regime path D [1, H]: {group: [H, K+3]}. Noise-free and
+    additive: each group's path minus the path with every driver flat after t."""
+    zres0 = np.zeros((1, len(SERIES)))
+    t0 = np.array([t])
+    flat = {c: np.zeros((1, 1, H)) for c in CHANNELS}
+    run = lambda fx: with_composites(simulate(post, st, data, t0, fx, D, zres0, np.random.default_rng(0))[:, 0], data)  # noqa: E731
+    base = run(flat)
+    out = {}
+    for g, chans in GROUPS.items():
+        if not set(chans) & set(CHANNELS):
+            continue
+        out[g] = (run(flat | {c: fut[c] for c in chans if c in CHANNELS}) - base).mean(0).round(3).tolist()
+    out["all_drivers"] = (run(fut) - base).mean(0).round(3).tolist()
+    return out
 
 
 OUT_KEYS = [s.key for s in SERIES] + [f"{r}_composite" for r in REGIONS]
@@ -614,46 +691,49 @@ def garch_paths(par: dict, n: int, shock: np.ndarray, rng) -> np.ndarray:
     return out
 
 
-def gas_model(data: dict, last: int) -> dict:
-    """Each gas price: beta x Brent's monthly change plus its own monthly GARCH-t residual."""
+def driver_model(data: dict, last: int) -> dict:
+    """Each driver channel besides Brent: beta x Brent's monthly change plus its own monthly GARCH-t
+    residual, fitted on months up to `last`."""
     sl = slice(1, last + 1)
     out = {}
-    for g in ("g_us", "g_eu"):
-        x, y = data["x"][sl], data[g][sl]
+    for c in CHANNELS[1:]:
+        x, y = data["x"][sl], data[c][sl]
         ok = np.isfinite(x) & np.isfinite(y)
         beta = float(np.polyfit(x[ok], y[ok], 1)[0])
-        out[g] = garch_fit(y[ok] - beta * x[ok]) | {"beta": beta}
+        out[c] = garch_fit(y[ok] - beta * x[ok]) | {"beta": beta}
     return out
 
 
 def closure_template(data: dict) -> dict:
-    """The 2026 closure's monthly Brent and gas moves (log), months 1..7 of the template."""
+    """The 2026 closure's monthly moves (log) of every driver channel, months 1..7 of the template."""
     months = data["months"]
     a, b = months.get_loc(pd.Timestamp(CLOSURE[0])), months.get_loc(pd.Timestamp(CLOSURE[1]))
     tpl = {}
-    for f in ("x", "g_us", "g_eu"):
-        tpl[f] = np.zeros(H)
-        tpl[f][:b - a + 1] = data[f][a:b + 1]
+    for c in CHANNELS:
+        tpl[c] = np.zeros(H)
+        tpl[c][:b - a + 1] = np.nan_to_num(data[c][a:b + 1])
     return tpl
 
 
 def driver_paths(data: dict, last: int, n: int, rng, driver: str = "GARCH-CGMY", severity: float = 0.0,
-                 gm: dict | None = None, daily: pd.Series | None = None):
-    """Brent and gas paths [n, H] after month `last`. severity scales the 2026 closure template
-    (0 = no closure). driver: GARCH-CGMY or GARCH-Student-t (daily, stored fits) or monthly-t."""
-    gm = gm or gas_model(data, last)
-    tpl = closure_template(data) if severity else {f: np.zeros(H) for f in ("x", "g_us", "g_eu")}
+                 dm: dict | None = None, daily: pd.Series | None = None) -> dict:
+    """Paths [n, H] of every driver channel after month `last`. severity scales the 2026 closure
+    template (0 = no closure). driver: GARCH-CGMY or GARCH-Student-t (daily, stored fits) or monthly-t.
+    The other channels follow Brent (beta) plus their own GARCH-t noise and, in a closure, their own
+    2026 moves beyond what Brent explains."""
+    dm = dm or driver_model(data, last)
+    tpl = closure_template(data) if severity else {c: np.zeros(H) for c in CHANNELS}
     shock = severity * tpl["x"]
     if driver == "monthly-t":
         x = garch_paths(garch_fit(data["x"][1:last + 1]), n, shock, rng)
     else:
         x = daily_paths(driver, daily if daily is not None else daily_brent(), data["months"][last], n, shock, rng)
-    gas = []
-    for g in ("g_us", "g_eu"):
-        par = gm[g]
-        excess = severity * np.where(tpl[g] != 0, tpl[g] - par["beta"] * tpl["x"], 0.0)
-        gas.append(par["beta"] * x + garch_paths(par | {"mu": par["mu"]}, n, excess, rng))
-    return x, gas[0], gas[1]
+    out = {"x": x}
+    for c in CHANNELS[1:]:
+        par = dm[c]
+        excess = severity * np.where(tpl[c] != 0, tpl[c] - par["beta"] * tpl["x"], 0.0)
+        out[c] = par["beta"] * x + garch_paths(par, n, excess, rng)
+    return out
 
 
 # --- scoring -----------------------------------------------------------------------------------
@@ -738,8 +818,8 @@ def quantiles(S: np.ndarray) -> dict:
 
 
 def run_fold(data: dict, j: int) -> dict:
-    """Fit on months before block j, score every origin in it: what-if (oil, gas and regime as they
-    happened) with and without the regime terms, and forecasts with three Brent drivers."""
+    """Fit on months before block j, score every origin in it: what-if (drivers and regime as they
+    happened) with and without the regime terms, and forecasts with three Brent models."""
     block = fold_blocks(data["months"])[j]
     last = int(block[0] - 1)
     post, st, diag, zres = fit(data, last, seed=j)
@@ -748,33 +828,33 @@ def run_fold(data: dict, j: int) -> dict:
     N = len(post["a"])
     actual = actual_paths(data, t0)
     T = len(data["months"])
-    fut = lambda a: np.stack([np.r_[np.nan_to_num(a[t + 1:t + H + 1]), np.zeros(max(0, t + H + 1 - T))] for t in t0])[None]  # noqa: E731
-    Dw = np.stack([np.r_[data["D"][t + 1:t + H + 1], np.zeros(max(0, t + H + 1 - T))] for t in t0])
+    later = lambda a: np.stack([np.r_[np.nan_to_num(a[t + 1:t + H + 1]), np.zeros(max(0, t + H + 1 - T))] for t in t0])  # noqa: E731
+    Dw = later(data["D"])
     res = {"fold": j, "diagnostics": diag, "origins": [f"{data['months'][t]:%Y-%m}" for t in t0], "modes": {}}
+    whatif = {c: later(data[c])[None] for c in CHANNELS}
     for label, regime in (("whatif", True), ("whatif_no_regime", False)):
-        S = with_composites(simulate(post, st, data, t0, fut(data["x"]), fut(data["g_us"]), fut(data["g_eu"]), Dw, zres,
-                                     rng, regime), data)
+        S = with_composites(simulate(post, st, data, t0, whatif, Dw, zres, rng, regime), data)
         res["modes"][label] = pack(score(S, actual), actual)
-    gm, daily = gas_model(data, last), daily_brent()
+    dm, daily = driver_model(data, last), daily_brent()
     Dfc = np.repeat(data["D"][t0][:, None], H, 1)  # a disruption under way is assumed to continue
     brent_actual = np.stack([np.cumsum(np.r_[data["x"][t + 1:t + H + 1], np.full(max(0, t + H + 1 - T), np.nan)]) * 100
                              for t in t0])
     res["brent"] = {}
     for driver in ("GARCH-CGMY", "GARCH-Student-t", "monthly-t"):
-        paths = [driver_paths(data, int(t), N, rng, driver, 0.0, gm, daily) for t in t0]
-        x = np.stack([p[0] for p in paths], 1)
-        gus, geu = np.stack([p[1] for p in paths], 1), np.stack([p[2] for p in paths], 1)
-        S = with_composites(simulate(post, st, data, t0, x, gus, geu, Dfc, zres, rng), data)
+        paths = [driver_paths(data, int(t), N, rng, driver, 0.0, dm, daily) for t in t0]
+        fc = {c: np.stack([p[c] for p in paths], 1) for c in CHANNELS}  # [N, O, H]
+        S = with_composites(simulate(post, st, data, t0, fc, Dfc, zres, rng), data)
         res["modes"][f"forecast_{driver}"] = pack(score(S, actual), actual)
-        B = np.cumsum(x, 2) * 100  # [N, O, H]
+        B = np.cumsum(fc["x"], 2) * 100
         res["brent"][driver] = pack(score(B[..., None], brent_actual[..., None]), brent_actual[..., None])
     res["benchmarks"] = {k: pack(v, actual) for k, v in benchmarks(data, last, t0, actual, rng).items()}
     return res
 
 
 def run_event(data: dict, base_month: str, seed: int, scenarios: bool) -> dict:
-    """Fit up to `base_month`; fan charts given the oil and gas that happened (what-if), and, if
-    `scenarios`, for no closure and a 2026-sized closure at three severities with Lévy Brent paths."""
+    """Fit up to `base_month`; fan charts given the drivers that happened (what-if), what each
+    driver group contributed, and, if `scenarios`, no closure against a 2026-sized closure at three
+    severities with Lévy Brent paths."""
     months = data["months"]
     t = months.get_loc(pd.Timestamp(base_month))
     post, st, diag, zres = fit(data, t, seed=seed)
@@ -787,10 +867,11 @@ def run_event(data: dict, base_month: str, seed: int, scenarios: bool) -> dict:
            "mu_kappa": quantiles(post["mu_kappa"]), "psi": quantiles(post["psi"]),
            "actual": np.nan_to_num(actual_paths(data, np.array([t]))[0], nan=-999).round(3).tolist(),
            "actual_months": n_known}
+    whatif = {c: pad(data[c])[None, None] for c in CHANNELS}
     for label, regime in (("whatif", True), ("whatif_no_regime", False)):
-        S = with_composites(simulate(post, st, data, np.array([t]), pad(data["x"])[None, None], pad(data["g_us"])[None, None],
-                                     pad(data["g_eu"])[None, None], Dw, zres, rng, regime), data)[:, 0]
+        S = with_composites(simulate(post, st, data, np.array([t]), whatif, Dw, zres, rng, regime), data)[:, 0]
         out["fans"][label] = quantiles(S)
+    out["contributions"] = decompose(post, st, data, t, whatif, Dw)
     link = np.zeros((N, H, len(SERIES)))
     for k in range(len(SERIES)):
         b, sd, X = ols_fit(data, k, t)
@@ -798,53 +879,53 @@ def run_event(data: dict, base_month: str, seed: int, scenarios: bool) -> dict:
         link[:, :, k] = np.cumsum(Xf @ b) + sd * np.sqrt(np.arange(1, H + 1)) * rng.standard_normal((N, H))
     out["fans"]["avg_link"] = quantiles(with_composites(link, data))
     if scenarios:
-        gm, daily = gas_model(data, t), daily_brent()
+        dm, daily = driver_model(data, t), daily_brent()
         for label, sev in (("none", 0.0), ("closure_25", 0.25), ("closure_50", 0.5), ("closure_100", 1.0)):
-            x, gus, geu = driver_paths(data, t, N, rng, "GARCH-CGMY", sev, gm, daily)
+            p = driver_paths(data, t, N, rng, "GARCH-CGMY", sev, dm, daily)
             D = np.ones((1, H)) if sev > 0 else np.zeros((1, H))
-            S = with_composites(simulate(post, st, data, np.array([t]), x[:, None], gus[:, None], geu[:, None], D, zres,
+            S = with_composites(simulate(post, st, data, np.array([t]), {c: p[c][:, None] for c in CHANNELS}, D, zres,
                                          rng), data)[:, 0]
             out["fans"][label] = quantiles(S)
-            out["fans"][label + "_brent"] = quantiles(np.cumsum(x, 1) * 100)
+            out["fans"][label + "_brent"] = quantiles(np.cumsum(p["x"], 1) * 100)
     return out
 
 
 def run_final(data: dict) -> dict:
-    """Fit on all months: kappa by kind, each item's 12-month response to a sustained +10% Brent move
-    in normal and supply-disruption months, its weighted contribution to the composite, and the
-    next 12 months' fan from the latest month with Lévy Brent paths (the disruption continuing)."""
+    """Fit on all months: kappa by kind; each item's 12-month response to a sustained +10% move in
+    Brent (normal and supply-disruption months) and, with food drivers, in grains and in urea; and
+    the next 12 months' fan from the latest month with Lévy Brent paths (the disruption continuing)."""
     months = data["months"]
     last = len(months) - 1
     post, st, diag, zres = fit(data, last, seed=99)
     rng = np.random.default_rng(7)
     N = len(post["a"])
     t0 = np.array([last])
-    base_x = np.zeros((1, 1, H))
-    shocked_x = base_x.copy()
-    shocked_x[..., 0] = SHOCK
-    zero = np.zeros((1, 1, H))
-    resp = {}
-    for label, d in (("normal", 0.0), ("supply", 1.0)):
-        D = np.full((1, H), d)
+
+    def response(channel: str, d: float) -> dict:
+        shocked = np.zeros((1, 1, H))
+        shocked[..., 0] = SHOCK
         seed = int(rng.integers(1 << 30))
-        S1 = simulate(post, st, data, t0, shocked_x, zero, zero, D, zres, np.random.default_rng(seed))
-        S0 = simulate(post, st, data, t0, base_x, zero, zero, D, zres, np.random.default_rng(seed))
-        eff = with_composites(S1 - S0, data)[:, 0]  # [N, H, K+3], common random numbers cancel the noise
-        resp[label] = quantiles(eff)
+        D = np.full((1, H), d)
+        S1 = simulate(post, st, data, t0, {channel: shocked}, D, zres, np.random.default_rng(seed))
+        S0 = simulate(post, st, data, t0, {}, D, zres, np.random.default_rng(seed))
+        return quantiles(with_composites(S1 - S0, data)[:, 0])  # common random numbers cancel the noise
+
+    resp = {"normal": response("x", 0.0), "supply": response("x", 1.0)}
+    if FOOD:
+        resp |= {"grain": response("g_grain", 0.0), "urea": response("g_urea", 0.0)}
     w = data["weights"]["w"]
-    gm, daily = gas_model(data, last), daily_brent()
-    x, gus, geu = driver_paths(data, last, N, rng, "GARCH-CGMY", 0.0, gm, daily)
-    S = with_composites(simulate(post, st, data, t0, x[:, None], gus[:, None], geu[:, None],
+    p = driver_paths(data, last, N, rng, "GARCH-CGMY", 0.0, driver_model(data, last), daily_brent())
+    S = with_composites(simulate(post, st, data, t0, {c: p[c][:, None] for c in CHANNELS},
                                  np.full((1, H), data["D"][last]), zres, rng), data)[:, 0]
     return {"diagnostics": diag, "kappa": quantiles(post["kappa"]), "mu_kappa": quantiles(post["mu_kappa"]),
             "psi": quantiles(post["psi"]), "phi": quantiles(post["phi"]), "response_10pct": resp,
-            "weights": {k: w.get(k) for k in OUT_KEYS}, "outlook": quantiles(S), "outlook_brent": quantiles(np.cumsum(x, 1) * 100),
+            "weights": {k: w.get(k) for k in OUT_KEYS}, "outlook": quantiles(S), "outlook_brent": quantiles(np.cumsum(p["x"], 1) * 100),
             "latest": f"{months[last]:%Y-%m}", "in_supply_regime": bool(data["D"][last])}
 
 
 def run(data: dict, name: str) -> dict:
     meta = {"generated": datetime.now(UTC).isoformat(timespec="seconds"), "job": os.environ.get("SLURM_JOB_ID"),
-            "quick": QUICK}
+            "quick": QUICK, "food_drivers": FOOD, "samples": SAMPLES}
     if name.startswith("fold-"):
         out = run_fold(data, int(name.split("-")[1]))
     elif name == "event-2022":
