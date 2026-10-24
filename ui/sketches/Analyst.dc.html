@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Ask the analyst</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0B0F14}
+a{color:#7CC0EA}a:hover{color:#A9D6F2}
+</style>
+</helmet>
+<div style="font-family: 'IBM Plex Sans', system-ui, sans-serif; color: #E7ECF2; background: #0B0F14; min-height: 900px; box-sizing: border-box; padding: 24px; display: flex; flex-wrap: wrap; gap: 16px; align-items: stretch">
+
+<section aria-label="Ask the analyst" style="flex: 2 1 520px; min-width: 0; background: #121821; border: 1px solid #222C38; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 14px">
+  <h1 style="margin: 0; font-size: 20px; font-weight: 600">Ask the analyst</h1>
+  <p style="margin: 0; font-size: 13px; color: #A3AFBD">Answers only from our own data and receipts, and links every number it uses.</p>
+  <div style="display: flex; flex-direction: column; gap: 12px; flex: 1 1 auto">
+    <div style="align-self: flex-end; max-width: 80%; background: #14283A; border: 1px solid #2B4A66; border-radius: 10px; padding: 10px 14px; font-size: 14px">Why did hidden flow jump overnight?</div>
+    <div style="max-width: 90%; background: #1B2430; border: 1px solid #2B3644; border-radius: 10px; padding: 12px 14px; font-size: 14px; line-height: 1.55; display: flex; flex-direction: column; gap: 8px">
+      <p style="margin: 0">Between [HH:MM] and [HH:MM] UTC, [N] VLCC-sized ships switched off AIS in the outbound lane. A Sentinel-1 pass at [HH:MM] saw [N] ships there with no transponder signal. Together they add about [X.X] mb/d to the hidden estimate.</p>
+      <div style="display: flex; flex-wrap: wrap; gap: 6px">
+        <a href="Receipt.dc.html" style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; padding: 4px 8px; border-radius: 4px; border: 1px solid #2B4A66; text-decoration: none; min-height: 32px; display: inline-flex; align-items: center">receipt: hidden flow</a>
+        <a href="Ghost.dc.html" style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; padding: 4px 8px; border-radius: 4px; border: 1px solid #2B4A66; text-decoration: none; min-height: 32px; display: inline-flex; align-items: center">IMO [#######]</a>
+        <a href="Replay.dc.html" style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; padding: 4px 8px; border-radius: 4px; border: 1px solid #2B4A66; text-decoration: none; min-height: 32px; display: inline-flex; align-items: center">similar: [past event]</a>
+      </div>
+    </div>
+    <div style="align-self: flex-end; max-width: 80%; background: #14283A; border: 1px solid #2B4A66; border-radius: 10px; padding: 10px 14px; font-size: 14px">What would that do to my mortgage if it lasts a month?</div>
+    <div style="max-width: 90%; background: #1B2430; border: 1px solid #2B3644; border-radius: 10px; padding: 12px 14px; font-size: 14px; line-height: 1.55">Running that as a scenario… <a href="Ripple.dc.html">open it in the what-if view</a></div>
+  </div>
+  <form style="display: flex; gap: 8px" aria-label="Ask a question">
+    <label for="ask" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Your question</label>
+    <input id="ask" type="text" placeholder="Ask about ships, prices or rates" style="flex: 1 1 auto; min-height: 44px; padding: 0 12px; border-radius: 6px; border: 1px solid #2B3644; background: #0B0F14; color: #E7ECF2; font: inherit; font-size: 14px">
+    <button type="button" style="min-height: 44px; padding: 0 18px; border-radius: 6px; border: 1px solid #F0A23B; background: #F0A23B; color: #1A1206; font: inherit; font-size: 14px; font-weight: 600">Ask</button>
+  </form>
+</section>
+
+<div style="flex: 1 1 380px; min-width: 0; display: flex; flex-direction: column; gap: 16px">
+  <section aria-label="Alert rules" style="background: #121821; border: 1px solid #222C38; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 12px">
+    <h2 style="margin: 0; font-size: 18px; font-weight: 600">Tell me when</h2>
+    <div style="display: flex; flex-direction: column; gap: 10px; font-size: 14px">
+      <label for="metric" style="color: #A3AFBD; font-size: 13px">Measure</label>
+      <select id="metric" style="min-height: 44px; padding: 0 10px; border-radius: 6px; border: 1px solid #2B3644; background: #0B0F14; color: #E7ECF2; font: inherit">
+        <option>Hidden flow through the strait</option>
+        <option>Total flow through the strait</option>
+        <option>Tankers gone dark, last 6 h</option>
+        <option>Brent price</option>
+      </select>
+      <label for="cond" style="color: #A3AFBD; font-size: 13px">Condition</label>
+      <div style="display: flex; gap: 8px">
+        <select id="cond" style="flex: 1 1 auto; min-height: 44px; padding: 0 10px; border-radius: 6px; border: 1px solid #2B3644; background: #0B0F14; color: #E7ECF2; font: inherit">
+          <option>rises above</option>
+          <option>falls below</option>
+          <option>moves more than</option>
+        </select>
+        <label for="thresh" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Threshold</label>
+        <input id="thresh" type="text" value="[X.X] mb/d" style="width: 120px; min-height: 44px; padding: 0 10px; border-radius: 6px; border: 1px solid #2B3644; background: #0B0F14; color: #E7ECF2; font-family: 'IBM Plex Mono', monospace; font-size: 14px">
+      </div>
+      <fieldset style="margin: 0; padding: 0; border: 0; display: flex; gap: 14px; flex-wrap: wrap">
+        <legend style="color: #A3AFBD; font-size: 13px; margin-bottom: 6px">Send to</legend>
+        <label style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px"><input type="checkbox" checked> Phone</label>
+        <label style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px"><input type="checkbox"> Email</label>
+        <label style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px"><input type="checkbox"> Slack</label>
+      </fieldset>
+      <button type="button" style="min-height: 44px; border-radius: 6px; border: 1px solid #2B3644; background: #1B2430; color: #E7ECF2; font: inherit; font-size: 14px">Save alert</button>
+    </div>
+  </section>
+
+  <section aria-label="Daily brief" style="background: #121821; border: 1px solid #222C38; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 10px">
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px">
+      <h2 style="margin: 0; font-size: 18px; font-weight: 600">Morning brief, [date]</h2>
+      <button type="button" aria-label="Listen to the brief" style="min-width: 44px; min-height: 44px; border-radius: 50%; border: 1px solid #2B3644; background: #1B2430; color: #E7ECF2; display: inline-flex; align-items: center; justify-content: center">
+        <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2.5v11l9-5.5z"></path></svg>
+      </button>
+    </div>
+    <ol style="margin: 0; padding: 0 0 0 18px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: #C2CBD5; line-height: 1.45">
+      <li>Flow through Hormuz [X.X] mb/d, [up/down] [X%] on the week.</li>
+      <li>Hidden share [X%]: [N] new dark suspects, [N] confirmed.</li>
+      <li>Brent [$XX.XX], [±X%]. Markets price the next Fed move as [hold].</li>
+      <li>For a typical household: [±$X] a month if this lasts.</li>
+    </ol>
+  </section>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Number receipt</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0B0F14}
+a{color:#7CC0EA}a:hover{color:#A9D6F2}
+</style>
+</helmet>
+<div style="font-family: 'IBM Plex Sans', system-ui, sans-serif; color: #E7ECF2; background: #0B0F14; min-height: 900px; box-sizing: border-box; padding: 24px; display: flex; flex-direction: column; gap: 18px">
+
+<header style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px">
+  <div style="display: flex; flex-direction: column; gap: 4px">
+    <p style="margin: 0; font-size: 13px; color: #A3AFBD">Receipt for</p>
+    <h1 style="margin: 0; font-size: 26px; font-weight: 600">Oil through the strait: <span style="font-family: 'IBM Plex Mono', monospace; color: #F5BD6E">[X.X] mb/d</span></h1>
+    <p style="margin: 0; font-size: 14px; color: #A3AFBD">Computed <span style="font-family: 'IBM Plex Mono', monospace">[date HH:MM UTC]</span> from the inputs below. Click any step.</p>
+  </div>
+  <div style="display: flex; gap: 8px; flex-wrap: wrap">
+    <button type="button" style="min-height: 44px; padding: 0 16px; border-radius: 6px; border: 1px solid #2B3644; background: #1B2430; color: #E7ECF2; font: inherit; font-size: 14px">Download receipt (JSON)</button>
+    <button type="button" style="min-height: 44px; padding: 0 16px; border-radius: 6px; border: 1px solid #2B3644; background: transparent; color: #A3AFBD; font: inherit; font-size: 14px">Compare with an hour ago</button>
+  </div>
+</header>
+
+<section aria-label="How this number was made" style="display: flex; flex-wrap: wrap; align-items: stretch; gap: 10px">
+  <sc-for list="{{steps}}" as="s" hint-placeholder-count="7">
+    <div style="flex: 1 1 150px; min-width: 0; display: flex; align-items: center; gap: 10px">
+      <button type="button" onClick="{{s.pick}}" aria-pressed="{{s.pressed}}" style="flex: 1 1 auto; min-width: 0; min-height: 96px; text-align: left; padding: 12px; border-radius: 10px; border: 1px solid {{s.border}}; background: {{s.bg}}; color: #E7ECF2; font: inherit; display: flex; flex-direction: column; gap: 6px; cursor: pointer">
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 1px; color: {{s.kindColor}}">{{s.kind}}</span>
+        <span style="font-size: 14px; font-weight: 600">{{s.title}}</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #C2CBD5">{{s.value}}</span>
+      </button>
+      <sc-if value="{{s.notLast}}" hint-placeholder-val="{{ true }}">
+        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="#6F7E8F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10h12M11 5l5 5-5 5"></path></svg>
+      </sc-if>
+    </div>
+  </sc-for>
+</section>
+
+<div style="display: flex; flex-wrap: wrap; gap: 16px">
+  <section aria-label="Step detail" aria-live="polite" style="flex: 999 1 560px; min-width: 0; background: #121821; border: 1px solid #222C38; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 12px">
+    <p style="margin: 0; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 1px; color: {{sel.kindColor}}">{{sel.kind}}</p>
+    <h2 style="margin: 0; font-size: 20px; font-weight: 600">{{sel.title}}</h2>
+    <p style="margin: 0; font-size: 15px; color: #C2CBD5; line-height: 1.5">{{sel.detail}}</p>
+    <dl style="margin: 0; display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 8px 16px; font-size: 14px">
+      <dt style="color: #A3AFBD">Source</dt><dd style="margin: 0; font-family: 'IBM Plex Mono', monospace">{{sel.source}}</dd>
+      <dt style="color: #A3AFBD">Collected</dt><dd style="margin: 0; font-family: 'IBM Plex Mono', monospace">{{sel.when}}</dd>
+      <dt style="color: #A3AFBD">Status</dt><dd style="margin: 0; font-family: 'IBM Plex Mono', monospace">{{sel.status}}</dd>
+    </dl>
+  </section>
+
+  <aside style="flex: 1 1 380px; min-width: 0; display: flex; flex-direction: column; gap: 16px">
+    <section aria-label="Reproduce" style="background: #121821; border: 1px solid #222C38; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 10px">
+      <h2 style="margin: 0; font-size: 16px; font-weight: 600">Reproduce this number</h2>
+      <pre style="margin: 0; padding: 12px; border-radius: 6px; background: #0B0F14; border: 1px solid #222C38; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #C2CBD5; white-space: pre-wrap">uv run python -m flow.estimate \
+  --at [date]T[HH:MM]Z \
+  --snapshot [sha256:abcd…]</pre>
+      <p style="margin: 0; font-size: 12px; color: #8794A3">Code at commit [abc1234]. Input snapshot stored so judges can rerun it.</p>
+    </section>
+    <section aria-label="What changed" style="background: #121821; border: 1px solid #222C38; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 8px">
+      <h2 style="margin: 0; font-size: 16px; font-weight: 600">Since an hour ago</h2>
+      <ul style="margin: 0; padding: 0 0 0 18px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: #C2CBD5">
+        <li>+[N] laden crossings seen: <span style="font-family: 'IBM Plex Mono', monospace">+[X.X] mb/d</span></li>
+        <li>+[N] dark suspect: <span style="font-family: 'IBM Plex Mono', monospace">+[X.X] mb/d</span></li>
+        <li>New radar scene matched [N] ships: range narrowed</li>
+      </ul>
+    </section>
+  </aside>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { picked: 3 };
+}
+renderVals() {
+const kinds = {
+INPUT: '#7CC0EA',
+STEP: '#CBBDF0',
+OUTPUT: '#F5BD6E'
+};
+const raw = [
+{ kind: 'INPUT', title: 'AIS messages', value: '[N] msgs · 24 h', detail: 'Position reports from every transponder in a box around the strait. Raw messages are kept, so any later step can be checked against them.', source: '[AIS provider] stream', when: '[from] to [to] UTC', status: 'LIVE' },
+{ kind: 'INPUT', title: 'Radar scenes', value: '[N] scenes', detail: 'Satellite radar sees ships whether or not their transponder is on. Each detection has a position, time and rough length.', source: 'Copernicus Sentinel-1 [scene ids]', when: '[date HH:MM] UTC', status: 'CACHED (latest pass)' },
+{ kind: 'INPUT', title: 'Ship registry', value: '[N] tankers', detail: 'Type, size and design draught for each ship, plus sanctions-list matches by IMO number.', source: '[registry] · OFAC / EU / UK lists', when: '[date]', status: 'CACHED' },
+{ kind: 'STEP', title: 'Detect crossings', value: '[N] crossings', detail: 'A ship counts once when its track crosses a gate line drawn across the strait, in either direction. Duplicates and drifting ships are dropped.', source: 'flow/crossings.py', when: 'run [HH:MM]', status: 'MODELLED' },
+{ kind: 'STEP', title: 'Barrels per ship', value: '[X.X] mb/d seen', detail: 'Cargo is estimated from ship size and how deep it sits in the water versus its design draught: a laden tanker sits deeper than one in ballast.', source: 'flow/cargo.py', when: 'run [HH:MM]', status: 'MODELLED' },
+{ kind: 'STEP', title: 'Hidden ships', value: '[X.X] mb/d hidden', detail: 'Radar detections with no matching transponder, plus transponder gaps inside the strait, each weighted by how likely it is a laden tanker.', source: 'flow/dark.py', when: 'run [HH:MM]', status: 'MODELLED' },
+{ kind: 'OUTPUT', title: 'Total and range', value: '[X.X] mb/d', detail: 'Seen plus hidden, with the range from [N] random draws over the uncertain inputs (load factor, dark-ship weights).', source: 'flow/estimate.py', when: '[date HH:MM] UTC', status: 'MODELLED' }
+];
+const p = this.state.picked;
+const steps = raw.map((s, i) => ({
+...s,
+kindColor: kinds[s.kind],
+border: i === p ? '#F0A23B' : '#2B3644',
+bg: i === p ? '#1F1A12' : '#121821',
+pressed: i === p ? 'true' : 'false',
+notLast: i < raw.length - 1,
+pick: () => this.setState({ picked: i })
+}));
+return { steps, sel: steps[p] };
+}
+}
+</script>
+</body>
+</html>
