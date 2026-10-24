@@ -65,6 +65,7 @@ class Series:
     target: str | None = None  # inflation | unemployment | rate | cost, or None for inputs only
     name: str = ""
     freq: str = "M"  # M, or Q for quarterly (placed at the quarter's last month before the lag)
+    anchor_lags: int | None = None  # oil lags (months) in the target's linear pass-through; None = by kind
 
 
 SERIES = [
@@ -150,8 +151,11 @@ def industry_series() -> list[Series]:
     """Industry cost targets from Eileen's list: fuel (industry), freight, materials and industry PPIs."""
     rows = pd.read_csv(INDUSTRY_LIST)
     rows = rows[(rows["chain"] == "industry") & rows["layer"].isin(["fuel", "freight", "materials", "industry"])]
+    # Pass-through lags follow notes/industry/README.md: 0-2 months for fuel and freight (and the
+    # two direct "industry" series, refineries and air fares), 0-12 for materials.
     return [Series(f"ind_{r.fred_id.lower()}", "fred", r.fred_id, "industry", "dlog",
-                   0 if r.frequency in ("daily", "weekly") else 1, "cost", r.name) for r in rows.itertuples()]
+                   0 if r.frequency in ("daily", "weekly") else 1, "cost", r.name,
+                   anchor_lags=12 if r.layer == "materials" else 2) for r in rows.itertuples()]
 
 
 # --- fetching (cached under data/raw/macro/, git-ignored) -----------------------------------
