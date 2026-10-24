@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__linear"
+    ],
+    "ask": [
+      "mcp__linear__delete_comment",
+      "mcp__linear__delete_attachment",
+      "mcp__linear__delete_status_update",
+      "mcp__linear__delete_diff_comment"
+    ]
+  }
+}
