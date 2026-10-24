@@ -41,10 +41,10 @@ Everything is a cached snapshot bundled into the page. Nothing is fetched live.
 ## Build
 
 ```bash
-python ui/industry/build/build.py
+python ui/industry/src/build.py
 ```
 
-The build needs Python 3 and `node` (for a syntax check). It starts from `build/v8.html`, Edward's strait page
+The build needs Python 3 and `node` (for a syntax check). It starts from `src/v8.html`, Edward's strait page
 as published on the artifact before these changes, and reads `ui/globe/` for the globe library and data.
 Each `patch_*.py` step is a list of exact find-and-replace edits that fails loudly if its target text has moved.
 
