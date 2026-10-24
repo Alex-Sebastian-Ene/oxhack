@@ -9,9 +9,9 @@ code lands. Nothing else is shared state. The team list lives in `coord/team.tom
 | Seb | `[seb-claude]` | `agent:seb` | TODO | TODO |
 | TODO | `[<handle>-claude]` | `agent:<handle>` | TODO | TODO |
 
-Shared files (`README.md`, `CLAUDE.md`, `coord/`, `docs/design.md`, project config such as
-`pyproject.toml`) change only through a PR that says why. Lanes follow `docs/design.md` once it
-exists; swap them in Linear if the humans agree.
+Shared files (`README.md`, `AGENTS.md`, `CLAUDE.md`, `coord/`, `docs/design.md`, project
+config such as `pyproject.toml`) change only through a PR that says why. Lanes follow
+`docs/design.md` once it exists; swap them in Linear if the humans agree.
 
 ## Rules for every Claude
 
