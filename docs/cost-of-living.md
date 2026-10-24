@@ -201,6 +201,23 @@ NUTS (2 chains, 500 warm-up, 1,000 draws per chain):
     - Read these as information, not as a model to forecast with.
   - Fold 0 of the food version first reached ESS 39. It was refitted with 1,000 warm-up and 2,000
     draws (R-hat 1.02, ESS 183).
+- **Targeted food driver (job 1972769): grain prices for bread and cereals only, all three
+  regions.** The rule was fixed on economic grounds before the run, not chosen from the item
+  results above. All 11 fits converged (R-hat at most 1.03, ESS at least 165). A rerun of base
+  fold 0 matched the earlier one exactly.
+  - **US bread and cereals: clearly better at 3–12 months,** beyond 2 errors, both given the
+    drivers (−0.09 ± 0.03 at 3 months to −0.16 ± 0.07 at 12) and as true forecasts (−0.12 ± 0.03 to
+    −0.19 ± 0.06). Its skill rises from 0.08 to 0.21–0.23.
+  - **UK and euro-area bread: slightly worse, within noise** (up to +0.04 ± 0.03).
+  - **Pooled over the three regions:** bread skill rises from 0.144 to 0.173 (0.146 to 0.184 as
+    forecasts). The gain at 3–12 months stays within its errors.
+  - **Composites and every other food item: unchanged,** with differences of 0.007 or less.
+  - **2022 is still missed:** US bread +3.7% predicted against +13.6% actual.
+  - **In 2026 the US bread median moves closer:** +1.1% against +2.6% before, with +0.5% actual.
+  - **Grain → bread** (all data, per sustained +10% grain move, 12 months on): US +0.69% (0.51 to
+    0.86), UK +0.66% (0.25 to 1.03), euro area +0.32% (0.14 to 0.51).
+  - **Verdict:** unlike the full version it never does worse beyond noise, and it clearly improves
+    US bread. It is a candidate for the main model. The evidence is strongest in the US.
 - **Already clear from the data (no model fit needed):** see the event tables in
   `notes/cost-of-living.md`. In February–September 2026, against the average link given the
   actual oil and gas:
@@ -230,8 +247,8 @@ bash cluster/iridis/cost_of_living_env.sh
 sbatch --array=0-21 cluster/iridis/cost_of_living.slurm
 ```
 
-Tasks 0–10 are the base model and 11–21 the food-driver version. Both use 1,000 draws per chain
-(`COL_SAMPLES`).
+Tasks 0–10 are the base model, 11–21 the food-driver version (`COL_FOOD=1`) and 22–32 the
+bread-only version (`COL_FOOD=bread`). All use 1,000 draws per chain (`COL_SAMPLES`).
 
 ## Outputs for the UI
 
@@ -261,7 +278,8 @@ Tasks 0–10 are the base model and 11–21 the food-driver version. Both use 1,
   - Euro-area weights are for the current euro area, while the indices are the 19-country series.
 - **Yearly Lévy fits.** An origin in October uses a fit that ends the previous December.
 - **Food has oil and gas as its only drivers.**
-  - Grain and urea were tried and made forecasts worse, so they stay out of the main model.
+  - Grain and urea for every food item made forecasts worse, so they stay out of the main model.
+    Grain for bread alone helps US bread and harms nothing beyond noise.
   - 2022's food surge is outside what the model can explain, and it shows in the event table.
   - A leaner food term might do better: one 12-month grain change per item, or vegetable oils for
     oils and fats. That is untested.
