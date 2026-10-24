@@ -4,8 +4,8 @@ Data for the globe's "Shipped" view: `exports.json` (one source per row).
 
 **How collected:** web search on 24 Oct 2026. Every primary site (OEC, worldsteel, USGS, Comtrade,
 Energy Institute) was blocked, so **all figures are from search-result snippets**. The search
-budget ran out before **bauxite, alumina, urea, polyethylene and naphtha**. Those five are left
-off the map until researched, rather than shown from guesses.
+budget ran out before bauxite, alumina, urea, polyethylene and naphtha; a second pass (below) filled
+what it could. Polyethylene exporters by country are still unconfirmed, so they stay off the map.
 
 Where no world total was found for the same year (steel, scrap, crude, aluminium), `share` is
 empty and the globe shows volumes or values instead of a share of world exports.
@@ -31,3 +31,23 @@ Headlines:
   - Exporters: US 25%, Qatar 19%, Australia 18%.
   - 2026: Hormuz cut about 20% of world LNG supply.
 - **Primary aluminium (2024, by value):** Canada, UAE and Russia lead. Canada sends about 91% to the US.
+
+Second pass (24 Oct 2026, same method):
+- **Urea (2025):**
+  - Exporters: Russia 10.8 Mt, China 4.9 Mt. No same-year world total, so no shares.
+  - Saudi Arabia and Oman are left out (seen only in a LinkedIn post).
+  - 2026: exports from Hormuz-dependent economies fell 83% in April (UN/ITC/WTO).
+- **Bauxite (2025):**
+  - Exporters: Guinea 183 Mt, about 70% of seaborne trade; Australia about 19%.
+  - Flows: Guinea → China 149 Mt, 74% of China's imports.
+- **Alumina:**
+  - Exporters (2024): Australia 15.9 Mt, about 42%. China 2.6 Mt in 2025, of which 79% went to Russia.
+- **Naphtha (2026 pre-war baseline, kb/d):**
+  - Exporters: UAE 574, Russia about 450, Qatar 291. No world total, so no shares.
+- **Ethane (2025):**
+  - Exporters: the US, 579 kb/d.
+  - Flows (2024): 46% of US exports go to China, then Canada 15%, India 13%, Norway 9%.
+- **Primary aluminium flows:**
+  - Russia → China: 64% of China's imports in Oct 2025.
+  - Russia → Türkiye: 29% of its imports by value, 2023.
+
