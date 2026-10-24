@@ -44,8 +44,8 @@ config such as `pyproject.toml`) change only through a PR that says why. Lanes f
 
 ## Research desk
 
-TODO: pick whose Claude has the research tools (web search, docs indexing). Until then, file the
-question as an issue with labels `research` + `human-needed`.
+Edward's Claude is the research desk: web search, docs and dataset checks. File the question as
+an issue with labels `research` + `agent:edward`.
 
 - Title is the question. Body says what you will do with the answer and the format you want
   (table, CSV columns, code snippet, URL list).
