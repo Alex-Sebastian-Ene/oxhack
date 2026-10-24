@@ -27,7 +27,7 @@ current estimate and for each what-if scenario.
 |---|---|---|
 | `pass_through.csv` | How each cost channel responds to oil, and how fast | `channel, effect, per, lag_from_days, lag_to_days, measure, region, source, source_url, source_date, collected_at, confidence` |
 | `industry_exposure.csv` | Default oil-linked cost share per industry | `industry, oil_linked_cost, share_pct, measure, year, region, source, source_url, source_date, collected_at` |
-| `fred_series.csv` | FRED series to fit the pass-through on; each ID checked on its FRED page | `fred_id, name, layer, frequency, checked_on` |
+| `fred_series.csv` | FRED series for both chains, with their date range and fitting split; each ID downloaded on 24 Oct 2026 | `fred_id, name, layer, chain, frequency, first_obs, last_obs, split, checked_on` |
 
 ## Findings the model should reproduce
 
@@ -47,9 +47,46 @@ current estimate and for each what-if scenario.
 - **Most exposed:** airlines (fuel 31.4% of costs, 2026), container shipping (~25%), trucking (~21%),
   then farming, cement and chemicals. See `industry_exposure.csv`; the shares use different
   measures, so rebuild one consistent measure from an input-output table before comparing.
-- **Train on 2000 onward.** Oil predicted US core inflation before 1981 but not after
+- **Skip pre-1981 data.** Oil predicted US core inflation before 1981 but not after
   ([FRBSF 2005-28](https://www.frbsf.org/research-and-insights/publications/economic-letter/oil-price-shocks-and-inflation)),
-  so older data overstates today's effect. Backtest on 2014–16 and 2022–23.
+  so older data overstates today's effect. The splits below all start in 1991 or later.
+
+## Fitting setup: household links and industry series side by side
+
+The product shows two chains from the same Brent scenario. The household chain (petrol, CPI,
+expectations, Fed, mortgages) is Seb's `experiments/oil_chain.py`; the industry series (fuel,
+freight, materials) reuse its `link()` regression unchanged, so both chains are fitted, validated
+and reported the same way.
+
+```
+                    ┌─ household: petrol → energy CPI → headline / core CPI → Fed → mortgages
+Brent scenario ─────┤
+                    └─ industry:  diesel / jet fuel → freight PPIs → materials PPIs → industry cost
+```
+
+Several industry series start in Dec 2003, so they cannot use Seb's 1991–2008 training window
+(it would leave ~60 months, ending on the 2008 crash). Each series in `fred_series.csv` therefore
+carries a `split`:
+
+| Split | Train | Test | Used for | Why |
+|---|---|---|---|---|
+| A | 1991–2008 | 2009–2026 | Household links, and industry series with data from 1994 or earlier | Seb's split; same numbers as `notes/oil-chain-links.md` |
+| B | 2004–2015 | 2016–2026 | Trucking, air freight and plastic-film PPIs (start Dec 2003) | ~12 years each way; train holds the 2008 and 2014 crashes, test holds 2020, 2022 and 2026 |
+| C | 2003–2013 | 2014–2026 | 5-year breakeven (starts Jan 2003) | Seb's existing split for this series |
+
+Rules for both chains:
+
+1. **Validate on the split, then refit for the product.** The split answers "is this link real?".
+   The number the product shows comes from a refit on the full history (or the last ~15 years),
+   labelled "validated out of sample, refitted on <years>".
+2. **Show drift as range.** Seb's refits show links have moved (oil → petrol +6.9% on 1991–2008,
+   +5.2% on 2009–2026). When the two fits differ, show both ends as the range.
+3. **Same lags per kind of link:** 0–2 months for fuel and freight, 0–12 for materials, CPI and
+   wages (materials respond over ~10 months; see `pass_through.csv`).
+4. **Backtest the same episodes in both chains:** 2014–16 (supply-led fall), 2020 (demand-led
+   fall), 2022–23 (fall after the war spike), and the 2026 closure.
+5. **Report rises and falls separately** where the data allows, since cuts pass through more
+   slowly (rockets and feathers).
 
 ## How to get one consistent cost share per industry
 
@@ -85,4 +122,5 @@ one year because of price alone.
 
 - [ ] US data (fastest, all on FRED) or UK framing (ONS, fits OxHack)?
 - [ ] Five curated industries for the demo, or all from the BEA summary table?
-- [ ] Who owns flow → Brent (the step before this part)? Ed's `docs/ideas.md` (on branch `claude/trusting-turing-r78njk`) sketches it.
+- [ ] Who owns flow → Brent (the step before this part)? Ed's `docs/ideas.md` (on branch `claude/trusting-turing-r78njk`) sketches it, and `docs/knock-on-validation.md` asks the research desk for a supply-shock event study.
+- [ ] Seb: are you happy with splits B and C next to your split A, and with "validate, then refit" for the numbers the product shows?
