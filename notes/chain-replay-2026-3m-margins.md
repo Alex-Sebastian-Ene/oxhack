@@ -36,3 +36,14 @@ Mean and central 90% interval, in each series' units (100 × log change ≈ %, p
 | ind_pcu325311325311 | 6 | +3.5 | +15.1 (-9.6..+43.2) ✓ | +3.6 (-14.8..+23.8) ✓ | +19.4 (-15.5..+69.5) ✓ |
 
 **Every series, horizons 1–6 with published outcomes:** share of actuals inside the 90% interval: whatif 89% of 65, lost 0 58% of 65, lost 82 97% of 65.
+
+**Joint forecast of all series** (t-copula fitted on months to 2026-01: tail index 8, mean absolute correlation 0.06). Energy / variogram score of every published series at each horizon, each scaled by its training spread; lower is better.
+
+| Run | h | ES independent | ES copula | VS independent | VS copula |
+|---|---|---|---|---|---|
+| whatif | 1 | 3.601 | 3.657 | 53.50 | 53.64 |
+| whatif | 3 | 4.870 | 4.910 | 59.91 | 60.88 |
+| whatif | 6 | 3.314 | 3.215 | 32.62 | 31.71 |
+| lost 82 | 1 | 3.304 | 3.348 | 49.57 | 50.05 |
+| lost 82 | 3 | 4.923 | 4.913 | 60.80 | 61.78 |
+| lost 82 | 6 | 3.059 | 3.014 | 31.05 | 30.11 |
