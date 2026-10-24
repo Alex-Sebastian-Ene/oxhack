@@ -1,0 +1,4 @@
+# Normalise line endings; scripts that run on Iridis (Linux) must stay LF even on Windows checkouts.
+* text=auto
+*.sh text eol=lf
+*.slurm text eol=lf
