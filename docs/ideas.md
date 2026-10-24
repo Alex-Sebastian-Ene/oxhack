@@ -133,6 +133,20 @@ lanes proposed in `docs/design.md`.
   figures first)
 - "What a strait on the other side of the world does to your mortgage."
 
+## Build order (draft, as shares of hacking time until we know the event length)
+
+| Phase | Share | Data / model | UI | Demo-ready check |
+|---|---|---|---|---|
+| 1. Skeleton | first ~15% | Collectors that save timestamped snapshots: PortWatch, EIA, FRED, Kalshi | Command view shell (A) with the strait map and gate line | App runs end to end on cached data, badges correct |
+| 2. Seen flow + chain v0 | ~15–40% | Crossings from GFW AIS; cargo per ship; chain from literature elasticities | Flow panel; what-if ripple (B) | Slider moves every number, each with a source |
+| 3. Hidden flow | ~40–65% | GFW SAR unmatched detections; gap bridging; Little's-law estimate; Monte Carlo range; receipts | Ghost file (C), receipts (G), snapshot explainer (M) | One real dark ship shown end to end |
+| 4. Proof | ~65–80% | Backtest on the 2026 crisis and one 2019 event; published estimates table | Replay (E), us vs the analysts (L) | Model vs actual table filled with real numbers |
+| 5. Wow + polish | ~80–95% | Shared state for votes | Judge mode (J) + phone (D) | Five phones in the room move the big screen |
+| 6. Freeze | last ~5% | Nothing new | Record the video, rehearse | Pitch under the time limit, twice |
+
+Cut order if behind: judge mode → backtest on 2019 → spoofing checks → Little's law (fall back
+to "seen vs published estimates").
+
 ## The 2026 context (check before pitching)
 
 Researched 24 Oct 2026, mostly from search snippets because many sites were unreachable; verify
