@@ -469,6 +469,33 @@ def report() -> None:
             cells.append(f"{np.nanmean(d):+.3f} (t {mb.nw_t(d):+.1f})")
         out.append(f"| {m1} vs {m2} | " + " | ".join(cells) + " |")
 
+    if "global_tcn" in variants and "global_lin" in variants:
+        others = ["global_lin"] + [col for col, _ in refs[:1]]  # and the main Bayesian model
+
+        def dm(m1, m2, grp):
+            c = cols(grp)
+            d = np.nanmean((C[m1][:, c] - C[m2][:, c]) / scale[c], 1)
+            return float(np.nanmean(d)), mb.nw_t(d)
+
+        tests = {(m, grp): dm("global_tcn", m, grp) for m in others for grp in mb.GROUPS}
+        out += ["", "## Does the shared TCN help?", "",
+                "`global_tcn` is `global_lin` with its network's flat inputs replaced by the 24-month causal TCN, so "
+                "the comparison with `global_lin` isolates the encoder. Skill over all horizons; t is the "
+                "Diebold–Mariano t of `global_tcn` minus the other model (positive: `global_tcn` is worse).", "",
+                "| Target | global_tcn | " + " | ".join(f"{m} | t vs {m}" for m in others) + " |",
+                "|---|---|" + "---|---|" * len(others)]
+        for grp in mb.GROUPS:
+            c = cols(grp)
+            out.append(f"| {grp} | {skill(C['global_tcn'], c):+.3f} | "
+                       + " | ".join(f"{skill(C[m], c):+.3f} | {tests[m, grp][1]:+.1f}" for m in others) + " |")
+        for m in others:
+            better = [g for g in mb.GROUPS if tests[m, g][1] < -2]
+            worse = [g for g in mb.GROUPS if tests[m, g][1] > 2]
+            top = max(mb.GROUPS, key=lambda g: abs(tests[m, g][1]))
+            out += ["", f"Against `{m}`, `global_tcn` is significantly better (t < −2) in "
+                    f"{', '.join(better) or 'no group'} and significantly worse (t > +2) in {', '.join(worse) or 'no group'}; "
+                    f"the largest difference is {top} ({tests[m, top][0]:+.3f}, t {tests[m, top][1]:+.1f})."]
+
     out += ["", "## Did the networks train?", "",
             "Epoch with the lowest validation NLL (last quarter of the training months) per seed; the final "
             "network is refitted on all training months for that many epochs. The macro_nn.py networks stopped "
