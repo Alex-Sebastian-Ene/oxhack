@@ -37,11 +37,12 @@ def converged(d: dict) -> bool:
     return d["max_r_hat"] <= R_HAT_MAX and d["min_ess"] >= ESS_MIN and not d.get("quick")
 
 
-def load_runs() -> tuple[dict, dict]:
-    """(converged fits, fits left out because their chains did not converge)."""
+def load_runs(folder=None) -> tuple[dict, dict]:
+    """(converged fits, fits left out because their chains did not converge) in one runs folder."""
+    folder = folder or col.RUNS_BASE
     ok, failed = {}, {}
     for n in col.NAMES:
-        p = col.RUNS / f"{n}.json"
+        p = folder / f"{n}.json"
         if p.exists():
             r = json.loads(p.read_text())
             (ok if converged(r["diagnostics"]) and not r["meta"].get("quick") else failed)[n] = r
@@ -359,9 +360,133 @@ def write_csvs(runs: dict, data: dict) -> None:
                                      fin["latest"], gen])
 
 
+FOOD_ITEMS = [s.key for s in col.SERIES if s.kind in col.FOOD_KINDS and s.kind not in ("rest", "all")]
+FOOD_GROUPS = [(col.KIND_NAMES[k], [s.key for s in col.SERIES if s.kind == k])
+               for k in ("bread", "meat", "dairy", "oils_fats", "fruit_veg", "sugar", "restaurants")]
+FOOD_GROUPS += [(f"{col.REGIONS[r]} cost of living (composite)", [f"{r}_composite"]) for r in col.REGIONS]
+
+
+def food_section(base: dict, food: dict, data: dict) -> list[str]:
+    """Do grain and urea prices help? The same fits with and without them, compared like for like."""
+    out = ["## Food drivers: do grain and urea prices help?", "",
+           "The same model and folds, refitted with the monthly change in grain prices (mean of wheat and maize, IMF) and "
+           "in urea (World Bank) as extra drivers of the food items, restaurants, the rest of the basket and headline, "
+           "lags 0–12. Both versions use 1,000 draws per chain and the same seeds; skill is against the base run's "
+           "climatology for both.", ""]
+    bf = [base.get(f"fold-{j}") for j in range(8)]
+    ff = [food.get(f"fold-{j}") for j in range(8)]
+    if all(bf) and all(ff):
+        clim = stack(bf, "climatology")
+        cols_ = {"base": {m: stack(bf, m) for m in ("whatif", "forecast_GARCH-CGMY")},
+                 "food": {m: stack(ff, m) for m in ("whatif", "forecast_GARCH-CGMY")}}
+        ins = {"base": stack(bf, "whatif", "inside90"), "food": stack(ff, "whatif", "inside90")}
+        out += ["**Skill against climatology, all horizons, 8 folds**", "",
+                "| Group | Base, given drivers | With food drivers | Base, forecast | With food drivers, forecast | "
+                "90% coverage, base → food |", "|---|---|---|---|---|---|"]
+        for lab, keys in FOOD_GROUPS:
+            c = cols(keys)
+            cells = [f3(skill(cols_[v][m], clim, c)) for m in ("whatif", "forecast_GARCH-CGMY") for v in ("base", "food")]
+            cells = [cells[0], cells[1], cells[2], cells[3]]
+            out.append(f"| {lab} | " + " | ".join(cells) + f" | {pct(np.nanmean(ins['base'][:, :, c]))} → "
+                       f"{pct(np.nanmean(ins['food'][:, :, c]))} |")
+        out += ["", "**With food drivers minus base**, CRPS in units of climatology CRPS (negative = food drivers better), "
+                "± Newey–West error.", "", "| Series | Mode | " + " | ".join(f"h={h}" for h in col.HS) + " |",
+                "|---|---|" + "---|" * len(col.HS)]
+        rows = [("All food items", FOOD_ITEMS)] + [(f"{col.REGIONS[r]} composite", [f"{r}_composite"]) for r in col.REGIONS]
+        for lab, keys in rows:
+            for m, mlab in (("whatif", "given drivers"), ("forecast_GARCH-CGMY", "forecast")):
+                cells = []
+                for h in col.HS:
+                    d, s = diff(cols_["food"][m], cols_["base"][m], clim, cols(keys), H_IDX[h])
+                    cells.append(f"{d:+.3f} ± {s:.3f}")
+                out.append(f"| {lab} | {mlab} | " + " | ".join(cells) + " |")
+        out.append("")
+    for name, label in (("event-2022", "2022"), ("event-2026", "2026")):
+        if name not in base or name not in food:
+            continue
+        b, f = base[name], food[name]
+        n = b["actual_months"]
+        hi = n - 1
+        act = np.array(b["actual"], float)[hi]
+        keys = FOOD_ITEMS + [f"{r}_composite" for r in col.REGIONS]
+        stats = {}
+        for v, ev in (("base", b), ("food", f)):
+            fan = ev["fans"]["whatif"]
+            inside = [fan["q05"][hi][KEYS.index(k)] <= act[KEYS.index(k)] <= fan["q95"][hi][KEYS.index(k)] for k in keys]
+            miss = [abs(fan["q50"][hi][KEYS.index(k)] - act[KEYS.index(k)]) for k in keys]
+            stats[v] = (sum(inside), len(keys), float(np.mean(miss)))
+        out += [f"**The {label} test** (fitted to {b['base'][:7]}, scored {n} months on, given the drivers that happened): "
+                f"food items and composites inside their 90% bands {stats['base'][0]}/{stats['base'][1]} without food drivers, "
+                f"{stats['food'][0]}/{stats['food'][1]} with them; mean miss of the median {stats['base'][2]:.2f} pp against "
+                f"{stats['food'][2]:.2f} pp.", "",
+                "| Series | Actual | Base (90%) | With food drivers (90%) |", "|---|---|---|---|"]
+        for key in [f"{r}_{i}" for r in col.REGIONS for i in ("bread", "dairy", "oils_fats")] + [f"{r}_composite" for r in col.REGIONS]:
+            k = KEYS.index(key)
+            cells = []
+            for ev in (b, f):
+                fan = ev["fans"]["whatif"]
+                lo, mid, hi_ = fan["q05"][hi][k], fan["q50"][hi][k], fan["q95"][hi][k]
+                cells.append(f"{mid:+.1f} ({lo:+.1f} to {hi_:+.1f}){' ✓' if lo <= act[k] <= hi_ else ''}")
+            out.append(f"| {NAME[key]} | {act[k]:+.1f} | " + " | ".join(cells) + " |")
+        out.append("")
+        con = f.get("contributions")
+        if con:
+            out += [f"**What moved food prices in {label}**: each driver's contribution to the change from {b['base'][:7]} to "
+                    f"{n} months on (pp of the price level, posterior mean, food-driver model). *Other* is the actual minus all "
+                    "drivers: drift, momentum from before, and everything the drivers don't capture.", "",
+                    "| Series | Actual | Oil | Gas | Grain | Urea | Other |", "|---|---|---|---|---|---|---|"]
+            for key in [f"{r}_{i}" for r in col.REGIONS for i in ("bread", "meat", "dairy", "oils_fats")] + \
+                       [f"{r}_composite" for r in col.REGIONS]:
+                k = KEYS.index(key)
+                parts = [con[g][hi][k] for g in ("oil", "gas", "grain", "urea")]
+                other = act[k] - con["all_drivers"][hi][k]
+                out.append(f"| {NAME[key]} | {act[k]:+.1f} | " + " | ".join(f"{p:+.1f}" for p in parts) + f" | {other:+.1f} |")
+            out.append("")
+    fin = food.get("final")
+    if fin and "grain" in fin["response_10pct"]:
+        r = fin["response_10pct"]
+        out += ["**Response to a sustained +10% move in each input, 12 months on** (food-driver model, all data, median and "
+                "90% interval, % of the price level)", "",
+                "| Series | +10% Brent | +10% grain prices | +10% urea |", "|---|---|---|---|"]
+        for key in [f"{r_}_{i}" for r_ in col.REGIONS for i in ("bread", "meat", "dairy", "oils_fats")] + \
+                   [f"{r_}_composite" for r_ in col.REGIONS]:
+            k = KEYS.index(key)
+            out.append(f"| {NAME[key]} | " + " | ".join(
+                f"{r[g]['q50'][11][k]:+.2f} ({r[g]['q05'][11][k]:+.2f} to {r[g]['q95'][11][k]:+.2f})"
+                for g in ("normal", "grain", "urea")) + " |")
+        out.append("")
+    return out
+
+
+def write_contributions(food: dict) -> None:
+    """notes/cost-of-living-contributions.csv: each driver's part in each event, for the UI."""
+    rows = []
+    gen = datetime.now(UTC).date().isoformat()
+    for name in ("event-2022", "event-2026"):
+        ev = food.get(name)
+        if not ev or "contributions" not in ev:
+            continue
+        act = np.array(ev["actual"], float)
+        con = ev["contributions"]
+        for h in range(ev["actual_months"]):
+            for k, key in enumerate(KEYS):
+                if act[h, k] <= -998:
+                    continue
+                for g in ("oil", "gas", "grain", "urea"):
+                    if g in con:
+                        rows.append([ev["base"][:7], h + 1, key, REGION[key], KIND[key], g, round(con[g][h][k], 3),
+                                     round(act[h, k], 3), gen])
+    with open(col.NOTES / "cost-of-living-contributions.csv", "w", newline="") as fh:
+        wr = csv.writer(fh)
+        wr.writerow(["base_month", "months_after", "series", "region", "kind", "driver", "contribution_pp", "actual_pp",
+                     "generated"])
+        wr.writerows(rows)
+
+
 def write() -> None:
     data = col.load()
     runs, failed = load_runs()
+    food_runs, food_failed = load_runs(col.RUNS_FOOD)
     folds = [runs[f"fold-{j}"] for j in range(8) if f"fold-{j}" in runs]
     today = datetime.now(UTC).date().isoformat()
     jobs = sorted({str(r["meta"].get("job")) for r in (runs | failed).values() if r["meta"].get("job")})
@@ -372,9 +497,10 @@ def write() -> None:
            "the only simulated inputs are Brent and gas paths in forecast and scenario rows._", "",
            "Method: `docs/cost-of-living.md`. Skill is 1 − CRPS / CRPS of climatology, with each series weighted equally "
            "in a group; 0 is no better than climatology.", ""]
-    if failed:
-        out += [f"**Left out, chains not converged** (needs R-hat ≤ {R_HAT_MAX} and ESS ≥ {ESS_MIN}): " + "; ".join(
-            f"{n} (R-hat {r['diagnostics']['max_r_hat']}, ESS {r['diagnostics']['min_ess']})" for n, r in failed.items()), ""]
+    for lab, fl in (("", failed), (" (food-driver runs)", food_failed)):
+        if fl:
+            out += [f"**Left out{lab}, chains not converged** (needs R-hat ≤ {R_HAT_MAX} and ESS ≥ {ESS_MIN}): " + "; ".join(
+                f"{n} (R-hat {r['diagnostics']['max_r_hat']}, ESS {r['diagnostics']['min_ess']})" for n, r in fl.items()), ""]
     if len(folds) < 8:
         folds = []  # the fold tables need every fold, or the comparison is not like for like
     out += events_section(data)
@@ -388,7 +514,11 @@ def write() -> None:
         out += scenario_section(runs["event-2026"], data["weights"]["w"])
     if "final" in runs:
         out += final_section(runs["final"], data["weights"]["w"])
+    if food_runs:
+        out += food_section(runs, food_runs, data)
     out += data_section(data)
     (col.NOTES / "cost-of-living.md").write_text("\n".join(out) + "\n", encoding="utf-8")
     write_csvs(runs, data)
+    if food_runs:
+        write_contributions(food_runs)
     print(f"wrote {col.NOTES / 'cost-of-living.md'} and the CSVs")
