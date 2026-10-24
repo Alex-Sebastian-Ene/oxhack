@@ -626,7 +626,9 @@ def ablation_section() -> list[str]:
              "nn_mean", "stack")
     out = ["", "## Diagnostics: what changes when one thing is removed", "",
            f"Reduced model set ({', '.join(ABLATION_MODELS['archs'])}, {ABLATION_MODELS['seeds']} seeds, small size), "
-           "skill vs climatology over all horizons; folds per variant in brackets. `full` is the reference.", ""]
+           "skill over all horizons against the climatology of the unanchored `full` variant (same test origins for "
+           "every variant, so one yardstick); folds per variant in brackets. `full` is the reference.", ""]
+    ref = {r["fold"]: np.array(r["models"]["climatology"]["crps"], dtype=float) for r in runs.get("full", [])}
     for g in ("inflation", "unemployment", "rate", "cost"):
         cols = groups == g
         out += [f"**{g.capitalize()}**", "", "| Variant | " + " | ".join(shown) + " |", "|---|" + "---|" * len(shown)]
@@ -634,7 +636,9 @@ def ablation_section() -> list[str]:
             if variant not in runs:
                 continue
             rs = runs[variant]
-            clim = np.concatenate([np.array(r["models"]["climatology"]["crps"], dtype=float) for r in rs])
+            own = [np.array(r["models"]["climatology"]["crps"], dtype=float) for r in rs]
+            clim = np.concatenate([ref.get(r["fold"], o) if ref.get(r["fold"], o).shape == o.shape else o
+                                   for r, o in zip(rs, own)])
             cells = []
             for m in shown:
                 if m not in rs[0]["models"]:
@@ -696,6 +700,17 @@ def anchored_section(v1_folds: list[dict]) -> list[str]:
             cal = 1 - np.nanmean(stack(an, m, "crps")[:, cols]) / base
             cells.append(f"{v} / {raw:+.3f} / **{cal:+.3f}**")
         out.append(f"| {m} | " + " | ".join(cells) + " |")
+    # Hybrid: anchored (recalibrated) for the groups with validated oil links, unanchored for the rest.
+    priced = np.isin(groups, ["inflation", "cost"])
+    out += ["", "**Hybrid** (anchored and recalibrated for inflation and costs; unanchored, with the oil path as an "
+                "input, for unemployment and rates):", "",
+            "| Model | inflation | unemployment | rate | cost |", "|---|---|---|---|---|"]
+    for m in ("nn_mean", "stack", "lstm_base", "ridge", "climatology"):
+        if m not in an[0]["models"] or m not in v1[0]["models"]:
+            continue
+        hyb = np.where(priced, stack(an, m, "crps"), stack(v1, m, "crps"))
+        out.append(f"| {m} | " + " | ".join(f"{1 - np.nanmean(hyb[:, groups == g]) / np.nanmean(clim[:, groups == g]):+.3f}"
+                                             for g in ("inflation", "unemployment", "rate", "cost")) + " |")
     from scipy.stats import norm
     y = np.concatenate([np.array(f["y"], dtype=float) for f in an])
     out += ["", "**Calibration: share inside the central 90% interval** (target 90%), anchored raw → recalibrated:", "",

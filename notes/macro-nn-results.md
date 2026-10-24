@@ -132,9 +132,105 @@ Crisis windows: 2008-09 to 2009-06, 2020-03 to 2020-12, 2022-02 to 2022-12, 2026
 | lstm_base | +0.030 | +0.020 | +0.061 | +0.015 | +0.057 | +0.008 | +0.036 | +0.097 |
 | no_change | -0.674 | -0.370 | +0.096 | +0.017 | +0.075 | +0.026 | +0.082 | +0.032 |
 
+## Anchored model: the oil pass-through fixed to the validated linear links
+
+_8 folds (Iridis job 1971583), same test origins as above. Each fold fits, on its training months only, the `oil_chain.py` link for every target series (monthly change on Brent lags 0–12 for inflation, unemployment, rates and materials, 0–2 for fuel and freight) and anchors it only if the summed effect clears 2 Newey–West errors. The networks and baselines then learn the residual without seeing the oil path, and every interval is rescaled on the validation set. Skill is against the *unanchored* climatology, so both runs share one yardstick._
+
+**Which links are anchored** (folds where the link cleared the bar; effect of a sustained +10% Brent move on the summed monthly changes, in the target's units, mean over anchored folds):
+
+| Target | Lags | Folds anchored | Effect of +10% oil |
+|---|---|---|---|
+| us_cpi | 0–12 | 8/8 | +0.435 |
+| us_unemp | 0–12 | 4/8 | -0.244 |
+| us_rate | 0–12 | 1/8 | +0.545 |
+| uk_cpi | 0–12 | 8/8 | +0.298 |
+| uk_unemp | 0–12 | 0/8 | not anchored |
+| uk_rate | 0–12 | 3/8 | +0.274 |
+| ea_cpi | 0–12 | 7/8 | +0.297 |
+| ea_unemp | 0–12 | 3/8 | -0.129 |
+| ea_rate | 0–12 | 3/8 | +0.254 |
+| ind_gasdesw | 0–2 | 8/8 | +6.082 |
+| ind_djfuelusgulf | 0–2 | 8/8 | +9.812 |
+| ind_pcu484121484121 | 0–2 | 8/8 | +0.660 |
+| ind_pcu4841248412 | 0–2 | 8/8 | +0.655 |
+| ind_pcu483111483111 | 0–2 | 6/8 | +0.870 |
+| ind_pcu481112481112 | 0–2 | 7/8 | +0.510 |
+| ind_pcu325211325211 | 0–12 | 8/8 | +2.708 |
+| ind_pcu3261132611 | 0–12 | 8/8 | +1.543 |
+| ind_pcu326160326160 | 0–12 | 8/8 | +1.891 |
+| ind_wpu0915 | 0–12 | 8/8 | +0.682 |
+| ind_pcu325311325311 | 0–12 | 8/8 | +7.554 |
+| ind_pcu324110324110 | 0–2 | 8/8 | +9.246 |
+| ind_pcu481111481111 | 0–2 | 6/8 | +0.609 |
+
+**Skill vs the unanchored climatology, all horizons** (v1 = unanchored run above; raw = anchored with the networks' own variances; recalibrated = anchored with validation-rescaled variances):
+
+| Model | inflation: v1 / raw / recal. | unemployment: v1 / raw / recal. | rate: v1 / raw / recal. | cost: v1 / raw / recal. |
+|---|---|---|---|---|
+| anchor | - / -0.538 / **-0.327** | - / +0.011 / **-0.084** | - / -0.085 / **-0.107** | - / +0.406 / **+0.408** |
+| stack | -0.153 / +0.049 / **+0.038** | +0.026 / -0.081 / **-0.135** | +0.026 / -0.154 / **-0.174** | -0.017 / +0.386 / **+0.383** |
+| nn_mean | +0.004 / +0.132 / **+0.147** | +0.047 / -0.052 / **-0.137** | +0.025 / -0.126 / **-0.144** | +0.009 / +0.417 / **+0.420** |
+| ridge | -0.033 / +0.113 / **+0.104** | +0.104 / +0.116 / **+0.011** | -0.326 / -0.218 / **-0.261** | -0.091 / +0.373 / **+0.392** |
+| climatology | +0.000 / +0.131 / **+0.147** | +0.000 / -0.098 / **-0.179** | +0.000 / -0.160 / **-0.182** | +0.000 / +0.415 / **+0.417** |
+| lstm_base | +0.024 / +0.134 / **+0.152** | +0.035 / -0.055 / **-0.139** | +0.028 / -0.134 / **-0.158** | +0.066 / +0.415 / **+0.418** |
+| lstm_small | +0.024 / +0.130 / **+0.147** | +0.020 / -0.081 / **-0.165** | +0.024 / -0.134 / **-0.152** | +0.051 / +0.415 / **+0.418** |
+| tcn_transformer_base | -0.010 / +0.124 / **+0.141** | +0.051 / -0.059 / **-0.134** | +0.032 / -0.133 / **-0.151** | -0.015 / +0.413 / **+0.418** |
+| transformer_base | -0.002 / +0.132 / **+0.151** | +0.052 / -0.051 / **-0.135** | +0.007 / -0.133 / **-0.148** | -0.009 / +0.415 / **+0.418** |
+| no_change | -0.515 / -0.596 / **-0.397** | +0.051 / +0.055 / **-0.040** | +0.046 / +0.053 / **+0.052** | +0.057 / -0.004 / **-0.003** |
+
+**Hybrid** (anchored and recalibrated for inflation and costs; unanchored, with the oil path as an input, for unemployment and rates):
+
+| Model | inflation | unemployment | rate | cost |
+|---|---|---|---|---|
+| nn_mean | +0.147 | +0.047 | +0.025 | +0.420 |
+| stack | +0.038 | +0.026 | +0.026 | +0.383 |
+| lstm_base | +0.152 | +0.035 | +0.028 | +0.418 |
+| ridge | +0.104 | +0.104 | -0.326 | +0.392 |
+| climatology | +0.147 | +0.000 | +0.000 | +0.417 |
+
+**Calibration: share inside the central 90% interval** (target 90%), anchored raw → recalibrated:
+
+| Model | inflation | unemployment | rate | cost |
+|---|---|---|---|---|
+| anchor | 44% → **82%** | 73% → **82%** | 86% → **79%** | 76% → **79%** |
+| stack | 60% → **57%** | 74% → **72%** | 70% → **64%** | 71% → **69%** |
+| nn_mean | 66% → **77%** | 70% → **80%** | 85% → **80%** | 78% → **80%** |
+| ridge | 82% → **78%** | 89% → **83%** | 91% → **83%** | 89% → **82%** |
+| lstm_base | 66% → **77%** | 71% → **80%** | 85% → **80%** | 78% → **80%** |
+| tcn_transformer_base | 65% → **77%** | 70% → **80%** | 84% → **79%** | 78% → **80%** |
+
+**Response to a +10% Brent move in the next month, 12 months ahead** (anchored = every model, fitted on all data; v1 = the unanchored ensemble mean and stacker):
+
+| Output | anchored | v1 nn_mean | v1 stack | anchored in final fit |
+|---|---|---|---|---|
+| us_cpi | **+0.429** | +0.030 | +0.039 | yes |
+| us_unemp | **+0.000** | -0.008 | -0.075 | no |
+| us_rate | **+0.000** | +0.014 | +0.024 | no |
+| uk_cpi | **+0.342** | +0.017 | +0.043 | yes |
+| uk_unemp | **+0.000** | -0.002 | +0.001 | no |
+| uk_rate | **+0.000** | +0.018 | +0.039 | no |
+| ea_cpi | **+0.347** | +0.027 | +0.014 | yes |
+| ea_unemp | **+0.000** | -0.002 | -0.002 | no |
+| ea_rate | **+0.000** | +0.012 | +0.020 | no |
+| ind_gasdesw | **+4.982** | +0.650 | +0.974 | yes |
+| ind_djfuelusgulf | **+9.238** | +0.843 | +2.864 | yes |
+| ind_pcu484121484121 | **+0.754** | +0.112 | +0.180 | yes |
+| ind_pcu4841248412 | **+0.749** | +0.097 | +0.298 | yes |
+| ind_pcu483111483111 | **+0.773** | +0.188 | +0.219 | yes |
+| ind_pcu481112481112 | **+0.595** | +0.135 | +0.327 | yes |
+| ind_pcu325211325211 | **+2.325** | +0.251 | +0.355 | yes |
+| ind_pcu3261132611 | **+1.410** | +0.132 | +0.385 | yes |
+| ind_pcu326160326160 | **+1.588** | +0.188 | +0.332 | yes |
+| ind_wpu0915 | **+0.719** | +0.041 | +0.073 | yes |
+| ind_pcu325311325311 | **+5.798** | +0.667 | +0.814 | yes |
+| ind_pcu324110324110 | **+8.450** | +0.775 | +2.605 | yes |
+| ind_pcu481111481111 | **+0.743** | +0.156 | +0.227 | yes |
+
+Linear link for comparison (`notes/oil-chain-links.md`, US, 1991–2008 fit): headline CPI +0.36 pp.
+
 ## Diagnostics: what changes when one thing is removed
 
-Reduced model set (lstm, tcn_transformer, 3 seeds, small size), skill vs climatology over all horizons; folds per variant in brackets. `full` is the reference.
+Reduced model set (lstm, tcn_transformer, 3 seeds, small size), skill over all horizons against the climatology of the unanchored `full` variant (same test origins for every variant, so one yardstick); folds per variant in brackets. `full` is the reference.
 
 **Inflation**
 
@@ -145,13 +241,15 @@ Reduced model set (lstm, tcn_transformer, 3 seeds, small size), skill vs climato
 | no_ais (8) | -0.034 | +0.018 | -0.015 | - | - | +0.006 | -0.218 |
 | no_market_signals (8) | -0.039 | +0.002 | -0.021 | - | - | -0.006 | -0.175 |
 | lookahead (8) | -0.026 | +0.023 | -0.006 | - | - | +0.015 | -0.117 |
-| shuffled_targets (8) | -0.047 | -0.000 | -0.007 | - | - | -0.002 | -0.144 |
-| window_12 (8) | -0.009 | +0.029 | +0.000 | - | - | +0.020 | -0.150 |
+| shuffled_targets (8) | -0.033 | +0.013 | +0.006 | - | - | +0.011 | -0.129 |
+| window_12 (8) | +0.001 | +0.039 | +0.011 | - | - | +0.030 | -0.138 |
 | v2_all (8) | -0.046 | -0.002 | -0.016 | -0.015 | -0.010 | +0.003 | -0.163 |
 | v2_no_fuel (8) | -0.022 | +0.008 | -0.026 | +0.025 | -0.026 | +0.010 | -0.194 |
 | v2_no_pipeline (8) | -0.046 | +0.020 | -0.005 | +0.009 | -0.019 | +0.014 | -0.142 |
 | v2_no_drivers (8) | -0.070 | +0.017 | -0.011 | +0.014 | -0.009 | +0.017 | -0.244 |
 | v2_no_ais_pipeline (8) | -0.047 | +0.009 | -0.021 | +0.007 | -0.030 | +0.007 | -0.129 |
+| anchored (8) | +0.104 | +0.152 | +0.152 | - | - | +0.153 | +0.079 |
+| anchored_no_ais (8) | +0.104 | +0.149 | +0.149 | - | - | +0.150 | +0.048 |
 
 **Unemployment**
 
@@ -162,13 +260,15 @@ Reduced model set (lstm, tcn_transformer, 3 seeds, small size), skill vs climato
 | no_ais (8) | +0.104 | +0.051 | +0.052 | - | - | +0.058 | +0.059 |
 | no_market_signals (8) | +0.087 | +0.038 | +0.060 | - | - | +0.053 | +0.048 |
 | lookahead (8) | +0.107 | +0.008 | +0.033 | - | - | +0.026 | +0.035 |
-| shuffled_targets (8) | -0.065 | -0.015 | -0.002 | - | - | -0.007 | -0.092 |
-| window_12 (8) | +0.083 | +0.026 | +0.051 | - | - | +0.044 | +0.032 |
+| shuffled_targets (8) | -0.084 | -0.033 | -0.020 | - | - | -0.025 | -0.111 |
+| window_12 (8) | +0.088 | +0.031 | +0.056 | - | - | +0.049 | +0.037 |
 | v2_all (8) | +0.001 | +0.027 | +0.053 | +0.006 | +0.029 | +0.045 | -0.025 |
 | v2_no_fuel (8) | +0.057 | +0.030 | +0.048 | +0.019 | +0.010 | +0.041 | +0.013 |
 | v2_no_pipeline (8) | +0.001 | +0.018 | +0.048 | +0.029 | +0.011 | +0.041 | -0.015 |
 | v2_no_drivers (8) | +0.054 | +0.035 | +0.066 | +0.003 | +0.021 | +0.045 | +0.012 |
 | v2_no_ais_pipeline (8) | +0.001 | +0.037 | +0.050 | +0.030 | +0.024 | +0.051 | -0.016 |
+| anchored (8) | +0.011 | -0.181 | -0.136 | - | - | -0.156 | -0.115 |
+| anchored_no_ais (8) | +0.013 | -0.126 | -0.138 | - | - | -0.129 | -0.043 |
 
 **Rate**
 
@@ -179,13 +279,15 @@ Reduced model set (lstm, tcn_transformer, 3 seeds, small size), skill vs climato
 | no_ais (8) | -0.325 | +0.045 | +0.012 | - | - | +0.035 | -0.020 |
 | no_market_signals (8) | -0.361 | +0.025 | +0.005 | - | - | +0.021 | -0.063 |
 | lookahead (8) | -0.343 | +0.011 | +0.016 | - | - | +0.023 | +0.002 |
-| shuffled_targets (8) | -0.188 | +0.001 | -0.009 | - | - | -0.002 | -0.128 |
-| window_12 (8) | -0.409 | +0.025 | +0.042 | - | - | +0.044 | +0.058 |
+| shuffled_targets (8) | -0.225 | -0.030 | -0.040 | - | - | -0.033 | -0.163 |
+| window_12 (8) | -0.423 | +0.015 | +0.033 | - | - | +0.034 | +0.049 |
 | v2_all (8) | -0.433 | +0.003 | +0.022 | -0.070 | -0.046 | -0.000 | -0.016 |
 | v2_no_fuel (8) | -0.331 | -0.011 | +0.014 | -0.021 | -0.046 | +0.005 | +0.012 |
 | v2_no_pipeline (8) | -0.433 | +0.019 | +0.021 | -0.036 | -0.051 | +0.009 | +0.026 |
 | v2_no_drivers (8) | -0.436 | +0.028 | +0.033 | -0.023 | -0.048 | +0.015 | +0.000 |
 | v2_no_ais_pipeline (8) | -0.433 | +0.031 | +0.013 | -0.024 | -0.064 | +0.012 | -0.005 |
+| anchored (8) | -0.261 | -0.160 | -0.155 | - | - | -0.149 | -0.152 |
+| anchored_no_ais (8) | -0.263 | -0.152 | -0.199 | - | - | -0.166 | -0.178 |
 
 **Cost**
 
@@ -196,13 +298,15 @@ Reduced model set (lstm, tcn_transformer, 3 seeds, small size), skill vs climato
 | no_ais (8) | -0.090 | +0.051 | -0.030 | - | - | +0.019 | -0.048 |
 | no_market_signals (8) | -0.093 | +0.005 | -0.027 | - | - | -0.006 | -0.056 |
 | lookahead (8) | -0.077 | +0.067 | -0.016 | - | - | +0.036 | -0.020 |
-| shuffled_targets (8) | -0.122 | -0.000 | -0.002 | - | - | +0.001 | -0.113 |
-| window_12 (8) | -0.169 | +0.065 | -0.025 | - | - | +0.030 | -0.042 |
+| shuffled_targets (8) | -0.085 | +0.033 | +0.032 | - | - | +0.034 | -0.076 |
+| window_12 (8) | -0.123 | +0.102 | +0.015 | - | - | +0.068 | -0.000 |
 | v2_all (8) | -0.147 | +0.023 | -0.024 | +0.021 | -0.058 | +0.012 | -0.055 |
 | v2_no_fuel (8) | -0.110 | +0.017 | -0.022 | +0.024 | -0.051 | +0.013 | -0.043 |
 | v2_no_pipeline (8) | -0.146 | +0.032 | -0.023 | +0.017 | -0.065 | +0.011 | -0.036 |
 | v2_no_drivers (8) | -0.172 | +0.011 | -0.016 | +0.024 | -0.058 | +0.011 | -0.059 |
 | v2_no_ais_pipeline (8) | -0.146 | +0.023 | -0.015 | +0.008 | -0.043 | +0.016 | -0.045 |
+| anchored (8) | +0.392 | +0.417 | +0.415 | - | - | +0.417 | +0.378 |
+| anchored_no_ais (8) | +0.392 | +0.420 | +0.416 | - | - | +0.419 | +0.368 |
 
 
 ## Response to a +10% Brent move (fit on all data; mean over origins 2023-11..2025-10)

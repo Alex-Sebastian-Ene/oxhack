@@ -145,6 +145,69 @@ and the stacker. The v1 `full` row is the reference.
 The v2 jobs ran the code just before `fold_indices()` was pulled out of `run_fold`. That refactor
 changes no indices (`tests/test_macro.py` checks the fold gap).
 
+## The anchored model (oil pass-through fixed to the validated links)
+
+`macro_nn.py fold J --anchored` (Iridis job 1971583, 8 folds plus the final fit; diagnostics job
+1971584).
+- **The anchor:** each fold fits, on its training months only, the `oil_chain.py` link for every
+  target series: its monthly change on Brent lags 0–12 (inflation, unemployment, rates,
+  materials) or 0–2 (fuel and freight).
+- **Validated links only:** a link is kept only if its summed effect clears 2 Newey–West
+  errors. Otherwise the anchor is 0.
+- **Residual learning:** every model learns the residual without seeing the oil path, so a
+  what-if response is exactly the validated link.
+- **Recalibration:** variances are rescaled per output on the validation set, pulled towards
+  the series-wide scale.
+
+Skill is measured against the *unanchored* climatology, so both runs share one yardstick.
+
+| | Inflation | Unemployment | Rate | Cost |
+|---|---|---|---|---|
+| v1, best model | +0.024 (LSTM) | +0.104 (ridge) | +0.046 (no change) | +0.066 (LSTM) |
+| v1 ensemble mean | +0.004 | +0.047 | +0.025 | +0.009 |
+| Anchored ensemble mean, recalibrated | **+0.147** | −0.137 | −0.144 | **+0.420** |
+| Anchored LSTM, recalibrated | **+0.152** | −0.139 | −0.158 | **+0.418** |
+| Anchored climatology (anchor + mean residual) | +0.147 | −0.179 | −0.182 | +0.417 |
+| **Hybrid ensemble mean** (anchored for prices, v1 for the rest) | **+0.147** | **+0.047** | **+0.025** | **+0.420** |
+
+**Oil-shock responses, now anchored** (+10% Brent next month, change after 12 months, all-data
+fit; v1 ensemble mean in brackets):
+
+| Target | Anchored | v1 |
+|---|---|---|
+| US / UK / euro-area CPI | **+0.43 / +0.34 / +0.35 pp** | +0.03 / +0.02 / +0.03 |
+| Diesel / jet fuel / refineries | +5.0 / +9.2 / +8.5% | +0.7 / +0.8 / +0.8 |
+| Freight PPIs | +0.6 to +0.8% | +0.1 to +0.2 |
+| Plastics, paperboard, fertiliser | +0.7 to +5.8% | +0.0 to +0.7 |
+| Unemployment, policy rates | 0 (no validated link in the final fit) | about 0 |
+
+**What it shows:**
+1. **Anchoring fixes prices.** Inflation skill rises from about +0.02 to +0.15 and cost skill
+   from +0.07 to +0.42. The what-if responses now match the validated links (US CPI +0.43 pp on
+   2000–2026 data, against +0.36 for the 1991–2008 fit) instead of a tenth of them.
+2. **The gain is the anchor's, not the networks'.** Anchored climatology (the anchor plus each
+   series' average drift) scores the same as the networks, which add at most about 0.005. On
+   monthly data, the honest price model is the validated linear link plus a drift and a
+   calibrated band.
+3. **Unemployment and rates get worse when anchored**, for two reasons:
+   - The networks lose the oil path, which for these targets stands in for global demand: oil
+     collapsed with the 2008 and 2020 unemployment spikes.
+   - US unemployment cleared the significance bar in 4 of 8 folds with a *negative* sign (oil
+     up, unemployment down). That is demand-driven comovement, not a supply effect, so
+     significance alone is not a strong enough validation rule for these targets.
+
+   Hence the hybrid: anchored for inflation and costs, unanchored for unemployment and rates. In
+   the what-if, the unanchored targets should stay at 0 or show a range, since they have no
+   validated causal link.
+4. **Recalibration helps where models were overconfident, and only partly.**
+   - It raises inflation coverage of the 90% interval from 66% to 77% and costs from 78% to 80%
+     (ensemble mean), and improves inflation CRPS.
+   - It lowers coverage for ridge and for rates. The validation slice (the last quarter of each
+     training window) does not represent the test years well.
+
+   The next step is calibration on pooled out-of-sample errors from earlier folds (forward
+   conformal), which should get closer to 90%.
+
 ## Flow → Brent from AIS (`notes/flow-price-link.md`)
 
 PortWatch shows Hormuz tanker capacity at 117% of normal a week before the 2026 closure, about 0%
