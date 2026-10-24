@@ -566,8 +566,222 @@
     "year": 2024,
     "unit_note": "91% of value of all Canadian aluminium exports",
     "source": "https://natural-resources.canada.ca/minerals-mining/mining-data-statistics-analysis/minerals-metals-facts/aluminum-facts"
+   },
+   {
+    "from": "RUS",
+    "to": "CHN",
+    "value": null,
+    "share_of_importer": 0.635,
+    "period": "Oct 2025",
+    "year": 2025,
+    "unit_note": "157.7 kt in Oct 2025; Russia was 46.5% of China's 2024 primary imports",
+    "source": "https://www.metal.com/en/newscontent/103635144",
+    "note": "exact SMM page unconfirmed"
+   },
+   {
+    "from": "RUS",
+    "to": "TUR",
+    "value": null,
+    "share_of_importer": 0.29,
+    "basis": "by value, unwrought aluminium",
+    "year": 2023,
+    "source": "https://trendeconomy.com/data/h2/Turkey/7601"
    }
   ],
   "note_2026": "World total not found. Alloyed sub-code 760120 (WITS 2024): NOR $3.62bn, CAN $3.33bn, BHR $2.77bn, MYS $2.75bn."
+ },
+ {
+  "id": "fertiliser",
+  "name": "Urea",
+  "unit": "Mt urea exported",
+  "year": 2025,
+  "source": "https://t.me/s/eximdata1/194 (Russia, MMI via Vedomosti, secondary) ; https://www.mysteel.net/news/5110910-chinas-2025-urea-exports-surge-to-nearly-5-mln-t-on-policy-adjustment (China, customs)",
+  "accessed": "2026-10-24",
+  "world_total": {
+   "value": 54.7,
+   "year": 2024,
+   "basis": "global urea trade; not divided into 2025 volumes",
+   "source": "https://www.sunsirs.com/uk/detail_news-27843.html"
+  },
+  "exporters": [
+   {
+    "iso3": "RUS",
+    "value": 10.8,
+    "share": null,
+    "source": "https://t.me/s/eximdata1/194",
+    "note": "MMI via Vedomosti, secondary"
+   },
+   {
+    "iso3": "CHN",
+    "value": 4.9,
+    "share": null,
+    "source": "https://www.mysteel.net/news/5110910-chinas-2025-urea-exports-surge-to-nearly-5-mln-t-on-policy-adjustment"
+   }
+  ],
+  "flows": [],
+  "note_2026": "Saudi Arabia (~4 Mt) and Oman (~3.5 Mt) seen only in a LinkedIn post, so left out. Hormuz carries ~34% of urea trade (WTO), ~40% of seaborne urea (Kpler). Urea exports from Hormuz-dependent economies fell 83% by volume in Apr 2026 vs Apr 2025 (UN/ITC/WTO, https://www.fertilizerdaily.com/20260807-un-itc-hormuz-disruption-urea-exports-83-percent-drop/). About 21 Mt/yr of Gulf urea export capacity affected (OPEC Fund)."
+ },
+ {
+  "id": "bauxite",
+  "name": "Bauxite",
+  "unit": "Mt",
+  "year": 2025,
+  "source": "https://www.hellenicshippingnews.com/?p=1148516 (IFCHOR GALBRAITHS: 251 Mt seaborne, Guinea ~70%) ; https://www.miningweekly.com/article/guineas-bauxite-exports-jump-25-to-183-million-tons-in-2025-on-chinese-demand-2026-01-26",
+  "accessed": "2026-10-24",
+  "world_total": {
+   "value": 251,
+   "basis": "seaborne exports (IFCHOR GALBRAITHS); URSA gives 246.6"
+  },
+  "exporters": [
+   {
+    "iso3": "GIN",
+    "value": 182.8,
+    "share": 0.7,
+    "note": "value = official exports (Reuters); share = IFCHOR (~175 Mt, ~70%)"
+   },
+   {
+    "iso3": "AUS",
+    "value": null,
+    "share": 0.19,
+    "note": "derived: Guinea + Australia ~89% minus Guinea ~70%"
+   }
+  ],
+  "flows": [
+   {
+    "from": "GIN",
+    "to": "CHN",
+    "value": 149,
+    "share_of_exporter": 0.815,
+    "share_of_importer": 0.743,
+    "year": 2025,
+    "note": "share_of_exporter derived 149/182.8",
+    "source": "https://www.alcircle.com/news/gacc-china-s-bauxite-imports-jump-26-yoy-in-2025-117034"
+   },
+   {
+    "from": "AUS",
+    "to": "CHN",
+    "value": 37.35,
+    "share_of_importer": 0.186,
+    "year": 2025,
+    "source": "https://www.alcircle.com/news/gacc-china-s-bauxite-imports-jump-26-yoy-in-2025-117034"
+   }
+  ],
+  "note_2026": "No 2026 Hormuz link found for bauxite. Brazil and Indonesia 2025 unconfirmed."
+ },
+ {
+  "id": "alumina",
+  "name": "Alumina",
+  "unit": "Mt",
+  "year": 2024,
+  "source": "https://www.indexbox.io/blog/alumina-world-market-overview-2024-9/ (Australia ~42% of world exports) ; https://www.ceicdata.com/en/australia/export-volume (Australia 15.88 Mt)",
+  "accessed": "2026-10-24",
+  "exporters": [
+   {
+    "iso3": "AUS",
+    "value": 15.88,
+    "share": 0.42,
+    "note": "value CEIC (Dept of Industry), share IndexBox (41% in later editions)"
+   },
+   {
+    "iso3": "CHN",
+    "value": 2.55,
+    "share": null,
+    "year": 2025,
+    "note": "2025, derived: 2.02 Mt to Russia = 79.3% of exports",
+    "source": "https://www.alcircle.com/press-release/gacc-china-s-2025-alumina-exports-surge-43-per-cent-y-o-y-117019"
+   }
+  ],
+  "flows": [
+   {
+    "from": "CHN",
+    "to": "RUS",
+    "value": 2.02,
+    "share_of_exporter": 0.793,
+    "year": 2025,
+    "source": "https://www.alcircle.com/press-release/gacc-china-s-2025-alumina-exports-surge-43-per-cent-y-o-y-117019"
+   }
+  ],
+  "note_2026": "Brazil ranks 2nd and Indonesia 3rd (IndexBox ranking, no values). None found for 2026."
+ },
+ {
+  "id": "naphtha",
+  "name": "Naphtha",
+  "unit": "kb/d",
+  "year": 2026,
+  "source": "https://www.argusmedia.com/de/news-and-insights/latest-market-news/2798741-mideast-naphtha-supply-tightens-as-disruptions-mount (UAE, Qatar: Vortexa pre-war 2026 baseline, excludes intra-regional trade) ; https://www.energyintel.com/0000019d-7243-d7a3-a59d-72e75c020000 (Russia)",
+  "accessed": "2026-10-24",
+  "note": "No world total found, so no shares. Jan-Sep 2024 Arab ranking: UAE (#1 globally), Qatar, Kuwait, Algeria (https://www.shafaq.com/en/Economy/Iraq-secures-fifth-position-in-Arab-Naphtha-exports-in-the-first-nine-months-of-2024).",
+  "exporters": [
+   {
+    "iso3": "ARE",
+    "value": 574,
+    "share": null
+   },
+   {
+    "iso3": "RUS",
+    "value": 450,
+    "share": null,
+    "source": "https://www.energyintel.com/0000019d-7243-d7a3-a59d-72e75c020000"
+   },
+   {
+    "iso3": "QAT",
+    "value": 291,
+    "share": null
+   }
+  ],
+  "flows": [],
+  "note_2026": "Middle East naphtha exports 692 kt in Mar 2026 vs 4.06 Mt in Feb (S&P Commodities at Sea); Gulf naphtha to Asia 160 kb/d in March vs 1.4 mb/d in Jan-Feb (Kpler)."
+ },
+ {
+  "id": "ethane",
+  "name": "Ethane",
+  "unit": "kb/d",
+  "year": 2025,
+  "source": "https://www.eia.gov/todayinenergy/detail.php?id=67387 (US exports) ; https://chemicalweekly.com/digitalissue/aug2025/19/files/basic-html/page124.html (destinations, 2024)",
+  "accessed": "2026-10-24",
+  "exporters": [
+   {
+    "iso3": "USA",
+    "value": 579,
+    "share": null,
+    "note": "the main seaborne exporter; no world total found"
+   }
+  ],
+  "flows": [
+   {
+    "from": "USA",
+    "to": "CHN",
+    "value": null,
+    "share_of_exporter": 0.46,
+    "year": 2024,
+    "note": "over 50% in 2025",
+    "source": "https://chemicalweekly.com/digitalissue/aug2025/19/files/basic-html/page124.html"
+   },
+   {
+    "from": "USA",
+    "to": "CAN",
+    "value": null,
+    "share_of_exporter": 0.15,
+    "year": 2024,
+    "source": "https://chemicalweekly.com/digitalissue/aug2025/19/files/basic-html/page124.html"
+   },
+   {
+    "from": "USA",
+    "to": "IND",
+    "value": null,
+    "share_of_exporter": 0.13,
+    "year": 2024,
+    "source": "https://chemicalweekly.com/digitalissue/aug2025/19/files/basic-html/page124.html"
+   },
+   {
+    "from": "USA",
+    "to": "NOR",
+    "value": null,
+    "share_of_exporter": 0.09,
+    "year": 2024,
+    "source": "https://chemicalweekly.com/digitalissue/aug2025/19/files/basic-html/page124.html"
+   }
+  ],
+  "note_2026": "none found"
  }
 ]
