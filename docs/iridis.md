@@ -54,3 +54,17 @@ FAMILY=iid sbatch --array=0-29 cluster/iridis/levy.slurm       # constant-sigma 
 - Check the "Fit health" line at the top of the report. It flags any run whose daily log density
   goes above 8, which can only happen if a fit has collapsed. That is how the off-grid density bug
   described in [oil-price-model.md](oil-price-model.md) was caught.
+- A venv built with `uv venv --python 3.12` can link to the login node's `/usr/bin/python3.12`,
+  which compute nodes don't have; every task then fails in under a second with "No such file or
+  directory". Set `UV_PYTHON_INSTALL_DIR` to scratch and pass `--python-preference only-managed`
+  (as `cluster/iridis/cost_of_living_env.sh` does), then check `readlink -f .venv-*/bin/python`.
+- A pipe hides a failed setup step: `bash env.sh | tail -3 && sbatch ...` submits even when the
+  environment build failed, because the pipeline's status is `tail`'s. Build first, then submit.
+
+## Cost-of-living basket model
+
+`cluster/iridis/cost_of_living.slurm` runs one fit per array task (`--array=0-10`: the 2026 and
+2022 event tests, the all-data fit and folds 0–7). It needs `data/raw/` and the stored daily Lévy
+fits `runs/levy/rolling-*.json` copied up, and its own environment
+(`bash cluster/iridis/cost_of_living_env.sh`, numpy, pandas, scipy, jax, numpyro; no PyTorch).
+Each fit took 1–2 minutes on 4 cores. See [cost-of-living.md](cost-of-living.md).
