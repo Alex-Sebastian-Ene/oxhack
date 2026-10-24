@@ -8,6 +8,8 @@ code lands. Nothing else is shared state. The team list lives in `coord/team.tom
 |---|---|---|---|---|
 | Seb | `[seb-claude]` | `agent:seb` | TODO | TODO |
 | Eileen | `[eileen-claude]` | `agent:eileen` | TODO | TODO |
+| Yasmin | `[yasmin-claude]` | `agent:yasmin` | TODO | TODO |
+| Yasmin | `[yasmin-claude]` | `agent:yasmin` | TODO | TODO |
 | TODO | `[<handle>-claude]` | `agent:<handle>` | TODO | TODO |
 
 Shared files (`README.md`, `AGENTS.md`, `CLAUDE.md`, `coord/`, `docs/design.md`, project
