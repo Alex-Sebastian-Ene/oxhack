@@ -1,0 +1,253 @@
+{
+ "material": "fertiliser",
+ "unit": "kt N in ammonia (shares use an assumed world total of 150,000 kt; USGS 2022: 145,000)",
+ "year": 2025,
+ "source": "Likely USGS MCS 2026 estimates via https://worldpopulationreview.com/country-rankings/ammonia-production-by-country ; US 14,000 confirmed in https://pubs.usgs.gov/periodicals/mcs2026/mcs2026-nitrogen.pdf (search snippets, accessed 2026-10-24)",
+ "producers": [
+  {
+   "iso3": "CHN",
+   "name": "China",
+   "value": 49000,
+   "share": 0.327
+  },
+  {
+   "iso3": "IND",
+   "name": "India",
+   "value": 15000,
+   "share": 0.1
+  },
+  {
+   "iso3": "RUS",
+   "name": "Russia",
+   "value": 15000,
+   "share": 0.1
+  },
+  {
+   "iso3": "USA",
+   "name": "United States",
+   "value": 14000,
+   "share": 0.093
+  },
+  {
+   "iso3": "IDN",
+   "name": "Indonesia",
+   "value": 6000,
+   "share": 0.04
+  },
+  {
+   "iso3": "SAU",
+   "name": "Saudi Arabia",
+   "value": 5200,
+   "share": 0.035
+  },
+  {
+   "iso3": "IRN",
+   "name": "Iran",
+   "value": 4800,
+   "share": 0.032
+  },
+  {
+   "iso3": "EGY",
+   "name": "Egypt",
+   "value": 4000,
+   "share": 0.027
+  },
+  {
+   "iso3": "CAN",
+   "name": "Canada",
+   "value": 3800,
+   "share": 0.025
+  },
+  {
+   "iso3": "TTO",
+   "name": "Trinidad and Tobago",
+   "value": 3300,
+   "share": 0.022
+  },
+  {
+   "iso3": "QAT",
+   "name": "Qatar",
+   "value": 3000,
+   "share": 0.02
+  }
+ ],
+ "inputs": [
+  {
+   "id": "natural_gas",
+   "name": "Natural gas",
+   "unit": "share of world gas production (41,245 TWh)",
+   "producers": [
+    {
+     "iso3": "USA",
+     "share": 0.25
+    },
+    {
+     "iso3": "RUS",
+     "share": 0.153
+    },
+    {
+     "iso3": "IRN",
+     "share": 0.064
+    },
+    {
+     "iso3": "CHN",
+     "share": 0.06
+    },
+    {
+     "iso3": "CAN",
+     "share": 0.047
+    },
+    {
+     "iso3": "QAT",
+     "share": 0.044
+    },
+    {
+     "iso3": "AUS",
+     "share": 0.036
+    },
+    {
+     "iso3": "SAU",
+     "share": 0.029
+    }
+   ],
+   "source": "Energy Institute Statistical Review 2025 via OWID https://raw.githubusercontent.com/owid/energy-data/master/owid-energy-data.csv (shares computed)",
+   "year": 2024
+  },
+  {
+   "id": "urea",
+   "name": "Urea (imported)",
+   "unit": "import origins only",
+   "producers": [],
+   "source": "see per-link sources",
+   "year": 2025
+  }
+ ],
+ "links": [
+  {
+   "to": "IND",
+   "input": "urea",
+   "from": "OMN",
+   "share": 0.46,
+   "basis": "share of India's urea imports (5.65 Mt); imports ~20% of use",
+   "year": 2025,
+   "source": "https://india.mongabay.com/2026/03/west-asia-conflict-raises-concerns-over-urea-supply-in-india/"
+  },
+  {
+   "to": "IND",
+   "input": "urea",
+   "from": "RUS",
+   "share": 0.16,
+   "basis": "share of India's urea imports, FY2024-25",
+   "year": 2025,
+   "source": "https://india.mongabay.com/2026/03/west-asia-conflict-raises-concerns-over-urea-supply-in-india/"
+  },
+  {
+   "to": "IND",
+   "input": "urea",
+   "from": "SAU",
+   "share": 0.09,
+   "basis": "share of India's urea imports, FY2024-25",
+   "year": 2025,
+   "source": "https://india.mongabay.com/2026/03/west-asia-conflict-raises-concerns-over-urea-supply-in-india/"
+  },
+  {
+   "to": "IND",
+   "input": "urea",
+   "from": "QAT",
+   "share": 0.066,
+   "basis": "share of India's urea imports, FY2024-25",
+   "year": 2025,
+   "source": "https://fertiliserindia.com/fertilizer-imports-india-2024-25-trends/"
+  },
+  {
+   "to": "IND",
+   "input": "urea",
+   "from": "ARE",
+   "share": 0.06,
+   "basis": "share of India's urea imports, FY2024-25",
+   "year": 2025,
+   "source": "https://india.mongabay.com/2026/03/west-asia-conflict-raises-concerns-over-urea-supply-in-india/"
+  },
+  {
+   "to": "USA",
+   "input": "urea",
+   "from": "RUS",
+   "share": 0.36,
+   "basis": "share of US urea import volume (5.23 Mt)",
+   "year": 2025,
+   "source": "https://wits.worldbank.org/trade/comtrade/en/country/USA/year/2025/tradeflow/Imports/partner/ALL/product/310210"
+  },
+  {
+   "to": "USA",
+   "input": "urea",
+   "from": "QAT",
+   "share": 0.215,
+   "basis": "share of US urea import volume",
+   "year": 2025,
+   "source": "https://wits.worldbank.org/trade/comtrade/en/country/USA/year/2025/tradeflow/Imports/partner/ALL/product/310210"
+  },
+  {
+   "to": "USA",
+   "input": "urea",
+   "from": "CAN",
+   "share": 0.109,
+   "basis": "share of US urea import value",
+   "year": 2025,
+   "source": "https://gtaic.ai/market-reports/urea-fertilizers-market-usa-guide-in-2026"
+  },
+  {
+   "to": "USA",
+   "input": "urea",
+   "from": "DZA",
+   "share": 0.079,
+   "basis": "share of US urea import volume",
+   "year": 2025,
+   "source": "https://wits.worldbank.org/trade/comtrade/en/country/USA/year/2025/tradeflow/Imports/partner/ALL/product/310210"
+  },
+  {
+   "to": "USA",
+   "input": "urea",
+   "from": "SAU",
+   "share": 0.055,
+   "basis": "share of US urea import volume",
+   "year": 2025,
+   "source": "https://wits.worldbank.org/trade/comtrade/en/country/USA/year/2025/tradeflow/Imports/partner/ALL/product/310210"
+  },
+  {
+   "to": "BRA",
+   "input": "urea",
+   "from": "OMN",
+   "share": 0.18,
+   "basis": "approx share of Brazil's urea imports, Jan-Sep 2024",
+   "year": 2024,
+   "source": "https://www.argusmedia.com/en/news-and-insights/latest-market-news/2616388-brazil-s-urea-imports-up-17-pc-in-september"
+  },
+  {
+   "to": "BRA",
+   "input": "urea",
+   "from": "QAT",
+   "share": 0.18,
+   "basis": "approx share of Brazil's urea imports, Jan-Sep 2024",
+   "year": 2024,
+   "source": "https://www.argusmedia.com/en/news-and-insights/latest-market-news/2616388-brazil-s-urea-imports-up-17-pc-in-september"
+  },
+  {
+   "to": "BRA",
+   "input": "urea",
+   "from": "NGA",
+   "share": 0.18,
+   "basis": "approx share of Brazil's urea imports, Jan-Sep 2024",
+   "year": 2024,
+   "source": "https://www.argusmedia.com/en/news-and-insights/latest-market-news/2616388-brazil-s-urea-imports-up-17-pc-in-september"
+  }
+ ],
+ "oil_exposure": {
+  "notes": "Gas is commonly cited at 70-90% of ammonia cash cost (not re-checked). Gulf countries were 36% of world urea exports in 2023-25 (IFPRI); FAO: a third of urea and 20% of ammonia exports pass Hormuz. 2026: Gulf offers withdrawn; NOLA urea +17% soon after the war began; China export ban in March, ~1.5 Mt quotas in late May; Gulf shipments still largely halted after 6+ months while world N+P exports fell only ~9% (IFPRI).",
+  "sources": [
+   "https://www.tfi.org/media-center/2026/03/04/tfi-strait-of-hormuz-closure-impacts-to-fertilizer/",
+   "https://www.ifpri.org/blog/how-are-fertilizer-markets-coping-with-the-continued-closure-of-the-strait-of-hormuz/",
+   "https://openknowledge.fao.org/server/api/core/bitstreams/1aafb5d8-39d1-481a-b1f8-25facaec3051/content",
+   "https://weforum.org/stories/2026/03/fertilizer-urea-middle-east-war-food-security"
+  ]
+ }
+}
