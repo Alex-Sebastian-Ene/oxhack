@@ -6,8 +6,8 @@ The UI sketches for these live on Ed's design canvas (ask Ed for the link).
 ## What we must ship (core)
 
 1. **Near-live strait view.** AIS tankers on a map of Hormuz (free AIS there lags by days; see
-   Data), with a gate line across the strait that
-   counts each crossing once, by direction and laden or empty.
+   Data), with a gate line across the strait that counts each crossing once, by direction and
+   laden or empty.
 2. **Flow estimate.** Barrels per day, split into seen and hidden, with a range and the EIA
    baseline next to it.
 3. **What-if chain.** A flow slider that moves oil price → pump prices → CPI → Fed rate →
@@ -23,7 +23,7 @@ Ordered roughly by impact for effort. "Dynamic" means something visibly changes 
 | 1 | **Ghost hunter** | A radar image of a ship that has no AIS signal, matched and added to hidden flow live | The core claim made visible: we can see ships that hide | M–L |
 | 2 | **Judge mode** | QR code on the slide; judges open the phone view and drag the slider; the big screen shows the room's average scenario | They play with it instead of watching it | M |
 | 3 | **Number receipts** | Click any number: inputs → steps → output, plus the command to rerun it | Trust, and it answers "where did that come from?" before they ask | S–M |
-| 4 | **Replay + backtest** | Press play on a past shock (2019 tanker attacks, Abqaiq, Red Sea); ships, prices and rates move day by day; model vs actual table | Proves the chain is not made up | M |
+| 4 | **Replay + backtest** | Press play on a past shock (the 2026 closure, 2019 tanker attacks, Abqaiq, Red Sea); ships, prices and rates move day by day; model vs actual table | Proves the chain is not made up | M |
 | 5 | **Draught scale** | A tanker sits deeper when full: before/after draught turns into barrels | Simple, clever physics; easy to explain | S |
 | 6 | **Spoofing detector** | Tracks that jump onto land, move impossibly fast or circle; a heat map of suspect areas | Shows the data is adversarial, and that we handle it | M |
 | 7 | **Model vs market** | Our Fed probabilities next to prediction-market or futures pricing; our Brent move next to the futures curve | A live, falsifiable claim | S–M |
@@ -40,10 +40,16 @@ Ordered roughly by impact for effort. "Dynamic" means something visibly changes 
 | 18 | **Alerts + morning brief** | Rule builder ("tell me when hidden flow > X") and a written or spoken daily brief | Product feel; shows how it would be used daily | S |
 | 19 | **Us vs the analysts** | Our flow estimate on one chart with Vortexa, Argus, Kpler, Windward and the US government figure, each dated | The real numbers disagree by 3x in 2026; we show why, with receipts | S–M |
 
-**Suggested pick:** core + Ghost hunter (1) + Judge mode (2) + Receipts (3) + Us vs the
-analysts (19), which is cheap and ties us to the 2026 news. If Ghost hunter
-cannot be made real in time, swap it for Replay + backtest (4) and show the dark-ship detection
-on one recorded example, labelled as cached.
+**Suggested pick** (on top of the core):
+
+| Pick | Why this one | Canvas | If it slips |
+|---|---|---|---|
+| Ghost hunter (1) + radar snapshot maths | It *is* the product: the number nobody else can see | C, M, P | One recorded dark ship, labelled cached |
+| Us vs the analysts (19) | Cheap, and ties us to the 2026 news | L | Static table of published estimates |
+| Number receipts (3) | Answers "where's that from?" before judges ask | G | Source + timestamp on hover only |
+| Judge mode (2) | Judges play instead of watch | J, D | Presenter drags the slider (B) |
+
+Replay + backtest (4) is the first reserve: it proves the chain, and the 2026 closure is the case.
 
 ## Demo moments (three minutes)
 
@@ -52,7 +58,7 @@ on one recorded example, labelled as cached.
 3. QR code: judges drag the strait shut on their phones; the big screen ripples through Brent,
    inflation, the Fed and a household's monthly bill.
 4. Click a number on screen: the receipt shows exactly where it came from.
-5. Close on the backtest: "on the 2019 tanker attacks, we were within X% of what happened".
+5. Close on the backtest: "replaying the 2026 closure, we were within X% of what happened".
 
 ## Sketches on the canvas
 
