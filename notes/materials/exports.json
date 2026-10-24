@@ -1,0 +1,573 @@
+[
+ {
+  "id": "steel",
+  "name": "Steel (finished + semi-finished)",
+  "unit": "Mt",
+  "year": 2025,
+  "source": "https://worldsteel.org/data/world-steel-in-figures/world-steel-in-figures-2026/",
+  "exporters": [
+   {
+    "iso3": "CHN",
+    "value": 133.6,
+    "share": null
+   },
+   {
+    "iso3": "JPN",
+    "value": 29.8,
+    "share": null
+   },
+   {
+    "iso3": "KOR",
+    "value": 27.9,
+    "share": null
+   },
+   {
+    "iso3": "DEU",
+    "value": 20.9,
+    "share": null
+   },
+   {
+    "iso3": "TUR",
+    "value": 17.5,
+    "share": null
+   },
+   {
+    "iso3": "RUS",
+    "value": 15.2,
+    "share": null
+   }
+  ],
+  "flows": [],
+  "note_2026": "2025 world total not found (2024: 449.2 Mt, China 26%). No bilateral flows confirmed."
+ },
+ {
+  "id": "iron_ore",
+  "name": "Iron ore",
+  "unit": "Mt seaborne",
+  "year": 2025,
+  "source": "https://www.hellenicshippingnews.com/?p=1117516",
+  "exporters": [
+   {
+    "iso3": "AUS",
+    "value": 945.5,
+    "share": 0.552
+   },
+   {
+    "iso3": "BRA",
+    "value": 400.7,
+    "share": 0.234
+   },
+   {
+    "iso3": "CAN",
+    "value": 61.2,
+    "share": 0.036
+   },
+   {
+    "iso3": "ZAF",
+    "value": 55.7,
+    "share": 0.033
+   },
+   {
+    "iso3": "IND",
+    "value": 28.9,
+    "share": 0.017
+   }
+  ],
+  "flows": [
+   {
+    "from": "AUS",
+    "to": "CHN",
+    "value": 830.9,
+    "share_of_exporter": 0.85,
+    "year": 2025,
+    "source": "https://www.spglobal.com/energy/en/news-research/latest-news/metals/071026-global-iron-ore-trade-hits-record-high-driven-by-chinese-demand-australian-exports"
+   },
+   {
+    "from": "BRA",
+    "to": "CHN",
+    "value": 302.2,
+    "share_of_exporter": 0.73,
+    "year": 2025,
+    "source": "https://www.spglobal.com/energy/en/news-research/latest-news/metals/071026-global-iron-ore-trade-hits-record-high-driven-by-chinese-demand-australian-exports"
+   }
+  ],
+  "note_2026": "No confirmed Hormuz effect."
+ },
+ {
+  "id": "coking_coal",
+  "name": "Coking coal",
+  "unit": "Mt",
+  "year": 2024,
+  "source": "https://www.iea.org/reports/coal-mid-year-update-2025/trade",
+  "exporters": [
+   {
+    "iso3": "AUS",
+    "value": 153,
+    "share": 0.415
+   },
+   {
+    "iso3": "MNG",
+    "value": 56,
+    "share": 0.152
+   },
+   {
+    "iso3": "USA",
+    "value": 52,
+    "share": 0.141
+   },
+   {
+    "iso3": "RUS",
+    "value": 49,
+    "share": 0.133
+   },
+   {
+    "iso3": "CAN",
+    "value": 30.5,
+    "share": 0.083
+   }
+  ],
+  "flows": [
+   {
+    "from": "MNG",
+    "to": "CHN",
+    "value": 56.8,
+    "share_of_importer": 0.46,
+    "year": 2024,
+    "source": "https://www.spglobal.com/energy/en/news-research/latest-news/coal/012225-chinas-met-coal-import-up-19-yoy-imports-from-australia-cross-10-million-mt"
+   },
+   {
+    "from": "RUS",
+    "to": "CHN",
+    "value": 30.5,
+    "share_of_exporter": 0.62,
+    "year": 2024,
+    "source": "https://www.spglobal.com/energy/en/news-research/latest-news/coal/012225-chinas-met-coal-import-up-19-yoy-imports-from-australia-cross-10-million-mt"
+   },
+   {
+    "from": "AUS",
+    "to": "IND",
+    "value": 34,
+    "share_of_exporter": 0.24,
+    "year": 2025,
+    "source": "https://www.bigmint.co/insights/detail/india-s-coking-coal-imports-increase-by-10-y-o-y-in-cy-25-bigmint-report-717170"
+   },
+   {
+    "from": "USA",
+    "to": "CHN",
+    "value": 10.7,
+    "share_of_exporter": 0.21,
+    "year": 2024,
+    "source": "https://gmk.center/en/news/china-increased-coking-coal-imports-to-a-record-level-in-2024/"
+   },
+   {
+    "from": "AUS",
+    "to": "CHN",
+    "value": 10.4,
+    "share_of_exporter": 0.07,
+    "year": 2024,
+    "source": "https://www.spglobal.com/energy/en/news-research/latest-news/coal/012225-chinas-met-coal-import-up-19-yoy-imports-from-australia-cross-10-million-mt"
+   },
+   {
+    "from": "RUS",
+    "to": "IND",
+    "value": 9.7,
+    "year": 2025,
+    "source": "https://www.bigmint.co/insights/detail/india-s-coking-coal-imports-increase-by-10-y-o-y-in-cy-25-bigmint-report-717170"
+   },
+   {
+    "from": "USA",
+    "to": "IND",
+    "value": 9.3,
+    "year": 2025,
+    "source": "https://www.bigmint.co/insights/detail/india-s-coking-coal-imports-increase-by-10-y-o-y-in-cy-25-bigmint-report-717170"
+   }
+  ],
+  "note_2026": "No Hormuz effect found."
+ },
+ {
+  "id": "scrap",
+  "name": "Steel scrap",
+  "unit": "Mt",
+  "year": 2025,
+  "source": "https://www.steelorbis.com/steel-news/latest-news/bir-global-recycled-steel-consumption-rises-despite-lower-crude-steel-output-in-2025-1456577.htm",
+  "exporters": [
+   {
+    "iso3": "USA",
+    "value": 11.767,
+    "share": null
+   },
+   {
+    "iso3": "JPN",
+    "value": 7.711,
+    "share": null
+   },
+   {
+    "iso3": "GBR",
+    "value": 6.532,
+    "share": null
+   },
+   {
+    "iso3": "CAN",
+    "value": 4.28,
+    "share": null
+   }
+  ],
+  "flows": [
+   {
+    "from": "USA",
+    "to": "TUR",
+    "value": 3.6,
+    "share_of_exporter": 0.31,
+    "share_of_importer": 0.19,
+    "year": 2025,
+    "source": "https://gmk.center/en/news/global-scrap-consumption-rose-by-4-5-y-y-in-2025-bir/"
+   },
+   {
+    "from": "NLD",
+    "to": "TUR",
+    "value": 2.8,
+    "share_of_importer": 0.15,
+    "year": 2025,
+    "source": "https://gmk.center/en/news/global-scrap-consumption-rose-by-4-5-y-y-in-2025-bir/"
+   },
+   {
+    "from": "JPN",
+    "to": "VNM",
+    "value": 1.92,
+    "share_of_exporter": 0.43,
+    "year": 2025,
+    "period": "Jan-Jul 2025",
+    "source": "https://www.steelorbis.com/steel-news/latest-news/japanssteelscrapexportsup-178-percent-in-january-july-2025-1407113.htm"
+   },
+   {
+    "from": "JPN",
+    "to": "KOR",
+    "value": 0.75,
+    "share_of_exporter": 0.17,
+    "year": 2025,
+    "period": "Jan-Jul 2025",
+    "source": "https://www.steelorbis.com/steel-news/latest-news/japanssteelscrapexportsup-178-percent-in-january-july-2025-1407113.htm"
+   },
+   {
+    "from": "JPN",
+    "to": "BGD",
+    "value": 0.74,
+    "share_of_exporter": 0.17,
+    "year": 2025,
+    "period": "Jan-Jul 2025",
+    "source": "https://www.steelorbis.com/steel-news/latest-news/japanssteelscrapexportsup-178-percent-in-january-july-2025-1407113.htm"
+   }
+  ],
+  "note_2026": "EU-27 extra-EU exports were 16.7 Mt in 2025, the largest of any exporter (no ISO code, so not on the map). EU proposes banning ferrous scrap exports to India, Pakistan and Bangladesh from May 2027."
+ },
+ {
+  "id": "jet_fuel",
+  "name": "Jet fuel / kerosene",
+  "unit": "kb/d seaborne",
+  "year": 2025,
+  "source": "https://windward.ai/blog/jet-fuel-crisis-accelerates-as-kuwait-strikes-remove-10-of-seaborne-supply/",
+  "exporters": [
+   {
+    "iso3": "KWT",
+    "value": 260,
+    "share": 0.147
+   },
+   {
+    "iso3": "KOR",
+    "value": 247,
+    "share": 0.14
+   },
+   {
+    "iso3": "USA",
+    "value": 219,
+    "share": null
+   },
+   {
+    "iso3": "NGA",
+    "value": 89,
+    "share": 0.05
+   },
+   {
+    "iso3": "OMN",
+    "value": 50,
+    "share": 0.028
+   }
+  ],
+  "flows": [
+   {
+    "from": "KOR",
+    "to": "USA",
+    "value": 80,
+    "share_of_exporter": 0.32,
+    "share_of_importer": 0.86,
+    "year": 2025,
+    "source": "https://gcaptain.com/south-korean-jet-fuel-exports-slowing-warns-kpler/"
+   },
+   {
+    "from": "USA",
+    "to": "MEX",
+    "value": 50,
+    "share_of_exporter": 0.23,
+    "year": 2025,
+    "source": "https://www.eia.gov/todayinenergy/detail.php?id=67304"
+   },
+   {
+    "from": "USA",
+    "to": "CAN",
+    "value": 42,
+    "share_of_exporter": 0.19,
+    "year": 2025,
+    "source": "https://www.eia.gov/todayinenergy/detail.php?id=67304"
+   },
+   {
+    "from": "USA",
+    "to": "PAN",
+    "value": 18,
+    "share_of_exporter": 0.08,
+    "year": 2025,
+    "source": "https://www.eia.gov/todayinenergy/detail.php?id=67304"
+   },
+   {
+    "from": "USA",
+    "to": "GBR",
+    "value": 13,
+    "share_of_exporter": 0.06,
+    "year": 2025,
+    "source": "https://www.eia.gov/todayinenergy/detail.php?id=67304"
+   },
+   {
+    "from": "KWT",
+    "to": "GBR",
+    "value": null,
+    "share_of_importer": 0.38,
+    "year": 2025,
+    "source": "https://www.spglobal.com/energy/en/news-research/latest-news/crude-oil/031925-middle-east-diesel-exports-to-europe-slump-to-3-year-low-with-uae-out-of-market"
+   }
+  ],
+  "note_2026": "Hormuz closure removed about 21% of global seaborne jet supply (Kpler); jet exports fell 30% to 1.3 mb/d in April 2026; Europe replaced only about half the lost Mideast jet (IEA)."
+ },
+ {
+  "id": "crude_oil",
+  "name": "Crude oil",
+  "unit": "Mt",
+  "year": 2024,
+  "source": "https://statbase.org/datasets/energy/oil-exports-trade-movements/ (Energy Institute Statistical Review 2025)",
+  "exporters": [
+   {
+    "iso3": "SAU",
+    "value": 320.6,
+    "share": null
+   },
+   {
+    "iso3": "RUS",
+    "value": 243.1,
+    "share": null
+   },
+   {
+    "iso3": "CAN",
+    "value": 219.4,
+    "share": null
+   },
+   {
+    "iso3": "USA",
+    "value": 198.3,
+    "share": null
+   },
+   {
+    "iso3": "ARE",
+    "value": 182.7,
+    "share": null
+   },
+   {
+    "iso3": "IRQ",
+    "value": 179.6,
+    "share": null
+   }
+  ],
+  "flows": [
+   {
+    "from": "CAN",
+    "to": "USA",
+    "value": 204,
+    "share_of_exporter": 0.93,
+    "year": 2024,
+    "unit_note": "4.1 mb/d converted",
+    "source": "https://www.eia.gov/todayinenergy/detail.php?id=65825"
+   },
+   {
+    "from": "RUS",
+    "to": "CHN",
+    "value": 100,
+    "share_of_importer": 0.192,
+    "year": 2025,
+    "source": "https://www.ourchinastory.com/en/16561"
+   },
+   {
+    "from": "RUS",
+    "to": "IND",
+    "value": 87,
+    "share_of_importer": 0.36,
+    "year": 2024,
+    "unit_note": "about 1.75 mb/d converted",
+    "source": "https://www.mees.com/2025/2/28/economics-finance/india-crude-imports-russia-cements-dominant-role-for-2024/8c5d8ff0-f5df-11ef-a37f-8dacae78daea"
+   },
+   {
+    "from": "SAU",
+    "to": "CHN",
+    "value": 78,
+    "share_of_importer": 0.14,
+    "year": 2025,
+    "source": "https://www.ourchinastory.com/en/16561"
+   },
+   {
+    "from": "MYS",
+    "to": "CHN",
+    "value": 65,
+    "share_of_importer": 0.11,
+    "year": 2025,
+    "unit_note": "mostly transshipped Iranian crude",
+    "source": "https://www.energypolicy.columbia.edu/where-china-gets-its-oil-crude-imports-in-2025-reveal-stockpiling-and-changing-fortunes-of-certain-suppliers-including-those-sanctioned/"
+   },
+   {
+    "from": "IRQ",
+    "to": "CHN",
+    "value": 64,
+    "share_of_importer": 0.113,
+    "year": 2025,
+    "source": "https://www.ourchinastory.com/en/16561"
+   }
+  ],
+  "note_2026": "IEA: Gulf oil exports fell to 8.7 mb/d in March 2026 (from 24 mb/d pre-war), recovering to 13.9 mb/d of crude in September; Yanbu and Fujairah bypass flows peaked at 7.8 mb/d in June."
+ },
+ {
+  "id": "lng",
+  "name": "LNG",
+  "unit": "Mt",
+  "year": 2025,
+  "source": "https://www.igu.org/press-releases/world-lng-report-2026",
+  "exporters": [
+   {
+    "iso3": "USA",
+    "value": 110.74,
+    "share": 0.253
+   },
+   {
+    "iso3": "QAT",
+    "value": 81.51,
+    "share": 0.187
+   },
+   {
+    "iso3": "AUS",
+    "value": 80.32,
+    "share": 0.184
+   },
+   {
+    "iso3": "RUS",
+    "value": 30.5,
+    "share": 0.07
+   }
+  ],
+  "flows": [
+   {
+    "from": "AUS",
+    "to": "JPN",
+    "value": 22.2,
+    "share_of_exporter": 0.34,
+    "year": 2025,
+    "period": "Jan-Oct 2025",
+    "source": "https://www.hellenicshippingnews.com/lng-shipping-australia-losing-market-share/"
+   },
+   {
+    "from": "AUS",
+    "to": "CHN",
+    "value": 17.2,
+    "share_of_exporter": 0.26,
+    "year": 2025,
+    "period": "Jan-Oct 2025",
+    "source": "https://www.hellenicshippingnews.com/lng-shipping-australia-losing-market-share/"
+   },
+   {
+    "from": "USA",
+    "to": "NLD",
+    "value": 13.5,
+    "share_of_exporter": 0.12,
+    "year": 2025,
+    "unit_note": "646 Bcf converted",
+    "source": "https://lngprime.com/?p=190375"
+   },
+   {
+    "from": "AUS",
+    "to": "KOR",
+    "value": 12.5,
+    "share_of_exporter": 0.19,
+    "year": 2025,
+    "period": "Jan-Oct 2025",
+    "source": "https://www.hellenicshippingnews.com/lng-shipping-australia-losing-market-share/"
+   },
+   {
+    "from": "USA",
+    "to": "FRA",
+    "value": 11.1,
+    "share_of_exporter": 0.1,
+    "year": 2025,
+    "unit_note": "533 Bcf converted",
+    "source": "https://lngprime.com/?p=190375"
+   },
+   {
+    "from": "QAT",
+    "to": "CHN",
+    "value": 8.4,
+    "share_of_exporter": 0.23,
+    "year": 2025,
+    "period": "Jan-May 2025",
+    "source": "https://www.spglobal.com/energy/en/news-research/latest-news/natural-gas/052025-qatars-kaabi-says-in-discussions-with-china-india-for-additional-lng-sales"
+   },
+   {
+    "from": "QAT",
+    "to": "IND",
+    "value": 5.1,
+    "share_of_exporter": 0.14,
+    "year": 2025,
+    "period": "Jan-May 2025",
+    "source": "https://www.spglobal.com/energy/en/news-research/latest-news/natural-gas/052025-qatars-kaabi-says-in-discussions-with-china-india-for-additional-lng-sales"
+   }
+  ],
+  "note_2026": "Hormuz closed since 28 Feb 2026, cutting about 20% of global LNG supply (EIA); Europe took 63% of its LNG from the US in Q1 2026."
+ },
+ {
+  "id": "aluminium",
+  "name": "Primary aluminium (HS 7601)",
+  "unit": "USD bn",
+  "year": 2024,
+  "source": "https://oec.world/en/profile/hs/raw-aluminium",
+  "exporters": [
+   {
+    "iso3": "CAN",
+    "value": 8.27,
+    "share": null
+   },
+   {
+    "iso3": "ARE",
+    "value": 7.36,
+    "share": null
+   },
+   {
+    "iso3": "RUS",
+    "value": 7.26,
+    "share": null
+   }
+  ],
+  "flows": [
+   {
+    "from": "CAN",
+    "to": "USA",
+    "value": null,
+    "share_of_exporter": 0.91,
+    "year": 2024,
+    "unit_note": "91% of value of all Canadian aluminium exports",
+    "source": "https://natural-resources.canada.ca/minerals-mining/mining-data-statistics-analysis/minerals-metals-facts/aluminum-facts"
+   }
+  ],
+  "note_2026": "World total not found. Alloyed sub-code 760120 (WITS 2024): NOR $3.62bn, CAN $3.33bn, BHR $2.77bn, MYS $2.75bn."
+ }
+]
