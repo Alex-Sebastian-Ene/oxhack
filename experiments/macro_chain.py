@@ -497,7 +497,9 @@ def replay(origin: str = REPLAY_ORIGIN) -> None:
              "- **lost 0:** a genuine forecast with GARCH-CGMY oil paths and no scenario: what a forecaster without the "
              "flow link would have said.",
              "- **lost 82:** GARCH-CGMY paths plus the flow scenario of the 82 points lost in 2026. **In sample for "
-             "the flow link:** its premium was calibrated on this same event (`notes/flow-price-link.md`), so it shows "
+             "the flow link:** its premium curve (`notes/flow-premium.csv`, each path drawn within the curve's 90% "
+             "band) was fitted to this same event; Bab el-Mandeb 2023-24 checks only its sign and the role of "
+             "rerouting out of sample (`notes/flow-events.md`). So it shows "
              "how the chain composes, not that the flow link forecasts.", "",
              "Mean and central 90% interval, in each series' units (100 × log change ≈ %, pp for rates). ✓ = the "
              "actual is inside the 90% interval.", "",
@@ -537,7 +539,7 @@ def replay(origin: str = REPLAY_ORIGIN) -> None:
             a = actual[nm]
             rows.append(f"{key},{grp},{lost:g},{h},{x.mean():.4f},{q05:.4f},{q50:.4f},{q95:.4f},"
                         f"{'' if not np.isfinite(a) else f'{a:.4f}'},{unit},{validated},{origin},"
-                        "experiments/macro_chain.py replay (oil: GARCH-CGMY + 2026 closure premium; "
+                        "experiments/macro_chain.py replay (oil: GARCH-CGMY + notes/flow-premium.csv premium sampled in its band; "
                         f"models: {'+'.join(members)}),{idx[last]:%Y-%m},{gen}")
     (NOTES / f"chain-scenarios{suffix()}.csv").write_text("\n".join(rows) + "\n", encoding="utf-8")
     print(f"wrote {NOTES / f'chain-replay-2026{suffix()}.md'} and {NOTES / f'chain-scenarios{suffix()}.csv'}")
