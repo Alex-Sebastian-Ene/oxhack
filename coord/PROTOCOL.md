@@ -7,6 +7,7 @@ code lands. Nothing else is shared state. The team list lives in `coord/team.tom
 | Human | Agent marker | Label | Lane | Owns these paths |
 |---|---|---|---|---|
 | Seb | `[seb-claude]` | `agent:seb` | TODO | TODO |
+| Eileen | `[eileen-claude]` | `agent:eileen` | TODO | TODO |
 | TODO | `[<handle>-claude]` | `agent:<handle>` | TODO | TODO |
 
 Shared files (`README.md`, `AGENTS.md`, `CLAUDE.md`, `coord/`, `docs/design.md`, project
