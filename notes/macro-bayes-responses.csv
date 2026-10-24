@@ -1,0 +1,529 @@
+series,group,shock,months_ahead,mean,q05,q95,p_positive,unit,source,fitted_to,generated
+us_cpi,inflation,brent_up_10pct,1,0.1239,0.0964,0.1513,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_cpi,inflation,brent_up_10pct,2,0.2226,0.1743,0.2691,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_cpi,inflation,brent_up_10pct,3,0.2476,0.1896,0.3036,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_cpi,inflation,brent_up_10pct,4,0.2530,0.1858,0.3193,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_cpi,inflation,brent_up_10pct,5,0.2725,0.2041,0.3457,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_cpi,inflation,brent_up_10pct,6,0.2787,0.2015,0.3556,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_cpi,inflation,brent_up_10pct,7,0.2964,0.2124,0.3793,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_cpi,inflation,brent_up_10pct,8,0.3210,0.2343,0.4091,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_cpi,inflation,brent_up_10pct,9,0.3261,0.2297,0.4232,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_cpi,inflation,brent_up_10pct,10,0.3286,0.2316,0.4301,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_cpi,inflation,brent_up_10pct,11,0.3392,0.2335,0.4486,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_cpi,inflation,brent_up_10pct,12,0.3720,0.2564,0.4934,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_cpi,inflation,brent_down_10pct,1,-0.1149,-0.1468,-0.0856,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_cpi,inflation,brent_down_10pct,2,-0.2062,-0.2611,-0.1567,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_cpi,inflation,brent_down_10pct,3,-0.2291,-0.2877,-0.1755,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_cpi,inflation,brent_down_10pct,4,-0.2338,-0.2932,-0.1757,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_cpi,inflation,brent_down_10pct,5,-0.2515,-0.3150,-0.1888,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_cpi,inflation,brent_down_10pct,6,-0.2568,-0.3226,-0.1938,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_cpi,inflation,brent_down_10pct,7,-0.2731,-0.3437,-0.2042,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_cpi,inflation,brent_down_10pct,8,-0.2957,-0.3688,-0.2221,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_cpi,inflation,brent_down_10pct,9,-0.3000,-0.3768,-0.2231,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_cpi,inflation,brent_down_10pct,10,-0.3020,-0.3834,-0.2179,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_cpi,inflation,brent_down_10pct,11,-0.3114,-0.3955,-0.2263,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_cpi,inflation,brent_down_10pct,12,-0.3413,-0.4325,-0.2507,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_unemp,unemployment,brent_up_10pct,1,-0.0143,-0.0329,0.0043,0.102,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_unemp,unemployment,brent_up_10pct,2,-0.0176,-0.0422,0.0071,0.117,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_unemp,unemployment,brent_up_10pct,3,-0.0508,-0.0861,-0.0183,0.003,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_unemp,unemployment,brent_up_10pct,4,-0.0565,-0.0979,-0.0192,0.007,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_unemp,unemployment,brent_up_10pct,5,-0.0721,-0.1188,-0.0284,0.010,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_unemp,unemployment,brent_up_10pct,6,-0.0865,-0.1412,-0.0360,0.005,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_unemp,unemployment,brent_up_10pct,7,-0.0978,-0.1562,-0.0398,0.005,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_unemp,unemployment,brent_up_10pct,8,-0.0989,-0.1592,-0.0407,0.005,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_unemp,unemployment,brent_up_10pct,9,-0.1157,-0.1810,-0.0480,0.000,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_unemp,unemployment,brent_up_10pct,10,-0.1185,-0.1925,-0.0493,0.000,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_unemp,unemployment,brent_up_10pct,11,-0.1306,-0.2085,-0.0556,0.000,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_unemp,unemployment,brent_up_10pct,12,-0.1264,-0.2056,-0.0468,0.000,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_unemp,unemployment,brent_down_10pct,1,0.0165,-0.0035,0.0394,0.897,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_unemp,unemployment,brent_down_10pct,2,0.0220,-0.0065,0.0568,0.882,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_unemp,unemployment,brent_down_10pct,3,0.0581,0.0164,0.1039,0.998,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_unemp,unemployment,brent_down_10pct,4,0.0658,0.0141,0.1246,0.993,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_unemp,unemployment,brent_down_10pct,5,0.0833,0.0266,0.1499,0.990,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_unemp,unemployment,brent_down_10pct,6,0.0997,0.0319,0.1800,0.995,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_unemp,unemployment,brent_down_10pct,7,0.1127,0.0399,0.1995,0.995,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_unemp,unemployment,brent_down_10pct,8,0.1140,0.0415,0.2078,0.995,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_unemp,unemployment,brent_down_10pct,9,0.1308,0.0515,0.2376,1.000,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_unemp,unemployment,brent_down_10pct,10,0.1342,0.0491,0.2385,1.000,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_unemp,unemployment,brent_down_10pct,11,0.1467,0.0560,0.2589,1.000,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_unemp,unemployment,brent_down_10pct,12,0.1427,0.0479,0.2544,1.000,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_rate,rate,brent_up_10pct,1,0.0026,-0.0013,0.0074,0.870,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_rate,rate,brent_up_10pct,2,0.0061,-0.0011,0.0153,0.907,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_rate,rate,brent_up_10pct,3,0.0094,-0.0013,0.0246,0.920,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_rate,rate,brent_up_10pct,4,0.0103,-0.0029,0.0286,0.877,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_rate,rate,brent_up_10pct,5,0.0131,-0.0028,0.0357,0.892,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_rate,rate,brent_up_10pct,6,0.0143,-0.0042,0.0391,0.892,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_rate,rate,brent_up_10pct,7,0.0154,-0.0047,0.0437,0.870,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_rate,rate,brent_up_10pct,8,0.0166,-0.0053,0.0455,0.877,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_rate,rate,brent_up_10pct,9,0.0179,-0.0050,0.0484,0.873,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_rate,rate,brent_up_10pct,10,0.0189,-0.0049,0.0526,0.863,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_rate,rate,brent_up_10pct,11,0.0191,-0.0054,0.0552,0.865,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_rate,rate,brent_up_10pct,12,0.0206,-0.0043,0.0571,0.868,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_rate,rate,brent_down_10pct,1,-0.0018,-0.0052,0.0011,0.130,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_rate,rate,brent_down_10pct,2,-0.0040,-0.0103,0.0018,0.092,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_rate,rate,brent_down_10pct,3,-0.0064,-0.0163,0.0015,0.080,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_rate,rate,brent_down_10pct,4,-0.0067,-0.0185,0.0037,0.122,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_rate,rate,brent_down_10pct,5,-0.0087,-0.0226,0.0030,0.107,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_rate,rate,brent_down_10pct,6,-0.0094,-0.0267,0.0045,0.107,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_rate,rate,brent_down_10pct,7,-0.0102,-0.0293,0.0049,0.130,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_rate,rate,brent_down_10pct,8,-0.0110,-0.0319,0.0054,0.122,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_rate,rate,brent_down_10pct,9,-0.0120,-0.0368,0.0054,0.128,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_rate,rate,brent_down_10pct,10,-0.0127,-0.0383,0.0056,0.138,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_rate,rate,brent_down_10pct,11,-0.0127,-0.0399,0.0071,0.135,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+us_rate,rate,brent_down_10pct,12,-0.0137,-0.0406,0.0055,0.133,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_cpi,inflation,brent_up_10pct,1,0.0880,0.0540,0.1257,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_cpi,inflation,brent_up_10pct,2,0.1564,0.1091,0.2069,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_cpi,inflation,brent_up_10pct,3,0.1778,0.1279,0.2311,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_cpi,inflation,brent_up_10pct,4,0.1723,0.1192,0.2377,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_cpi,inflation,brent_up_10pct,5,0.2162,0.1476,0.2846,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_cpi,inflation,brent_up_10pct,6,0.2090,0.1404,0.2831,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_cpi,inflation,brent_up_10pct,7,0.2136,0.1400,0.2932,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_cpi,inflation,brent_up_10pct,8,0.2475,0.1718,0.3385,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_cpi,inflation,brent_up_10pct,9,0.2733,0.1800,0.3693,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_cpi,inflation,brent_up_10pct,10,0.2866,0.1847,0.3875,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_cpi,inflation,brent_up_10pct,11,0.3246,0.2168,0.4402,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_cpi,inflation,brent_up_10pct,12,0.3682,0.2561,0.4909,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_cpi,inflation,brent_down_10pct,1,-0.0732,-0.1057,-0.0438,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_cpi,inflation,brent_down_10pct,2,-0.1299,-0.1812,-0.0880,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_cpi,inflation,brent_down_10pct,3,-0.1481,-0.2016,-0.0988,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_cpi,inflation,brent_down_10pct,4,-0.1441,-0.2091,-0.0904,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_cpi,inflation,brent_down_10pct,5,-0.1804,-0.2469,-0.1158,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_cpi,inflation,brent_down_10pct,6,-0.1743,-0.2496,-0.1069,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_cpi,inflation,brent_down_10pct,7,-0.1783,-0.2598,-0.1066,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_cpi,inflation,brent_down_10pct,8,-0.2065,-0.2896,-0.1288,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_cpi,inflation,brent_down_10pct,9,-0.2275,-0.3226,-0.1424,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_cpi,inflation,brent_down_10pct,10,-0.2385,-0.3349,-0.1496,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_cpi,inflation,brent_down_10pct,11,-0.2704,-0.3749,-0.1717,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_cpi,inflation,brent_down_10pct,12,-0.3056,-0.4155,-0.2027,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_unemp,unemployment,brent_up_10pct,1,-0.0016,-0.0044,0.0006,0.133,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_unemp,unemployment,brent_up_10pct,2,-0.0009,-0.0045,0.0022,0.335,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_unemp,unemployment,brent_up_10pct,3,-0.0049,-0.0113,-0.0009,0.022,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_unemp,unemployment,brent_up_10pct,4,-0.0062,-0.0139,-0.0013,0.022,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_unemp,unemployment,brent_up_10pct,5,-0.0111,-0.0223,-0.0044,0.000,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_unemp,unemployment,brent_up_10pct,6,-0.0156,-0.0303,-0.0068,0.000,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_unemp,unemployment,brent_up_10pct,7,-0.0173,-0.0344,-0.0071,0.000,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_unemp,unemployment,brent_up_10pct,8,-0.0190,-0.0368,-0.0078,0.000,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_unemp,unemployment,brent_up_10pct,9,-0.0192,-0.0387,-0.0079,0.000,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_unemp,unemployment,brent_up_10pct,10,-0.0186,-0.0376,-0.0070,0.000,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_unemp,unemployment,brent_up_10pct,11,-0.0177,-0.0365,-0.0066,0.000,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_unemp,unemployment,brent_up_10pct,12,-0.0162,-0.0331,-0.0050,0.000,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_unemp,unemployment,brent_down_10pct,1,0.0065,-0.0028,0.0158,0.868,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_unemp,unemployment,brent_down_10pct,2,0.0036,-0.0101,0.0167,0.665,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_unemp,unemployment,brent_down_10pct,3,0.0215,0.0044,0.0397,0.978,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_unemp,unemployment,brent_down_10pct,4,0.0270,0.0071,0.0495,0.978,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_unemp,unemployment,brent_down_10pct,5,0.0487,0.0239,0.0742,1.000,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_unemp,unemployment,brent_down_10pct,6,0.0682,0.0373,0.0983,1.000,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_unemp,unemployment,brent_down_10pct,7,0.0757,0.0384,0.1081,1.000,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_unemp,unemployment,brent_down_10pct,8,0.0826,0.0438,0.1165,1.000,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_unemp,unemployment,brent_down_10pct,9,0.0836,0.0439,0.1193,1.000,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_unemp,unemployment,brent_down_10pct,10,0.0808,0.0394,0.1192,1.000,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_unemp,unemployment,brent_down_10pct,11,0.0768,0.0355,0.1161,1.000,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_unemp,unemployment,brent_down_10pct,12,0.0707,0.0263,0.1111,1.000,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_rate,rate,brent_up_10pct,1,0.0027,-0.0019,0.0073,0.850,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_rate,rate,brent_up_10pct,2,0.0051,-0.0016,0.0129,0.882,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_rate,rate,brent_up_10pct,3,0.0071,-0.0010,0.0176,0.922,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_rate,rate,brent_up_10pct,4,0.0060,-0.0041,0.0169,0.848,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_rate,rate,brent_up_10pct,5,0.0083,-0.0024,0.0200,0.897,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_rate,rate,brent_up_10pct,6,0.0080,-0.0037,0.0213,0.865,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_rate,rate,brent_up_10pct,7,0.0084,-0.0036,0.0228,0.865,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_rate,rate,brent_up_10pct,8,0.0090,-0.0030,0.0236,0.863,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_rate,rate,brent_up_10pct,9,0.0098,-0.0030,0.0255,0.877,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_rate,rate,brent_up_10pct,10,0.0100,-0.0029,0.0258,0.865,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_rate,rate,brent_up_10pct,11,0.0095,-0.0050,0.0262,0.843,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_rate,rate,brent_up_10pct,12,0.0108,-0.0037,0.0284,0.882,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_rate,rate,brent_down_10pct,1,-0.0023,-0.0068,0.0017,0.150,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_rate,rate,brent_down_10pct,2,-0.0042,-0.0108,0.0017,0.117,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_rate,rate,brent_down_10pct,3,-0.0058,-0.0145,0.0010,0.077,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_rate,rate,brent_down_10pct,4,-0.0051,-0.0150,0.0035,0.152,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_rate,rate,brent_down_10pct,5,-0.0070,-0.0187,0.0020,0.102,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_rate,rate,brent_down_10pct,6,-0.0068,-0.0195,0.0036,0.135,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_rate,rate,brent_down_10pct,7,-0.0072,-0.0214,0.0035,0.135,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_rate,rate,brent_down_10pct,8,-0.0077,-0.0231,0.0034,0.138,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_rate,rate,brent_down_10pct,9,-0.0083,-0.0241,0.0026,0.122,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_rate,rate,brent_down_10pct,10,-0.0084,-0.0245,0.0028,0.135,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_rate,rate,brent_down_10pct,11,-0.0078,-0.0251,0.0049,0.158,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+uk_rate,rate,brent_down_10pct,12,-0.0089,-0.0274,0.0038,0.117,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_cpi,inflation,brent_up_10pct,1,0.1556,0.1045,0.2146,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_cpi,inflation,brent_up_10pct,2,0.2396,0.1656,0.3195,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_cpi,inflation,brent_up_10pct,3,0.2555,0.1766,0.3485,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_cpi,inflation,brent_up_10pct,4,0.2386,0.1505,0.3311,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_cpi,inflation,brent_up_10pct,5,0.2654,0.1724,0.3663,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_cpi,inflation,brent_up_10pct,6,0.2579,0.1623,0.3622,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_cpi,inflation,brent_up_10pct,7,0.2618,0.1526,0.3756,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_cpi,inflation,brent_up_10pct,8,0.3034,0.1876,0.4184,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_cpi,inflation,brent_up_10pct,9,0.3434,0.2203,0.4614,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_cpi,inflation,brent_up_10pct,10,0.3612,0.2277,0.4905,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_cpi,inflation,brent_up_10pct,11,0.3949,0.2458,0.5343,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_cpi,inflation,brent_up_10pct,12,0.4411,0.2919,0.5857,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_cpi,inflation,brent_down_10pct,1,-0.0960,-0.1406,-0.0566,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_cpi,inflation,brent_down_10pct,2,-0.1477,-0.2132,-0.0870,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_cpi,inflation,brent_down_10pct,3,-0.1580,-0.2295,-0.0886,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_cpi,inflation,brent_down_10pct,4,-0.1485,-0.2231,-0.0777,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_cpi,inflation,brent_down_10pct,5,-0.1648,-0.2516,-0.0871,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_cpi,inflation,brent_down_10pct,6,-0.1609,-0.2501,-0.0795,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_cpi,inflation,brent_down_10pct,7,-0.1636,-0.2596,-0.0775,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_cpi,inflation,brent_down_10pct,8,-0.1900,-0.2988,-0.0928,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_cpi,inflation,brent_down_10pct,9,-0.2157,-0.3296,-0.0999,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_cpi,inflation,brent_down_10pct,10,-0.2265,-0.3478,-0.1080,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_cpi,inflation,brent_down_10pct,11,-0.2468,-0.3796,-0.1202,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_cpi,inflation,brent_down_10pct,12,-0.2755,-0.4158,-0.1318,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_unemp,unemployment,brent_up_10pct,1,-0.0009,-0.0048,0.0031,0.330,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_unemp,unemployment,brent_up_10pct,2,-0.0016,-0.0079,0.0050,0.292,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_unemp,unemployment,brent_up_10pct,3,-0.0092,-0.0201,-0.0016,0.022,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_unemp,unemployment,brent_up_10pct,4,-0.0143,-0.0293,-0.0040,0.007,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_unemp,unemployment,brent_up_10pct,5,-0.0228,-0.0425,-0.0085,0.000,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_unemp,unemployment,brent_up_10pct,6,-0.0277,-0.0508,-0.0102,0.000,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_unemp,unemployment,brent_up_10pct,7,-0.0284,-0.0550,-0.0095,0.000,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_unemp,unemployment,brent_up_10pct,8,-0.0298,-0.0586,-0.0098,0.000,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_unemp,unemployment,brent_up_10pct,9,-0.0311,-0.0604,-0.0105,0.000,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_unemp,unemployment,brent_up_10pct,10,-0.0309,-0.0623,-0.0092,0.000,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_unemp,unemployment,brent_up_10pct,11,-0.0330,-0.0646,-0.0097,0.000,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_unemp,unemployment,brent_up_10pct,12,-0.0318,-0.0633,-0.0093,0.005,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_unemp,unemployment,brent_down_10pct,1,0.0024,-0.0060,0.0112,0.670,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_unemp,unemployment,brent_down_10pct,2,0.0049,-0.0088,0.0197,0.708,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_unemp,unemployment,brent_down_10pct,3,0.0220,0.0033,0.0422,0.978,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_unemp,unemployment,brent_down_10pct,4,0.0338,0.0080,0.0614,0.993,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_unemp,unemployment,brent_down_10pct,5,0.0533,0.0201,0.0896,1.000,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_unemp,unemployment,brent_down_10pct,6,0.0640,0.0257,0.1059,1.000,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_unemp,unemployment,brent_down_10pct,7,0.0647,0.0266,0.1081,1.000,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_unemp,unemployment,brent_down_10pct,8,0.0673,0.0273,0.1107,1.000,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_unemp,unemployment,brent_down_10pct,9,0.0701,0.0267,0.1152,1.000,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_unemp,unemployment,brent_down_10pct,10,0.0698,0.0235,0.1146,1.000,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_unemp,unemployment,brent_down_10pct,11,0.0747,0.0256,0.1219,1.000,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_unemp,unemployment,brent_down_10pct,12,0.0719,0.0256,0.1206,0.995,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_rate,rate,brent_up_10pct,1,0.0014,-0.0009,0.0040,0.858,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_rate,rate,brent_up_10pct,2,0.0032,-0.0007,0.0082,0.902,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_rate,rate,brent_up_10pct,3,0.0050,-0.0002,0.0115,0.945,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_rate,rate,brent_up_10pct,4,0.0053,-0.0012,0.0138,0.887,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_rate,rate,brent_up_10pct,5,0.0067,-0.0014,0.0170,0.912,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_rate,rate,brent_up_10pct,6,0.0072,-0.0025,0.0185,0.900,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_rate,rate,brent_up_10pct,7,0.0076,-0.0026,0.0200,0.880,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_rate,rate,brent_up_10pct,8,0.0081,-0.0033,0.0216,0.870,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_rate,rate,brent_up_10pct,9,0.0087,-0.0033,0.0229,0.875,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_rate,rate,brent_up_10pct,10,0.0090,-0.0033,0.0243,0.882,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_rate,rate,brent_up_10pct,11,0.0089,-0.0035,0.0247,0.865,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_rate,rate,brent_up_10pct,12,0.0095,-0.0033,0.0261,0.870,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_rate,rate,brent_down_10pct,1,-0.0017,-0.0048,0.0010,0.142,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_rate,rate,brent_down_10pct,2,-0.0038,-0.0095,0.0009,0.098,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_rate,rate,brent_down_10pct,3,-0.0059,-0.0143,0.0003,0.055,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_rate,rate,brent_down_10pct,4,-0.0062,-0.0164,0.0018,0.113,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_rate,rate,brent_down_10pct,5,-0.0078,-0.0197,0.0020,0.087,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_rate,rate,brent_down_10pct,6,-0.0082,-0.0210,0.0029,0.100,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_rate,rate,brent_down_10pct,7,-0.0086,-0.0227,0.0034,0.120,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_rate,rate,brent_down_10pct,8,-0.0091,-0.0231,0.0034,0.130,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_rate,rate,brent_down_10pct,9,-0.0097,-0.0249,0.0033,0.125,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_rate,rate,brent_down_10pct,10,-0.0100,-0.0271,0.0038,0.117,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_rate,rate,brent_down_10pct,11,-0.0098,-0.0267,0.0041,0.135,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ea_rate,rate,brent_down_10pct,12,-0.0105,-0.0280,0.0039,0.130,pp,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_gasdesw,cost,brent_up_10pct,1,3.5945,3.0612,4.1327,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_gasdesw,cost,brent_up_10pct,2,5.7954,5.0145,6.5911,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_gasdesw,cost,brent_up_10pct,3,6.1242,5.2553,7.0438,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_gasdesw,cost,brent_up_10pct,4,6.1802,5.2561,7.1675,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_gasdesw,cost,brent_up_10pct,5,6.1904,5.2562,7.1835,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_gasdesw,cost,brent_up_10pct,6,6.1924,5.2563,7.1849,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_gasdesw,cost,brent_up_10pct,7,6.1929,5.2563,7.1851,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_gasdesw,cost,brent_up_10pct,8,6.1929,5.2563,7.1851,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_gasdesw,cost,brent_up_10pct,9,6.1930,5.2563,7.1851,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_gasdesw,cost,brent_up_10pct,10,6.1930,5.2563,7.1851,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_gasdesw,cost,brent_up_10pct,11,6.1930,5.2563,7.1851,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_gasdesw,cost,brent_up_10pct,12,6.1930,5.2563,7.1851,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_gasdesw,cost,brent_down_10pct,1,-3.0138,-3.5432,-2.4751,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_gasdesw,cost,brent_down_10pct,2,-4.8611,-5.6511,-3.9526,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_gasdesw,cost,brent_down_10pct,3,-5.1376,-6.0486,-4.0993,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_gasdesw,cost,brent_down_10pct,4,-5.1847,-6.1214,-4.0979,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_gasdesw,cost,brent_down_10pct,5,-5.1933,-6.1254,-4.0976,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_gasdesw,cost,brent_down_10pct,6,-5.1950,-6.1259,-4.0976,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_gasdesw,cost,brent_down_10pct,7,-5.1953,-6.1260,-4.0976,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_gasdesw,cost,brent_down_10pct,8,-5.1954,-6.1260,-4.0976,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_gasdesw,cost,brent_down_10pct,9,-5.1954,-6.1260,-4.0976,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_gasdesw,cost,brent_down_10pct,10,-5.1954,-6.1260,-4.0976,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_gasdesw,cost,brent_down_10pct,11,-5.1954,-6.1260,-4.0976,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_gasdesw,cost,brent_down_10pct,12,-5.1954,-6.1260,-4.0976,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_djfuelusgulf,cost,brent_up_10pct,1,8.0763,7.2623,8.8931,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_djfuelusgulf,cost,brent_up_10pct,2,7.8776,7.0677,8.8277,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_djfuelusgulf,cost,brent_up_10pct,3,8.1932,7.1871,9.1429,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_djfuelusgulf,cost,brent_up_10pct,4,8.1701,7.1829,9.1238,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_djfuelusgulf,cost,brent_up_10pct,5,8.1726,7.1828,9.1239,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_djfuelusgulf,cost,brent_up_10pct,6,8.1723,7.1828,9.1239,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_djfuelusgulf,cost,brent_up_10pct,7,8.1724,7.1828,9.1239,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_djfuelusgulf,cost,brent_up_10pct,8,8.1724,7.1828,9.1239,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_djfuelusgulf,cost,brent_up_10pct,9,8.1724,7.1828,9.1239,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_djfuelusgulf,cost,brent_up_10pct,10,8.1724,7.1828,9.1239,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_djfuelusgulf,cost,brent_up_10pct,11,8.1724,7.1828,9.1239,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_djfuelusgulf,cost,brent_up_10pct,12,8.1724,7.1828,9.1239,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_djfuelusgulf,cost,brent_down_10pct,1,-9.3603,-10.2040,-8.5339,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_djfuelusgulf,cost,brent_down_10pct,2,-9.1260,-9.9662,-8.3721,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_djfuelusgulf,cost,brent_down_10pct,3,-9.4905,-10.5080,-8.6804,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_djfuelusgulf,cost,brent_down_10pct,4,-9.4638,-10.4668,-8.6772,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_djfuelusgulf,cost,brent_down_10pct,5,-9.4667,-10.4678,-8.6774,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_djfuelusgulf,cost,brent_down_10pct,6,-9.4663,-10.4677,-8.6774,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_djfuelusgulf,cost,brent_down_10pct,7,-9.4664,-10.4677,-8.6774,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_djfuelusgulf,cost,brent_down_10pct,8,-9.4664,-10.4677,-8.6774,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_djfuelusgulf,cost,brent_down_10pct,9,-9.4664,-10.4677,-8.6774,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_djfuelusgulf,cost,brent_down_10pct,10,-9.4664,-10.4677,-8.6774,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_djfuelusgulf,cost,brent_down_10pct,11,-9.4664,-10.4677,-8.6774,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_djfuelusgulf,cost,brent_down_10pct,12,-9.4664,-10.4677,-8.6774,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu484121484121,cost,brent_up_10pct,1,0.1545,0.0487,0.2725,0.990,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu484121484121,cost,brent_up_10pct,2,0.4651,0.2328,0.7325,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu484121484121,cost,brent_up_10pct,3,0.6118,0.3205,0.9246,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu484121484121,cost,brent_up_10pct,4,0.6399,0.3369,0.9658,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu484121484121,cost,brent_up_10pct,5,0.6458,0.3378,0.9777,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu484121484121,cost,brent_up_10pct,6,0.6471,0.3389,0.9811,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu484121484121,cost,brent_up_10pct,7,0.6474,0.3392,0.9820,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu484121484121,cost,brent_up_10pct,8,0.6475,0.3393,0.9823,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu484121484121,cost,brent_up_10pct,9,0.6475,0.3393,0.9824,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu484121484121,cost,brent_up_10pct,10,0.6475,0.3393,0.9824,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu484121484121,cost,brent_up_10pct,11,0.6475,0.3393,0.9824,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu484121484121,cost,brent_up_10pct,12,0.6475,0.3393,0.9824,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu484121484121,cost,brent_down_10pct,1,-0.1793,-0.2930,-0.0775,0.010,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu484121484121,cost,brent_down_10pct,2,-0.5399,-0.7489,-0.3551,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu484121484121,cost,brent_down_10pct,3,-0.7144,-0.9555,-0.4550,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu484121484121,cost,brent_down_10pct,4,-0.7473,-1.0130,-0.4729,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu484121484121,cost,brent_down_10pct,5,-0.7541,-1.0236,-0.4760,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu484121484121,cost,brent_down_10pct,6,-0.7556,-1.0246,-0.4762,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu484121484121,cost,brent_down_10pct,7,-0.7560,-1.0248,-0.4762,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu484121484121,cost,brent_down_10pct,8,-0.7561,-1.0248,-0.4762,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu484121484121,cost,brent_down_10pct,9,-0.7561,-1.0248,-0.4762,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu484121484121,cost,brent_down_10pct,10,-0.7561,-1.0248,-0.4762,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu484121484121,cost,brent_down_10pct,11,-0.7561,-1.0248,-0.4762,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu484121484121,cost,brent_down_10pct,12,-0.7561,-1.0248,-0.4762,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu4841248412,cost,brent_up_10pct,1,0.2328,0.1143,0.3640,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu4841248412,cost,brent_up_10pct,2,0.5727,0.3485,0.8244,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu4841248412,cost,brent_up_10pct,3,0.6839,0.4232,0.9864,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu4841248412,cost,brent_up_10pct,4,0.7065,0.4342,1.0374,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu4841248412,cost,brent_up_10pct,5,0.7115,0.4370,1.0544,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu4841248412,cost,brent_up_10pct,6,0.7127,0.4376,1.0568,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu4841248412,cost,brent_up_10pct,7,0.7130,0.4377,1.0574,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu4841248412,cost,brent_up_10pct,8,0.7130,0.4377,1.0575,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu4841248412,cost,brent_up_10pct,9,0.7131,0.4377,1.0575,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu4841248412,cost,brent_up_10pct,10,0.7131,0.4377,1.0575,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu4841248412,cost,brent_up_10pct,11,0.7131,0.4377,1.0575,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu4841248412,cost,brent_up_10pct,12,0.7131,0.4377,1.0575,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu4841248412,cost,brent_down_10pct,1,-0.2141,-0.3239,-0.1134,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu4841248412,cost,brent_down_10pct,2,-0.5307,-0.7463,-0.3363,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu4841248412,cost,brent_down_10pct,3,-0.6339,-0.8630,-0.4043,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu4841248412,cost,brent_down_10pct,4,-0.6542,-0.8816,-0.4173,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu4841248412,cost,brent_down_10pct,5,-0.6586,-0.8888,-0.4184,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu4841248412,cost,brent_down_10pct,6,-0.6596,-0.8895,-0.4182,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu4841248412,cost,brent_down_10pct,7,-0.6598,-0.8896,-0.4182,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu4841248412,cost,brent_down_10pct,8,-0.6599,-0.8896,-0.4182,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu4841248412,cost,brent_down_10pct,9,-0.6599,-0.8897,-0.4181,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu4841248412,cost,brent_down_10pct,10,-0.6599,-0.8897,-0.4181,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu4841248412,cost,brent_down_10pct,11,-0.6599,-0.8897,-0.4181,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu4841248412,cost,brent_down_10pct,12,-0.6599,-0.8897,-0.4181,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu483111483111,cost,brent_up_10pct,1,0.3868,0.1674,0.5974,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu483111483111,cost,brent_up_10pct,2,0.5192,0.2301,0.8480,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu483111483111,cost,brent_up_10pct,3,0.7355,0.3046,1.1702,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu483111483111,cost,brent_up_10pct,4,0.7669,0.3142,1.2260,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu483111483111,cost,brent_up_10pct,5,0.7719,0.3163,1.2371,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu483111483111,cost,brent_up_10pct,6,0.7728,0.3167,1.2418,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu483111483111,cost,brent_up_10pct,7,0.7730,0.3168,1.2429,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu483111483111,cost,brent_up_10pct,8,0.7730,0.3168,1.2431,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu483111483111,cost,brent_up_10pct,9,0.7730,0.3168,1.2432,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu483111483111,cost,brent_up_10pct,10,0.7730,0.3168,1.2432,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu483111483111,cost,brent_up_10pct,11,0.7730,0.3168,1.2432,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu483111483111,cost,brent_up_10pct,12,0.7730,0.3168,1.2432,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu483111483111,cost,brent_down_10pct,1,-0.3429,-0.5572,-0.1436,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu483111483111,cost,brent_down_10pct,2,-0.4603,-0.7813,-0.1935,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu483111483111,cost,brent_down_10pct,3,-0.6452,-1.0378,-0.2782,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu483111483111,cost,brent_down_10pct,4,-0.6718,-1.0892,-0.2924,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu483111483111,cost,brent_down_10pct,5,-0.6760,-1.0979,-0.2945,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu483111483111,cost,brent_down_10pct,6,-0.6768,-1.0996,-0.2948,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu483111483111,cost,brent_down_10pct,7,-0.6769,-1.0999,-0.2949,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu483111483111,cost,brent_down_10pct,8,-0.6769,-1.0999,-0.2949,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu483111483111,cost,brent_down_10pct,9,-0.6769,-1.1000,-0.2949,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu483111483111,cost,brent_down_10pct,10,-0.6769,-1.1000,-0.2949,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu483111483111,cost,brent_down_10pct,11,-0.6769,-1.1000,-0.2949,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu483111483111,cost,brent_down_10pct,12,-0.6769,-1.1000,-0.2949,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu481112481112,cost,brent_up_10pct,1,0.1193,-0.0537,0.3082,0.875,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu481112481112,cost,brent_up_10pct,2,0.3817,0.1251,0.6840,0.998,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu481112481112,cost,brent_up_10pct,3,0.5845,0.2430,1.0108,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu481112481112,cost,brent_up_10pct,4,0.5757,0.2410,1.0095,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu481112481112,cost,brent_up_10pct,5,0.5768,0.2411,1.0108,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu481112481112,cost,brent_up_10pct,6,0.5767,0.2411,1.0108,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu481112481112,cost,brent_up_10pct,7,0.5767,0.2411,1.0108,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu481112481112,cost,brent_up_10pct,8,0.5767,0.2411,1.0108,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu481112481112,cost,brent_up_10pct,9,0.5767,0.2411,1.0108,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu481112481112,cost,brent_up_10pct,10,0.5767,0.2411,1.0108,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu481112481112,cost,brent_up_10pct,11,0.5767,0.2411,1.0108,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu481112481112,cost,brent_up_10pct,12,0.5767,0.2411,1.0108,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu481112481112,cost,brent_down_10pct,1,-0.1064,-0.2855,0.0543,0.125,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu481112481112,cost,brent_down_10pct,2,-0.3533,-0.6296,-0.1131,0.003,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu481112481112,cost,brent_down_10pct,3,-0.5318,-0.8857,-0.2292,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu481112481112,cost,brent_down_10pct,4,-0.5240,-0.8687,-0.2228,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu481112481112,cost,brent_down_10pct,5,-0.5250,-0.8721,-0.2235,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu481112481112,cost,brent_down_10pct,6,-0.5249,-0.8717,-0.2234,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu481112481112,cost,brent_down_10pct,7,-0.5250,-0.8718,-0.2234,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu481112481112,cost,brent_down_10pct,8,-0.5250,-0.8718,-0.2234,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu481112481112,cost,brent_down_10pct,9,-0.5250,-0.8718,-0.2234,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu481112481112,cost,brent_down_10pct,10,-0.5250,-0.8718,-0.2234,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu481112481112,cost,brent_down_10pct,11,-0.5250,-0.8718,-0.2234,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu481112481112,cost,brent_down_10pct,12,-0.5250,-0.8718,-0.2234,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu325211325211,cost,brent_up_10pct,1,0.1438,0.0286,0.2734,0.980,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu325211325211,cost,brent_up_10pct,2,0.6420,0.4393,0.8670,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu325211325211,cost,brent_up_10pct,3,1.0750,0.7602,1.3935,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu325211325211,cost,brent_up_10pct,4,1.4483,1.0490,1.8709,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu325211325211,cost,brent_up_10pct,5,1.7340,1.2555,2.2722,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu325211325211,cost,brent_up_10pct,6,1.8446,1.2829,2.4241,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu325211325211,cost,brent_up_10pct,7,2.0225,1.4133,2.6363,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu325211325211,cost,brent_up_10pct,8,2.1356,1.4650,2.8049,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu325211325211,cost,brent_up_10pct,9,2.2569,1.5439,2.9750,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu325211325211,cost,brent_up_10pct,10,2.2617,1.5262,3.0346,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu325211325211,cost,brent_up_10pct,11,2.3026,1.5396,3.0444,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu325211325211,cost,brent_up_10pct,12,2.3193,1.5055,3.1436,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu325211325211,cost,brent_down_10pct,1,-0.1602,-0.3098,-0.0297,0.020,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu325211325211,cost,brent_down_10pct,2,-0.7077,-0.9960,-0.4618,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu325211325211,cost,brent_down_10pct,3,-1.1821,-1.5915,-0.8229,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu325211325211,cost,brent_down_10pct,4,-1.5910,-2.0786,-1.1529,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu325211325211,cost,brent_down_10pct,5,-1.9039,-2.4773,-1.4131,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu325211325211,cost,brent_down_10pct,6,-2.0254,-2.6485,-1.4819,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu325211325211,cost,brent_down_10pct,7,-2.2198,-2.8902,-1.6147,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu325211325211,cost,brent_down_10pct,8,-2.3428,-3.0375,-1.7153,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu325211325211,cost,brent_down_10pct,9,-2.4759,-3.2418,-1.8012,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu325211325211,cost,brent_down_10pct,10,-2.4779,-3.2299,-1.7806,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu325211325211,cost,brent_down_10pct,11,-2.5186,-3.2780,-1.8061,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu325211325211,cost,brent_down_10pct,12,-2.5332,-3.2684,-1.8224,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu3261132611,cost,brent_up_10pct,1,0.0616,0.0051,0.1158,0.963,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu3261132611,cost,brent_up_10pct,2,0.2784,0.1885,0.3771,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu3261132611,cost,brent_up_10pct,3,0.5181,0.3854,0.6667,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu3261132611,cost,brent_up_10pct,4,0.7705,0.5889,0.9696,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu3261132611,cost,brent_up_10pct,5,0.9802,0.7540,1.2179,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu3261132611,cost,brent_up_10pct,6,1.1198,0.8620,1.3963,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu3261132611,cost,brent_up_10pct,7,1.2505,0.9694,1.5467,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu3261132611,cost,brent_up_10pct,8,1.3354,1.0333,1.6508,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu3261132611,cost,brent_up_10pct,9,1.4220,1.0765,1.7637,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu3261132611,cost,brent_up_10pct,10,1.4761,1.1270,1.8433,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu3261132611,cost,brent_up_10pct,11,1.5251,1.1173,1.9582,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu3261132611,cost,brent_up_10pct,12,1.5479,1.1386,1.9788,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu3261132611,cost,brent_down_10pct,1,-0.0533,-0.1034,-0.0034,0.037,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu3261132611,cost,brent_down_10pct,2,-0.2386,-0.3398,-0.1431,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu3261132611,cost,brent_down_10pct,3,-0.4438,-0.5989,-0.3036,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu3261132611,cost,brent_down_10pct,4,-0.6598,-0.8751,-0.4647,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu3261132611,cost,brent_down_10pct,5,-0.8385,-1.0897,-0.6044,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu3261132611,cost,brent_down_10pct,6,-0.9576,-1.2334,-0.6910,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu3261132611,cost,brent_down_10pct,7,-1.0688,-1.3859,-0.7691,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu3261132611,cost,brent_down_10pct,8,-1.1404,-1.4740,-0.8074,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu3261132611,cost,brent_down_10pct,9,-1.2132,-1.5578,-0.8568,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu3261132611,cost,brent_down_10pct,10,-1.2589,-1.6109,-0.8658,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu3261132611,cost,brent_down_10pct,11,-1.2989,-1.6461,-0.8975,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu3261132611,cost,brent_down_10pct,12,-1.3172,-1.6535,-0.9079,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu326160326160,cost,brent_up_10pct,1,0.0176,-0.0350,0.0652,0.738,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu326160326160,cost,brent_up_10pct,2,0.1794,0.0920,0.2687,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu326160326160,cost,brent_up_10pct,3,0.3620,0.2254,0.5028,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu326160326160,cost,brent_up_10pct,4,0.5727,0.4004,0.7659,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu326160326160,cost,brent_up_10pct,5,0.7618,0.5485,1.0035,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu326160326160,cost,brent_up_10pct,6,0.8803,0.6280,1.1398,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu326160326160,cost,brent_up_10pct,7,0.9627,0.6689,1.2405,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu326160326160,cost,brent_up_10pct,8,1.0484,0.7449,1.3642,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu326160326160,cost,brent_up_10pct,9,1.1122,0.7737,1.4516,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu326160326160,cost,brent_up_10pct,10,1.1550,0.7978,1.5130,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu326160326160,cost,brent_up_10pct,11,1.1811,0.8105,1.5667,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu326160326160,cost,brent_up_10pct,12,1.1704,0.7962,1.5715,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu326160326160,cost,brent_down_10pct,1,-0.0231,-0.0953,0.0387,0.263,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu326160326160,cost,brent_down_10pct,2,-0.2334,-0.3451,-0.1278,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu326160326160,cost,brent_down_10pct,3,-0.4707,-0.6131,-0.3240,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu326160326160,cost,brent_down_10pct,4,-0.7462,-0.9557,-0.5345,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu326160326160,cost,brent_down_10pct,5,-0.9934,-1.2436,-0.7262,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu326160326160,cost,brent_down_10pct,6,-1.1483,-1.4159,-0.8580,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu326160326160,cost,brent_down_10pct,7,-1.2542,-1.5484,-0.9305,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu326160326160,cost,brent_down_10pct,8,-1.3651,-1.6904,-1.0204,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu326160326160,cost,brent_down_10pct,9,-1.4457,-1.7747,-1.0693,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu326160326160,cost,brent_down_10pct,10,-1.5016,-1.8752,-1.1059,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu326160326160,cost,brent_down_10pct,11,-1.5339,-1.9081,-1.1393,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu326160326160,cost,brent_down_10pct,12,-1.5190,-1.9117,-1.1118,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_wpu0915,cost,brent_up_10pct,1,0.0203,-0.0035,0.0465,0.920,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_wpu0915,cost,brent_up_10pct,2,0.0951,0.0559,0.1378,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_wpu0915,cost,brent_up_10pct,3,0.1731,0.1184,0.2386,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_wpu0915,cost,brent_up_10pct,4,0.2655,0.1874,0.3527,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_wpu0915,cost,brent_up_10pct,5,0.3601,0.2616,0.4671,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_wpu0915,cost,brent_up_10pct,6,0.4335,0.3169,0.5618,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_wpu0915,cost,brent_up_10pct,7,0.5046,0.3794,0.6546,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_wpu0915,cost,brent_up_10pct,8,0.5795,0.4391,0.7518,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_wpu0915,cost,brent_up_10pct,9,0.6492,0.4905,0.8460,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_wpu0915,cost,brent_up_10pct,10,0.6924,0.5137,0.8939,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_wpu0915,cost,brent_up_10pct,11,0.7363,0.5529,0.9445,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_wpu0915,cost,brent_up_10pct,12,0.7560,0.5654,0.9723,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_wpu0915,cost,brent_down_10pct,1,-0.0146,-0.0347,0.0022,0.080,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_wpu0915,cost,brent_down_10pct,2,-0.0681,-0.1042,-0.0384,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_wpu0915,cost,brent_down_10pct,3,-0.1237,-0.1753,-0.0773,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_wpu0915,cost,brent_down_10pct,4,-0.1895,-0.2595,-0.1283,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_wpu0915,cost,brent_down_10pct,5,-0.2566,-0.3442,-0.1816,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_wpu0915,cost,brent_down_10pct,6,-0.3086,-0.4083,-0.2253,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_wpu0915,cost,brent_down_10pct,7,-0.3594,-0.4701,-0.2659,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_wpu0915,cost,brent_down_10pct,8,-0.4127,-0.5286,-0.3075,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_wpu0915,cost,brent_down_10pct,9,-0.4623,-0.5871,-0.3448,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_wpu0915,cost,brent_down_10pct,10,-0.4927,-0.6243,-0.3653,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_wpu0915,cost,brent_down_10pct,11,-0.5239,-0.6659,-0.3897,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_wpu0915,cost,brent_down_10pct,12,-0.5380,-0.6875,-0.3998,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu325311325311,cost,brent_up_10pct,1,0.1852,-0.0261,0.4173,0.912,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu325311325311,cost,brent_up_10pct,2,0.8846,0.4732,1.3461,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu325311325311,cost,brent_up_10pct,3,1.7897,1.0677,2.5060,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu325311325311,cost,brent_up_10pct,4,2.6503,1.6653,3.5854,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu325311325311,cost,brent_up_10pct,5,3.3345,2.0363,4.4638,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu325311325311,cost,brent_up_10pct,6,3.8437,2.3455,5.1700,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu325311325311,cost,brent_up_10pct,7,4.4241,2.7083,6.0209,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu325311325311,cost,brent_up_10pct,8,4.9840,3.0950,6.7374,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu325311325311,cost,brent_up_10pct,9,5.4966,3.4346,7.5468,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu325311325311,cost,brent_up_10pct,10,5.8519,3.6131,8.0694,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu325311325311,cost,brent_up_10pct,11,6.1626,3.8531,8.6161,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu325311325311,cost,brent_up_10pct,12,6.3038,3.9262,8.8626,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu325311325311,cost,brent_down_10pct,1,-0.2212,-0.5080,0.0324,0.087,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu325311325311,cost,brent_down_10pct,2,-1.0574,-1.6040,-0.5771,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu325311325311,cost,brent_down_10pct,3,-2.1391,-2.9514,-1.4015,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu325311325311,cost,brent_down_10pct,4,-3.1692,-4.2534,-2.1734,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu325311325311,cost,brent_down_10pct,5,-3.9812,-5.3228,-2.7249,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu325311325311,cost,brent_down_10pct,6,-4.5844,-6.0888,-3.1504,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu325311325311,cost,brent_down_10pct,7,-5.2734,-7.0816,-3.7157,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu325311325311,cost,brent_down_10pct,8,-5.9355,-7.8351,-4.1724,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu325311325311,cost,brent_down_10pct,9,-6.5408,-8.6496,-4.6186,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu325311325311,cost,brent_down_10pct,10,-6.9577,-9.1099,-4.9121,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu325311325311,cost,brent_down_10pct,11,-7.3199,-9.6172,-5.2979,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu325311325311,cost,brent_down_10pct,12,-7.4782,-9.7960,-5.3281,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu324110324110,cost,brent_up_10pct,1,5.5498,4.8439,6.2229,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu324110324110,cost,brent_up_10pct,2,8.1010,7.1402,9.0510,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu324110324110,cost,brent_up_10pct,3,8.7350,7.6408,9.8562,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu324110324110,cost,brent_up_10pct,4,8.6748,7.5994,9.7802,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu324110324110,cost,brent_up_10pct,5,8.6824,7.6154,9.7819,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu324110324110,cost,brent_up_10pct,6,8.6813,7.6121,9.7818,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu324110324110,cost,brent_up_10pct,7,8.6814,7.6128,9.7819,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu324110324110,cost,brent_up_10pct,8,8.6814,7.6126,9.7819,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu324110324110,cost,brent_up_10pct,9,8.6814,7.6127,9.7819,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu324110324110,cost,brent_up_10pct,10,8.6814,7.6127,9.7819,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu324110324110,cost,brent_up_10pct,11,8.6814,7.6127,9.7819,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu324110324110,cost,brent_up_10pct,12,8.6814,7.6127,9.7819,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu324110324110,cost,brent_down_10pct,1,-5.7804,-6.5235,-4.9860,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu324110324110,cost,brent_down_10pct,2,-8.4330,-9.3964,-7.3876,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu324110324110,cost,brent_down_10pct,3,-9.0902,-10.2042,-7.9717,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu324110324110,cost,brent_down_10pct,4,-9.0283,-10.1056,-7.9158,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu324110324110,cost,brent_down_10pct,5,-9.0360,-10.1205,-7.9323,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu324110324110,cost,brent_down_10pct,6,-9.0349,-10.1186,-7.9288,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu324110324110,cost,brent_down_10pct,7,-9.0351,-10.1188,-7.9295,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu324110324110,cost,brent_down_10pct,8,-9.0351,-10.1188,-7.9294,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu324110324110,cost,brent_down_10pct,9,-9.0351,-10.1188,-7.9294,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu324110324110,cost,brent_down_10pct,10,-9.0351,-10.1188,-7.9294,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu324110324110,cost,brent_down_10pct,11,-9.0351,-10.1188,-7.9294,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu324110324110,cost,brent_down_10pct,12,-9.0351,-10.1188,-7.9294,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu481111481111,cost,brent_up_10pct,1,0.5195,0.1509,0.9424,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu481111481111,cost,brent_up_10pct,2,0.6199,0.2105,1.0875,0.993,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu481111481111,cost,brent_up_10pct,3,0.7283,0.2132,1.2896,0.993,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu481111481111,cost,brent_up_10pct,4,0.6999,0.2357,1.2317,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu481111481111,cost,brent_up_10pct,5,0.7076,0.2282,1.2360,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu481111481111,cost,brent_up_10pct,6,0.7054,0.2310,1.2322,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu481111481111,cost,brent_up_10pct,7,0.7061,0.2312,1.2322,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu481111481111,cost,brent_up_10pct,8,0.7059,0.2311,1.2322,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu481111481111,cost,brent_up_10pct,9,0.7059,0.2311,1.2322,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu481111481111,cost,brent_up_10pct,10,0.7059,0.2311,1.2322,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu481111481111,cost,brent_up_10pct,11,0.7059,0.2311,1.2322,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu481111481111,cost,brent_up_10pct,12,0.7059,0.2311,1.2322,1.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu481111481111,cost,brent_down_10pct,1,-0.5962,-1.0854,-0.1973,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu481111481111,cost,brent_down_10pct,2,-0.7009,-1.2331,-0.2479,0.007,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu481111481111,cost,brent_down_10pct,3,-0.8220,-1.4053,-0.2845,0.007,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu481111481111,cost,brent_down_10pct,4,-0.7902,-1.3024,-0.2992,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu481111481111,cost,brent_down_10pct,5,-0.7989,-1.3224,-0.3005,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu481111481111,cost,brent_down_10pct,6,-0.7964,-1.3179,-0.3003,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu481111481111,cost,brent_down_10pct,7,-0.7971,-1.3189,-0.3020,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu481111481111,cost,brent_down_10pct,8,-0.7969,-1.3187,-0.3023,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu481111481111,cost,brent_down_10pct,9,-0.7970,-1.3187,-0.3022,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu481111481111,cost,brent_down_10pct,10,-0.7970,-1.3187,-0.3022,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu481111481111,cost,brent_down_10pct,11,-0.7970,-1.3187,-0.3022,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24
+ind_pcu481111481111,cost,brent_down_10pct,12,-0.7970,-1.3187,-0.3022,0.000,% of price level,experiments/macro_bayes.py (FRED/ONS/Eurostat via notes/macro-panel.md),2026-10,2026-10-24

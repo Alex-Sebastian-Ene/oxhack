@@ -10,4 +10,5 @@ source scripts/hpc_env.sh
 uv venv --python 3.12 .venv-nn
 uv pip install --python .venv-nn/bin/python --index-url https://download.pytorch.org/whl/cpu torch
 uv pip install --python .venv-nn/bin/python "numpy>=1.26" "pandas>=2.1" "scipy>=1.11" "xlrd>=2.0"
-.venv-nn/bin/python -c "import torch, numpy, pandas, scipy; print('torch', torch.__version__)"
+uv pip install --python .venv-nn/bin/python "jax>=0.4.30" "numpyro>=0.15"  # experiments/macro_bayes.py
+.venv-nn/bin/python -c "import torch, numpy, pandas, scipy, numpyro; print('torch', torch.__version__, 'numpyro', numpyro.__version__)"
