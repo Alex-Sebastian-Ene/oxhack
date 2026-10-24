@@ -44,6 +44,41 @@ def run(net, st, info, data, t, fut):
     return mg.simulate([net], st, info, data, np.array([t]), fut, None, n=1, noise=False)[0, 0]
 
 
+class Recorder(nn.Module):
+    """A fixed one-step rule (own lag 1, oil lag 0, volatility state) that records what it is given."""
+
+    def __init__(self, seq: bool) -> None:
+        super().__init__()
+        self.seq, self.calls = seq, []
+
+    def forward(self, x, k, s=None):
+        self.calls.append((x.numpy().copy(), None if s is None else s.numpy().copy()))
+        loc = 0.5 * x[:, 0] + 0.3 * x[:, mg.OWN] + 0.1 * x[:, -1]
+        return loc, torch.full((len(x),), 1e-9), torch.full((len(x),), 5.0)
+
+
+class SeqStub(nn.Module):
+    """Location = coef * Brent's change `lag` steps before the sequence's last step."""
+
+    seq = True
+
+    def __init__(self, lag: int, coef: float = 1.0) -> None:
+        super().__init__()
+        self.lag, self.coef = lag, coef
+
+    def forward(self, x, k, s):
+        return self.coef * s[:, -1 - self.lag, 1], torch.full((len(x),), 1e-9), torch.full((len(x),), 5.0)
+
+
+def flat_inputs(data, s, k):
+    """The 26 inputs as macro_global.py built them with 12 own and 13 oil lags: y[s-1..s-12],
+    z[s..s-12], v[s] (zeros before the first month)."""
+    z, y = data["oil_m"], data["dM"][:, k]
+    own = [y[s - lag] if s - lag >= 0 else 0.0 for lag in range(1, mg.OWN + 1)]
+    oil = [z[s - lag] if s - lag >= 0 else 0.0 for lag in range(mb.LAGS)]
+    return np.array(own + oil + [mb.log_vol(z)[s]])
+
+
 def test_inputs_line_up_with_months():
     rng = np.random.default_rng(0)
     st = SimpleNamespace(xs=1.0, vm=0.0, vs=1.0, ym=np.zeros(K), ys=np.ones(K))
@@ -54,6 +89,63 @@ def test_inputs_line_up_with_months():
     assert y[i] == data["dM"][30, 1]
     assert x[i, 0] == data["dM"][29, 1] and x[i, mg.OWN - 1] == data["dM"][30 - mg.OWN, 1]  # own lags 1..OWN
     assert x[i, mg.OWN] == data["oil_m"][30] and x[i, mg.OWN + 12] == data["oil_m"][18]  # oil lags 0..12
+    assert x.shape[1] == mg.OWN + mb.LAGS + 1
+    for i in (0, np.flatnonzero((s == 30) & (k == 1))[0], len(s) - 1):  # 24-month features, same flat inputs
+        assert x[i] == pytest.approx(flat_inputs(data, s[i], k[i]), abs=1e-12)
+
+
+def test_sequences_end_in_the_forecast_month():
+    rng = np.random.default_rng(2)
+    st = SimpleNamespace(xs=1.0, vm=0.0, vs=1.0, ym=np.zeros(K), ys=np.ones(K))
+    data = {"oil_m": rng.normal(size=M), "dM": rng.normal(size=(M, K))}
+    f = mg.features(data, st)
+    s, k, x, y = mg.training_rows(f, M - 1)
+    q = mg.sequences(f, s, k)
+    assert q.shape == (len(s), mg.SEQ, 3)
+    i = np.flatnonzero((s == 40) & (k == 1))[0]
+    v = mb.log_vol(data["oil_m"])
+    assert q[i, -1, 1] == data["oil_m"][40] and q[i, 0, 1] == data["oil_m"][40 - mg.SEQ + 1]  # Brent, lags 0..23
+    assert q[i, -1, 0] == data["dM"][39, 1] and q[i, 0, 0] == data["dM"][40 - mg.SEQ, 1]  # own, lags 1..24
+    assert q[i, -1, 2] == pytest.approx(v[40]) and q[i, -5, 2] == pytest.approx(v[36])  # volatility state
+    j = np.flatnonzero((s == 13) & (k == 0))[0]  # before the first month: zeros
+    assert q[j, :mg.SEQ - 14, :2] == pytest.approx(0.0) and q[j, -1, 1] == data["oil_m"][13]
+
+
+def test_buffers_feed_both_networks_their_training_inputs():
+    """Every simulated month's inputs, flat and sequence, are what features() gives once the simulated
+    path (nowcast, own changes, the oil path) is written into the data."""
+    rng = np.random.default_rng(3)
+    st, info, data = toy()
+    data["oil_m"], data["dM"] = rng.normal(size=M), rng.normal(size=(M, K))
+    t, fut = 40, rng.normal(size=(1, 1, 12))
+    for seq in (False, True):
+        rec = Recorder(seq)
+        mg.simulate([rec], st, info, data, np.array([t]), fut, None, n=1, noise=False)
+        assert len(rec.calls) == 13  # month t (nowcast for the lag-1 series), then t+1..t+12
+        done = {"oil_m": data["oil_m"].copy(), "dM": data["dM"].copy()}
+        done["oil_m"][t + 1:t + 13] = fut[0, 0]
+        for j, (x, _) in enumerate(rec.calls):
+            loc = 0.5 * x[:, 0] + 0.3 * x[:, mg.OWN] + 0.1 * x[:, -1]
+            done["dM"][t + j] = np.where(np.arange(K) < 1 - j, done["dM"][t + j], loc)  # series 0 is published at t
+        f = mg.features(done, st)
+        for j, (x, s) in enumerate(rec.calls):
+            for kk in range(K):
+                assert x[kk] == pytest.approx(flat_inputs(done, t + j, kk), abs=1e-6)
+                if seq:
+                    assert s[kk] == pytest.approx(mg.sequences(f, np.array([t + j]), np.array([kk]))[0], abs=1e-6)
+                else:
+                    assert s is None
+
+
+def test_tcn_sees_oil_at_lag_0_in_the_right_month():
+    st, info, data = toy()
+    fut = np.zeros((1, 1, 12))
+    fut[0, 0, 0] = 0.1  # Brent moves in the first month after the origin
+    now, later = run(SeqStub(0), st, info, data, 40, fut), run(SeqStub(1), st, info, data, 40, fut)
+    assert now[:2] == pytest.approx([0.1, 0.1])  # series 0 after 1 and 3 months, as for the flat inputs
+    assert later[:2] == pytest.approx([0.0, 0.1])
+    data["oil_m"][40] = 0.2  # a move in the origin month is lag 1 for month t+1
+    assert run(SeqStub(1), st, info, data, 40, np.zeros((1, 1, 12)))[0] == pytest.approx(0.2)
 
 
 def test_nowcast_starts_from_last_published_month():
@@ -77,7 +169,28 @@ def test_oil_path_enters_at_the_right_lag():
     assert later[:2] == pytest.approx([0.0, 0.1])
 
 
-def test_training_recovers_momentum_and_oil():
+def test_fit_nets_seeds_and_per_draw_oil_paths(monkeypatch):
+    monkeypatch.setattr(mg, "QUICK", True)  # 3 epochs: only the plumbing is under test
+    rng = np.random.default_rng(4)
+    st, info, data = toy()
+    data["oil_m"], data["dM"] = rng.normal(size=M), rng.normal(size=(M, K))
+    info["floor"] = np.full(K, 0.05)
+    nets, training = mg.fit_nets(data, info, st, M - 13, "global_tcn", seeds=2, base_seed=7000)
+    assert len(training) == 2 and all(isinstance(n, mg.SeqNet) for n in nets)
+    f = mg.features(data, st)
+    s, k, x, y = mg.training_rows(f, M - 13)
+    again, _ = mg.train(x, k, y, s, info["floor"], True, seed=7000 + 200 + 1, seq=mg.sequences(f, s, k))
+    assert all(torch.equal(a, b) for a, b in zip(nets[1].state_dict().values(), again.state_dict().values()))
+    fut = np.zeros((4, 1, 12))
+    fut[:, 0, 0] = [0.1, 0.2, 0.3, 0.4]
+    out = mg.simulate([SeqStub(0), SeqStub(0)], st, info, data, np.array([40]), fut, None, n=4, noise=False)
+    assert out[:, 0, 0] == pytest.approx(fut[:, 0, 0])  # draw i follows oil path i
+    assert np.isfinite(mg.simulate(nets, st, info, data, np.array([40]), fut, np.random.default_rng(0), n=4)).all()
+
+
+@pytest.mark.parametrize("tcn", [False, True])
+def test_training_recovers_momentum_and_oil(tcn):
+    """global, and the TCN without the linear term: both must find own lag 1 and oil lag 0."""
     rng = np.random.default_rng(1)
     n = 400
     z = rng.normal(size=n)
@@ -87,9 +200,12 @@ def test_training_recovers_momentum_and_oil():
     st = SimpleNamespace(xs=1.0, vm=0.0, vs=1.0, ym=np.zeros(K), ys=np.ones(K))
     f = mg.features({"oil_m": z, "dM": dM}, st)
     s, k, x, y = mg.training_rows(f, n - 1)
-    net, info = mg.train(x, k, y, s, np.full(K, 0.05), linear=False, seed=0)
+    seq = mg.sequences(f, s, k) if tcn else None
+    net, info = mg.train(x, k, y, s, np.full(K, 0.05), linear=False, seed=0, seq=seq)
+    assert isinstance(net, mg.SeqNet) == tcn
     assert info["best_epoch"] > 5  # it trained, unlike the windowed networks
     truth = 0.5 * x[:, 0] + np.where(k == 0, 0.8, -0.4) * x[:, mg.OWN]
+    args = (torch.as_tensor(x, dtype=torch.float32), torch.as_tensor(k))
     with torch.no_grad():
-        loc = net(torch.as_tensor(x, dtype=torch.float32), torch.as_tensor(k))[0].numpy()
+        loc = net(*args, *(() if seq is None else (torch.as_tensor(seq, dtype=torch.float32),)))[0].numpy()
     assert np.corrcoef(loc, truth)[0, 1] > 0.95

@@ -20,6 +20,13 @@ tail index of at least 2.5. Two variants, fixed before scoring:
     global      the shared network only
     global_lin  plus a per-series linear term in the location (the least-squares momentum and
                 oil-lag model nested inside), so the network only has to learn what is shared
+A third, added after those two were scored and fixed before its own run, asks whether a TCN works
+once it is shared across series and predicts one step ahead (macro_nn.py's windowed TCN did not):
+    global_tcn  global_lin with the network's flat inputs replaced by a causal TCN (macro_nn.TCN,
+                16 wide, dilations 1, 2, 4, 8) over the last 24 months of the series' own change,
+                Brent's change and the volatility state; the TCN's last step and the series
+                embedding go into the same MLP and Student-t head, and the per-series linear term
+                stays on the 26 flat inputs
 
 Training: AdamW on the Student-t NLL, early stopping on the last quarter of the training months,
 then a refit on all of them for the chosen number of epochs. SEEDS networks per variant form a
@@ -29,6 +36,7 @@ macro_bayes.py: from each series' last published month, given the oil path that 
 
     uv run experiments/macro_global.py check      # tiny end-to-end run on the last fold
     uv run experiments/macro_global.py fold 3     # one fold -> runs/macro/global-fold-3.json
+    uv run experiments/macro_global.py fold 3 --variant global_tcn   # one variant, merged into that file
     uv run experiments/macro_global.py report     # notes/macro-global-results.md
 """
 
@@ -52,12 +60,14 @@ import macro_nn as mn
 ROOT = Path(__file__).resolve().parent.parent
 RUNS, NOTES = ROOT / "runs" / "macro", ROOT / "notes"
 OWN = 12  # lags of the series' own monthly change
+SEQ = 24  # months of history global_tcn sees
 EMB = 8  # series embedding width
 HIDDEN, LAYERS, DROPOUT = 64, 2, 0.1
+TCN_WIDTH, TCN_LAYERS = 16, 2  # macro_nn.TCN: 2 + TCN_LAYERS blocks, dilations 1, 2, 4, 8
 TRAIN = {"epochs": 300, "patience": 30, "lr": 2e-3, "wd": 1e-3, "batch": 256}
 VAL_SHARE = 0.25  # last share of training months held out for early stopping
 SEEDS = 5
-VARIANTS = ("global", "global_lin")
+VARIANTS = ("global", "global_lin", "global_tcn")
 SHOCK = np.log(1.10)  # +10% Brent in the first month, for the oil response
 # Bayesian references for the report: (column, runs/macro file stem). own: each series' own recent
 # volatility sets its band (macro_bayes.py --vol own, the main Bayesian model); oil: oil volatility only.
@@ -67,15 +77,20 @@ QUICK = False
 
 # --- data ------------------------------------------------------------------------------------
 
+def lagged(a: np.ndarray, lags: range, fill: float) -> np.ndarray:
+    """a[s - lag] for each lag, stacked on a new last axis; `fill` before the first month."""
+    return np.stack([np.concatenate([np.full((lag,) + a.shape[1:], fill), a[:len(a) - lag]]) for lag in lags], -1)
+
+
 def features(data: dict, st: mb.Stats) -> dict:
-    """Monthly arrays in standardised units: own lags [M, K, OWN] (y[s-1..s-OWN]), oil lags
-    [M, LAGS] (z[s..s-12]), volatility state [M] and targets y [M, K]."""
+    """Monthly arrays in standardised units, lags newest first: own lags [M, K, SEQ] (y[s-1..s-24]),
+    oil lags [M, SEQ] (z[s..s-23]), volatility state v [M] and its lags [M, SEQ] (v[s..s-23]), and
+    targets y [M, K]. The flat inputs take the first OWN own lags, the first LAGS oil lags and v[s]."""
     z = np.nan_to_num(data["oil_m"]) / st.xs
-    M = len(z)
     y = (data["dM"] - st.ym) / st.ys
-    own = np.stack([np.vstack([np.full((lag, y.shape[1]), np.nan), y[:M - lag]]) for lag in range(1, OWN + 1)], -1)
-    oil = np.stack([np.r_[np.zeros(lag), z[:M - lag]] for lag in range(mb.LAGS)], 1)
-    return {"own": own, "oil": oil, "v": (mb.log_vol(z) - st.vm) / st.vs, "y": y}
+    v = (mb.log_vol(z) - st.vm) / st.vs
+    return {"own": lagged(y, range(1, SEQ + 1), np.nan), "oil": lagged(z, range(SEQ), 0.0), "v": v,
+            "vol": lagged(v, range(SEQ), 0.0), "y": y}
 
 
 def training_rows(f: dict, last_month: int) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
@@ -84,8 +99,20 @@ def training_rows(f: dict, last_month: int) -> tuple[np.ndarray, np.ndarray, np.
     s, k = np.meshgrid(np.arange(13, last_month + 1), np.arange(f["y"].shape[1]), indexing="ij")
     ok = np.isfinite(f["y"][s, k]) & np.isfinite(f["own"][s, k, 0])
     s, k = s[ok], k[ok]
-    x = np.concatenate([np.nan_to_num(f["own"][s, k]), f["oil"][s], f["v"][s, None]], 1)
+    x = np.concatenate([np.nan_to_num(f["own"][s, k, :OWN]), f["oil"][s, :mb.LAGS], f["vol"][s, :1]], 1)
     return s, k, x, f["y"][s, k]
+
+
+def seq_inputs(own: np.ndarray, oil: np.ndarray, vol: np.ndarray) -> np.ndarray:
+    """global_tcn's input from newest-first lags [..., SEQ] (own lags 1..24, oil and volatility lags
+    0..23, broadcast together): [..., SEQ, 3], oldest month first. The last step is month s, with
+    the series' own change a month earlier, and Brent's change and the volatility state in s."""
+    return np.ascontiguousarray(np.stack(np.broadcast_arrays(own, oil, vol), -1)[..., ::-1, :])
+
+
+def sequences(f: dict, s: np.ndarray, k: np.ndarray) -> np.ndarray:
+    """global_tcn's input [rows, SEQ, 3] for training rows (s, k); missing own lags read as 0."""
+    return seq_inputs(np.nan_to_num(f["own"][s, k]), f["oil"][s], f["vol"][s])
 
 
 # --- network ---------------------------------------------------------------------------------
@@ -93,10 +120,12 @@ def training_rows(f: dict, last_month: int) -> tuple[np.ndarray, np.ndarray, np.
 class Net(nn.Module):
     """Shared MLP on [inputs, series embedding] -> Student-t (location, scale, tail index)."""
 
-    def __init__(self, n_series: int, n_in: int, floor: np.ndarray, linear: bool) -> None:
+    seq = False  # forward(x, k) only; SeqNet also takes the 24-month sequences
+
+    def __init__(self, n_series: int, n_in: int, floor: np.ndarray, linear: bool, n_body: int | None = None) -> None:
         super().__init__()
         self.emb = nn.Embedding(n_series, EMB)
-        layers, d = [], n_in + EMB
+        layers, d = [], (n_in if n_body is None else n_body) + EMB
         for _ in range(LAYERS):
             layers += [nn.Linear(d, HIDDEN), nn.GELU(), nn.Dropout(DROPOUT)]
             d = HIDDEN
@@ -106,10 +135,29 @@ class Net(nn.Module):
         self.register_buffer("floor", torch.as_tensor(floor, dtype=torch.float32))
 
     def forward(self, x, k):
-        h = self.head(self.body(torch.cat([x, self.emb(k)], -1)))
+        return self.student_t(torch.cat([x, self.emb(k)], -1), x, k)
+
+    def student_t(self, z, x, k):
+        """The MLP on z, plus the linear term on the flat inputs x, as Student-t parameters."""
+        h = self.head(self.body(z))
         loc = h[:, 0] + ((self.lin[k] * x).sum(-1) if self.lin is not None else 0.0)
         scale = self.floor[k] + nn.functional.softplus(h[:, 1])
         return loc, scale, mb.NU_MIN + nn.functional.softplus(h[:, 2])
+
+
+class SeqNet(Net):
+    """global_tcn: a causal TCN over the 24-month sequences [B, SEQ, 3] in place of the flat inputs.
+    Its last step (month s) and the series embedding go into Net's MLP and Student-t head; the
+    per-series linear term stays on the flat inputs."""
+
+    seq = True
+
+    def __init__(self, n_series: int, n_in: int, floor: np.ndarray, linear: bool) -> None:
+        super().__init__(n_series, n_in, floor, linear, n_body=TCN_WIDTH)
+        self.tcn = mn.TCN(3, TCN_WIDTH, TCN_LAYERS, DROPOUT)
+
+    def forward(self, x, k, seq):
+        return self.student_t(torch.cat([self.tcn(seq), self.emb(k)], -1), x, k)
 
 
 class OLS(nn.Module):
@@ -130,32 +178,34 @@ class OLS(nn.Module):
         return (x * self.W[k, :-1]).sum(-1) + self.W[k, -1], self.sd[k], torch.full((len(x),), 1e6)
 
 
-def nll(net: Net, x, k, y):
-    loc, scale, nu = net(x, k)
+def nll(net: Net, x, k, y, seq=None):
+    loc, scale, nu = net(x, k) if seq is None else net(x, k, seq)
     return -torch.distributions.StudentT(nu, loc, scale).log_prob(y).mean()
 
 
 def train(x: np.ndarray, k: np.ndarray, y: np.ndarray, months: np.ndarray, floor: np.ndarray, linear: bool,
-          seed: int) -> tuple[Net, dict]:
+          seed: int, seq: np.ndarray | None = None) -> tuple[Net, dict]:
     """Early stopping on the last VAL_SHARE of the training months, then a refit on all of them for
-    the best epoch count (so the latest months, the closest to the test block, are used)."""
+    the best epoch count (so the latest months, the closest to the test block, are used). With seq
+    (the rows' 24-month sequences, from `sequences`) the network is global_tcn's SeqNet."""
     cfg = TRAIN | ({"epochs": 3, "patience": 1} if QUICK else {})
     X, K, Y = (torch.as_tensor(x, dtype=torch.float32), torch.as_tensor(k, dtype=torch.long),
                torch.as_tensor(y, dtype=torch.float32))
+    S = None if seq is None else torch.as_tensor(seq, dtype=torch.float32)
     cut = np.quantile(np.unique(months), 1 - VAL_SHARE)
     n_series = int(k.max()) + 1
 
     def fit(rows: np.ndarray, epochs: int, val: np.ndarray | None = None) -> tuple[Net, float, int]:
         torch.manual_seed(seed)
         rng = np.random.default_rng(seed)
-        net = Net(n_series, x.shape[1], floor, linear)
+        net = Net(n_series, x.shape[1], floor, linear) if S is None else SeqNet(n_series, x.shape[1], floor, linear)
         opt = torch.optim.AdamW(net.parameters(), lr=cfg["lr"], weight_decay=cfg["wd"])
         best, best_ep, bad, state = np.inf, epochs, 0, None
         for ep in range(1, epochs + 1):
             net.train()
             for b in np.array_split(rng.permutation(rows), max(1, len(rows) // cfg["batch"])):
                 b = torch.from_numpy(b)
-                loss = nll(net, X[b], K[b], Y[b])
+                loss = nll(net, X[b], K[b], Y[b], None if S is None else S[b])
                 opt.zero_grad()
                 loss.backward()
                 nn.utils.clip_grad_norm_(net.parameters(), 1.0)
@@ -164,7 +214,7 @@ def train(x: np.ndarray, k: np.ndarray, y: np.ndarray, months: np.ndarray, floor
                 continue
             net.eval()
             with torch.no_grad():
-                v = nll(net, X[val], K[val], Y[val]).item()
+                v = nll(net, X[val], K[val], Y[val], None if S is None else S[val]).item()
             if v < best - 1e-4:
                 best, best_ep, bad, state = v, ep, 0, copy.deepcopy(net.state_dict())
             else:
@@ -182,20 +232,39 @@ def train(x: np.ndarray, k: np.ndarray, y: np.ndarray, months: np.ndarray, floor
     return net, {"val_nll": round(val_nll, 4), "best_epoch": best_ep, "rows": len(y), "val_rows": len(val)}
 
 
+def fit_nets(data: dict, info: dict, st: mb.Stats, last: int, variant: str, seeds: int = SEEDS,
+             base_seed: int = 0) -> tuple[list, list[dict]]:
+    """Build the training rows for months 13..last and train `seeds` networks of `variant`
+    ("global", "global_lin" or "global_tcn"). Returns (nets, per-seed training info). Network s
+    gets seed base_seed + 100 * VARIANTS.index(variant) + s (run_fold passes base_seed = 1000 * fold)."""
+    f = features(data, st)
+    months, k, x, y = training_rows(f, last)
+    seq = sequences(f, months, k) if variant == "global_tcn" else None
+    vi = VARIANTS.index(variant)
+    fitted = [train(x, k, y, months, info["floor"], variant != "global", seed=base_seed + 100 * vi + s, seq=seq)
+              for s in range(seeds)]
+    return [net for net, _ in fitted], [tr for _, tr in fitted]
+
+
 # --- forecasts -------------------------------------------------------------------------------
 
 def simulate(nets: list, st: mb.Stats, info: dict, data: dict, t: np.ndarray, future: np.ndarray, rng,
              n: int = mb.DRAWS, noise: bool = True) -> np.ndarray:
     """Draws of every output (target-major, horizon-minor, as data['names']) at origins t (month
     indices): [n, len(t), outputs], as macro_bayes.simulate with the next month's Student-t from
-    the networks. Draw i comes from nets[i % len(nets)]. noise=False follows the location only."""
+    the networks. Draw i comes from nets[i % len(nets)]; a net with seq = True (SeqNet) also gets the
+    24-month sequences. noise=False follows the location only."""
     K, O, pmax, H = len(info["keys"]), len(t), int(info["pub_lag"].max()), mn.OIL_AHEAD
     z_all = np.nan_to_num(data["oil_m"]) / st.xs
+    v_all = (mb.log_vol(z_all) - st.vm) / st.vs
     y_all = (data["dM"] - st.ym) / st.ys
     zf = np.broadcast_to(future / st.xs, (n, O, H))
     s0 = t - pmax + 1  # first simulated month: every series is published up to s0 - 1
-    buf = np.stack([z_all[s0 - 1 - lag] for lag in range(mb.LAGS)], -1)[None].repeat(n, 0)  # [n, O, LAGS], newest first
-    own = np.stack([np.nan_to_num(y_all[s0 - lag]) for lag in range(1, OWN + 1)], -1)[None].repeat(n, 0)  # [n, O, K, OWN]
+    # SEQ-month buffers, newest first: oil and volatility lags 0..23 of month s0 - 1, own lags 1..24 of
+    # month s0. The flat inputs read the first LAGS oil and OWN own lags, as before.
+    buf = np.stack([z_all[s0 - 1 - lag] for lag in range(SEQ)], -1)[None].repeat(n, 0)  # [n, O, SEQ]
+    vol = np.stack([v_all[s0 - 1 - lag] for lag in range(SEQ)], -1)[None].repeat(n, 0)  # [n, O, SEQ]
+    own = np.stack([np.nan_to_num(y_all[s0 - lag]) for lag in range(1, SEQ + 1)], -1)[None].repeat(n, 0)  # [n, O, K, SEQ]
     which = np.arange(n) % len(nets)
     cum = np.zeros((n, O, K))
     out = np.zeros((n, O, K, len(mn.HORIZONS)))
@@ -203,7 +272,8 @@ def simulate(nets: list, st: mb.Stats, info: dict, data: dict, t: np.ndarray, fu
         znew = zf[:, :, j - 1] if j >= 1 else np.broadcast_to(z_all[t + j], (n, O))
         buf = np.concatenate([znew[..., None], buf[..., :-1]], -1)
         v = (np.log(np.abs(buf[..., :3]).mean(-1) + mb.VOL_FLOOR) - st.vm) / st.vs  # [n, O]
-        x = np.concatenate([own, np.broadcast_to(buf[:, :, None, :], (n, O, K, mb.LAGS)),
+        vol = np.concatenate([v[..., None], vol[..., :-1]], -1)
+        x = np.concatenate([own[..., :OWN], np.broadcast_to(buf[:, :, None, :mb.LAGS], (n, O, K, mb.LAGS)),
                             np.broadcast_to(v[:, :, None, None], (n, O, K, 1))], -1)
         m = np.empty((n, O, K))
         for i, net in enumerate(nets):
@@ -212,8 +282,12 @@ def simulate(nets: list, st: mb.Stats, info: dict, data: dict, t: np.ndarray, fu
                 continue
             xi = torch.as_tensor(x[sel].reshape(-1, x.shape[-1]), dtype=torch.float32)
             ki = torch.as_tensor(np.tile(np.arange(K), int(sel.sum()) * O))  # series index, fastest-varying
+            args = (xi, ki)
+            if getattr(net, "seq", False):
+                si = seq_inputs(own[sel], buf[sel][:, :, None], vol[sel][:, :, None])  # [draws, O, K, SEQ, 3]
+                args += (torch.as_tensor(si.reshape(-1, SEQ, 3), dtype=torch.float32),)
             with torch.no_grad():
-                loc, scale, nu = (a.numpy().astype(float).reshape(-1, O, K) for a in net(xi, ki))
+                loc, scale, nu = (a.numpy().astype(float).reshape(-1, O, K) for a in net(*args))
             m[sel] = loc + scale * rng.standard_t(nu) if noise else loc
         known = j <= -info["pub_lag"]  # [K]: this month is already published for these series
         if known.any():
@@ -228,31 +302,29 @@ def simulate(nets: list, st: mb.Stats, info: dict, data: dict, t: np.ndarray, fu
     return out.reshape(n, O, K * len(mn.HORIZONS))
 
 
-def run_fold(data: dict, j: int) -> dict:
+def run_fold(data: dict, j: int, variants: tuple = VARIANTS) -> dict:
     dates = data["dates"]
     train_idx, test, last = mb.fold_window(data, j)
     info, st = mb.series_info(data), mb.Stats(data, last)
-    months, k, x, y = training_rows(features(data, st), last)
-    print(f"fold {j}: train months to {last} ({len(y)} rows), test {dates[test[0]]:%Y-%m}..{dates[test[-1]]:%Y-%m}",
+    rows = len(training_rows(features(data, st), last)[3])
+    print(f"fold {j}: train months to {last} ({rows} rows), test {dates[test[0]]:%Y-%m}..{dates[test[-1]]:%Y-%m}",
           flush=True)
     t, Y, oil = data["t"][test], data["Y"][test], data["OIL"][test]
     shocked = oil.copy()
     shocked[:, 0] += SHOCK
     out = {"fold": j, "test_dates": [f"{d:%Y-%m}" for d in dates[test]], "names": data["names"],
            "groups": data["groups"], "y": Y.tolist(), "train_months_to": int(last), "models": {}}
-    for vi, variant in enumerate(VARIANTS):
+    for variant in variants:  # seeds depend on the variant and fold, not on which others run
         t0 = time.time()
-        fitted = [train(x, k, y, months, info["floor"], variant == "global_lin", seed=1000 * j + 100 * vi + s)
-                  for s in range(2 if QUICK else SEEDS)]
-        nets = [f[0] for f in fitted]
+        nets, training = fit_nets(data, info, st, last, variant, 2 if QUICK else SEEDS, base_seed=1000 * j)
         S = simulate(nets, st, info, data, t, oil[None], np.random.default_rng(300 + j))
         # oil response: location-only paths with and without the shock, averaged over origins and networks
         base = simulate(nets, st, info, data, t, oil[None], None, n=len(nets), noise=False)
         up = simulate(nets, st, info, data, t, shocked[None], None, n=len(nets), noise=False)
         out["models"][variant] = mb.summarise(S, Y) | {
-            "training": [f[1] for f in fitted], "seconds": round(time.time() - t0, 1),
+            "training": training, "seconds": round(time.time() - t0, 1),
             "response_up10": (up - base).mean((0, 1)).tolist()}
-        ep = [f[1]["best_epoch"] for f in fitted]
+        ep = [tr["best_epoch"] for tr in training]
         print(f"  {variant}: best epochs {ep}, CRPS {np.nanmean(out['models'][variant]['crps']):.4f} "
               f"({time.time() - t0:.0f}s)", flush=True)
     return out
@@ -305,12 +377,13 @@ def report() -> None:
     refs = [(col, tag) for col, tag in BAYES
             if all(f["bayes"][tag] and mb.converged(f["bayes"][tag]["diagnostics"]) for f in folds)]
     has_anch = all(f["anch"] for f in folds)
+    variants = [m for m in VARIANTS if all(m in f["g"]["models"] for f in folds)]
 
     def stack(get):
         return np.vstack([np.array(get(f), float) for f in folds])
 
     scale = np.nanmean(stack(lambda f: f["v1"]["models"]["climatology"]["crps"]), 0)
-    C = {name: stack(lambda f, m=name: f["g"]["models"][m]["crps"]) for name in VARIANTS}
+    C = {name: stack(lambda f, m=name: f["g"]["models"][m]["crps"]) for name in variants}
     if has_ols:
         C["OLS, same inputs"] = stack(lambda f: f["ols"]["crps"])
     for col, tag in refs:
@@ -329,6 +402,10 @@ def report() -> None:
     n_orig = sum(len(f["g"]["test_dates"]) for f in folds)
     when = {tag: sorted(f["bayes"][tag]["meta"]["generated"] for f in folds if "meta" in f["bayes"][tag])
             for _, tag in refs}
+    ran = {}  # (first, last) run date -> variants; a variant run on its own (--variant) carries its own meta
+    for m in variants:
+        w = sorted(f["g"]["models"][m].get("meta", f["g"]["meta"])["generated"] for f in folds)
+        ran.setdefault((w[0], w[-1]), []).append(f"`{m}`")
     out = [
         "# Global one-step network: results", "",
         f"_Generated by `experiments/macro_global.py report` on {datetime.now(UTC).date().isoformat()} from "
@@ -336,11 +413,17 @@ def report() -> None:
         "training months and data as `notes/macro-bayes-results.md` (inputs: `notes/macro-panel.md`). The data are "
         "real and revised (not real-time vintages); nothing is synthetic. Every forecast here is a **what-if**: it "
         "is given the oil path that happened."
+        + "".join(f" {', '.join(ms)} in `runs/macro/global-fold-*.json` generated {a} to {b}." for (a, b), ms in ran.items())
         + "".join(f" `runs/macro/{tag}-fold-*.json` generated {w[0]} to {w[-1]}." for tag, w in when.items() if w)
         + "_", "",
         "Skill = 1 − CRPS / CRPS of the v1 climatology (training mean and spread), averaged over the outputs in "
         "the group; 0 is no better than climatology. `global` is one network shared by all 22 series; "
-        "`global_lin` adds a per-series linear term (momentum and oil lags) to its location. `OLS, same inputs` "
+        "`global_lin` adds a per-series linear term (momentum and oil lags) to its location. "
+        + ("`global_tcn` (added after the first two were scored) keeps that linear term but replaces the "
+           "network's flat inputs with a causal TCN (16 wide, dilations 1, 2, 4, 8) over the last 24 months of the "
+           "series' own change, Brent's change and the volatility state, shared by all series and predicting one "
+           "month ahead like the others. " if "global_tcn" in variants else "")
+        + "`OLS, same inputs` "
         "is per-series least squares on the networks' inputs (12 own lags, oil lags 0–12, volatility state) with "
         "Gaussian errors, simulated the same way: the inputs without the network. `Bayes own-vol` is the main "
         "Bayesian model (`macro_bayes.py --vol own`: each series' own recent volatility sets its band); "
@@ -355,7 +438,7 @@ def report() -> None:
             out.append(f"| {grp} | {h} | " + " | ".join(f"{b}{skill(M, cols(grp, h)):+.3f}{b}" for M in C.values()) + " |")
 
     y_all = stack(lambda f: f["g"]["y"])
-    runs = [(m, lambda f, m=m: f["g"]["models"][m]) for m in VARIANTS]
+    runs = [(m, lambda f, m=m: f["g"]["models"][m]) for m in variants]
     runs += [(col, lambda f, tag=tag: f["bayes"][tag]["modes"]["whatif"]) for col, tag in refs]
     out += ["", "## Calibration: share of outcomes inside the central 90% interval (target 90%)", "",
             "| Target | " + " | ".join(r[0] for r in runs) + " |", "|---|" + "---|" * len(runs)]
@@ -368,9 +451,11 @@ def report() -> None:
             cells.append(f"{np.mean(((y_all[:, c] >= lo[:, c]) & (y_all[:, c] <= hi[:, c]))[ok]):.0%}")
         out.append(f"| {grp} | " + " | ".join(cells) + " |")
 
-    pairs = [(m, col) for col, _ in refs for m in VARIANTS] + [("global_lin", "global")] \
-        + [(m, "OLS, same inputs") for m in VARIANTS if has_ols] \
-        + [("OLS, same inputs", col) for col, _ in refs if has_ols] + [(m, "v1 nn_mean") for m in VARIANTS]
+    pairs = [(m, col) for col, _ in refs for m in variants] \
+        + [(a, b) for a, b in (("global_lin", "global"), ("global_tcn", "global_lin"), ("global_tcn", "global"))
+           if a in variants and b in variants] \
+        + [(m, "OLS, same inputs") for m in variants if has_ols] \
+        + [("OLS, same inputs", col) for col, _ in refs if has_ols] + [(m, "v1 nn_mean") for m in variants]
     out += ["", "## Are the differences real? Diebold–Mariano tests", "",
             "Mean difference in climatology-scaled CRPS over all horizons (negative: the first model is better), "
             "with its Newey–West t-statistic (12 lags, for the overlapping 12-month targets). |t| > 2 is roughly "
@@ -388,12 +473,12 @@ def report() -> None:
             "Epoch with the lowest validation NLL (last quarter of the training months) per seed; the final "
             "network is refitted on all training months for that many epochs. The macro_nn.py networks stopped "
             "at a median of epoch 1-2.", "",
-            "| Fold | Training rows | " + " | ".join(f"{m}: best epochs" for m in VARIANTS) + " |",
-            "|---|---|" + "---|" * len(VARIANTS)]
+            "| Fold | Training rows | " + " | ".join(f"{m}: best epochs" for m in variants) + " |",
+            "|---|---|" + "---|" * len(variants)]
     for f in folds:
-        tr = {m: f["g"]["models"][m]["training"] for m in VARIANTS}
-        out.append(f"| {f['g']['fold']} | {tr[VARIANTS[0]][0]['rows']} | "
-                   + " | ".join(", ".join(str(s["best_epoch"]) for s in tr[m]) for m in VARIANTS) + " |")
+        tr = {m: f["g"]["models"][m]["training"] for m in variants}
+        out.append(f"| {f['g']['fold']} | {tr[variants[0]][0]['rows']} | "
+                   + " | ".join(", ".join(str(s["best_epoch"]) for s in tr[m]) for m in variants) + " |")
 
     keys = ("us_cpi", "uk_cpi", "ea_cpi", "us_unemp", "us_rate", "ind_gasdesw", "ind_djfuelusgulf", "ind_pcu325311325311")
     fins = [(col, tag, fin) for col, tag in BAYES if (fin := mb.load(f"{tag}-final.json"))]
@@ -402,13 +487,13 @@ def report() -> None:
             "each fold's test origins and its networks (the networks are nonlinear, so the response depends on "
             "the state). In the target's units (% of the price level; pp for rates and unemployment)."
             + "".join(f" {col}: posterior mean of the all-data fit (`runs/macro/{tag}-final.json`)." for col, tag, _ in fins), "",
-            "| Series | " + " | ".join(f"{m}, last fold | {m}, mean of folds" for m in VARIANTS)
+            "| Series | " + " | ".join(f"{m}, last fold | {m}, mean of folds" for m in variants)
             + "".join(f" | {col} (all data)" for col, _, _ in fins) + " |",
-            "|---|" + "---|---|" * len(VARIANTS) + "---|" * len(fins)]
+            "|---|" + "---|---|" * len(variants) + "---|" * len(fins)]
     for key in keys:
         c = names.index(f"{key}@12")
         row = []
-        for m in VARIANTS:
+        for m in variants:
             r = [f["g"]["models"][m]["response_up10"][c] for f in folds]
             row += [f"{r[-1]:+.2f}", f"{np.mean(r):+.2f}"]
         row += [f"{fin['responses']['up10']['mean'][fin['keys'].index(key)][11]:+.2f}" for _, _, fin in fins]
@@ -424,6 +509,7 @@ def main() -> None:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("cmd", choices=("check", "fold", "ols", "report"))
     p.add_argument("j", nargs="?", type=int, default=0)
+    p.add_argument("--variant", choices=VARIANTS, help="fit only this variant; fold merges it into the fold's file")
     a = p.parse_args()
     if a.cmd == "report":
         return report()
@@ -431,16 +517,26 @@ def main() -> None:
         (RUNS / "global-ols.json").write_text(json.dumps(run_ols()))
         return print(f"wrote {RUNS / 'global-ols.json'}")
     data = mn.make_dataset(mn.V1_BLOCKS)
+    variants = (a.variant,) if a.variant else VARIANTS
     if a.cmd == "check":
         QUICK = True
-        out = run_fold(data, mn.FOLDS - 1)
+        out = run_fold(data, mn.FOLDS - 1, variants)
         print({m: float(np.nanmean(v["crps"])) for m, v in out["models"].items()})
         return
     RUNS.mkdir(parents=True, exist_ok=True)
-    meta = {"generated": datetime.now(UTC).isoformat(timespec="seconds"), "job": os.environ.get("SLURM_JOB_ID")}
+    meta = {"generated": datetime.now(UTC).isoformat(timespec="seconds"), "job": os.environ.get("SLURM_JOB_ID"),
+            "torch_threads": torch.get_num_threads()}
     path = RUNS / f"global-fold-{a.j}.json"
-    path.write_text(json.dumps(run_fold(data, a.j) | {"meta": meta}))
-    print(f"wrote {path}")
+    out = run_fold(data, a.j, variants)
+    old = mb.load(path.name) if a.variant else None  # read after the run, so other variants' merges are kept
+    if old is None:
+        out |= {"meta": meta}
+    else:
+        assert old["test_dates"] == out["test_dates"] and old["names"] == out["names"], f"{path}: origins or outputs differ"
+        old["models"][a.variant] = out["models"][a.variant] | {"meta": meta}  # this variant's own run date
+        out = old
+    path.write_text(json.dumps(out))
+    print(f"wrote {path}" + (f" ({a.variant} merged)" if old else ""))
 
 
 if __name__ == "__main__":
