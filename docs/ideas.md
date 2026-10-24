@@ -54,6 +54,60 @@ on one recorded example, labelled as cached.
 4. Click a number on screen: the receipt shows exactly where it came from.
 5. Close on the backtest: "on the 2019 tanker attacks, we were within X% of what happened".
 
+## How we could estimate hidden flow
+
+Stack several independent signals, then combine them with honest ranges. Each one alone is weak;
+agreement between them is the story.
+
+1. **Seen crossings.** A gate line across the strait; count AIS tracks that cross it, by
+   direction. Drop tracks that fail the spoofing checks (impossible speed, on land, circles,
+   duplicate MMSI).
+2. **Cargo per ship.** Deadweight × load factor. Laden or empty from reported draught vs design
+   draught. AIS draught is typed in by the crew and often stale, so treat it as a hint and
+   check it against direction (outbound from Gulf terminals is usually laden).
+3. **Gap bridging.** A ship goes silent on one side of the strait and reappears on the other
+   within a plausible transit time: count it as a dark crossing, high confidence.
+4. **Radar snapshot + Little's law.** Count tanker-sized radar detections with no AIS match in a
+   corridor through the strait at one satellite pass (L). Divide by the typical time to cross that
+   corridor (W) to get dark crossings per hour (λ = L / W). Turns a once-every-few-days snapshot
+   into a flow rate. Clever, simple, explainable on one slide.
+5. **Mass balance (stretch).** Known exports from terminals inside the Gulf, minus the bypass
+   pipelines, minus what AIS sees = what must be crossing dark. Gas flaring at the fields
+   (VIIRS Nightfire) as a rough check on production.
+6. **Combine.** Monte Carlo over the uncertain inputs (load factor, dark weights, corridor
+   time) gives a total with a range, plus how much each signal contributed.
+
+**Validation:** on a pre-crisis period when AIS was good, hide the AIS for some ships and check
+that the radar + Little's-law estimate recovers them. Compare our seen count with PortWatch, and
+our total with the published 2026 estimates (see "us vs the analysts").
+
+## Options for the economic chain
+
+Start simple and cite every link; only add sophistication where it changes the answer.
+
+| Link | Simple version (weekend) | Better version (if time) |
+|---|---|---|
+| Flow → Brent | Net supply loss × a price elasticity from the literature (e.g. Kilian 2009; Caldara, Cavallo & Iacoviello 2019: verify values) | Fit on our backtest events; subtract offsets (bypass pipelines, spare capacity, strategic reserve releases) |
+| Brent → pump price | Lagged regression on EIA weekly retail vs Brent | Asymmetric pass-through ("rockets and feathers": prices rise fast, fall slowly) |
+| Energy → CPI | CPI energy weight × energy price change | Second-round effects through transport and food |
+| CPI → Fed | Show market pricing (Kalshi) next to a simple policy rule | Explain "look through supply shocks": inflation up but growth down |
+| Fed → mortgages | 30-year rate ≈ 10-year Treasury + spread | Monthly payment for a typical loan |
+| UK | Ofgem cap (quarterly lag) and BoE Bank Rate | LNG link via Qatar for UK gas bills |
+
+## How the pieces fit together (sketch)
+
+Collectors on a timer (AIS, radar, prices, macro) → timestamped snapshots on disk → estimator
+(flow + range) → chain model → small API → front end. Every output carries a receipt (inputs,
+their collection times, code version), which the UI shows on click. This splits cleanly into the
+lanes proposed in `docs/design.md`.
+
+## Pitch lines to try
+
+- "The strait has gone dark. We turned the lights back on."
+- "Ship trackers say 3.5 million barrels a day. Washington says 10. Who's right?" (verify the
+  figures first)
+- "What a strait on the other side of the world does to your mortgage."
+
 ## The 2026 context (check before pitching)
 
 Researched 24 Oct 2026, mostly from search snippets because many sites were unreachable; verify
