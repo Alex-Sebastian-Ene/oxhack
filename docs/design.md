@@ -31,7 +31,7 @@ never shown as live (see `AGENTS.md`). The checked version of this table (Gulf c
 licence, 2026 context) is in `docs/ideas.md`; the key finding is that **no free live AIS feed
 covers Hormuz**, so the app is near-live and says how old each view is.
 
-| Need | Candidate sources (unverified) | Notes |
+| Need | Sources (checks in `docs/ideas.md`) | Notes |
 |---|---|---|
 | Ship positions and counts in and around Hormuz | IMF PortWatch (daily transits); GFW AIS presence (hourly, ~3-day lag) | AISStream has no receivers in Hormuz; paid feeds are enterprise-only |
 | Ships with AIS off (ghost / dark fleet) | GFW SAR detections unmatched to AIS; Sentinel-1 via Copernicus | Revisit time is days, not minutes |
