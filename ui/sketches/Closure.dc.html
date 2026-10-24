@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Closure simulator</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0B0F14}
+a{color:#7CC0EA}a:hover{color:#A9D6F2}
+input[type=range]{accent-color:#F0A23B}
+</style>
+</helmet>
+<div style="font-family: 'IBM Plex Sans', system-ui, sans-serif; color: #E7ECF2; background: #0B0F14; min-height: 900px; box-sizing: border-box; padding: 24px; display: flex; flex-direction: column; gap: 16px">
+
+<header style="display: flex; flex-direction: column; gap: 6px">
+  <h1 style="margin: 0; font-size: 28px; font-weight: 600">Close the strait: how much oil goes missing?</h1>
+  <p style="margin: 0; font-size: 15px; color: #A3AFBD; max-width: 980px">Uses published figures only: pre-war flow and spare pipeline capacity around the strait. You choose how much is blocked and for how long.</p>
+</header>
+
+<div style="display: flex; flex-wrap: wrap; gap: 16px">
+  <section aria-label="Scenario" style="flex: 1 1 380px; min-width: 0; background: #121821; border: 1px solid #222C38; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 16px">
+    <div style="display: flex; flex-direction: column; gap: 4px">
+      <div style="display: flex; justify-content: space-between"><label for="share" style="font-size: 15px">Share of flow blocked</label><span style="font-family: 'IBM Plex Mono', monospace; font-size: 18px; color: #F5BD6E">{{share}}%</span></div>
+      <input id="share" type="range" min="0" max="100" step="5" value="{{share}}" onChange="{{setShare}}" style="width: 100%; min-height: 44px">
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 4px">
+      <div style="display: flex; justify-content: space-between"><label for="days" style="font-size: 15px">How long</label><span style="font-family: 'IBM Plex Mono', monospace; font-size: 18px; color: #F5BD6E">{{days}} days</span></div>
+      <input id="days" type="range" min="1" max="120" step="1" value="{{days}}" onChange="{{setDays}}" style="width: 100%; min-height: 44px">
+    </div>
+    <div style="border-top: 1px solid #222C38; padding-top: 14px; display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: #A3AFBD">
+      <p style="margin: 0">Pre-war flow: <span style="font-family: 'IBM Plex Mono', monospace; color: #E7ECF2">20 mb/d</span>, about 20% of world consumption (EIA, 2024 data)</p>
+      <p style="margin: 0">Spare bypass pipeline capacity: <span style="font-family: 'IBM Plex Mono', monospace; color: #E7ECF2">2.6–3.5 mb/d</span> (EIA figure unconfirmed; secondary sources)</p>
+      <p style="margin: 0">Not modelled yet: strategic stock releases, spare production elsewhere, demand falling.</p>
+    </div>
+  </section>
+
+  <section aria-label="Result" aria-live="polite" style="flex: 2 1 560px; min-width: 0; background: #121821; border: 1px solid #F0A23B; border-radius: 10px; padding: 24px; display: flex; flex-direction: column; gap: 18px">
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px">
+      <div style="display: flex; flex-direction: column; gap: 4px">
+        <span style="font-size: 13px; color: #A3AFBD">Blocked</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 30px">{{blocked}}</span>
+        <span style="font-size: 12px; color: #A3AFBD">mb/d</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 4px">
+        <span style="font-size: 13px; color: #A3AFBD">Rerouted by pipeline</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 30px; color: #7CC0EA">{{bypass}}</span>
+        <span style="font-size: 12px; color: #A3AFBD">mb/d</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 4px">
+        <span style="font-size: 13px; color: #A3AFBD">Missing from the market</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 30px; color: #F5BD6E">{{net}}</span>
+        <span style="font-size: 12px; color: #A3AFBD">mb/d · {{netShare}} of world use</span>
+      </div>
+    </div>
+    <div aria-hidden="true" style="display: flex; height: 22px; border-radius: 4px; overflow: hidden; background: #1B2430">
+      <div style="width: {{wFlow}}; background: #3C7FAD"></div>
+      <div style="width: {{wBypass}}; background: #7CC0EA"></div>
+      <div style="width: {{wNet}}; background: repeating-linear-gradient(135deg, #F0A23B 0 6px, #8A5B1E 6px 10px)"></div>
+    </div>
+    <div style="display: flex; flex-wrap: wrap; gap: 16px; font-size: 13px; color: #A3AFBD"><span>Dark blue: still flowing</span><span>Light blue: rerouted</span><span>Hatched: missing</span></div>
+    <div style="border-top: 1px solid #222C38; padding-top: 16px; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap">
+      <span style="font-size: 15px; color: #A3AFBD">Over {{days}} days, the world is short of</span>
+      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 40px; color: #F5BD6E; line-height: 1">{{cumulative}}</span>
+      <span style="font-size: 15px; color: #A3AFBD">million barrels</span>
+    </div>
+    <p style="margin: 0; font-size: 12px; color: #8794A3">Ranges come from the bypass range. MODELLED from the cited inputs; next step feeds "missing" into the price model (board B).</p>
+  </section>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { share: 100, days: 30 };
+}
+renderVals() {
+const flow = 20;
+const world = 100;
+const bpLo = 2.6;
+const bpHi = 3.5;
+const s = this.state;
+const blocked = flow * s.share / 100;
+const byLo = Math.min(bpLo, blocked);
+const byHi = Math.min(bpHi, blocked);
+const netLo = blocked - byHi;
+const netHi = blocked - byLo;
+const f1 = (x) => x.toFixed(1);
+const range = (a, b) => (Math.abs(a - b) < 0.05 ? f1(a) : f1(a) + '–' + f1(b));
+const pct = (x) => (x / flow * 100).toFixed(1) + '%';
+return {
+share: s.share,
+days: s.days,
+blocked: f1(blocked),
+bypass: range(byLo, byHi),
+net: range(netLo, netHi),
+netShare: range(netLo / world * 100, netHi / world * 100) + '%',
+cumulative: range(netLo * s.days, netHi * s.days).replace(/\.0/g, ''),
+wFlow: pct(flow - blocked),
+wBypass: pct((byLo + byHi) / 2),
+wNet: pct(blocked - (byLo + byHi) / 2),
+setShare: (e) => this.setState({ share: Number(e.target.value) }),
+setDays: (e) => this.setState({ days: Number(e.target.value) })
+};
+}
+}
+</script>
+</body>
+</html>

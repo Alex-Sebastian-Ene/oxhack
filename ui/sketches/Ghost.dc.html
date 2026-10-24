@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Ghost-ship dossier</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0B0F14}
+a{color:#7CC0EA}a:hover{color:#A9D6F2}
+</style>
+</helmet>
+<div style="font-family: 'IBM Plex Sans', system-ui, sans-serif; color: #E7ECF2; background: #0B0F14; min-height: 900px; box-sizing: border-box; padding: 24px; display: flex; flex-direction: column; gap: 16px">
+
+<header style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px">
+  <div style="display: flex; flex-direction: column; gap: 4px">
+    <p style="margin: 0; font-size: 13px; color: #A3AFBD"><a href="Main.dc.html">Live view</a> / Suspected dark tanker</p>
+    <h1 style="margin: 0; font-size: 26px; font-weight: 600">Tanker [NAME] · IMO <span style="font-family: 'IBM Plex Mono', monospace">[#######]</span></h1>
+    <p style="margin: 0; font-size: 14px; color: #A3AFBD">VLCC-sized · flag [country] · last AIS <span style="font-family: 'IBM Plex Mono', monospace">[date HH:MM UTC]</span></p>
+  </div>
+  <div style="display: flex; flex-wrap: wrap; gap: 8px">
+    <button type="button" style="min-height: 44px; padding: 0 16px; border-radius: 6px; border: 1px solid #2B3644; background: #1B2430; color: #E7ECF2; font: inherit; font-size: 14px">See raw AIS messages</button>
+    <button type="button" style="min-height: 44px; padding: 0 16px; border-radius: 6px; border: 1px solid #F0A23B; background: #F0A23B; color: #1A1206; font: inherit; font-size: 14px; font-weight: 600">Count in hidden flow</button>
+  </div>
+</header>
+
+<div style="display: flex; flex-wrap: wrap; gap: 16px">
+  <section aria-label="Track" style="flex: 999 1 560px; min-width: 0; background: #121821; border: 1px solid #222C38; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 12px">
+    <h2 style="margin: 0; font-size: 16px; font-weight: 600">Track, last 72 h</h2>
+    <svg viewBox="0 0 800 420" role="img" aria-label="Schematic track: tanker visible on AIS, then a gap with a satellite detection, then visible again sitting deeper in the water" style="width: 100%; height: auto; display: block; border-radius: 8px; background: #0F1A26">
+      <path d="M0,0 H800 V110 C700,130 600,96 500,120 C420,140 330,110 250,140 C170,170 80,140 0,160 Z" fill="#1C2733" stroke="#2E3B4A"></path>
+      <path d="M260,420 C300,330 350,270 400,230 C430,250 450,300 480,340 C510,380 530,400 540,420 Z" fill="#1C2733" stroke="#2E3B4A"></path>
+      <path d="M760,300 C680,270 600,240 520,214" stroke="#4EA8DE" stroke-width="3" fill="none"></path>
+      <circle cx="760" cy="300" r="5" fill="#4EA8DE"></circle>
+      <circle cx="520" cy="214" r="6" fill="#4EA8DE"></circle>
+      <path d="M520,214 C440,196 360,190 290,196" stroke="#F0A23B" stroke-width="3" stroke-dasharray="3 7" fill="none"></path>
+      <rect x="395" y="182" width="14" height="14" fill="none" stroke="#E7ECF2" stroke-width="2"></rect>
+      <path d="M290,196 C220,204 140,224 60,250" stroke="#4EA8DE" stroke-width="3" fill="none"></path>
+      <circle cx="290" cy="196" r="6" fill="#4EA8DE"></circle>
+      <polygon points="0,-8 16,0 0,8" fill="#4EA8DE" transform="translate(56,252) rotate(162)"></polygon>
+      <g font-family="IBM Plex Mono, monospace" font-size="12">
+        <rect x="540" y="150" width="200" height="44" rx="6" fill="#121821" stroke="#2E3B4A"></rect>
+        <text x="552" y="168" fill="#C2CBD5">AIS off [date HH:MM]</text>
+        <text x="552" y="186" fill="#C2CBD5">draught [X.X] m (light)</text>
+        <rect x="320" y="226" width="196" height="44" rx="6" fill="#121821" stroke="#E7ECF2"></rect>
+        <text x="332" y="244" fill="#E7ECF2">Sentinel-1 hit [HH:MM]</text>
+        <text x="332" y="262" fill="#C2CBD5">length ~[XXX] m</text>
+        <rect x="110" y="270" width="200" height="44" rx="6" fill="#121821" stroke="#2E3B4A"></rect>
+        <text x="122" y="288" fill="#C2CBD5">AIS on [date HH:MM]</text>
+        <text x="122" y="306" fill="#F5BD6E">draught [X.X] m (laden)</text>
+      </g>
+      <text x="380" y="176" fill="#F5BD6E" font-size="13" font-family="IBM Plex Sans, sans-serif">dark for [N] h</text>
+    </svg>
+    <p style="margin: 0; font-size: 12px; color: #8794A3; font-family: 'IBM Plex Mono', monospace">AIS: [provider] · SAR: Copernicus Sentinel-1 [scene id] · Sketch: track schematic</p>
+
+    <h3 style="margin: 4px 0 0; font-size: 14px; font-weight: 600">Timeline</h3>
+    <ol style="margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; font-size: 13px">
+      <li style="border-top: 3px solid #4EA8DE; padding-top: 8px"><span style="font-family: 'IBM Plex Mono', monospace; color: #A3AFBD">[D-3]</span><br>Leaves [anchorage] light</li>
+      <li style="border-top: 3px dashed #F0A23B; padding-top: 8px"><span style="font-family: 'IBM Plex Mono', monospace; color: #A3AFBD">[D-2]</span><br>AIS off near [terminal]</li>
+      <li style="border-top: 3px solid #E7ECF2; padding-top: 8px"><span style="font-family: 'IBM Plex Mono', monospace; color: #A3AFBD">[D-2]</span><br>Radar sees an unlisted ship</li>
+      <li style="border-top: 3px solid #4EA8DE; padding-top: 8px"><span style="font-family: 'IBM Plex Mono', monospace; color: #A3AFBD">[D-1]</span><br>Back on AIS, laden, outbound</li>
+    </ol>
+  </section>
+
+  <aside style="flex: 1 1 380px; min-width: 0; display: flex; flex-direction: column; gap: 16px">
+    <section aria-label="Verdict" style="background: #121821; border: 1px solid #F0A23B; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 10px">
+      <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px">
+        <h2 style="margin: 0; font-size: 14px; font-weight: 500; color: #A3AFBD">Verdict</h2>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 1px; padding: 2px 8px; border-radius: 4px; border: 1px solid #B9A6E8; color: #CBBDF0">MODELLED</span>
+      </div>
+      <p style="margin: 0; font-size: 20px; font-weight: 600; color: #F5BD6E">Likely loaded crude while dark</p>
+      <p style="margin: 0; font-size: 14px; color: #C2CBD5">Adds about <span style="font-family: 'IBM Plex Mono', monospace; color: #E7ECF2">[X.X] million barrels</span> to hidden flow · confidence <span style="font-family: 'IBM Plex Mono', monospace; color: #E7ECF2">[0.XX]</span></p>
+    </section>
+
+    <section aria-label="Evidence" style="background: #121821; border: 1px solid #222C38; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 10px">
+      <h2 style="margin: 0; font-size: 14px; font-weight: 500; color: #A3AFBD">Evidence</h2>
+      <ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 0; font-size: 14px">
+        <li style="display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid #222C38"><span>AIS gap inside the strait</span><span style="font-family: 'IBM Plex Mono', monospace; color: #F5BD6E">[N] h</span></li>
+        <li style="display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid #222C38"><span>Radar hit with no AIS match</span><span style="font-family: 'IBM Plex Mono', monospace; color: #F5BD6E">yes</span></li>
+        <li style="display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid #222C38"><span>Draught change, before → after</span><span style="font-family: 'IBM Plex Mono', monospace; color: #F5BD6E">+[X.X] m</span></li>
+        <li style="display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid #222C38"><span>On a sanctions list (OFAC / EU / UK)</span><span style="font-family: 'IBM Plex Mono', monospace">[match / none]</span></li>
+        <li style="display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid #222C38"><span>Flag or name changes, 12 months</span><span style="font-family: 'IBM Plex Mono', monospace">[N]</span></li>
+        <li style="display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid #222C38"><span>Impossible jumps (spoofing)</span><span style="font-family: 'IBM Plex Mono', monospace">[N]</span></li>
+        <li style="display: flex; justify-content: space-between; gap: 12px; padding: 10px 0"><span>Met another tanker at sea (ship-to-ship)</span><span style="font-family: 'IBM Plex Mono', monospace">[yes / no]</span></li>
+      </ul>
+    </section>
+
+    <section aria-label="Review" style="background: #121821; border: 1px solid #222C38; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 10px">
+      <h2 style="margin: 0; font-size: 14px; font-weight: 500; color: #A3AFBD">Was this right?</h2>
+      <p style="margin: 0; font-size: 13px; color: #A3AFBD">Reviews tune the detector and are logged with who made them.</p>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap">
+        <button type="button" style="min-height: 44px; padding: 0 16px; border-radius: 6px; border: 1px solid #2B3644; background: #1B2430; color: #E7ECF2; font: inherit; font-size: 14px">Confirm dark transit</button>
+        <button type="button" style="min-height: 44px; padding: 0 16px; border-radius: 6px; border: 1px solid #2B3644; background: transparent; color: #A3AFBD; font: inherit; font-size: 14px">Not a tanker / false alarm</button>
+      </div>
+    </section>
+  </aside>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

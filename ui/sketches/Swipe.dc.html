@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Satellite swipe</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0B0F14}
+a{color:#7CC0EA}a:hover{color:#A9D6F2}
+input[type=range]{accent-color:#F0A23B}
+</style>
+</helmet>
+<div style="font-family: 'IBM Plex Sans', system-ui, sans-serif; color: #E7ECF2; background: #0B0F14; min-height: 900px; box-sizing: border-box; padding: 24px; display: flex; flex-direction: column; gap: 16px">
+
+<header style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px">
+  <div style="display: flex; flex-direction: column; gap: 6px">
+    <h1 style="margin: 0; font-size: 28px; font-weight: 600">What AIS shows vs what radar sees</h1>
+    <p style="margin: 0; font-size: 15px; color: #A3AFBD">Same place, same moment. Drag the divider: every ship that appears only on the radar side is a ship hiding its transponder.</p>
+  </div>
+  <p style="margin: 0; font-family: 'IBM Plex Mono', monospace; font-size: 14px"><span style="color: #8794A3">sketch:</span> <span style="color: #7CC0EA">AIS {{aisCount}}</span> · <span style="color: #E7ECF2">radar {{radarCount}}</span> · <span style="color: #F5BD6E">hidden {{hiddenCount}}</span></p>
+</header>
+
+<section aria-label="Swipe comparison" style="background: #121821; border: 1px solid #222C38; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 10px">
+  <div aria-hidden="true" style="position: relative; height: 460px; border-radius: 8px; overflow: hidden; background: #1A1F25">
+    <div style="position: absolute; inset: 0; background: repeating-linear-gradient(0deg, #1A1F25 0 3px, #1D232A 3px 6px)"></div>
+    <sc-for list="{{radar}}" as="r" hint-placeholder-count="9">
+      <span style="position: absolute; left: {{r.left}}; top: {{r.top}}; width: 34px; height: 12px; border-radius: 3px; background: #E7ECF2; opacity: 0.85"></span>
+      <sc-if value="{{r.hidden}}" hint-placeholder-val="{{ false }}">
+        <span style="position: absolute; left: {{r.ringLeft}}; top: {{r.ringTop}}; width: 54px; height: 32px; border: 2px dashed #F0A23B; border-radius: 50%; box-sizing: border-box"></span>
+      </sc-if>
+    </sc-for>
+    <span style="position: absolute; right: 14px; top: 12px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #E7ECF2; background: #0B0F14; padding: 4px 8px; border-radius: 4px">RADAR · Sentinel-1 [scene], [date HH:MM]</span>
+    <div style="position: absolute; inset: 0; background: #0F1A26; clip-path: inset(0 {{clipRight}} 0 0)">
+      <sc-for list="{{ais}}" as="a" hint-placeholder-count="5">
+        <span style="position: absolute; left: {{a.left}}; top: {{a.top}}; width: 0; height: 0; border-top: 8px solid transparent; border-bottom: 8px solid transparent; border-left: 22px solid #4EA8DE"></span>
+      </sc-for>
+      <span style="position: absolute; left: 14px; top: 12px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #CFE6F6; background: #0B0F14; padding: 4px 8px; border-radius: 4px">AIS · [provider], [date HH:MM] ± [N] min</span>
+    </div>
+    <div style="position: absolute; top: 0; bottom: 0; left: {{splitPct}}; width: 3px; margin-left: -1px; background: #F0A23B"></div>
+  </div>
+  <label for="split" style="font-size: 14px; color: #A3AFBD">Divider</label>
+  <input id="split" type="range" min="0" max="100" step="1" value="{{split}}" onChange="{{onSplit}}" style="width: 100%; min-height: 44px">
+  <p style="margin: 0; font-size: 12px; color: #8794A3">Sketch: shapes stand in for a real radar image and AIS positions. Real version: the scene as an image under the map, AIS matched within ± [N] minutes of the pass.</p>
+</section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { split: 50 };
+}
+renderVals() {
+const pts = [
+[8, 30, false], [19, 62, true], [27, 40, false], [38, 70, false], [46, 25, true],
+[58, 55, false], [66, 35, true], [77, 68, false], [86, 44, true]
+];
+const radar = pts.map(([x, y, h]) => ({
+left: x + '%', top: y + '%', hidden: h,
+ringLeft: 'calc(' + x + '% - 10px)', ringTop: 'calc(' + y + '% - 10px)'
+}));
+const ais = pts.filter((p) => !p[2]).map(([x, y]) => ({ left: x + '%', top: 'calc(' + y + '% - 2px)' }));
+const s = this.state.split;
+return {
+radar, ais,
+split: s,
+splitPct: s + '%',
+clipRight: (100 - s) + '%',
+aisCount: ais.length,
+radarCount: pts.length,
+hiddenCount: pts.length - ais.length,
+onSplit: (e) => this.setState({ split: Number(e.target.value) })
+};
+}
+}
+</script>
+</body>
+</html>

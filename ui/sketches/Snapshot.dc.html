@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>From one radar snapshot to a flow rate</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0B0F14}
+a{color:#7CC0EA}a:hover{color:#A9D6F2}
+input[type=range]{accent-color:#F0A23B}
+</style>
+</helmet>
+<div style="font-family: 'IBM Plex Sans', system-ui, sans-serif; color: #E7ECF2; background: #0B0F14; min-height: 900px; box-sizing: border-box; padding: 24px; display: flex; flex-direction: column; gap: 18px">
+
+<header style="display: flex; flex-direction: column; gap: 6px">
+  <h1 style="margin: 0; font-size: 28px; font-weight: 600">One radar photo, a whole day of flow</h1>
+  <p style="margin: 0; font-size: 15px; color: #A3AFBD; max-width: 900px">A satellite passes every few days. If it sees L hidden tankers in the corridor, and a tanker takes W hours to cross it, then about L ÷ W hidden tankers cross every hour. (Little's law, from queueing theory.)</p>
+</header>
+
+<div style="display: flex; flex-wrap: wrap; gap: 16px">
+  <section aria-label="Corridor snapshot" style="flex: 999 1 600px; min-width: 0; background: #121821; border: 1px solid #222C38; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 10px">
+    <h2 style="margin: 0; font-size: 16px; font-weight: 600">Radar pass over the corridor</h2>
+    <div aria-hidden="true" style="position: relative; height: 220px; border-radius: 8px; background: #0F1A26; overflow: hidden">
+      <div style="position: absolute; left: 0; right: 0; top: 70px; height: 80px; background: #13283B; border-top: 1px dashed #35506B; border-bottom: 1px dashed #35506B"></div>
+      <span style="position: absolute; left: 12px; top: 48px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #6F8BA6">corridor, [XX] nm long</span>
+      <sc-for list="{{boats}}" as="b" hint-placeholder-count="6">
+        <span style="position: absolute; left: {{b.left}}; top: {{b.top}}; width: 26px; height: 10px; border: 2px solid {{b.color}}; border-radius: 3px; box-sizing: border-box"></span>
+      </sc-for>
+    </div>
+    <div style="display: flex; flex-wrap: wrap; gap: 16px; font-size: 13px; color: #A3AFBD"><span>White outline: radar ship with a matching AIS signal</span><span>Amber outline: radar ship with no AIS (hidden)</span></div>
+    <p style="margin: 0; font-size: 12px; color: #8794A3">Sketch with illustrative inputs. Real version: GFW SAR detections or our own Sentinel-1 scene.</p>
+  </section>
+
+  <section aria-label="Inputs and result" style="flex: 1 1 420px; min-width: 0; background: #121821; border: 1px solid #222C38; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 14px">
+    <div style="display: flex; flex-direction: column; gap: 4px">
+      <div style="display: flex; justify-content: space-between"><label for="L" style="font-size: 14px">L, hidden tankers in the photo</label><span style="font-family: 'IBM Plex Mono', monospace">{{L}}</span></div>
+      <input id="L" type="range" min="0" max="20" step="1" value="{{L}}" onChange="{{setL}}" style="width: 100%; min-height: 44px">
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 4px">
+      <div style="display: flex; justify-content: space-between"><label for="W" style="font-size: 14px">W, hours to cross the corridor</label><span style="font-family: 'IBM Plex Mono', monospace">{{W}} h</span></div>
+      <input id="W" type="range" min="2" max="12" step="1" value="{{W}}" onChange="{{setW}}" style="width: 100%; min-height: 44px">
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 4px">
+      <div style="display: flex; justify-content: space-between"><label for="C" style="font-size: 14px">Average cargo per laden tanker</label><span style="font-family: 'IBM Plex Mono', monospace">{{Clabel}}</span></div>
+      <input id="C" type="range" min="2" max="20" step="1" value="{{C10}}" onChange="{{setC}}" style="width: 100%; min-height: 44px">
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 4px">
+      <div style="display: flex; justify-content: space-between"><label for="F" style="font-size: 14px">Share of hidden tankers that are laden</label><span style="font-family: 'IBM Plex Mono', monospace">{{F}}%</span></div>
+      <input id="F" type="range" min="0" max="100" step="10" value="{{F}}" onChange="{{setF}}" style="width: 100%; min-height: 44px">
+    </div>
+    <div style="border-top: 1px solid #222C38; padding-top: 14px; display: flex; flex-direction: column; gap: 6px">
+      <p style="margin: 0; font-family: 'IBM Plex Mono', monospace; font-size: 15px; color: #C2CBD5">{{L}} ÷ {{W}} h = {{perHour}} hidden crossings / h</p>
+      <p style="margin: 0; font-family: 'IBM Plex Mono', monospace; font-size: 15px; color: #C2CBD5">× 24 h × {{F}}% laden × {{Clabel}}</p>
+      <p style="margin: 4px 0 0; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 44px; color: #F5BD6E; line-height: 1">{{mbd}}</span><span style="font-size: 15px; color: #C2CBD5">million barrels / day hidden</span></p>
+      <p style="margin: 0; font-size: 12px; color: #8794A3">Assumes a steady flow over the day. One pass is noisy: average several passes and show the range.</p>
+    </div>
+  </section>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { L: 2, W: 5, C10: 10, F: 60 };
+}
+renderVals() {
+const s = this.state;
+const perHour = s.W > 0 ? s.L / s.W : 0;
+const cargo = s.C10 / 10;
+const mbd = perHour * 24 * (s.F / 100) * cargo;
+const boats = [];
+const seen = 4;
+for (let i = 0; i < s.L + seen; i++) {
+const hidden = i < s.L;
+boats.push({
+left: ((i * 37 + 9) % 92) + '%',
+top: (78 + ((i * 29) % 60)) + 'px',
+color: hidden ? '#F0A23B' : '#E7ECF2'
+});
+}
+const num = (e) => Number(e.target.value);
+return {
+L: s.L, W: s.W, C10: s.C10, F: s.F,
+Clabel: cargo.toFixed(1) + 'M bbl',
+perHour: perHour.toFixed(2),
+mbd: mbd.toFixed(1),
+boats,
+setL: (e) => this.setState({ L: num(e) }),
+setW: (e) => this.setState({ W: num(e) }),
+setC: (e) => this.setState({ C10: num(e) }),
+setF: (e) => this.setState({ F: num(e) })
+};
+}
+}
+</script>
+</body>
+</html>

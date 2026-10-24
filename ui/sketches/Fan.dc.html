@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Uncertainty fan</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0B0F14}
+a{color:#7CC0EA}a:hover{color:#A9D6F2}
+</style>
+</helmet>
+<div style="font-family: 'IBM Plex Sans', system-ui, sans-serif; color: #E7ECF2; background: #0B0F14; min-height: 900px; box-sizing: border-box; padding: 24px; display: flex; flex-direction: column; gap: 16px">
+
+<header style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px">
+  <div style="display: flex; flex-direction: column; gap: 6px">
+    <h1 style="margin: 0; font-size: 28px; font-weight: 600">How sure are we, at each step?</h1>
+    <p style="margin: 0; font-size: 15px; color: #A3AFBD; max-width: 900px">Uncertainty grows down the chain. Most dashboards hide that; we show it, and say which input matters most.</p>
+  </div>
+  <div role="group" aria-label="View" style="display: flex; gap: 6px">
+    <button type="button" onClick="{{showPoint}}" aria-pressed="{{pointPressed}}" style="min-height: 44px; padding: 0 14px; border-radius: 6px; border: 1px solid {{pointBorder}}; background: #121821; color: #E7ECF2; font: inherit; font-size: 14px">Single numbers</button>
+    <button type="button" onClick="{{showRange}}" aria-pressed="{{rangePressed}}" style="min-height: 44px; padding: 0 14px; border-radius: 6px; border: 1px solid {{rangeBorder}}; background: #121821; color: #E7ECF2; font: inherit; font-size: 14px">Honest ranges</button>
+  </div>
+</header>
+
+<section aria-label="Ranges by step" style="background: #121821; border: 1px solid #222C38; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 4px">
+  <sc-for list="{{rows}}" as="r" hint-placeholder-count="5">
+    <div style="display: grid; grid-template-columns: 220px minmax(0, 1fr) 200px; gap: 16px; align-items: center; min-height: 72px; border-bottom: 1px solid #222C38">
+      <span style="font-size: 15px; font-weight: 500">{{r.name}}</span>
+      <span aria-hidden="true" style="position: relative; height: 28px; display: block">
+        <span style="position: absolute; left: 0; right: 0; top: 13px; height: 2px; background: #222C38"></span>
+        <span style="position: absolute; left: {{r.outerLeft}}; width: {{r.outerWidth}}; top: 6px; height: 16px; border-radius: 8px; background: #3A2C14"></span>
+        <span style="position: absolute; left: {{r.innerLeft}}; width: {{r.innerWidth}}; top: 6px; height: 16px; border-radius: 8px; background: #8A5B1E"></span>
+        <span style="position: absolute; left: 50%; top: 2px; width: 4px; height: 24px; margin-left: -2px; border-radius: 2px; background: #F0A23B"></span>
+      </span>
+      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 14px; color: #C2CBD5">{{r.label}}</span>
+    </div>
+  </sc-for>
+  <div style="display: flex; flex-wrap: wrap; gap: 16px; padding-top: 10px; font-size: 13px; color: #A3AFBD"><span>Darker band: likely (50%)</span><span>Lighter band: plausible (90%)</span><span>Widths are illustrative until the Monte Carlo runs</span></div>
+</section>
+
+<section aria-label="What drives the uncertainty" style="background: #121821; border: 1px solid #222C38; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 10px">
+  <h2 style="margin: 0; font-size: 16px; font-weight: 600">Biggest sources of doubt in the final number</h2>
+  <ol style="margin: 0; padding: 0 0 0 20px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: #C2CBD5">
+    <li>How many hidden tankers are laden: [X%] of the spread</li>
+    <li>Price sensitivity to lost supply: [X%]</li>
+    <li>Whether the Fed looks through an oil shock: [X%]</li>
+  </ol>
+  <p style="margin: 0; font-size: 13px; color: #8794A3">Pinning down the top item is the best use of the next hour of work; the same list tells judges we know where we are weak.</p>
+</section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { ranges: true };
+}
+renderVals() {
+const on = this.state.ranges;
+const steps = [
+{ name: 'Flow through Hormuz', inner: 10, outer: 22, unit: 'mb/d' },
+{ name: 'Brent', inner: 16, outer: 34, unit: '$/bbl' },
+{ name: 'Pump price', inner: 20, outer: 40, unit: '$/gal' },
+{ name: 'Inflation (CPI)', inner: 26, outer: 52, unit: '% y/y' },
+{ name: 'Fed and mortgage', inner: 34, outer: 66, unit: '%' }
+];
+const rows = steps.map((s) => {
+const iw = on ? s.inner : 0;
+const ow = on ? s.outer : 0;
+return {
+name: s.name,
+innerLeft: (50 - iw / 2) + '%', innerWidth: iw + '%',
+outerLeft: (50 - ow / 2) + '%', outerWidth: ow + '%',
+label: on ? '[mid] ([lo]–[hi]) ' + s.unit : '[mid] ' + s.unit
+};
+});
+return {
+rows,
+pointPressed: on ? 'false' : 'true',
+rangePressed: on ? 'true' : 'false',
+pointBorder: on ? '#2B3644' : '#F0A23B',
+rangeBorder: on ? '#F0A23B' : '#2B3644',
+showPoint: () => this.setState({ ranges: false }),
+showRange: () => this.setState({ ranges: true })
+};
+}
+}
+</script>
+</body>
+</html>
