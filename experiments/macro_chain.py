@@ -11,6 +11,11 @@ Members (fixed before scoring):
     global_lin  macro_global.py, shared one-step network plus a per-series linear term
     global      macro_global.py, the shared network only
     global_tcn  macro_global.py, shared one-step TCN (when macro_global provides it)
+    margins     margins.py, the refined-product margin member: Brent path plus a simulated product
+                margin, mapped onto the three fuel targets (diesel, jet fuel, refinery PPI); it has
+                draws for those targets only. With CHAIN_MARGINS=1 it joins every mixture of two or
+                more members as one more equal-weight member on those targets' columns (outputs
+                tagged -margins); run it with `fold J margins`
 
 Oil modes, the same draws for every member (draw n always uses oil path n, so oil and model
 uncertainty travel together):
@@ -27,6 +32,7 @@ folds before j (equal weights for fold 0). Equal weights are reported as the rob
     uv run experiments/macro_chain.py fold 3 [member ...]   # -> runs/macro/chain-3-<member>.{npz,json}
     uv run experiments/macro_chain.py report                # notes/macro-chain-results.md + weights
     uv run experiments/macro_chain.py replay                # the 2026 closure from 2026-02, scenario fan CSV
+    CHAIN_MARGINS=1 uv run experiments/macro_chain.py report    # with the margin member (after `fold J margins`)
 """
 
 from __future__ import annotations
@@ -43,6 +49,7 @@ import numpy as np
 import macro_bayes as mb
 import macro_global as mg
 import macro_nn as mn
+import margins
 import oil_paths as op
 
 RUNS, NOTES = mb.RUNS, mb.NOTES
@@ -52,6 +59,8 @@ STEP = 0.25
 # Iridis runs with more networks per variant: CHAIN_SEEDS=20 CHAIN_TAG=s20 (the first 5 networks are
 # the default run's, since seeds are base + 100 * variant + s)
 TAG = os.environ.get("CHAIN_TAG", "")
+MARGIN = "margins"  # the margin member: fuel targets only (margins.TARGETS)
+MARGINS = os.environ.get("CHAIN_MARGINS", "") == "1"  # mix it in on the fuel targets (report, replay)
 SPREAD = np.round(np.arange(0.8, 2.001, 0.05), 2)  # calibration: band widening factors tried
 QUICK = False
 
@@ -61,7 +70,7 @@ def stem(j: int, member: str) -> str:
 
 
 def suffix() -> str:
-    return f"-{TAG}" if TAG else ""
+    return (f"-{TAG}" if TAG else "") + ("-margins" if MARGINS else "")
 
 
 def available() -> tuple[str, ...]:
@@ -105,15 +114,21 @@ def run_member(data: dict, j: int, member: str, market: dict, prices) -> tuple[d
     info = mb.series_info(data)
     oil = oil_modes(data, j, st, last, t, market, prices)
     t0 = time.time()
-    if member == "bayes_own":
-        post, st, info, diag = mb.fit(data, last, seed=j, vol="own")  # the seed of macro_bayes.run_fold
-        sim = lambda fut, rng: mb.simulate(post, st, info, data, t, fut, rng)  # noqa: E731
-        extra = {"diagnostics": diag}
+    if member == MARGIN:  # fitted on the same training months; NaN outside the fuel targets
+        cm = margins.ChainMargins(data, last)
+        S = {mode: cm.member_draws(t, fut, "whatif" if mode == "whatif" else "forecast", seed=(j, k), n=draws()).astype(np.float32)
+             for k, (mode, fut) in enumerate(oil.items())}
+        extra = {"margins": cm.describe()}
     else:
-        nets, training = fit_nets(data, info, st, last, member, 1000 * j)  # macro_global.run_fold's seeds
-        sim = lambda fut, rng: mg.simulate(nets, st, info, data, t, fut, rng, n=draws())  # noqa: E731
-        extra = {"training": training}
-    S = {mode: sim(fut, np.random.default_rng(300 + j)).astype(np.float32) for mode, fut in oil.items()}
+        if member == "bayes_own":
+            post, st, info, diag = mb.fit(data, last, seed=j, vol="own")  # the seed of macro_bayes.run_fold
+            sim = lambda fut, rng: mb.simulate(post, st, info, data, t, fut, rng)  # noqa: E731
+            extra = {"diagnostics": diag}
+        else:
+            nets, training = fit_nets(data, info, st, last, member, 1000 * j)  # macro_global.run_fold's seeds
+            sim = lambda fut, rng: mg.simulate(nets, st, info, data, t, fut, rng, n=draws())  # noqa: E731
+            extra = {"training": training}
+        S = {mode: sim(fut, np.random.default_rng(300 + j)).astype(np.float32) for mode, fut in oil.items()}
     summary = {"fold": j, "member": member, "test_dates": [f"{d:%Y-%m}" for d in data["dates"][test]],
                "names": data["names"], "groups": data["groups"], "y": Y.tolist(), "seconds": round(time.time() - t0, 1),
                "modes": {mode: mb.summarise(s.astype(float), Y) for mode, s in S.items()}} | extra
@@ -149,6 +164,23 @@ def mixture(S: np.ndarray, w: np.ndarray, order: np.ndarray) -> np.ndarray:
     return S[a, np.arange(S.shape[1])]
 
 
+def with_margins(S: np.ndarray, D: np.ndarray | None, w: np.ndarray, order: np.ndarray, cols: list[int]) -> np.ndarray:
+    """mixture(S, w, order), except that on the columns `cols` (the fuel targets) the margin member's
+    draws D [N, ...] join as one more equal-weight member: weights (w * m / (m + 1), 1 / (m + 1)) for
+    a mixture of m members. A single member is left as it is, and so is everything when D is None."""
+    M = mixture(S, w, order)
+    m = int((w > 0).sum())
+    if D is not None and m > 1:
+        share = 1 / (m + 1)
+        M[..., cols] = mixture(np.concatenate([S, D[None]]), np.r_[w * (1 - share), share], order)[..., cols]
+    return M
+
+
+def fuel_columns(names: list[str]) -> list[int]:
+    """Columns of the targets the margin member covers."""
+    return [c for c, nm in enumerate(names) if nm.split("@")[0] in margins.TARGETS]
+
+
 def forward_choice(score: np.ndarray, fold: int, equal: int) -> int:
     """score: [folds, combos] mean scaled CRPS. Fold j takes the best combination on folds < j."""
     return equal if fold == 0 else int(np.argmin(score[:fold].mean(0)))
@@ -173,9 +205,13 @@ def calibration_factor(inside: np.ndarray, target: float = 0.9) -> float:
 
 
 def report() -> None:
-    members = [m for m in MEMBERS if all((RUNS / f"{stem(j, m)}.npz").exists() for j in range(mn.FOLDS))]
+    wanted = os.environ.get("CHAIN_MEMBERS", ",".join(MEMBERS)).split(",")  # e.g. CHAIN_MEMBERS=bayes_own,global_lin,global
+    members = [m for m in wanted if all((RUNS / f"{stem(j, m)}.npz").exists() for j in range(mn.FOLDS))]
     if not members:
         raise SystemExit(f"no complete runs/macro/{stem(0, '<member>')}.npz set yet")
+    missing = [j for j in range(mn.FOLDS) if not (RUNS / f"{stem(j, MARGIN)}.npz").exists()]
+    if MARGINS and missing:
+        raise SystemExit(f"CHAIN_MARGINS=1 needs runs/macro/{stem(0, MARGIN)}.npz etc.: run `fold J margins` for folds {missing}")
     W = simplex(len(members))
     equal = int(np.argmin(np.abs(W - 1 / len(members)).sum(1)))
     # leave-one-out: equal weights on every member but one (does each member earn its place?)
@@ -200,9 +236,11 @@ def report() -> None:
         y = np.array(ref["y"], float)
         assert np.allclose(data["Y"][test], y, equal_nan=True), f"fold {j}: targets differ from the dataset"
         vol = np.array([np.nanmean(np.abs(data["oil_m"][i - 2:i + 1])) for i in data["t"][test]])  # Brent turmoil at the origin
-        folds.append({"summ": summ, "S": S, "y": y, "clim": np.array(v1["models"]["climatology"]["crps"], float),
+        D = {mode: np.load(RUNS / f"{stem(j, MARGIN)}.npz")[mode].astype(float) for mode in MODES} if MARGINS else None
+        folds.append({"summ": summ, "S": S, "D": D, "y": y, "clim": np.array(v1["models"]["climatology"]["crps"], float),
                       "clim_emp": empirical_crps(data["Y"][train], y), "vol": vol})
     names, groups = folds[0]["summ"][members[0]]["names"], np.array(folds[0]["summ"][members[0]]["groups"])
+    fuel = fuel_columns(names)
     H = np.array([int(n.split("@")[1]) for n in names])
     scale = np.nanmean(np.vstack([f["clim"] for f in folds]), 0)
     scale_emp = np.nanmean(np.vstack([f["clim_emp"] for f in folds]), 0)
@@ -219,7 +257,7 @@ def report() -> None:
         for mode in MODES:
             crps, lo, hi = [], [], []
             for k, w in enumerate(W):
-                M = mixture(f["S"][mode], w, order)
+                M = with_margins(f["S"][mode], f["D"][mode] if MARGINS else None, w, order, fuel)
                 crps.append(np.where(np.isfinite(y), mb.crps_samples(M, np.nan_to_num(y)), np.nan))
                 lo.append(np.quantile(M, 0.05, 0))
                 hi.append(np.quantile(M, 0.95, 0))
@@ -321,7 +359,11 @@ def report() -> None:
            "climatology. Modes: **whatif** is given the oil path that happened; **levy** and **bootstrap** know "
            "nothing after the origin, with oil paths from GARCH-CGMY (`oil_paths.py`) or the block bootstrap. "
            f"Members: {', '.join(f'`{m}`' for m in members)}. **equal**: equal-weight mixture; **forward**: per "
-           "group, the weights (simplex grid, step 0.25) with the lowest CRPS on earlier folds (equal for fold 0).", ""]
+           "group, the weights (simplex grid, step 0.25) with the lowest CRPS on earlier folds (equal for fold 0)."
+           + (" **With the margin member** (`experiments/margins.py`, `runs/macro/chain-J-margins.npz`): every mixture "
+              "of two or more members takes it as one more equal-weight member on the three fuel targets' columns "
+              "(diesel, jet fuel, refinery PPI; cost group); single-member columns are the members alone."
+              if MARGINS else ""), ""]
     for mode in MODES:
         out += [f"## {mode}: skill by horizon", "", "| Target | h | " + " | ".join(labels) + " |",
                 "|---|---|" + "---|" * len(labels)]
@@ -473,9 +515,14 @@ def replay(origin: str = REPLAY_ORIGIN) -> None:
             S[mode].append(sim(fut, np.random.default_rng(300))[:, 0])  # [N, outputs]
     names, groups = data["names"], np.array(data["groups"])
     order = np.random.default_rng(1234).permutation(mb.DRAWS)
+    cm = margins.ChainMargins(data, last) if MARGINS else None
     ens = {}
-    for mode, parts in S.items():
-        ens[mode] = mixture(np.stack(parts), equal, order)  # [N, outputs]
+    for k, (mode, parts) in enumerate(S.items()):
+        D = None
+        if cm is not None:  # the margin member from the same oil paths; a scenario adds a crisis scaled lost / 82
+            lost = 0.0 if mode == "whatif" else float(mode.split()[1])
+            D = cm.member_draws(t, oil[mode], "whatif" if mode == "whatif" else "forecast", lost, seed=(99, k), n=mb.DRAWS)[:, 0]
+        ens[mode] = with_margins(np.stack(parts), D, equal, order, fuel_columns(names))  # [N, outputs]
     # what happened: the change over h months after the origin, where every month is published
     dM = data["dM"]
     actual = {}
@@ -491,7 +538,10 @@ def replay(origin: str = REPLAY_ORIGIN) -> None:
              f"{idx[last]:%Y-%m} only. Outcomes are real (`notes/macro-panel.md`; daily Brent FRED DCOILBRENTEU "
              f"fetched {fetched}); {seen} months of Brent after the origin are known. Members: {', '.join(members)}, "
              "mixed with equal weights, the best ensemble on the 8 folds (`notes/macro-chain-results.md`). "
-             "Simulated: the oil paths and the model draws._", "",
+             + ("Plus the margin member on the three fuel targets (`experiments/margins.py`: product margins fitted on "
+                "the same months, crisis term from the IEA actions before 2026, so 2026 is out of sample for it; "
+                "`notes/margins-results.md`). " if MARGINS else "")
+             + "Simulated: the oil paths and the model draws._", "",
              "- **what-if (out of sample):** the chain is given the Brent path that happened. This tests the knock-on "
              "layer on an event it never saw.",
              "- **lost 0:** a genuine forecast with GARCH-CGMY oil paths and no scenario: what a forecaster without the "
@@ -540,7 +590,7 @@ def replay(origin: str = REPLAY_ORIGIN) -> None:
             rows.append(f"{key},{grp},{lost:g},{h},{x.mean():.4f},{q05:.4f},{q50:.4f},{q95:.4f},"
                         f"{'' if not np.isfinite(a) else f'{a:.4f}'},{unit},{validated},{origin},"
                         "experiments/macro_chain.py replay (oil: GARCH-CGMY + notes/flow-premium.csv premium sampled in its band; "
-                        f"models: {'+'.join(members)}),{idx[last]:%Y-%m},{gen}")
+                        f"models: {'+'.join(members + ([MARGIN] if MARGINS else []))}),{idx[last]:%Y-%m},{gen}")
     (NOTES / f"chain-scenarios{suffix()}.csv").write_text("\n".join(rows) + "\n", encoding="utf-8")
     print(f"wrote {NOTES / f'chain-replay-2026{suffix()}.md'} and {NOTES / f'chain-scenarios{suffix()}.csv'}")
 
@@ -575,7 +625,7 @@ def main() -> None:
                   {mode: s.shape for mode, s in S.items()})
         return
     for m in a.members or available():
-        assert m in available(), f"{m} is not available in this checkout"
+        assert m in available() or m == MARGIN, f"{m} is not available in this checkout"
         S, summ = run_member(data, a.j, m, market, prices)
         save_member(S, summ, a.j, m)
         print(f"fold {a.j} {m}: " + ", ".join(f"{mode} {np.nanmean(v['crps']):.4f}" for mode, v in summ["modes"].items())

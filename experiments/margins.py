@@ -562,11 +562,12 @@ class ChainMargins:
         return M
 
     def member_draws(self, t: np.ndarray, oil: np.ndarray, mode: str, lost: float = 0.0, seed: tuple = (),
-                     like: np.ndarray | None = None) -> np.ndarray:
+                     like: np.ndarray | None = None, n: int | None = None) -> np.ndarray:
         """The margin member's draws [N, origins, outputs]: the fuel targets' columns from the member,
         the others copied from `like` (e.g. any other member's draws, which the mixture never uses for
-        them) or NaN. Mix it in as one more equal-weight member for the fuel columns."""
-        N = oil.shape[0] if like is None else like.shape[0]
+        them) or NaN. N: like's draws, else n, else oil's (a single what-if path needs n). Mix it in as
+        one more equal-weight member for the fuel columns (macro_chain.with_margins)."""
+        N = like.shape[0] if like is not None else n or oil.shape[0]
         D = np.full((N, len(t), len(self.data["names"])), np.nan) if like is None else like.copy()
         for o, tt in enumerate(t):
             out = self.at(tt, np.broadcast_to(oil[:, o], (N, oil.shape[-1])), mode, lost, seed)
@@ -841,7 +842,7 @@ def scenario_csvs(rep: dict) -> tuple[Path, Path]:
                                 f"{c['mean'][s]:.2f},{c['q05'][s]:.2f},{c['q50'][s]:.2f},{c['q95'][s]:.2f},"
                                 f"{'' if a is None else f'{a:.2f}'},$/bbl (monthly mean of daily product minus Brent),"
                                 f"{crisis},{pool},{validated},{rep['origin']},experiments/margins.py replay (EIA spot fetched "
-                                f"{rep['fetched']}; oil: GARCH-CGMY + 2026 closure premium),{rep['train_to']},{gen}")
+                                f"{rep['fetched']}; oil: GARCH-CGMY + notes/flow-premium.csv premium sampled in its band),{rep['train_to']},{gen}")
     a = NOTES / "margin-scenarios.csv"
     a.write_text("\n".join(rows) + "\n", encoding="utf-8")
     rows = ["series,group,flow_drop_points,months_ahead,mean,q05,q50,q95,actual,unit,validated,origin,source,fitted_to,generated"]
@@ -856,8 +857,8 @@ def scenario_csvs(rep: dict) -> tuple[Path, Path]:
             act = rep["actual"][nm]
             rows.append(f"{key},cost,{r['lost']:g},{h},{d['mean'][c]:.4f},{d['q05'][c]:.4f},{d['q50'][c]:.4f},{d['q95'][c]:.4f},"
                         f"{'' if act is None else f'{act:.4f}'},100 x log change (about %),yes,{rep['origin']},"
-                        f"experiments/margins.py replay (chain: {'+'.join(MEMBERS)} + margin member; oil: GARCH-CGMY + 2026 "
-                        f"closure premium),{rep['train_to']},{gen}")
+                        f"experiments/margins.py replay (chain: {'+'.join(MEMBERS)} + margin member; oil: GARCH-CGMY + "
+                        f"notes/flow-premium.csv premium sampled in its band),{rep['train_to']},{gen}")
     b = NOTES / "chain-fuel-scenarios-margins.csv"
     b.write_text("\n".join(rows) + "\n", encoding="utf-8")
     return a, b
@@ -1130,7 +1131,7 @@ def report() -> None:
                            f"{cn['mean'][s - 1]:.1f} ({cn['q05'][s - 1]:.1f}..{cn['q95'][s - 1]:.1f}) |")
         a_csv, b_csv = scenario_csvs(rep)
         out += ["", "## The margin scenario for a Hormuz closure", "",
-                f"From {rep['origin']} with the oil paths of the flow scenario (GARCH-CGMY plus the 2026 closure premium), "
+                f"From {rep['origin']} with the oil paths of the flow scenario (GARCH-CGMY plus the premium of `notes/flow-premium.csv`, each path drawn within its band), "
                 "the crisis term scaled by lost flow / 82 (an assumption: past crises are not sized in points of Hormuz "
                 f"flow). Fitted on months to {rep['train_to']}. Crack spread, $/bbl, mean (90% band). Full table: "
                 f"`{a_csv.relative_to(ROOT).as_posix()}`; the fuel targets with the margin layer: `{b_csv.relative_to(ROOT).as_posix()}` "

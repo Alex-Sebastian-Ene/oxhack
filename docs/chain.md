@@ -15,6 +15,7 @@ This page covers how they join, and what the joined chain gets right.
 | `cluster/iridis/macro_replay.slurm` | The 2026 replay and scenario tables on Iridis (task 0: the 3 recommended members, task 1: all four) | `notes/chain-replay-2026*.md`, `notes/chain-scenarios*.csv` |
 | `cluster/iridis/macro_chain.slurm` | The chain's folds as an Iridis array; `CHAIN_SEEDS`/`CHAIN_TAG` for more networks per variant | `runs/macro/chain-*.{npz,json}` |
 | `experiments/margins.py` | Refined-product margins (crack spreads) between Brent and the fuel targets, scored on the chain's own fold draws and the 2026 replay | `notes/margins-results.md`, `notes/margins-monthly.csv`, `notes/margin-scenarios.csv`, `notes/chain-fuel-scenarios-margins.csv` |
+| `macro_chain.py` with `CHAIN_MARGINS=1` | The chain with the margin member on the fuel targets (`fold J margins` first) | `notes/macro-chain-results-margins.md`, `notes/chain-replay-2026-3m-margins.md`, `notes/chain-scenarios-3m-margins.csv` |
 
 ## How the chain is built
 
@@ -164,14 +165,30 @@ Fuel targets on the 8 folds (skill against the v1 climatology, all horizons, the
   - Retail diesel: +15.9 → +15.3.
   - Refinery PPI: +6.6 → +5.9.
 
-  The 1-month bands still miss diesel and jet fuel. The replay catches 89% of 65 with or without the margin member. (On Iridis the chain alone catches 89%, against 91% in the laptop run above: the Bayes sampler's floating point moves one outcome across a band edge.)
+  The 1-month bands still miss diesel and jet fuel. The replay catches the same 89% of 65 with or without the margin member.
 
   The reason the overshoot barely moves: the diesel crack went from $34 to $63 in March 2026. The average of the four earlier crises gives $39 (23..56); only 2022 widened margins on this scale.
 - **Scenario:** `notes/margin-scenarios.csv` gives the crack fan for 0–100 points of lost flow from 2026-02.
   - The crisis term is scaled by lost flow / 82, an assumption.
   - It comes in two versions: the pre-2026 crises (validated against 2026), and with 2026's own path added (in sample, for a forward scenario).
   - `notes/chain-fuel-scenarios-margins.csv` gives the fuel targets with the margin member, in the columns of `notes/chain-scenarios-3m.csv`.
-- **Not in `macro_chain.py` yet.** `margins.ChainMargins(data, last)` is the interface (`member_draws`, `correct`). Hooking it into `macro_chain.py` waits for its owner.
+- **In the chain, behind a flag.** `macro_chain.py fold J margins` saves the margin member's draws like any member's (`runs/macro/chain-J-margins.npz`; the fuel targets only).
+  - With `CHAIN_MARGINS=1`, `report` and `replay` add it to every mixture of two or more members, as one more equal-weight member on the three fuel targets' columns.
+  - Outputs are tagged `-margins`. Single-member columns and the other 19 targets are untouched.
+  - Its draws match `margins.py`'s exactly, and they come from the same oil paths, draw by draw.
+
+  Results for the recommended 3 members (`notes/macro-chain-results-margins.md`, against the same report without the flag):
+
+  | Cost group, equal mixture | Without | With the margin member |
+  |---|---|---|
+  | What-if | +0.302 | **+0.313** |
+  | Lévy oil (forecast) | +0.147 | **+0.153** |
+  | Bootstrap oil (forecast) | +0.138 | **+0.143** |
+  | What-if, against the stricter empirical yardstick | +0.290 | **+0.301** |
+
+  Inflation, unemployment and rates are unchanged by construction, and cost coverage stays at 89%.
+
+  The replay with it is `notes/chain-replay-2026-3m-margins.md` (Iridis job 1972756), the same fits as `notes/chain-replay-2026-3m.md`. The slider's table with it is `notes/chain-scenarios-3m-margins.csv`: same columns, and only the fuel rows differ.
 
 ## Reproduce
 
@@ -187,6 +204,8 @@ uv run experiments/margins.py data                        # EIA spot prices -> n
 uv run experiments/margins.py fold                        # all 8 folds, against runs/macro/chain-J-<member>.npz
 uv run experiments/margins.py replay                      # the 2026 replay (refits the 3 members once, then cached)
 uv run experiments/margins.py report                      # notes/margins-results.md and the scenario CSVs
+uv run experiments/macro_chain.py fold 0 margins          # ... to 7: the margin member's draws (numpy only, seconds)
+CHAIN_MARGINS=1 CHAIN_MEMBERS=bayes_own,global_lin,global uv run experiments/macro_chain.py report   # -> -margins
 ```
 
 On Iridis (`docs/iridis.md` for access). Copy `experiments/`, `cluster/`, `scripts/`, `data/raw/`, `notes/industry/` and `runs/levy/` to a fresh `/scratch/$USER/<folder>`, then:
@@ -196,6 +215,8 @@ bash cluster/iridis/macro_env.sh                                       # once (t
 sbatch --array=0-7 cluster/iridis/macro_chain.slurm                    # every member, 5 seeds
 CHAIN_SEEDS=20 CHAIN_TAG=s20 sbatch --array=0-7 --time=08:00:00 cluster/iridis/macro_chain.slurm
 sbatch --array=0-8 cluster/iridis/margins.slurm                        # margins: folds 0-7, task 8 the replay
+MEMBERS=margins sbatch --array=0-7 cluster/iridis/macro_chain.slurm    # the margin member in the chain
+CHAIN_MARGINS=1 sbatch --array=0 cluster/iridis/macro_replay.slurm     # the 3-member replay with it
 ```
 
-The runs for this page are jobs 1972484 (`MEMBERS=global_tcn`) and 1972485 (20 seeds) on `amd_student`, 2026-10-24. `notes/industry/fred_series.csv` must be copied up: `macro_data.py` reads the industry series list from it.
+The runs for this page are jobs 1972484 (`MEMBERS=global_tcn`) and 1972485 (20 seeds) on `amd_student`, 2026-10-24. `notes/industry/fred_series.csv` must be copied up: `macro_data.py` reads the industry series list from it. The margin runs are jobs 1972719 (`margins.py`), 1972755 (`fold J margins`), 1972756 (replay with `CHAIN_MARGINS=1`) and 1972757 (`margins.py` replay with the premium curve); they also need `notes/flow-premium.csv` and the EIA spot workbook in `data/raw/macro/`.
