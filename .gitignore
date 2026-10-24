@@ -25,3 +25,11 @@ htmlcov/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Downloaded data (re-fetched by the scripts that use it)
+data/raw/
+
+# Experiment outputs, cluster environments and logs
+runs/
+.venv-*/
+slurm-*.out
