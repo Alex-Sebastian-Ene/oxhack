@@ -1,0 +1,412 @@
+# Knock-on ensemble: regions, industry, oil, AIS and pipelines
+
+Technical notes for the multi-region version of the knock-on chain in [design.md](design.md). It
+extends the single-country links in [knock-on-validation.md](knock-on-validation.md) and the
+oil-price layer in [oil-price-model.md](oil-price-model.md).
+
+| Code | What it does | Output |
+|---|---|---|
+| `experiments/macro_data.py` | Fetches and aligns every input (monthly, 2000 on) with publication lags | `notes/macro-panel.md` |
+| `experiments/macro_nn.py` | Deep ensemble, baselines, stacker, folds, diagnostics, oil-shock responses | `notes/macro-nn-results.md` |
+| `experiments/macro_bayes.py` | Bayesian pass-through fitted by MCMC: pooled oil lags, momentum, asymmetry, volatility-driven bands (oil, own, drifting); what-if and genuine forecasts; benchmarks | `notes/macro-bayes-results.md`, `notes/macro-bayes-responses.csv` |
+| `experiments/macro_global.py` | One network shared by the 22 targets, one month ahead (own lags, oil lags, series embedding, Student-t head), simulated like the Bayesian model; least-squares benchmark on the same inputs | `notes/macro-global-results.md` |
+| `experiments/flow_price.py` | Hormuz flow (AIS) → Brent: regression and 2026 closure event study | `notes/flow-price-link.md` |
+| `experiments/hdi_link.py` | Oil prices against UNDP Human Development Index (annual) | `notes/hdi-link.md` |
+| `cluster/iridis/macro_*.{sh,slurm}` | Iridis environment, 9-task main array, diagnostics array | |
+
+## Inputs (blocks)
+
+Each series is registered once, with its source, transform, publication lag (months between the
+month it describes and its release) and role. Blocks switch on by name, so a region or source is
+added by adding rows. The full table, with date ranges and fetch dates, is in
+`notes/macro-panel.md`.
+
+| Block | Series | Sources |
+|---|---|---|
+| `oil` | Brent, WTI, Kilian global real activity, geopolitical risk index | FRED, Caldara & Iacoviello |
+| `ais` | Tanker transits and capacity through Hormuz, Bab el-Mandeb, Cape of Good Hope (share of 2019–24 normal) | IMF PortWatch (from AIS, 2019 on) |
+| `pipeline` | Tanker exports at the pipelines' sea ends (Yanbu for the East-West pipeline, Fujairah for Habshan–Fujairah) against exports from ports inside the Gulf | IMF PortWatch daily ports |
+| `fuel` | US crude stocks, SPR, refinery utilisation, gasoline and distillate demand, crude imports and production | EIA weekly history files |
+| `drivers` | Supply-chain pressure, food prices, US and EU gas, 1-year inflation expectations, M2, import prices, shelter CPI, wages | NY Fed, IMF, EIA, Michigan, Fed, BLS |
+| `us` | CPI, core CPI, unemployment, fed funds, 10y, industrial production, payrolls, sentiment, PPI, productivity | FRED (BLS, Fed) |
+| `uk` | CPI (ONS D7BT), unemployment, SONIA (stands in for Bank Rate), 10y, production, productivity, GBP/USD | ONS, FRED |
+| `ea` | HICP, unemployment (EA21), ECB deposit rate, industrial production, EUR/USD | Eurostat, FRED |
+| `industry` | Diesel, jet fuel, freight PPIs (trucking, deep-sea, air), materials PPIs (plastics, paperboard, fertiliser), refineries, air fares | FRED, read from Eileen's `notes/industry/fred_series.csv` |
+
+- **Rules that protect the results:**
+  - Only data public at the end of a month enter that month's inputs (the publication lags).
+  - Short gaps are filled on the *level*, so a filled month reads as "no change". The missing
+    October 2025 US releases are one example.
+  - Late-starting blocks (`ais`, `pipeline`) are zero before 2019, with an availability flag.
+  - AIS flows are shares of normal, not log changes: Hormuz tanker capacity fell 98% in March
+    2026, a log change of about −4.
+- **Targets:** inflation, unemployment and the policy rate in each region, plus the 13 industry
+  costs, as changes over 1, 3, 6 and 12 months. That's 88 outputs.
+- **Conditioning:** the forecasts are conditional on the oil path over the next 12 months, which
+  is what the what-if needs.
+
+## Models
+
+| Model | Architecture |
+|---|---|
+| `tcn` | Dilated causal convolutions (residual blocks, LayerNorm) over a 24-month window |
+| `transformer` | Linear projection, learned positions, pre-LN Transformer encoder; last-step and mean pooling |
+| `tcn_transformer` | TCN for local patterns, then a Transformer over its outputs |
+| `lstm` | 1–2 layer LSTM |
+| `nbeats` | N-BEATS-style residual MLP blocks on the flattened window (normalised input) |
+| `*_skip` | Any of the above plus a linear oil-path term added to the mean, without weight decay |
+| `nn_mean` | Equal-weight mixture of every network's deep ensemble |
+| `stack` | MLP stacker with an encoder. Per output it encodes the latest month and the output's identity, weighs every model's forecast (softmax) and rescales the spread. Trained on held-out validation forecasts |
+| `ridge`, `no_change`, `climatology` | Baselines |
+
+- **Outputs:** every network produces a Gaussian (a mean and a log-variance per output) and is
+  trained by masked negative log-likelihood (AdamW, early stopping).
+- **Sizes and seeds:** each network comes in a base size (64 wide, 2 layers) and a scaled-down
+  size (24 wide, 1 layer), each trained with **6 seeds**. The seeds' forecasts are combined as a
+  moment-matched mixture, i.e. a deep ensemble.
+- **Standardisation:** inputs and targets are standardised with training-fold statistics only.
+- **Scoring:** forward-chaining folds, 8 test blocks from 2008 to 2025, with a 12-month gap before
+  each so no training target overlaps the test block. The score is CRPS, reported as skill
+  against climatology. There are also 90% interval coverage, a learning curve by fold, a
+  crisis/calm split, diagnostics, and the response to a +10% Brent move.
+
+## Results with the v1 inputs (oil, AIS, regions, industry)
+
+Iridis job 1971341: 8 folds, 214 test origins (2008-01 to 2025-10). Diagnostics are job 1971356
+(7 variants × 8 folds). Skill is 1 − CRPS / CRPS of climatology, over all horizons; 0 means no
+better than forecasting the historical average.
+
+| Target group | Best | Skill | Ensemble mean (`nn_mean`) | Stacker | Ridge |
+|---|---|---|---|---|---|
+| Inflation (3) | LSTM | +0.024 | +0.004 | −0.153 | −0.033 |
+| Unemployment (3) | ridge | +0.104 | +0.047 | +0.026 | +0.104 |
+| Policy rate (3) | no change | +0.046 | +0.025 | +0.026 | −0.326 |
+| Industry costs (13) | LSTM | +0.066 | +0.009 | −0.017 | −0.091 |
+
+### The biggest issues, as the diagnostics show them
+
+1. **Too little data for deep models.** There are 287 monthly origins in all, and only 61 in
+   fold 0. The networks beat climatology by a few percent at most, no architecture wins
+   consistently, and more data (later folds) doesn't raise the ensemble's skill above about
+   0.03. The stacker overfits its small validation set, and it is the worst learned model.
+2. **The networks under-react to oil by 6–9×.**
+   - A +10% Brent move gives US CPI +0.03 to +0.06 pp after 12 months, against +0.36–0.40 pp for
+     the validated linear link.
+   - Diesel moves about +1%, against about +6% expected.
+   - Flexible models spread the oil effect thin across 52 inputs and 88 outputs.
+   - Unfixed, they can't drive the what-if, so v2 tests a linear oil skip path.
+3. **The bands are too narrow.** Only 70–76% of inflation and unemployment outcomes fall inside
+   the nominal 90% interval (rates are about 89%).
+4. **The skill comes from knowing the oil path.** Without it, inflation skill drops from +0.022
+   to −0.007 and cost skill from +0.061 to −0.010 (`no_oil_path`). Without a scenario, there is
+   essentially no forecasting skill.
+5. **AIS as a generic input hurts.** Without it, unemployment improves from +0.032 to +0.058 and
+   rates from +0.021 to +0.035. It covers only 2019 on; it is used through the flow → Brent link
+   instead (below).
+
+**What holds up:**
+- **No leakage:** with shuffled training targets, skill falls to 0 or below.
+- **Publication lags barely matter:** pretending data arrive immediately changes skill by at most
+  0.006.
+- **Window length:** a 12-month window is slightly better than 24 months.
+
+## Results with the v2 inputs (adding fuel flows, pipeline bypass exports and inflation drivers)
+
+Iridis jobs 1971471 (5 variants × 8 folds) and 1971472 (fit on all data). These use the reduced
+model set: ridge, small LSTM and TCN-Transformer with and without the oil skip path, 3 seeds each,
+and the stacker. The v1 `full` row is the reference.
+
+| Ensemble mean skill | Inflation | Unemployment | Rate | Cost |
+|---|---|---|---|---|
+| v1 inputs (52) | +0.012 | +0.032 | +0.021 | +0.029 |
+| v2, all blocks (74) | +0.003 | +0.045 | −0.000 | +0.012 |
+| v2 without `fuel` | +0.010 | +0.041 | +0.005 | +0.013 |
+| v2 without `pipeline` | +0.014 | +0.041 | +0.009 | +0.011 |
+| v2 without `drivers` | +0.017 | +0.045 | +0.015 | +0.011 |
+| v2 without `ais` and `pipeline` | +0.007 | +0.051 | +0.012 | +0.016 |
+
+- **The extra blocks don't help on this data.** Fuel flows, pipeline exports and the other
+  inflation drivers add inputs but no forecastable information beyond the oil path. Removing any
+  one of them changes skill by about as much as it varies between variants, and ridge collapses
+  on unemployment (from +0.104 to +0.001). With 287 monthly origins, more inputs mainly mean more
+  ways to overfit.
+- **The pipeline block still matters for the story, though.** In a closure, inside-Gulf exports
+  collapse while the bypass ports pick up what the pipelines can carry. That belongs in the flow
+  estimate (the chain's first link), not in a monthly inflation model.
+- **The oil skip path raises the oil response but costs forecast skill.**
+  - With the skip, a +10% Brent move gives US CPI +0.20 pp (LSTM) and +0.12 pp (TCN-Transformer)
+    after 12 months, against +0.02 and +0.01 without it. Euro-area CPI gives +0.22 and +0.16.
+    That is about half of the validated linear +0.36–0.40 pp, up from about a tenth.
+  - Industry responses are unstable: diesel is +0.57 for one model and −1.76 for the other.
+  - The unpenalised linear path also overfits, so forecast skill falls, most on rates (−0.05 to
+    −0.07).
+- **Next step:** fix the oil path's coefficients at, or shrink them towards, the validated linear
+  pass-through from `oil_chain.py`, and let the networks learn only the residual. That keeps the
+  what-if anchored to links that hold out of sample.
+
+The v2 jobs ran the code just before `fold_indices()` was pulled out of `run_fold`. That refactor
+changes no indices (`tests/test_macro.py` checks the fold gap).
+
+## The anchored model (oil pass-through fixed to the validated links)
+
+`macro_nn.py fold J --anchored` (Iridis job 1971583, 8 folds plus the final fit; diagnostics job
+1971584).
+- **The anchor:** each fold fits, on its training months only, the `oil_chain.py` link for every
+  target series: its monthly change on Brent lags 0–12 (inflation, unemployment, rates,
+  materials) or 0–2 (fuel and freight).
+- **Validated links only:** a link is kept only if its summed effect clears 2 Newey–West
+  errors. Otherwise the anchor is 0.
+- **Residual learning:** every model learns the residual without seeing the oil path, so a
+  what-if response is exactly the validated link.
+- **Recalibration:** variances are rescaled per output on the validation set, pulled towards
+  the series-wide scale.
+
+Skill is measured against the *unanchored* climatology, so both runs share one yardstick.
+
+| | Inflation | Unemployment | Rate | Cost |
+|---|---|---|---|---|
+| v1, best model | +0.024 (LSTM) | +0.104 (ridge) | +0.046 (no change) | +0.066 (LSTM) |
+| v1 ensemble mean | +0.004 | +0.047 | +0.025 | +0.009 |
+| Anchored ensemble mean, recalibrated | **+0.147** | −0.137 | −0.144 | **+0.420** |
+| Anchored LSTM, recalibrated | **+0.152** | −0.139 | −0.158 | **+0.418** |
+| Anchored climatology (anchor + mean residual) | +0.147 | −0.179 | −0.182 | +0.417 |
+| **Hybrid ensemble mean** (anchored for prices, v1 for the rest) | **+0.147** | **+0.047** | **+0.025** | **+0.420** |
+
+**Oil-shock responses, now anchored** (+10% Brent next month, change after 12 months, all-data
+fit; v1 ensemble mean in brackets):
+
+| Target | Anchored | v1 |
+|---|---|---|
+| US / UK / euro-area CPI | **+0.43 / +0.34 / +0.35 pp** | +0.03 / +0.02 / +0.03 |
+| Diesel / jet fuel / refineries | +5.0 / +9.2 / +8.5% | +0.7 / +0.8 / +0.8 |
+| Freight PPIs | +0.6 to +0.8% | +0.1 to +0.2 |
+| Plastics, paperboard, fertiliser | +0.7 to +5.8% | +0.0 to +0.7 |
+| Unemployment, policy rates | 0 (no validated link in the final fit) | about 0 |
+
+**What it shows:**
+1. **Anchoring fixes prices.** Inflation skill rises from about +0.02 to +0.15 and cost skill
+   from +0.07 to +0.42. The what-if responses now match the validated links (US CPI +0.43 pp on
+   2000–2026 data, against +0.36 for the 1991–2008 fit) instead of a tenth of them.
+2. **The gain is the anchor's, not the networks'.** Anchored climatology (the anchor plus each
+   series' average drift) scores the same as the networks, which add at most about 0.005. On
+   monthly data, the honest price model is the validated linear link plus a drift and a
+   calibrated band.
+3. **Unemployment and rates get worse when anchored**, for two reasons:
+   - The networks lose the oil path, which for these targets stands in for global demand: oil
+     collapsed with the 2008 and 2020 unemployment spikes.
+   - US unemployment cleared the significance bar in 4 of 8 folds with a *negative* sign (oil
+     up, unemployment down). That is demand-driven comovement, not a supply effect, so
+     significance alone is not a strong enough validation rule for these targets.
+
+   Hence the hybrid: anchored for inflation and costs, unanchored for unemployment and rates. In
+   the what-if, the unanchored targets should stay at 0 or show a range, since they have no
+   validated causal link.
+4. **Recalibration helps where models were overconfident, and only partly.**
+   - It raises inflation coverage of the 90% interval from 66% to 77% and costs from 78% to 80%
+     (ensemble mean), and improves inflation CRPS.
+   - It lowers coverage for ridge and for rates. The validation slice (the last quarter of each
+     training window) does not represent the test years well.
+
+   The next step is calibration on pooled out-of-sample errors from earlier folds (forward
+   conformal), which should get closer to 90%.
+
+## The Bayesian pass-through model (MCMC, `notes/macro-bayes-results.md`)
+
+`experiments/macro_bayes.py` is a single model for all 22 target series, fitted by NUTS (NumPyro)
+on each fold's training months. It uses the same data, folds and v1 climatology as the networks.
+
+- **Oil lags:** the anchor's lags (0–12 months, or 0–2 for fuel and freight). Coefficients are
+  pooled towards a mean per target group and lag length, so short series borrow from their group.
+- **Momentum:** each series' last monthly change carries on (AR(1) on monthly changes). This is
+  what the networks failed to use, and it is where short-horizon skill comes from.
+- **Rockets and feathers:** a per-series asymmetry, so oil rises and falls can pass through with
+  different strength.
+- **Bands:** Student-t errors whose scale moves with:
+  - recent oil volatility (every variant);
+  - each series' own recent volatility, an EWMA of its past absolute changes. This is `--vol own`,
+    observation-driven like GARCH, with its feedback bounded below 0.9 so it stays stationary;
+  - or one drifting volatility per target group, a random walk. This is `--vol cdv`, the common
+    drifting volatility of Carriero, Clark & Marcellino (2016).
+  - The scale has a floor, added after the volatility terms: 5% of the series' sd, and 20% for
+    policy rates, which move in discrete steps and sit still for years. Without it, the ECB
+    deposit rate (flat 2016–2022) split the chains into two modes.
+- **Forecasts:** simulated month by month from each series' last *published* month (so unpublished
+  months are nowcast), over 400 posterior draws.
+- **Two oil modes:**
+  - *what-if*: the oil path that happened.
+  - *forecast*: nothing after the origin is known. Oil paths are block-bootstrapped from the
+    training months, scaled to oil-options implied volatility at the origin (CBOE OVX, FRED
+    `OVXCLS`, from 2007-05) and centred on the WTI futures curve's slope (EIA `RCLC1`–`4`; EIA
+    stopped at 2024-04, so the last 18 origins have no drift).
+
+**Results:** run locally on 2026-10-24, 8 folds, 214 origins (2008-01 to 2025-10).
+- **Convergence:** Bayes and Bayes+own-vol converged on every fold, over every sampled site with
+  hyperparameters included (max R-hat ≤ 1.04, min ESS ≥ 133, no divergences).
+- **Bayes+CDV did not converge** on folds 3, 6 and 7 or on the all-data fit: its latent states
+  make every NUTS step hit the tree-depth limit at about 8 minutes a fold. It is left out and
+  needs Iridis (`VOL=cdv` in `cluster/iridis/macro_bayes.slurm`).
+- **Scoring:** skill is against the v1 climatology, over all horizons, with every row scored on
+  the same folds.
+
+| | Inflation | Unemployment | Rate | Cost |
+|---|---|---|---|---|
+| **Bayes+own-vol, what-if** (oil path given) | **+0.218** | −0.014 | **+0.217** | **+0.280** |
+| **Bayes+own-vol, forecast** (nothing after the origin) | **+0.106** | +0.007 | **+0.207** | +0.125 |
+| Bayes (oil volatility only), what-if | +0.212 | −0.014 | +0.195 | +0.264 |
+| Anchored ensemble mean (what-if) | +0.119 | −0.079 | −0.136 | +0.242 |
+| v1 ensemble mean (what-if) | +0.007 | +0.039 | +0.023 | +0.004 |
+| 90% coverage, Bayes+own-vol what-if (target 90%) | 85% | 74% | 84% | 87% |
+
+**Are the differences real?** These are Diebold–Mariano tests: Newey–West, 12 lags, all horizons.
+- Bayes+own-vol beats the anchored ensemble on inflation (t −4.2), rates (−4.1) and costs (−2.8).
+- Own volatility beats plain Bayes on rates (t −2.9) and costs (−3.8), but not on inflation (−1.2).
+
+**Against standard benchmarks** (forecast mode, US CPI over 12 months):
+
+| | Skill | Bayes+own-vol minus it (t) |
+|---|---|---|
+| **Bayes+own-vol forecast** | **+0.134** | |
+| Cleveland Fed 1-year expected inflation (FRED `EXPINF1YR`) | +0.063 | −0.071 (−1.4) |
+| Michigan 1-year expectations (FRED `MICH`) | −0.001 | −0.135 (−0.9) |
+| Last 12-month pace carries on (random walk) | −0.143 | −0.277 (−2.0) |
+
+- **What this means:** the forecast is on par with the Cleveland Fed's model-based expectations
+  (nominally better, not significantly) and beats the random walk.
+- **A caveat in our favour:** the surveys are real-time, while we're scored on revised data. That
+  flatters us slightly, because seasonally adjusted CPI is revised only through its seasonal factors.
+
+**Where the skill comes from** (what-if, all horizons; least-squares versions of the same mean
+equation, `macro_bayes.py benchmarks`):
+
+| | Momentum only | + oil lags (least squares) | Bayes | Bayes+own-vol |
+|---|---|---|---|---|
+| Inflation | +0.042 | +0.164 | +0.212 | +0.218 |
+| Rate | +0.095 | −0.033 | +0.195 | +0.217 |
+| Cost | +0.057 | +0.250 | +0.264 | +0.280 |
+
+1. **For prices, the oil lags do most of the work.** The Bayesian layer adds about 0.05 skill on
+   inflation and lifts coverage.
+2. **For policy rates, pooling and fat tails turn overfitting into skill.** Least-squares oil lags
+   make rates worse. Most of the gain is at 1 month (+0.31), falling to +0.15 at 12 months: rate
+   cycles carry on.
+3. **Horizons:**
+   - With the oil path given, price skill grows with the horizon: inflation +0.11 at 1 month and
+     +0.30 at 12 months, costs +0.20 and +0.36. Long-range price forecasts are mostly a question of
+     the oil scenario.
+   - Without it, inflation gets +0.07 to +0.16 and costs +0.11 to +0.14.
+4. **The 2026 closure** (fold 7, origin 2025-09, oil path given):
+
+   | Target | Model | 90% band | Actual |
+   |---|---|---|---|
+   | US CPI | ≈ +3.5% | 2.0–4.9% | +3.7% |
+   | US diesel | ≈ $5.08 | up to ≈ $7.01 | $6.29 (inside) |
+   | Jet fuel | +62% | +22% to +116% | +110% |
+
+   From the calm origin 2025-03, the US CPI band (0.9–2.9) missed the actual 3.2.
+5. **Responses to a ±10% Brent move** (all-data fit, mean and 90% interval of the average effect,
+   12 months):
+   - **Prices:** US CPI +0.37 (0.27–0.47), UK +0.35, euro area +0.44, diesel +6.2%, jet +8.4%,
+     refineries +8.7%, fertiliser +6.6%.
+   - **Rockets and feathers:**
+     - Diesel: asymmetry +0.18 (0.05–0.32), so +6.2% for a rise but −4.7% for a fall.
+     - Euro-area HICP: +0.27 (0.02–0.54).
+     - Paperboard: +0.23 (0.08–0.40).
+   - **36-month scenario:** the effects mostly settle within a year (US CPI +0.37 at 36 months).
+   - **Unemployment** again has the wrong (demand) sign, so it isn't a what-if link.
+   - **The table:** `notes/macro-bayes-responses.csv` has months 1–36. Months 13–36 are marked as
+     untested scenarios, and its interval is uncertainty about the average effect only.
+6. **Not solved:**
+   - **Unemployment.** No model here beats the v1 ridge (+0.104). AR(1) on monthly changes can't
+     tell survey noise from cycles; a latent trend component is the next thing to try.
+   - **Bands.** 74–87% coverage, against 90%.
+   - **Data vintages.** We score on revised data, not real-time vintages.
+   - **Supply vs demand.** Oil moves aren't separated into supply and demand shocks, so the
+     what-if is a conditional forecast, not a causal supply-shock effect.
+   - **Joint ranges.** Series are independent given oil, so a range for a sum of series (a
+     household's cost) would be too narrow.
+
+## Flow → Brent from AIS (`notes/flow-price-link.md`)
+
+PortWatch shows Hormuz tanker capacity at 117% of normal a week before the 2026 closure, about 0%
+two weeks later, and still about 2% by late August.
+
+| | Date | Brent | vs a week before |
+|---|---|---|---|
+| Closure starts (7-day share below 50% for 14 days) | 2026-03-04 | $81.56 | +14% |
+| +20 trading days | 2026-04-01 | $119.56 | **+53%** |
+| +120 trading days | 2026-08-25 | $88.24 | +22% |
+
+- **Peak effect:** about **0.8% on Brent per point of lost Hormuz flow**.
+- **Four months on:** about 0.27% per point. Markets adapted (stock releases, rerouting, lower
+  demand) even though the flow stayed near zero.
+- **Monthly regression, 2019–2026:** −0.19 ± 0.08% of Brent per point of flow. Without the
+  closure months it is −0.13 ± 0.12, not significant.
+- **This is one event,** and it mixes lost barrels with a risk premium. It is still the first
+  data-based number for the chain's first link.
+
+## HDI (`notes/hdi-link.md`)
+
+On UNDP data for 1991–2022, HDI rises *with* oil prices, for both importers and Gulf exporters.
+That is demand-driven comovement: oil rises in global booms, and both fell in 2020. The effect of
+a 10% oil move is about 0.1 thousandths of HDI, against normal growth of 3–8 thousandths a year.
+HDI is a context card, not a link in the monthly chain.
+
+## The global one-step network (`notes/macro-global-results.md`)
+
+`experiments/macro_global.py` fits one network shared by the 22 target series. It predicts next month's change of one series and is simulated forward like the Bayesian model. It tests whether the networks above failed because of their architecture or because of the problem they were given.
+
+- **Why the windowed networks failed:** their validation loss was lowest after 1–2 epochs (median over seeds and folds, base sizes), so early stopping kept weights close to initialisation, which forecast like climatology. With 33–174 training origins, 1,248 inputs and about 20k–150k parameters, every later epoch fitted noise.
+- **Inputs:** the series' own last 12 monthly changes, Brent's monthly change at lags 0–12, the Bayesian model's oil volatility state, and an 8-dimensional series embedding. Every (month, series) pair is a training row: 1,682 rows in fold 0 up to 5,818 in fold 7.
+- **Network:** a 2-layer MLP (64 wide) with a Student-t head, whose scale sits above the Bayesian model's floor and whose tail index is at least 2.5. `global_lin` adds a per-series linear term to the location. Each variant has 5 seeds. Training stops early on the last quarter of the training months, then refits on all of them.
+- **It trains:** best epochs are 3–37 from fold 2 on, and 2–8 in folds 0–1.
+- **Benchmark:** per-series least squares on the same inputs (OLS), simulated the same way.
+
+**Results:** what-if, 8 folds, 214 origins, run locally on 2026-10-24. The Bayesian reference is the fold files regenerated the same evening with the working copy of `macro_bayes.py`. Skill is against the v1 climatology, over all horizons.
+
+| | Inflation | Unemployment | Rate | Cost |
+|---|---|---|---|---|
+| global | +0.272 | +0.038 | **+0.224** | +0.245 |
+| global_lin | **+0.286** | **+0.055** | +0.182 | **+0.268** |
+| OLS, same inputs | +0.214 | −0.016 | −0.097 | +0.187 |
+| Bayes what-if | +0.212 | −0.014 | +0.195 | +0.264 |
+| 90% coverage (global / global_lin / Bayes) | 85 / 82 / 84% | 74 / 77 / 72% | 86 / 85 / 83% | 85 / 83 / 85% |
+
+1. **The shared network matches or beats the Bayesian model.**
+   - Inflation: `global_lin` is better by 0.075 in scaled CRPS (Diebold–Mariano t = −2.8), and `global` by 0.061 (t = −1.9).
+   - Most of the gain is at short horizons: inflation at 1 month scores +0.234 against +0.104.
+   - Rates, costs and unemployment are level with Bayes (|t| < 1).
+2. **The network makes the gain, not the extra lags.** OLS on the same inputs only matches Bayes on inflation, and on rates it falls apart (−0.097, t = +2.5 against Bayes). Sharing one model across the series is what makes 12 own lags usable.
+3. **Oil responses are close to the validated links but about 20% smaller.** For +10% Brent, after 12 months, mean over folds (Bayes all-data fit in brackets):
+   - US CPI +0.29 pp (+0.38);
+   - diesel +5.0% (+6.2%);
+   - jet fuel +8.1% (+8.1%).
+
+   Unemployment and rates show small responses with no validated link, so in the what-if they stay at 0 or show a range, as before.
+4. **Not solved:**
+   - Unemployment still trails the v1 ridge (+0.104).
+   - The network's oil response depends on the state, so a single shock table needs an all-data fit, which hasn't been run yet.
+   - Coverage is still short of 90%.
+
+## Reproduce
+
+```bash
+uv run experiments/macro_data.py                          # fetch, writes notes/macro-panel.md
+uv run experiments/macro_nn.py check                      # tiny end-to-end run
+uv run experiments/macro_nn.py fold 0                     # ... to 7; or on Iridis:
+#   bash cluster/iridis/macro_env.sh; sbatch --array=0-8 cluster/iridis/macro_nn.slurm
+uv run experiments/macro_nn.py ablate no_ais 0            # one diagnostic on one fold
+uv run experiments/macro_nn.py final --variant v2_all     # oil-shock responses for a variant
+uv run experiments/macro_nn.py report                     # notes/macro-nn-results.md
+uv run experiments/macro_bayes.py check                   # tiny MCMC run
+uv run experiments/macro_bayes.py fold 0 --vol own        # ... to 7, and `final`; --vol oil|own|cdv; or on Iridis:
+#   VOL=own sbatch --array=0-8 cluster/iridis/macro_bayes.slurm
+uv run experiments/macro_bayes.py benchmarks              # random walk, Cleveland Fed, Michigan, least-squares versions
+uv run experiments/macro_bayes.py report                  # notes/macro-bayes-results.md and macro-bayes-responses.csv
+uv run experiments/macro_global.py check                  # tiny end-to-end run
+uv run experiments/macro_global.py fold 0                 # ... to 7 (3-11 min each locally)
+uv run experiments/macro_global.py ols                    # least-squares benchmark, all folds
+uv run experiments/macro_global.py report                 # notes/macro-global-results.md
+uv run experiments/flow_price.py
+uv run experiments/hdi_link.py
+uv run --no-project --with pytest --with numpy --with scipy --with pandas --with xlrd --with openpyxl --with torch --with jax --with numpyro pytest -q tests
+```
