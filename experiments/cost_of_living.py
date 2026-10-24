@@ -27,7 +27,8 @@ the basket and headline inflation, on their monthly log changes (% of the price 
 - COL_FOOD=1 adds food inputs: the monthly log change of grain prices (the mean of wheat and
   maize, IMF) and of urea (World Bank), lags 0..12, for the food series, restaurants, the rest of the
   basket and headline: + sum_l F[k,l] grain[s-l] + sum_l U[k,l] urea[s-l]. Its runs go to
-  runs/col-food, so the two versions are compared on the same folds.
+  runs/col-food, so the two versions are compared on the same folds. COL_FOOD=bread is the targeted
+  version: grain prices for bread and cereals only, no urea (runs/col-food-bread).
 
 Forecasts simulate every series month by month. The noise is a bootstrap of the fitted
 standardised residual vectors, so items keep the correlations they had and the composite band is
@@ -71,9 +72,13 @@ import macro_data as md  # noqa: E402
 import oil_chain as oc  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
-FOOD = os.environ.get("COL_FOOD", "0") == "1"  # grain and urea prices as extra drivers of the food series
-RUNS_BASE, RUNS_FOOD = ROOT / "runs" / "col", ROOT / "runs" / "col-food"
-RUNS, NOTES, LEVY_RUNS = (RUNS_FOOD if FOOD else RUNS_BASE), ROOT / "notes", ROOT / "runs" / "levy"
+# COL_FOOD: 0 = oil and gas only; 1 = grain and urea for every food series; bread = grain prices for
+# bread and cereals only. Each version writes its own runs folder, so all are scored on the same folds.
+FOOD_MODE = os.environ.get("COL_FOOD", "0")
+FOOD = FOOD_MODE != "0"
+RUNS_BASE, RUNS_FOOD, RUNS_BREAD = ROOT / "runs" / "col", ROOT / "runs" / "col-food", ROOT / "runs" / "col-food-bread"
+RUNS = {"0": RUNS_BASE, "1": RUNS_FOOD, "bread": RUNS_BREAD}[FOOD_MODE]
+NOTES, LEVY_RUNS = ROOT / "notes", ROOT / "runs" / "levy"
 START = "2000-01-01"
 LAGS = 13  # oil and gas lags 0..12
 H = 12  # months ahead
@@ -183,6 +188,7 @@ DRIVERS = {"brent": ("fred", "DCOILBRENTEU", "Brent spot, $/bbl (EIA via FRED)")
            "urea": ("pinksheet", "Urea", "Urea, $/t (World Bank Pink Sheet)")}
 # Series whose prices grain and fertiliser can reach (food, restaurants, and the aggregates).
 FOOD_KINDS = ("bread", "meat", "dairy", "oils_fats", "fruit_veg", "sugar", "restaurants", "rest", "all")
+DRIVEN_KINDS = ("bread",) if FOOD_MODE == "bread" else FOOD_KINDS  # the series that get the food drivers
 # The World Bank moves this file with every monthly update; the cached copy is what the fits used.
 PINK_URL = ("https://thedocs.worldbank.org/en/doc/74e8be41ceb20fa0da750cda2f6b9e4e-0050012026/related/"
             "CMO-Historical-Data-Monthly.xlsx")
@@ -394,7 +400,7 @@ def fuel_average_links() -> dict:
 # --- the Bayesian model ----------------------------------------------------------------------
 
 ENERGY = ("x", "g_us", "g_eu")  # Brent and the two gas prices: the energy-cost pass-through
-FOODIN = ("g_grain", "g_urea") if FOOD else ()  # grains (wheat and maize) and urea: food inputs
+FOODIN = {"0": (), "1": ("g_grain", "g_urea"), "bread": ("g_grain",)}[FOOD_MODE]  # grains (wheat, maize), urea
 CHANNELS = ENERGY + FOODIN
 GROUPS = {"oil": ("x",), "gas": ("g_us", "g_eu"), "grain": ("g_grain",), "urea": ("g_urea",)}
 
@@ -430,7 +436,7 @@ def series_arrays() -> dict:
             "gsel": np.array([s.region == "us" for s in SERIES]),
             "nsa": np.array([s.nsa for s in SERIES], float),
             "kind": np.array([KINDS.index(s.kind) for s in SERIES]),
-            "fmask": np.array([s.kind in FOOD_KINDS for s in SERIES], float)}
+            "fmask": np.array([s.kind in DRIVEN_KINDS for s in SERIES], float)}
 
 
 def model(Zx, Zus, Zeu, mon, D, v, yprev, y, lagmask, gsel, nsa, kind, fmask, Zgr=None, Zur=None):
@@ -451,11 +457,13 @@ def model(Zx, Zus, Zeu, mon, D, v, yprev, y, lagmask, gsel, nsa, kind, fmask, Zg
     nu = numpyro.deterministic("nu", NU_MIN + numpyro.sample("nu_m", dist.Gamma(2, 0.1).expand([K]).to_event(1)))
     energy = Zx @ B.T + jnp.where(gsel[None, :], Zus @ G.T, Zeu @ G.T)
     m = a + S[:, mon].T + rho * jnp.nan_to_num(yprev) + energy * (1 + kappa * D[:, None])
-    if Zgr is not None:  # grain and urea pass-through, for the food series only
-        food = lagmask * fmask[:, None]
+    food = lagmask * fmask[:, None]  # grain and urea pass-through, for the food-driven series only
+    if Zgr is not None:
         Fg = numpyro.deterministic("Fg", numpyro.sample("Fgr", dist.Normal(0, 0.3).expand([K, LAGS]).to_event(2)) * food)
+        m = m + Zgr @ Fg.T
+    if Zur is not None:
         Fu = numpyro.deterministic("Fu", numpyro.sample("Fur", dist.Normal(0, 0.3).expand([K, LAGS]).to_event(2)) * food)
-        m = m + Zgr @ Fg.T + Zur @ Fu.T
+        m = m + Zur @ Fu.T
     scale = sigma * jnp.exp(phi * v[:, None] + psi * D[:, None])
     ok = jnp.isfinite(y) & jnp.isfinite(yprev)
     with numpyro.handlers.mask(mask=ok):
@@ -471,8 +479,9 @@ def fit_inputs(data: dict, st: Stats, last: int) -> dict:
     inp = {"Zx": lagmat(z["x"], fill=0.0)[rows], "Zus": lagmat(z["g_us"], fill=0.0)[rows],
            "Zeu": lagmat(z["g_eu"], fill=0.0)[rows], "mon": data["months"].month.values[rows] - 1,
            "D": data["D"][rows], "v": z["v"][rows], "yprev": z["y"][rows - 1], "y": z["y"][rows]}
-    if FOOD:
-        inp |= {"Zgr": lagmat(z["g_grain"], fill=0.0)[rows], "Zur": lagmat(z["g_urea"], fill=0.0)[rows]}
+    for key, c in (("Zgr", "g_grain"), ("Zur", "g_urea")):
+        if c in CHANNELS:
+            inp[key] = lagmat(z[c], fill=0.0)[rows]
     return inp
 
 
@@ -484,7 +493,9 @@ def residuals(post: dict, inp: dict) -> np.ndarray:
     m = (p["a"] + p["S"][:, inp["mon"]].T + p["rho"] * np.nan_to_num(inp["yprev"])
          + energy * (1 + p["kappa"] * inp["D"][:, None]))
     if "Fg" in p:
-        m = m + inp["Zgr"] @ p["Fg"].T + inp["Zur"] @ p["Fu"].T
+        m = m + inp["Zgr"] @ p["Fg"].T
+    if "Fu" in p:
+        m = m + inp["Zur"] @ p["Fu"].T
     scale = p["sigma"] * np.exp(p["phi"] * inp["v"][:, None] + p["psi"] * inp["D"][:, None])
     z = (inp["y"] - m) / scale
     z[~(np.isfinite(inp["y"]) & np.isfinite(inp["yprev"]))] = np.nan
@@ -503,18 +514,19 @@ def fit(data: dict, last: int, seed: int = 0) -> tuple[dict, Stats, dict, np.nda
     mcmc.run(jax.random.PRNGKey(seed), extra_fields=("diverging",),
              **{k: jnp.asarray(v) for k, v in inp.items()}, **{k: jnp.asarray(v) for k, v in arr.items()})
     grouped = mcmc.get_samples(group_by_chain=True)
-    sites = ("B", "G", "a", "rho_raw", "kz", "mu_kappa", "psi", "sigma_raw", "phi") + (("Fgr", "Fur") if FOOD else ())
+    sites = ("B", "G", "a", "rho_raw", "kz", "mu_kappa", "psi", "sigma_raw", "phi")
+    sites += tuple(s for s, c in (("Fgr", "g_grain"), ("Fur", "g_urea")) if c in CHANNELS)
     summ = numpyro.diagnostics.summary({k: np.asarray(grouped[k]) for k in sites})
-    if FOOD:  # the coefficients of non-food series on grain and urea are masked out, so prior-only: skip them
-        keep = series_arrays()["fmask"] > 0
-        for k in ("Fgr", "Fur"):
+    keep = series_arrays()["fmask"] > 0  # the other series' food coefficients are masked out (prior-only): skip them
+    for k in ("Fgr", "Fur"):
+        if k in summ:
             summ[k] = {s: np.asarray(v)[keep] for s, v in summ[k].items()}
     diag = {"seconds": round(time.time() - t0, 1), "chains": CHAINS, "warmup": warm, "samples": samp,
             "divergences": int(np.sum(mcmc.get_extra_fields()["diverging"])),
             "max_r_hat": round(max(float(np.nanmax(s["r_hat"])) for s in summ.values()), 3),
             "min_ess": round(min(float(np.nanmin(s["n_eff"])) for s in summ.values()), 1),
             "months": int(len(inp["y"])), "supply_months": int(inp["D"].sum()), "last": f"{data['months'][last]:%Y-%m}",
-            "food_drivers": FOOD}
+            "food_drivers": FOOD_MODE}
     post = {k: np.asarray(v) for k, v in mcmc.get_samples().items() if k in KEEP}
     pick = np.random.default_rng(seed).choice(len(post["a"]), size=min(50 if QUICK else DRAWS, len(post["a"])),
                                               replace=False)
@@ -539,7 +551,7 @@ def simulate(post: dict, st: Stats, data: dict, t0: np.ndarray, fut: dict, Dfut:
     B, G, a, S, rho = post["Bm"], post["Gm"], post["a"], post["S"], post["rho"]
     kappa, psi = (post["kappa"], post["psi"]) if regime else (np.zeros_like(post["kappa"]), np.zeros_like(post["psi"]))
     phi, sig, nu = post["phi"], post["sigma"], post["nu"]
-    food = "Fg" in post and "g_grain" in CHANNELS
+    food = [(c, post[p]) for c, p in (("g_grain", "Fg"), ("g_urea", "Fu")) if p in post and c in CHANNELS]
     cum, out = np.zeros((N, O, K)), np.zeros((N, O, H, K))
     first = data["months"][0]
     lag = lambda b, M: np.einsum("nol,nkl->nok", b, M)  # noqa: E731
@@ -551,8 +563,8 @@ def simulate(post: dict, st: Stats, data: dict, t0: np.ndarray, fut: dict, Dfut:
         mon = np.array([(first + pd.DateOffset(months=int(t) + j + 1)).month - 1 for t in t0])
         d = Dfut[:, j][None, :, None]  # [1, O, 1]
         m = a[:, None] + S[:, :, mon].transpose(0, 2, 1) + rho[:, None] * yprev + energy * (1 + kappa[:, None] * d)
-        if food:
-            m = m + lag(buf["g_grain"], post["Fg"]) + lag(buf["g_urea"], post["Fu"])
+        for c, M in food:
+            m = m + lag(buf[c], M)
         scale = sig[:, None] * np.exp(phi[:, None] * v[..., None] + psi[:, None] * d)
         e = zres[rng.integers(0, len(zres), size=(N, O))]  # [N, O, K]
         e = np.where(np.isfinite(e), e, rng.standard_t(nu[:, None, :], size=(N, O, K)))
@@ -911,8 +923,7 @@ def run_final(data: dict) -> dict:
         return quantiles(with_composites(S1 - S0, data)[:, 0])  # common random numbers cancel the noise
 
     resp = {"normal": response("x", 0.0), "supply": response("x", 1.0)}
-    if FOOD:
-        resp |= {"grain": response("g_grain", 0.0), "urea": response("g_urea", 0.0)}
+    resp |= {name: response(c, 0.0) for name, c in (("grain", "g_grain"), ("urea", "g_urea")) if c in CHANNELS}
     w = data["weights"]["w"]
     p = driver_paths(data, last, N, rng, "GARCH-CGMY", 0.0, driver_model(data, last), daily_brent())
     S = with_composites(simulate(post, st, data, t0, {c: p[c][:, None] for c in CHANNELS},
@@ -925,7 +936,7 @@ def run_final(data: dict) -> dict:
 
 def run(data: dict, name: str) -> dict:
     meta = {"generated": datetime.now(UTC).isoformat(timespec="seconds"), "job": os.environ.get("SLURM_JOB_ID"),
-            "quick": QUICK, "food_drivers": FOOD, "samples": SAMPLES}
+            "quick": QUICK, "food_drivers": FOOD_MODE, "samples": SAMPLES}
     if name.startswith("fold-"):
         out = run_fold(data, int(name.split("-")[1]))
     elif name == "event-2022":
