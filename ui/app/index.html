@@ -1222,13 +1222,16 @@ a.hz-src:hover { background: #163257; }
   animation: hz-rise .5s cubic-bezier(.2, .8, .2, 1) both;
 }
 #world-stage.hz-focus .hud > * { min-width: 0; }
+/* left: the country card, then the product and most-exposed cards, scrolling with the page. Right: the shock card,
+   which stays in place at the top, as tall as the visible area, its lower parts scrolling inside it. */
+#world-stage.hz-focus .hud { grid-template-rows: auto auto 1fr; }
 #world-stage.hz-focus .hud > #country-card { grid-column: 1; grid-row: 1; }
-/* two columns: the country card, and the shock card with the cards under it (.hz-side, made by focus.js; it has no box
-   elsewhere). Both scroll with the page; the shorter one stops when its bottom reaches the bottom of the screen (or at
-   the top, if it fits), so neither side runs out into blank space. focus.js sets each column's --hz-top. */
-.hz-side { display: contents; }
-#world-stage.hz-focus .hud > .hz-side { grid-column: 2; grid-row: 1; display: flex; flex-direction: column; gap: 14px; }
-#world-stage.hz-focus .hud > #country-card, #world-stage.hz-focus .hud > .hz-side { position: sticky; top: var(--hz-top, 0px); }
+#world-stage.hz-focus .hud > #prod-card { grid-column: 1; grid-row: 2; }
+#world-stage.hz-focus .hud > .hz-left { grid-column: 1; grid-row: 3; }
+#world-stage.hz-focus .hud > .hz-shock {
+  grid-column: 2; grid-row: 1 / span 3; align-self: start;
+  position: sticky; top: 0; max-height: calc(100vh - 110px); overflow-y: auto; overscroll-behavior: contain;
+}
 /* with the room, the country card's tabs go back on one row and its numbers get bigger */
 #world-stage.hz-focus #ctabs { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; }
 #world-stage.hz-focus #ctabs button { min-width: 0; padding: 0 6px; border-left-width: 2px !important; white-space: normal; line-height: 1.15; }
@@ -1238,7 +1241,7 @@ a.hz-src:hover { background: #163257; }
    set by focus.js) and the cards turn a little see-through, frosted, so the map shows faintly behind them */
 #world-stage.hz-focus .mapwrap { position: sticky; top: 0; z-index: 0; filter: brightness(calc(1 - .5 * var(--hz-cover, 0))) saturate(calc(1 - .3 * var(--hz-cover, 0))); }
 #world-stage.hz-focus .hud { position: relative; z-index: 1; }
-#world-stage.hz-focus .hud > .card, #world-stage.hz-focus .hz-side > .card {
+#world-stage.hz-focus .hud > .card {
   background-color: rgba(18, 26, 45, calc(1 - .18 * var(--hz-cover, 0))) !important;
   -webkit-backdrop-filter: blur(calc(8px * var(--hz-cover, 0))); backdrop-filter: blur(calc(8px * var(--hz-cover, 0)));
 }
@@ -1252,9 +1255,9 @@ a.hz-src:hover { background: #163257; }
   /* the page scrolls on a phone, not the stage: the stage must not be a scroll box, or nothing inside it can stay put */
   #world-stage.hz-focus { overflow: visible; }
   #world-stage.hz-focus .hud { grid-template-columns: minmax(0, 1fr); }
-  #world-stage.hz-focus .hud > #country-card { grid-column: 1; grid-row: auto; position: relative; top: auto; }
   /* one column on a phone: the shock card follows the detail rather than staying beside it */
-  #world-stage.hz-focus .hud > .hz-side { display: contents; }
+  #world-stage.hz-focus .hud > * { grid-column: 1 !important; grid-row: auto !important; }
+  #world-stage.hz-focus .hud > .hz-shock { position: static; max-height: none; overflow: visible; }
   #world-stage.hz-focus .mapwrap { height: 40vh; min-height: 240px; }
   #world-stage.hz-focus #ctabs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   /* the band is short on a phone: the legend keeps its title and colour bar, not its line keys */
@@ -7845,31 +7848,15 @@ window.HZModels = (() => {
   const stage = document.getElementById("world-stage");
   const map = stage && stage.querySelector(".mapwrap");
   if (!stage || !map) return;
-  // the cards beside the country card (the shock card first) go in one column that can stay in place (focus.css);
-  // it has no box of its own outside a picked country, so the side panel looks as before
+  // name the side panel's cards for the focus layout (focus.css): the shock card stays in place on the right, the
+  // product and most-exposed cards go under the country card on the left
   const hud = stage.querySelector(".hud"), cc = document.getElementById("country-card");
-  if (hud && cc && !hud.querySelector(".hz-side")) {
-    const side = document.createElement("div");
-    side.className = "hz-side";
-    [...hud.children].filter((x) => x !== cc).forEach((x) => side.appendChild(x));
-    hud.appendChild(side);
+  if (hud && cc) {
+    const rest = [...hud.children].filter((x) => x !== cc && x.id !== "prod-card");
+    const shock = rest.find((x) => x.querySelector("#lost-v"));
+    if (shock) shock.classList.add("hz-shock");
+    rest.filter((x) => x !== shock).forEach((x) => x.classList.add("hz-left"));
   }
-  // each column's sticking point (focus.css): a column taller than the visible area sticks once its bottom meets the
-  // bottom of that area; a shorter one sticks at the top. Only the shorter column ever gets to stick, since the taller
-  // one sets the row's height.
-  const side = hud && hud.querySelector(".hz-side");
-  function columns() {
-    if (!side || !cc) return;
-    const wide = stage.classList.contains("hz-focus") && window.innerWidth > 860;
-    const view = stage.scrollHeight > stage.clientHeight + 1 ? stage.clientHeight : window.innerHeight;
-    for (const col of [cc, side]) {
-      if (wide) col.style.setProperty("--hz-top", `${Math.min(0, Math.round(view - col.offsetHeight - 8))}px`);
-      else col.style.removeProperty("--hz-top");
-    }
-  }
-  if (side && cc) { const ro = new ResizeObserver(columns); ro.observe(cc); ro.observe(side); ro.observe(stage); }
-  window.addEventListener("resize", columns);
-  document.addEventListener("hz-select", () => setTimeout(columns, 0));
   const still = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   let seq = 0;
 
