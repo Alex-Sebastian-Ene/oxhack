@@ -7,8 +7,8 @@ in [macro-ensemble.md](macro-ensemble.md) and the Brent model in [oil-price-mode
 | Code | What it does | Output |
 |---|---|---|
 | `experiments/cost_of_living.py` | Basket data and weights, the event misses, the Bayesian item model, Brent and gas paths, folds, event tests, scenario fans | `runs/col/*.json` (git-ignored) |
-| `experiments/cost_of_living_report.py` | Tables from the runs; leaves out any fit whose chains did not converge; compares the food-driver version | `notes/cost-of-living.md`, `notes/cost-of-living-fans.csv`, `notes/cost-of-living-responses.csv`, `notes/cost-of-living-contributions.csv` |
-| `cluster/iridis/cost_of_living{_env.sh,.slurm}` | Iridis environment and the 22-task array (11 fits, without and with food drivers) | |
+| `experiments/cost_of_living_report.py` | Tables from the runs; leaves out any fit whose chains did not converge; the disruption multiplier for every metric; compares the other versions | `notes/cost-of-living.md`, `notes/cost-of-living-fans.csv`, `notes/cost-of-living-responses.csv`, `notes/cost-of-living-contributions.csv`, `notes/cost-of-living-multipliers.csv` |
+| `cluster/iridis/cost_of_living{_env.sh,.slurm}` | Iridis environment and the 33-task array (11 fits for each of three versions) | |
 | `tests/test_cost_of_living.py` | Rest of basket, average link, simulation terms, driver contributions, CRPS, Brent paths, the World Bank file | |
 
 ## Why item by item
@@ -62,9 +62,21 @@ items don't overlap, so their weights add up.
   - Brent: monthly average of the daily FRED `DCOILBRENTEU` series.
   - Gas: Henry Hub, monthly (`MHHNGSP`), for the US; the IMF EU gas price (`PNGASEUUSDM`) for the
     UK and euro area.
-  - Food inputs, for the food-driver version only: grain prices, the mean of IMF wheat
-    (`PWHEAMTUSDM`) and maize (`PMAIZMTUSDM`) via FRED, and urea from the World Bank Pink Sheet
-    (updated 2 October 2026).
+  - Grain prices: the mean of IMF wheat (`PWHEAMTUSDM`) and maize (`PMAIZMTUSDM`) via FRED, for
+    bread and cereals in the main model.
+  - Urea, from the World Bank Pink Sheet (updated 2 October 2026), in the rejected grain-and-urea
+    version only.
+
+**The chain's other metrics** are fitted in the same model so each gets its own disruption
+multiplier. They are not part of any composite (19 series, 60 in all):
+
+| Kind | Series |
+|---|---|
+| Industry fuel (US) | Retail diesel (`GASDESW`), Gulf Coast jet fuel (`DJFUELUSGULF`), refinery PPI; lags 0–2 |
+| Freight and air transport (US) | PPIs for long-distance truckload and trucking, deep-sea freight, air freight and passenger air; lags 0–2 |
+| Materials (US) | PPIs for plastics resin, film and bags, bottles, converted paper and paperboard, nitrogen fertiliser; lags 0–12 |
+| Unemployment | US (`UNRATE`), UK (OECD via FRED), euro area (Eurostat EA21); changes in pp |
+| Policy rate | Fed funds, SONIA, ECB deposit rate; changes in pp, with a wider error floor because rates move in steps |
 
 ## Model
 
@@ -140,35 +152,69 @@ NUTS (2 chains, 500 warm-up, 1,000 draws per chain):
 ## Status (2026-10-25)
 
 - **Done:**
-  - Data for 41 series, the weights, and the event analysis.
+  - Data for 60 series (the basket and the chain's other metrics), the weights, and the event
+    analysis.
   - The model, the report and the Iridis scripts.
   - 12 tests (all passing in all three versions).
 - **Main model (adopted 2026-10-25): oil and gas for every series, plus grain prices for bread
-  and cereals.**
-  - Iridis job 1972769; R-hat 1.007–1.028, ESS 166–513, no divergences.
-  - `notes/cost-of-living.md` and the three CSVs now come from it. Out of sample:
-  - **Against the average link:** better at every horizon, −0.18 ± 0.02 at 1 month to −0.08 ± 0.01
-    at 12.
+  and cereals,** now with the chain's other metrics fitted alongside.
+  - Iridis job 1973278; R-hat 1.004–1.016, ESS 234–514, no divergences.
+  - `notes/cost-of-living.md` and the four CSVs come from it.
+  - The basket results barely moved when the other metrics were added. Out of sample:
+  - **Against the average link:**
+    - Basket items: better at every horizon, −0.18 ± 0.02 at 1 month to −0.08 ± 0.01 at 12.
+    - US industry costs: better, −0.09 ± 0.02 to −0.05 ± 0.02.
+    - Unemployment and rates: much better, −0.37 ± 0.03 to −0.28 ± 0.09, mostly through momentum.
   - **Composite against direct headline:**
-    - US: better up to 6 months (−0.08 ± 0.02, −0.09 ± 0.02, −0.06 ± 0.02).
+    - US: better up to 6 months (−0.08 ± 0.02, −0.09 ± 0.02, −0.06 ± 0.03).
     - Euro area: −0.02 ± 0.01 at 1 month, just under 2 errors.
     - UK: no difference.
   - **Brent paths: Lévy is best at 3–12 months.**
-    - Against daily Student-t paths: −0.77 ± 0.51 at 12 months.
-    - Against a monthly GARCH-t: −1.98 ± 1.10 at 12 months.
-    - At 1 month it is level with Student-t and well ahead of the monthly model (CRPS 4.02 against
+    - Against daily Student-t paths: −0.75 ± 0.53 at 12 months.
+    - Against a monthly GARCH-t: −1.94 ± 1.09 at 12 months.
+    - At 1 month it is level with Student-t and well ahead of the monthly model (CRPS 4.01 against
       5.28).
-  - **2026 test (fitted to Feb 2026): the bands hold 44 of 44 outcomes,** against 36 without the
-    supply-shock terms and 37 for the average link. The median miss is 2.6 pp, against 3.2 and 3.2.
-    - Motor fuel: UK +23.7% predicted against +27.4% actual; euro area +27.4% against +25.4%; US
-      +34.5% against +30.8%.
-  - **2022 test: still missed.** 14 of 44 outcomes inside the bands, with misses of about 12 pp.
-  - **Calibration:** 73–94% of outcomes inside the 90% bands, against 61–87% for the average link.
+  - **2026 test (fitted to Feb 2026), basket:** the bands hold 44 of 44 outcomes, against 39
+    without the supply-shock terms and 37 for the average link. The median miss is 2.7 pp, against
+    3.4 and 3.3.
+    - Motor fuel: UK +22.7% predicted against +27.4% actual; euro area +27.2% against +25.4%; US
+      +37.1% against +30.8%.
+  - **2026 test, industry costs, unemployment and rates:** 15 of 17 outcomes inside the bands,
+    against 9 of 17 both without the terms and for the average link. The median miss is 8.2 pp,
+    against 9.5 and 10.0.
+    - Diesel: +52.5% actual, against +29.4% predicted (band −7 to +60) and +14.2% from the link.
+    - Jet fuel: +66.2%, against +41.0% (band −16 to +88) and +37.5%.
+    - Refineries: +62.9%, against +41.5% (band 2 to 77) and +32.8%.
+    - The link's bands miss all three.
+  - **2022 test: still missed.** 16 of 44 basket outcomes inside the bands, with misses of about
+    12 pp.
+  - **Calibration:** 73–94% of basket outcomes inside the 90% bands, against 61–86% for the
+    average link.
   - **Scenario from Feb 2026, 12 months on.** A 2026-sized closure lifts cost-of-living inflation:
-    - US: from +2.5% to +4.7%.
-    - UK: from +2.6% to +4.3%.
-    - Euro area: from +2.0% to +4.5%.
-    - It widens the 90% band from 3.0–4.3 pp to 6.4–7.8 pp.
+    - US: from +2.4% to +4.5%.
+    - UK: from +2.5% to +4.0%.
+    - Euro area: from +2.1% to +4.3%.
+    - It widens the 90% band from 2.9–3.6 pp to 6.0–8.7 pp.
+- **The disruption multiplier for every metric** (1 + kappa, all-data fit; the full table is in
+  `notes/cost-of-living.md` and `notes/cost-of-living-multipliers.csv`):
+  - **Clearly above 1:**
+    - Headline inflation ×1.48 (US), ×1.50 (UK), ×1.55 (euro area); each interval's lower end is
+      just above 1.
+    - Motor fuel ×1.46–1.55.
+    - Dairy ×1.9–2.1.
+    - US retail diesel ×1.29 (1.04 to 1.69).
+  - **Clearly below 1:** oils and fats (about ×0) and fruit and vegetables (×0.3–0.5). Their
+    pass-through all but vanished in the disruption months.
+  - **Within noise:** jet fuel ×1.18, refineries ×1.18, freight and air ×1.4–1.5 (wide), materials
+    and fertiliser ×1.0–1.1, household energy, restaurants, the rest of the basket.
+    - Policy rates ×1.3–1.5 on effects of about 0.03 pp.
+  - **Cost of living (composites):** ×1.19 (US), ×1.17 (UK), ×1.29 (euro area), as the ratio of
+    the 12-month responses in disruption and normal months.
+  - **Unemployment ×−0.24 (−0.66 to 0.19):** the usual oil-up, unemployment-down comovement
+    disappears in supply shocks. The effect is about 0.0 pp either way, so it isn't a link to show.
+  - **One multiplier for everything would be wrong.** Use each metric's own: ×1.49 suits motor fuel
+    and headline inflation, but it would overstate the composites, freight and materials, and get
+    oils, fruit and vegetables the wrong way round.
 - **History:** the runs below led to the main model.
 - **First full run (Iridis job 1972141): discarded.**
   - The fits that contain supply-disruption months did not converge: the 2026 test fit had R-hat
@@ -283,7 +329,7 @@ bash cluster/iridis/cost_of_living_env.sh
 sbatch --array=0-21 cluster/iridis/cost_of_living.slurm
 ```
 
-Tasks 0–10 are the base model, 11–21 the food-driver version (`COL_FOOD=1`) and 22–32 the
+Tasks 0–10 are the base model, 11–21 the food-driver version (`COL_FOOD=1`) and 22–32 the main,
 bread-only version (`COL_FOOD=bread`). All use 1,000 draws per chain (`COL_SAMPLES`).
 
 ## Outputs for the UI
@@ -300,9 +346,15 @@ bread-only version (`COL_FOOD=bread`). All use 1,000 draws per chain (`COL_SAMPL
 - `notes/cost-of-living-contributions.csv`: in the 2022 and 2026 windows, the part of each series'
   change that each driver's moves explain (oil, gas, and grain for bread), month by month, next to
   the actual.
-- All three CSVs come from the main model.
   - Columns: `base_month, months_after, series, region, kind, driver, contribution_pp, actual_pp,
     generated`.
+- `notes/cost-of-living-multipliers.csv`: every metric's supply-disruption multiplier (1 + kappa,
+  median and 90% interval), with its 12-month response to +10% Brent in normal and disruption
+  months.
+  - Columns: `series, region, kind, multiplier_q50, multiplier_q05, multiplier_q95,
+    response_normal_12m, response_disruption_12m, unit, fitted_to, generated`.
+  - The composites' multiplier is the ratio of those two responses.
+- All four CSVs come from the main model.
 
 ## Limits
 
@@ -315,6 +367,10 @@ bread-only version (`COL_FOOD=bread`). All use 1,000 draws per chain (`COL_SAMPL
   - US fruit and vegetables is one index.
   - Euro-area weights are for the current euro area, while the indices are the 19-country series.
 - **Yearly Lévy fits.** An origin in October uses a fit that ends the previous December.
+- **Unemployment and rates have no validated oil link.** Their multipliers scale effects of a few
+  hundredths of a point, so the app should keep showing 0 or a labelled range.
+- **Industry costs are US only.** Their multipliers are pooled within each group (fuel, transport,
+  materials) rather than across regions.
 - **Food is driven by oil, gas and, for bread, grain.**
   - Grain and urea for every food item made forecasts worse, so they stay out.
   - Grain for bread alone helps US bread and harms nothing beyond noise, so the main model has it.

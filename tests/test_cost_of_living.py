@@ -64,6 +64,8 @@ def test_rest_makes_the_composite_equal_headline():
     ch = pd.DataFrame(rng.normal(0, 1, (T, len(keys))), columns=keys)
     data = toy_data()
     ch = col.derive_rest(ch, data["weights"]["w"])
+    for s in col.OTHER:  # metrics outside the basket: large values, which must not leak into the composite
+        ch[s.key] = 1e6
     S = ch[[s.key for s in col.SERIES]].values[None]  # one "draw"
     out = col.with_composites(S, data)[0]
     for i, r in enumerate(col.REGIONS):
