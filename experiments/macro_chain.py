@@ -33,6 +33,7 @@ folds before j (equal weights for fold 0). Equal weights are reported as the rob
     uv run experiments/macro_chain.py report                # notes/macro-chain-results.md + weights
     uv run experiments/macro_chain.py replay                # the 2026 closure from 2026-02, scenario fan CSV
     CHAIN_MARGINS=1 uv run experiments/macro_chain.py report    # with the margin member (after `fold J margins`)
+    CHAIN_RELEASE=none uv run experiments/macro_chain.py replay # scenarios with no emergency stock release
 """
 
 from __future__ import annotations
@@ -65,6 +66,7 @@ STEP = 0.25
 TAG = os.environ.get("CHAIN_TAG", "")
 MARGIN = "margins"  # the margin member: fuel targets only (margins.TARGETS)
 MARGINS = os.environ.get("CHAIN_MARGINS", "") == "1"  # mix it in on the fuel targets (report, replay)
+RELEASE = os.environ.get("CHAIN_RELEASE", "2026")  # emergency stocks in the replay's scenarios (reserves.POLICIES)
 SPREAD = np.round(np.arange(0.8, 2.001, 0.05), 2)  # calibration: band widening factors tried
 QUICK = False
 
@@ -74,7 +76,7 @@ def stem(j: int, member: str) -> str:
 
 
 def suffix() -> str:
-    return (f"-{TAG}" if TAG else "") + ("-margins" if MARGINS else "")
+    return (f"-{TAG}" if TAG else "") + ("-margins" if MARGINS else "") + (f"-release-{RELEASE}" if RELEASE != "2026" else "")
 
 
 def available() -> tuple[str, ...]:
@@ -580,7 +582,7 @@ def replay(origin: str = REPLAY_ORIGIN) -> None:
     oil = {"whatif": np.nan_to_num(np.r_[real, np.full(mn.OIL_AHEAD - len(real), np.nan)])[None, None]}
     for lost in LOSTS:
         oil[f"lost {lost:g}"] = op.monthly_paths(prices, idx[t], mb.DRAWS, np.random.default_rng(900), "cgmy",
-                                                 market["drift"][t], lost=lost)
+                                                 market["drift"][t], lost=lost, release=RELEASE)
     cop = cp.fit(data, st, last, info)
     S = {mode: [] for mode in oil}
     S_cop = {mode: [] for mode in ("whatif", f"lost {op.LOST_2026:g}")}

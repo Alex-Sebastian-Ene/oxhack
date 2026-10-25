@@ -66,6 +66,15 @@ def test_premium_follows_the_curve_and_its_band():
     assert np.all(op.premium(op.LOST_2026, days, np.array([-10.0])) >= 0)  # never a negative premium
 
 
+def test_release_policy_scales_the_premium(monkeypatch):
+    z = np.array([0.0, 1.0])
+    base = op.premium(op.LOST_2026, 40, z)
+    assert np.array_equal(op.premium(op.LOST_2026, 40, z, "2026"), base)  # the default is the fitted curve
+    monkeypatch.setattr(op.rv, "factor", lambda lost, release, days: np.linspace(1.0, 2.0, days))
+    assert op.premium(op.LOST_2026, 40, z, "none") == pytest.approx(base * np.linspace(1.0, 2.0, 40))
+    assert np.all(op.premium(0.0, 40, z, "none") == 0)
+
+
 def test_no_scenario_draws_nothing_extra():
     a = op.monthly_paths(prices(), MONTH, 50, np.random.default_rng(3))
     b = op.monthly_paths(prices(), MONTH, 50, np.random.default_rng(3), lost=0.0)

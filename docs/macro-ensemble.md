@@ -27,6 +27,7 @@ added by adding rows. The full table, with date ranges and fetch dates, is in
 | `ais` | Tanker transits and capacity through Hormuz, Bab el-Mandeb, Cape of Good Hope (share of 2019–24 normal) | IMF PortWatch (from AIS, 2019 on) |
 | `pipeline` | Tanker exports at the pipelines' sea ends (Yanbu for the East-West pipeline, Fujairah for Habshan–Fujairah) against exports from ports inside the Gulf | IMF PortWatch daily ports |
 | `fuel` | US crude stocks, SPR, refinery utilisation, gasoline and distillate demand, crude imports and production | EIA weekly history files |
+| `stocks` (optional: only the `v1_stocks`, `v1_fuel`, `v1_fuel_stocks` variants use it) | US motor gasoline, distillate and total oil stocks (total includes the SPR) | EIA weekly history files |
 | `drivers` | Supply-chain pressure, food prices, US and EU gas, 1-year inflation expectations, M2, import prices, shelter CPI, wages | NY Fed, IMF, EIA, Michigan, Fed, BLS |
 | `us` | CPI, core CPI, unemployment, fed funds, 10y, industrial production, payrolls, sentiment, PPI, productivity | FRED (BLS, Fed) |
 | `uk` | CPI (ONS D7BT), unemployment, SONIA (stands in for Bank Rate), 10y, production, productivity, GBP/USD | ONS, FRED |
