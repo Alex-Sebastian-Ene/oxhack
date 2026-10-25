@@ -3,8 +3,8 @@
 # knock-ons (equal mix of bayes_own, global_lin and global, plus the margin member on the fuel targets).
 # 1. The shock card's slider sets lost Hormuz flow (points of normal, 0 to 100), not a Brent price.
 #    Brent becomes an output: pre-war $70 times the flow-premium curve's average log premium over the next
-#    12 months (notes/flow-premium.csv), with its 90% band. Everything that still needs a Brent price
-#    (steel and aluminium links, country fuel costs, energy bills) uses that.
+#    12 months (notes/flow-premium-iea.csv: per point of the IEA's lost strait flow, OXH-9), with its 90% band.
+#    Everything that still needs a Brent price (steel and aluminium links, country fuel costs, energy bills) uses that.
 # 2. Jet fuel, nitrogen fertiliser and plastics resin, diesel at the pump, CPI and unemployment come from the
 #    chain's scenario table (notes/chain-scenarios-3m-margins.csv), interpolated between its 0/25/50/82/100 points.
 #    Shown as the extra change against no disruption (the table's 0-point mean includes normal trend), with the
@@ -42,7 +42,7 @@ assert sorted(chain) == sorted(SERIES), sorted(set(SERIES) - set(chain))
 for d in chain.values():
     assert sorted(d["pts"], key=int) == ["0", "25", "50", "82", "100"] and all(sorted(m, key=int) == ["1", "3", "6", "12"] for m in d["pts"].values())
 
-prem = list(csv.DictReader((root / "notes" / "flow-premium.csv").open(encoding="utf-8")))
+prem = list(csv.DictReader((root / "notes" / "flow-premium-iea.csv").open(encoding="utf-8")))
 year = [r for r in prem if int(r["trading_day"]) <= 252]          # about 12 months of trading days
 PREM = {k: round(sum(float(r[f"e_{k}"]) for r in year) / len(year), 6) for k in ("low", "mid", "high")}
 PREM.update(days=len(year), generated=prem[0]["generated"])
@@ -53,7 +53,7 @@ CHAIN_JS = (
     "  // series -> lost-flow points -> months ahead -> [mean, q05, q95], in 100 x log change (pp for unemployment)\n"
     f"  const CHAIN = {json.dumps(chain, separators=(',', ':'))};\n"
     f"  const CHAIN_META = {json.dumps(meta)};\n"
-    "  // flow-premium curve, notes/flow-premium.csv: average log Brent premium per point of lost flow over the next\n"
+    "  // flow-premium curve, notes/flow-premium-iea.csv: average log Brent premium per point of the IEA's lost flow over the next\n"
     f"  // {PREM['days']} trading days (about 12 months), with its 90% band\n"
     f"  const PREM = {json.dumps(PREM)};\n"
 ) + r'''  const LOSTPTS = [0, 25, 50, 82, 100];
@@ -232,7 +232,7 @@ sub("    const pct = (st.brent / BRENT0 - 1) * 100, sg = (v) => (v > 0.005 ? \"+
 
 # ---------------------------------------------------------------- info sheet
 sub("      <li><b>Bundled:</b> globe.gl 2.41.4 (MIT)",
-    "      <li><b>The model:</b> Seb's recommended chain (<code>docs/chain.md</code>). You set the lost Hormuz flow; Brent follows from the flow-premium curve (<code>notes/flow-premium.csv</code>, fitted to the 2026 closure, checked on Bab el-Mandeb 2023–24); jet fuel, fertiliser, plastics resin, diesel, CPI and unemployment come from its scenario table (<code>notes/chain-scenarios-3m-margins.csv</code>), as the change against no disruption with the 90% range of outcomes. Steel and aluminium use Seb's linear links (OXH-5) at that Brent.</li>\n"
+    "      <li><b>The model:</b> Seb's recommended chain (<code>docs/chain.md</code>). You set the lost Hormuz flow; Brent follows from the flow-premium curve (<code>notes/flow-premium-iea.csv</code>, per point of the IEA's lost strait flow, fitted to the 2026 closure, checked on Bab el-Mandeb 2023–24); jet fuel, fertiliser, plastics resin, diesel, CPI and unemployment come from its scenario table (<code>notes/chain-scenarios-3m-margins.csv</code>), as the change against no disruption with the 90% range of outcomes. Steel and aluminium use Seb's linear links (OXH-5) at that Brent.</li>\n"
     "      <li><b>Bundled:</b> globe.gl 2.41.4 (MIT)")
 
 p.write_text(s, encoding="utf-8")

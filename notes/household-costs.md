@@ -11,7 +11,7 @@ Index = 100 on the 2019 average. Changes are 12-month log changes in % unless ma
 - **Euro area:** real pay hit its 2021-24 low of 95.9 (2019 = 100) in 2023-06 and is 99.8 in 2026-06: still below its 2019 level.
 - **UK income groups:** household costs rose 36.7% for the lowest-income tenth and 37.1% for the highest from 2021-01 to 2026-06 (ONS Household Costs Indices). The poorest were hit first: 14.5% against 11.3% in the year to 2022-10, as energy and food dominate their budgets. The richest caught up as mortgage rates rose: 1.7% against 4.0% in the year to 2024-06.
 - **A gallon of US petrol** took 6.7 minutes of work in 2019, 11.0 at the 2022 peak and 8.2 in 2026-09.
-- **The 2026 Hormuz closure:** for the UK, the chain's 82-points-lost scenario gives real pay -0.1% after 6 months (-3.0 to +1.9); it was -1.0%.
+- **The 2026 Hormuz closure:** for the UK, the chain's 2026 scenario (the IEA's lost flow month by month) gives real pay -0.2% after 6 months (-3.0 to +1.9); it was -1.0%.
 
 ## Real pay: is pay keeping up with prices?
 
@@ -288,19 +288,19 @@ Change over each window in %, first to last month; pay and CPI over the months b
 
 ## The 2026 Hormuz closure: real pay under the chain's scenarios
 
-From 2026-02: CPI from the knock-on chain's replay (`notes/chain-scenarios-3m.csv`: the 3-member ensemble fitted on data to 2026-01, the flow premium of `notes/flow-premium.csv`), and nominal pay assumed to keep its pace of the 12 months before (pay's response to the shock is not modelled). Real pay change in % with the 90% band; 'actual' is what happened, where published (US and UK). Lost flow is in points of normal Hormuz tanker flow; 2026 lost about 82.
+From 2026-02: CPI from the knock-on chain's replay (`notes/chain-scenarios-3m.csv` and `notes/chain-scenarios-2026-3m.csv`: the 3-member ensemble fitted on data to 2026-01, the flow premium of `notes/flow-premium-iea.csv` per point of the IEA's lost flow), and nominal pay assumed to keep its pace of the 12 months before (pay's response to the shock is not modelled). Real pay change in % with the 90% band; 'actual' is what happened, where published (US and UK). Lost flow is in points of February 2026's strait flow, held for 12 months; the 2026 column is the closure as the IEA counts it month by month (89 points lost in March to 47 in September).
 
-| Region | Months ahead | Pay (assumed) | No closure | 25 lost | 50 lost | 82 lost (as in 2026) | 100 lost | Actual |
-|---|---|---|---|---|---|---|---|---|
-| US | 3 | +0.9 | +0.3 (-0.3..+0.9) | -0.0 (-1.1..+0.7) | -0.3 (-1.9..+0.7) | -0.6 (-3.1..+0.7) | -0.8 (-3.6..+0.8) | -1.1 |
-| US | 6 | +1.8 | +0.6 (-0.6..+1.6) | +0.3 (-1.5..+1.5) | +0.0 (-2.5..+1.4) | -0.4 (-4.5..+1.9) | -0.6 (-5.2..+2.0) | -0.5 |
-| US | 12 | +3.7 | +1.3 (-1.2..+3.0) | +0.9 (-2.2..+3.1) | +0.6 (-3.7..+3.0) | -0.0 (-7.7..+3.6) | -0.3 (-7.4..+3.6) | – |
-| UK | 3 | +1.0 | +0.2 (-0.7..+1.0) | +0.0 (-1.1..+1.1) | -0.2 (-1.7..+1.0) | -0.4 (-2.4..+0.9) | -0.6 (-2.8..+0.8) | -1.0 |
-| UK | 6 | +1.9 | +0.7 (-0.6..+1.8) | +0.3 (-1.1..+1.7) | +0.1 (-2.2..+2.0) | -0.1 (-3.0..+1.9) | -0.2 (-3.7..+2.0) | -1.0 |
-| UK | 12 | +3.8 | +1.5 (-0.7..+3.5) | +1.1 (-1.5..+3.2) | +0.7 (-3.1..+3.4) | -0.0 (-5.7..+3.5) | -0.2 (-7.2..+3.5) | – |
-| Euro area | 3 | +0.2 | -0.5 (-1.5..+0.5) | -0.7 (-1.9..+0.4) | -0.9 (-2.7..+0.3) | -1.3 (-4.1..+0.3) | -1.4 (-4.7..+0.3) | – |
-| Euro area | 6 | +0.4 | -0.6 (-2.0..+0.7) | -0.8 (-2.7..+0.6) | -1.2 (-3.4..+0.6) | -1.6 (-5.3..+0.7) | -1.8 (-5.9..+0.6) | – |
-| Euro area | 12 | +0.8 | -0.9 (-3.1..+1.1) | -1.4 (-4.4..+0.8) | -2.0 (-6.1..+0.8) | -2.7 (-9.6..+1.3) | -3.1 (-10.6..+0.9) | – |
+| Region | Months ahead | Pay (assumed) | No closure | 25 lost | 50 lost | 82 lost | 100 lost | 2026 (IEA path) | Actual |
+|---|---|---|---|---|---|---|---|---|---|
+| US | 3 | +0.9 | +0.3 (-0.3..+0.9) | -0.0 (-1.1..+0.7) | -0.3 (-2.0..+0.7) | -0.7 (-3.1..+0.6) | -1.0 (-3.7..+0.6) | -0.7 (-3.4..+0.7) | -1.1 |
+| US | 6 | +1.8 | +0.6 (-0.6..+1.6) | +0.2 (-1.6..+1.4) | -0.1 (-2.9..+1.3) | -0.6 (-5.2..+1.6) | -0.9 (-6.3..+1.8) | -0.3 (-4.9..+2.2) | -0.5 |
+| US | 12 | +3.7 | +1.3 (-1.2..+3.0) | +0.8 (-2.4..+2.8) | +0.2 (-4.9..+2.7) | -0.5 (-9.2..+3.2) | -0.9 (-9.3..+3.7) | +0.4 (-8.6..+4.5) | – |
+| UK | 3 | +1.0 | +0.2 (-0.7..+1.0) | -0.0 (-1.1..+1.1) | -0.2 (-1.8..+0.8) | -0.5 (-2.3..+0.8) | -0.6 (-2.7..+0.7) | -0.5 (-2.5..+0.9) | -1.0 |
+| UK | 6 | +1.9 | +0.7 (-0.6..+1.8) | +0.3 (-1.3..+1.6) | +0.0 (-2.2..+1.6) | -0.4 (-3.5..+1.6) | -0.3 (-4.6..+1.6) | -0.2 (-3.0..+1.9) | -1.0 |
+| UK | 12 | +3.8 | +1.5 (-0.7..+3.5) | +1.0 (-1.9..+3.2) | +0.5 (-3.6..+3.1) | -0.3 (-7.3..+3.1) | -0.6 (-9.5..+3.1) | +0.2 (-6.0..+4.7) | – |
+| Euro area | 3 | +0.2 | -0.5 (-1.5..+0.5) | -0.7 (-1.9..+0.4) | -1.0 (-2.9..+0.3) | -1.3 (-4.1..+0.1) | -1.6 (-4.7..+0.2) | -1.4 (-4.3..+0.2) | – |
+| Euro area | 6 | +0.4 | -0.6 (-2.0..+0.7) | -0.9 (-2.7..+0.5) | -1.3 (-4.0..+0.4) | -1.8 (-5.5..+0.4) | -2.0 (-7.0..+0.5) | -1.7 (-5.9..+0.9) | – |
+| Euro area | 12 | +0.8 | -0.9 (-3.1..+1.1) | -1.6 (-4.7..+0.7) | -2.1 (-7.5..+0.7) | -3.1 (-11.4..+0.7) | -3.8 (-13.7..+1.4) | -2.8 (-10.4..+1.7) | – |
 
 ## Series and sources
 
