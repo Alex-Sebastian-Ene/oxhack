@@ -306,3 +306,17 @@ def test_steady_inflation_is_read_the_same_from_every_origin():
     assert ok.sum() > 60
     np.testing.assert_allclose(F[ok], (100 * np.log(1.03) * np.array(mg.mn.HORIZONS) / 12)[None].repeat(ok.sum(), 0),
                                atol=1e-6)
+
+
+def test_region_skill_scores_every_forecaster_on_the_origins_all_of_them_share():
+    rng = np.random.default_rng(0)
+    clim = rng.uniform(1, 2, (40, 3))
+    ours, theirs = clim * 0.8, clim * 0.9
+    theirs[:10, 1] = np.nan                            # a benchmark that started late, on one output
+    n, s, ok, _ = mg.region_skill({"ours": ours, "theirs": theirs}, clim, np.array([0, 1]))
+    assert n == 30 and not ok[:10].any() and ok[10:].all()
+    assert s["ours"] == pytest.approx(0.2) and s["theirs"] == pytest.approx(0.1)
+    r = mg.compare(ours, theirs, clim, np.array([0, 1]))  # the pairwise comparison agrees on a pair
+    assert (r["n"], r["s1"], r["s2"]) == (n, pytest.approx(s["ours"]), pytest.approx(s["theirs"]))
+    n, s, _, _ = mg.region_skill({"ours": ours, "theirs": theirs}, clim, np.array([2]))
+    assert n == 40                                     # an output the late start doesn't touch keeps every origin

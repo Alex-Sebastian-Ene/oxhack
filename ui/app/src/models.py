@@ -322,6 +322,42 @@ def global_net():
     }
 
 
+EXPERT_NAMES = {"SPF median, latest survey": "Professional forecasters (SPF)", "Cleveland Fed": "Cleveland Fed model",
+                "Michigan": "Michigan households"}
+
+
+def experts():
+    """The panel above the cards: our statistical and ML models against the experts, inflation by region, from the
+    global network's forecast-mode tables (nothing after the forecast date is known)."""
+    sec = "Inflation by region: our models against the experts"
+    ours = (("stats", "Bayes own-vol"), ("ml", "global_lin"))
+    rows = []
+    for region, label in (("US, UK and euro area", "All three"), ("US", "US"), ("UK", "UK"), ("Euro area", "Euro area")):
+        g = lambda col, h="12": _clean(cell(MG, (region, h), col, section=sec))
+        r = {"region": label, "full": region, "n": g("Origins"), **{k: num(g(col)) for k, col in ours},
+             "naive": num(g("Random walk")), "expert": None}
+        best = g("Best expert")
+        if best != "n/a":
+            r["expert"] = {"name": EXPERT_NAMES[best], "v": num(g(best)),
+                           "t": {k: num(g(f"{col} minus best expert (t)").split("(")[1].rstrip(")")) for k, col in ours},
+                           "others": [[EXPERT_NAMES[e], num(g(e))] for e in EXPERT_NAMES if e != best and g(e) != "n/a"]}
+        rows.append(r)
+    origin = find(MG, r"^### Inflation over the next 12 months by region, from (\d{4}-\d{2})")
+    psec = f"Inflation over the next 12 months by region, from {origin}"
+    point = lambda s: None if _clean(s) == "n/a" else float(_clean(s).split(" (")[0])
+    pred = []
+    for r in rows[1:]:
+        p = lambda col: point(cell(MG, r["full"], col, section=psec))
+        band = lambda col: [float(x) for x in re.findall(r"[+-]?\d+\.\d", _clean(cell(MG, r["full"], col, section=psec)).split("(")[1])]
+        best = next((k for k, v in EXPERT_NAMES.items() if r["expert"] and v == r["expert"]["name"]), None)
+        pred.append({"region": r["region"], "actual": p("Actual"), "stats": p("Bayes own-vol"), "ml": p("global_lin"),
+                     "stats_band": band("Bayes own-vol"), "ml_band": band("global_lin"),
+                     "expert": p(best) if best else None, "naive": p("Random walk")})
+    end = f"{int(origin[:4]) + 1}{origin[4:]}"
+    return {"rows": rows, "pred": pred, "origin": origin, "end": end, "src": MG, "date": generated(MG),
+            "span": find(MG, r"\((\d{4}-\d{2}\.\.\d{4}-\d{2}), \d+ forecast origins\)").replace("..", "–")}
+
+
 COL, COLD = "notes/cost-of-living.md", "docs/cost-of-living.md"
 
 
@@ -559,7 +595,12 @@ def data():
         c["files"] = [{"path": p, "date": generated(p)} for p in dict.fromkeys(c["files"])]
         c["asks"], c["tested"], c["limits"] = num(c["asks"]), num(c["tested"]), [num(x) for x in c["limits"]]
         cards.append(c)
-    return {"cards": cards, "groups": GROUPS} if cards else None
+    try:
+        ex = experts()
+    except (LookupError, OSError, ValueError, KeyError, IndexError) as e:
+        print(f"models: left out the experts panel: {e}", file=sys.stderr)
+        ex = None
+    return {"cards": cards, "groups": GROUPS, "experts": ex} if cards else None
 
 
 def script():
@@ -570,6 +611,13 @@ def script():
 if __name__ == "__main__":
     sys.stdout.reconfigure(encoding="utf-8")
     d = data() or {"cards": []}
+    if d.get("experts"):
+        ex = d["experts"]
+        print(f"== Against the experts ({ex['src']} {ex['date']}, backtest {ex['span']})")
+        for r in ex["rows"]:
+            print(f"   {r['region']:>10}  stats {r['stats']}  ml {r['ml']}  expert {r['expert'] and (r['expert']['name'], r['expert']['v'], r['expert']['t'])}  naive {r['naive']}  n={r['n']}")
+        for p in ex["pred"]:
+            print(f"   {ex['origin']}..{ex['end']} {p}")
     for c in d["cards"]:
         print(f"\n== {c['title']} ({c['kind']})")
         for s in c["stats"]:

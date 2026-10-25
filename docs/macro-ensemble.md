@@ -439,6 +439,10 @@ What-if skill can't be compared with institutions, because the what-if is given 
    - Cleveland and Michigan are 1-year rates, so at shorter horizons they are scaled by h/12, like the random walk.
    - Every point forecast gets a Gaussian band from its own training errors.
 6. **A caveat in our favour:** the surveys are real-time, while we're scored on revised data. This flatters us slightly: seasonally adjusted CPI is revised only through its seasonal factors.
+7. **By region** (`notes/macro-global-results.md`, "Inflation by region"; 12 months, forecast mode):
+   - `global_lin`'s skill is +0.223 in the UK and +0.207 in the euro area, against +0.080 in the US. The Bayesian model's is +0.168 and +0.182.
+   - We have no expert forecasts for the UK or the euro area yet, only the random walk (−0.093 and −0.111). Adding the ECB's SPF and a UK survey would complete the comparison.
+   - From August 2025, `global_lin` expected less than the 12-month rise that followed in all three regions: US +2.0% against +3.3%, UK +2.1% against +3.0%, euro area +1.6% against +3.2%. The SPF expected +2.6% for the US.
 
 ## Industries by country (`notes/sector-global-results.md`)
 
