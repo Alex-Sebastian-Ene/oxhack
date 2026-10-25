@@ -1,0 +1,4 @@
+# built pages and GIF frames: rebuild with make.py / capture.js
+*.html
+frames/
+globe/data.js
