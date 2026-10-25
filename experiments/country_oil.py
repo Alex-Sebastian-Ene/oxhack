@@ -5,10 +5,12 @@
 """Each map country's own oil numbers for the World view, so no country falls back to a typical profile.
 
 1. Fuel pass-through: how far a country's pump prices follow Brent. For the countries with motor-fuel
-   consumer prices in notes/country-trends.json (Eurostat HICP CP0722; US CPI motor fuel), the
+   consumer prices in notes/country-trends.json (Eurostat HICP CP0722; US CPI motor fuel), and outside
+   those the national motor-fuel CPIs on keyless APIs (OECD's national CPIs by COICOP, class 07.2.2;
+   Statistics Canada's gasoline index; SingStat's petrol index), cached in data/raw/fuel-cpi/: the
    12-month log change in motor-fuel prices on the 12-month log change in Brent (FRED MCOILBRENTEU,
    US dollars), 2009-2025, Newey-West errors over 12 months. The slope is the share of a Brent move
-   that reaches the pump. Countries without a series get the median slope, marked pooled.
+   that reaches the pump. Countries without a series have no estimate (the median is kept for reference).
 2. Oil trade, UN Comtrade (public preview API, no key): each reporter's imports and exports of crude
    (HS 2709) and refined products (HS 2710), and its imports from the seven Gulf producers whose
    exports leave through the Strait of Hormuz. By value, in US dollars, for 2024, or 2023 where a
@@ -26,7 +28,7 @@
    slope_h * x% to prices after h months (the average link; supply disruptions can move faster). Fits too
    noisy to use (high-inflation countries) are dropped and marked.
 
-    uv run experiments/country_oil.py fuel    # pass-through (FRED + notes/country-trends.json)
+    uv run experiments/country_oil.py fuel    # pass-through (FRED, notes/country-trends.json, OECD, StatCan, SingStat)
     uv run experiments/country_oil.py trade   # Comtrade pulls, cached in data/raw/comtrade-oil/
     uv run experiments/country_oil.py prices  # FAOSTAT, cached in data/raw/faostat/
     uv run experiments/country_oil.py         # all three; writes notes/country-oil.json and notes/country-oil.md
@@ -34,10 +36,13 @@
 
 from __future__ import annotations
 
+import io
 import json
+import re
 import sys
 import time
 import urllib.error
+import urllib.request
 from datetime import UTC, datetime
 
 import numpy as np
@@ -52,6 +57,13 @@ OUT_MD = md.ROOT / "notes" / "country-oil.md"
 RAW = md.ROOT / "data" / "raw" / "comtrade-oil"
 SAMPLE = ("2009-01-01", "2025-12-01")
 HAC_LAGS = 12
+FUEL_RAW = md.ROOT / "data" / "raw" / "fuel-cpi"
+# national CPIs by COICOP as index levels, class 07.2.2 (fuels and lubricants for personal transport equipment)
+OECD_FUEL = ("https://sdmx.oecd.org/public/rest/data/OECD.SDD.TPS,DSD_PRICES@DF_PRICES_ALL,1.0/"
+             ".M.N.CPI.IX.CP0722.N._Z?startPeriod=2007-01&format=csvfile")
+STATCAN = ("https://www150.statcan.gc.ca/t1/wds/rest/getDataFromVectorByReferencePeriodRange?vectorIds=%22{vector}%22"
+           "&startRefPeriod=2007-01-01&endReferencePeriod=2026-12-01")
+SINGSTAT = "https://tablebuilder.singstat.gov.sg/api/table/tabledata/{table}?seriesNoORrowNo={row}"
 # country-trends geo code -> ISO3 as on the map (Natural Earth; Kosovo is KOS there)
 GEO_ISO3 = {"AL": "ALB", "AT": "AUT", "BE": "BEL", "BA": "BIH", "BG": "BGR", "HR": "HRV", "CY": "CYP", "CZ": "CZE",
             "DK": "DNK", "EE": "EST", "FI": "FIN", "FR": "FRA", "GE": "GEO", "DE": "DEU", "EL": "GRC", "HU": "HUN",
@@ -88,6 +100,19 @@ def today() -> str:
     return datetime.now(UTC).strftime("%Y-%m-%d")
 
 
+def fetched_on(path) -> str:
+    return datetime.fromtimestamp(path.stat().st_mtime, UTC).strftime("%Y-%m-%d")
+
+
+def get(url: str, path):
+    """macro_data._get with an Accept header, which SingStat's API refuses requests without."""
+    if not path.exists():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with urllib.request.urlopen(urllib.request.Request(url, headers=md.UA | {"Accept": "*/*"}), timeout=120) as resp:
+            path.write_bytes(resp.read())
+    return path
+
+
 # ------------------------------------------------------------------------------------------- pass-through
 def yoy_series(packed: dict) -> pd.Series:
     """A notes/country-trends.json series ({from, v}: annual % changes, monthly) as a monthly Series."""
@@ -112,27 +137,112 @@ def passthrough(fuel_yoy: pd.Series, brent: pd.Series, sample=SAMPLE, lags=HAC_L
             "r2": round(float(r2), 2), "n": int(len(d)), "from": d.index[0].strftime("%Y-%m"), "to": d.index[-1].strftime("%Y-%m")}
 
 
+def level_yoy(level: pd.Series) -> pd.Series:
+    """12-month % change of a monthly price index, on a full monthly calendar (a missing month stays missing)."""
+    s = level[level > 0].sort_index()
+    s = s.reindex(pd.date_range(s.index[0], s.index[-1], freq="MS"))
+    return 100 * (s / s.shift(12) - 1)
+
+
+def oecd_levels(text: str, expenditure: str = "CP0722") -> dict[str, pd.Series]:
+    """{iso3: monthly index} from an OECD SDMX CSV of DF_PRICES_ALL: national CPI index levels for one COICOP item.
+    A country whose index changes base year inside the series is left out (its changes would jump at the splice)."""
+    d = pd.read_csv(io.StringIO(text), dtype={"TIME_PERIOD": str, "BASE_PER": str})
+    d = d[(d["FREQ"] == "M") & (d["METHODOLOGY"] == "N") & (d["MEASURE"] == "CPI") & (d["UNIT_MEASURE"] == "IX")
+          & (d["EXPENDITURE"] == expenditure) & d["OBS_VALUE"].notna()]
+    out = {}
+    for iso, g in d.groupby("REF_AREA"):
+        if len(iso) != 3 or g["BASE_PER"].nunique(dropna=False) > 1:
+            continue
+        s = pd.Series(g["OBS_VALUE"].astype(float).to_numpy(), index=pd.to_datetime(g["TIME_PERIOD"] + "-01"))
+        out[iso] = s.sort_index()
+    return out
+
+
+def statcan_levels(body: list) -> pd.Series:
+    """Monthly index from a Statistics Canada WDS reply (getDataFromVectorByReferencePeriodRange, one vector)."""
+    (r,) = body
+    if r["status"] != "SUCCESS":
+        raise ValueError(f"StatCan: {r['status']}")
+    pts = r["object"]["vectorDataPoint"]
+    return pd.Series({pd.Timestamp(p["refPer"]): float(p["value"]) for p in pts if p["value"] is not None}).sort_index()
+
+
+def singstat_levels(body: dict, row: str) -> pd.Series:
+    """Monthly index for one series ("1.06.1.5") from a SingStat Table Builder reply; "na" months are dropped."""
+    (r,) = [r for r in body["Data"]["row"] if r["seriesNo"] == row]
+    out = {}
+    for c in r["columns"]:
+        try:
+            out[pd.Timestamp(datetime.strptime(c["key"], "%Y %b"))] = float(c["value"])
+        except ValueError:
+            continue
+    return pd.Series(out).sort_index()
+
+
+# Motor-fuel CPIs outside Eurostat's HICP and the BLS, from keyless APIs: one file per series, cached in data/raw/fuel-cpi/.
+# iso3 -> (series as the app shows it, source, code, url, cache file, parser)
+NATIONAL_FUEL = {
+    "CAN": ("Statistics Canada CPI gasoline, table 18-10-0004-01", "Statistics Canada Web Data Service", "v41691136",
+            STATCAN.format(vector=41691136), "statcan_v41691136.json", statcan_levels),
+    "SGP": ("SingStat CPI petrol, table M213751", "SingStat Table Builder API", "M213751 series 1.06.1.5",
+            SINGSTAT.format(table="M213751", row="1.06.1.5"), "singstat_M213751_1.06.1.5.json",
+            lambda b: singstat_levels(b, "1.06.1.5")),
+}
+
+
+def national_fuel() -> dict[str, dict]:
+    """{iso3: {level, series, source, code, collected}}: OECD's national CPIs for class 07.2.2 (many countries in one
+    file), then the single-country series above."""
+    p = get(OECD_FUEL, FUEL_RAW / "oecd_cp0722.csv")
+    out = {iso: {"level": s, "series": "national CPI fuels and lubricants, COICOP 07.2.2, via the OECD",
+                 "source": "OECD Data Explorer, DF_PRICES_ALL", "code": f"{iso}.M.N.CPI.IX.CP0722.N._Z", "collected": fetched_on(p)}
+           for iso, s in oecd_levels(p.read_text(encoding="utf-8")).items()}
+    for iso, (series, source, code, url, file, parse) in NATIONAL_FUEL.items():
+        p = get(url, FUEL_RAW / file)
+        out[iso] = {"level": parse(json.loads(p.read_text(encoding="utf-8"))), "series": series, "source": source,
+                    "code": code, "collected": fetched_on(p)}
+    return out
+
+
 def fuel_section() -> dict:
     trends = json.loads(TRENDS.read_text(encoding="utf-8"))
     brent = md.fetch_fred("MCOILBRENTEU")
-    fetched = datetime.fromtimestamp((md.RAW / "fred_MCOILBRENTEU.csv").stat().st_mtime, UTC).strftime("%Y-%m-%d")
     src = trends["sources"]["consumer"]
+    last_fetch = lambda text: re.findall(r"\d{4}-\d{2}-\d{2}", text.split("fetched", 1)[1])[-1]  # noqa: E731
     out = {}
     for geo, c in trends["countries"].items():
         ser = (c.get("consumer") or {}).get("CP0722")
         fit = ser and passthrough(yoy_series(ser), brent)
         if fit:
-            fit["series"] = "US CPI motor fuel (BLS via FRED)" if geo == "US" else "Eurostat HICP motor fuels (CP0722)"
+            us = geo == "US"
+            fit |= {"series": "US CPI motor fuel (BLS via FRED)" if us else "Eurostat HICP motor fuels (CP0722)",
+                    "source": "BLS CPI via FRED" if us else "Eurostat HICP, prc_hicp_minr",
+                    "code": "CUSR0000SETB" if us else "CP0722", "collected": last_fetch(src["US" if us else "eu"])}
             out[GEO_ISO3[geo]] = fit
+    # national series for the countries Eurostat and the BLS don't cover; one too noisy to read is left out
+    noisy, added = [], []
+    for iso, n in national_fuel().items():
+        if iso in out:
+            continue
+        fit = passthrough(level_yoy(n.pop("level")), brent)
+        if fit and fit["se"] > NOISY_SE:
+            noisy.append(iso)
+        elif fit:
+            out[iso] = fit | n
+            added.append(iso)
     es = np.array([v["e"] for v in out.values()])
     pooled = {"e": round(float(np.median(es)), 3), "lo": round(float(np.percentile(es, 25)), 3),
               "hi": round(float(np.percentile(es, 75)), 3), "n": int(len(es))}
+    elsewhere = "; ".join(sorted({f"{v['source']} ({v['code'] if k in NATIONAL_FUEL else 'national CPIs, CP0722'}), fetched "
+                                  f"{v['collected']}" for k, v in out.items() if k in added}))
     return {"method": ("12-month log change in motor-fuel consumer prices on the 12-month log change in Brent (US$), "
                        f"{SAMPLE[0][:7]} to {SAMPLE[1][:7]}, Newey-West errors over {HAC_LAGS} months; range is 90%"),
-            "brent": f"FRED MCOILBRENTEU (Brent, monthly average, US$), fetched {fetched}",
-            "prices": f"{src['eu']}; US: {src['US']}",
-            "pooled": pooled | {"what": "median of the national slopes; the range is their middle half"},
-            "countries": out}
+            "brent": f"FRED MCOILBRENTEU (Brent, monthly average, US$), fetched {fetched_on(md.RAW / 'fred_MCOILBRENTEU.csv')}",
+            "prices": f"{src['eu']}; US: {src['US']}; elsewhere: {elsewhere}",
+            "pooled": pooled | {"what": "median of the national slopes, for reference (a country without a series has no "
+                                        "estimate); the range is their middle half"},
+            "noisy": noisy, "countries": out}
 
 
 # ------------------------------------------------------------------------------------------------- trade
@@ -539,12 +649,14 @@ def report(d: dict) -> str:
     lines = ["# Country oil profiles", "",
              f"_Generated by `experiments/country_oil.py` on {d['generated']}. Nothing here is synthetic._", ""]
     if f:
-        lines += ["## Fuel pass-through", "", f"{f['method']}. Brent: {f['brent']}.", "",
-                  f"Pooled (for countries without a series): {f['pooled']['e']:.2f}, middle half "
-                  f"{f['pooled']['lo']:.2f} to {f['pooled']['hi']:.2f} over {f['pooled']['n']} countries.", "",
-                  "| Country | Slope | 90% range | R² | Months |", "|---|---|---|---|---|"]
+        lines += ["## Fuel pass-through", "", f"{f['method']}. Brent: {f['brent']}. Motor-fuel prices: {f['prices']}.", "",
+                  f"{f['pooled']['n']} countries have their own series; a country without one has no estimate. Their median, "
+                  f"for reference: {f['pooled']['e']:.2f}, middle half {f['pooled']['lo']:.2f} to {f['pooled']['hi']:.2f}. "
+                  f"Too noisy to use (standard error above {NOISY_SE}): {', '.join(f.get('noisy') or []) or 'none'}.", "",
+                  "| Country | Slope | 90% range | R² | Months | Series | Collected |", "|---|---|---|---|---|---|---|"]
         for k, v in sorted(f["countries"].items(), key=lambda kv: -kv[1]["e"]):
-            lines.append(f"| {k} | {v['e']:.2f} | {v['lo']:.2f} to {v['hi']:.2f} | {v['r2']:.2f} | {v['n']} |")
+            lines.append(f"| {k} | {v['e']:.2f} | {v['lo']:.2f} to {v['hi']:.2f} | {v['r2']:.2f} | {v['n']} ({v['from']} to {v['to']}) "
+                         f"| {v['series']} | {v['collected']} |")
         lines.append("")
     if t:
         c = t["countries"]

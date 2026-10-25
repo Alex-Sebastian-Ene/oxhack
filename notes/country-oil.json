@@ -4,14 +4,15 @@
  "fuel": {
   "method": "12-month log change in motor-fuel consumer prices on the 12-month log change in Brent (US$), 2009-01 to 2025-12, Newey-West errors over 12 months; range is 90%",
   "brent": "FRED MCOILBRENTEU (Brent, monthly average, US$), fetched 2026-10-25",
-  "prices": "Eurostat HICP, prc_hicp_minr (ECOICOP 2; all items, food CP01, motor fuels CP0722, electricity CP0451, gas CP0452), fetched 2026-10-25; US: BLS CPI via FRED, seasonally adjusted (CPIAUCSL, CPIUFDSL, CUSR0000SETB, CUSR0000SEHF01, CUSR0000SEHF02), fetched 2026-10-24 to 2026-10-25",
+  "prices": "Eurostat HICP, prc_hicp_minr (ECOICOP 2; all items, food CP01, motor fuels CP0722, electricity CP0451, gas CP0452), fetched 2026-10-25; US: BLS CPI via FRED, seasonally adjusted (CPIAUCSL, CPIUFDSL, CUSR0000SETB, CUSR0000SEHF01, CUSR0000SEHF02), fetched 2026-10-24 to 2026-10-25; elsewhere: OECD Data Explorer, DF_PRICES_ALL (national CPIs, CP0722), fetched 2026-10-25; SingStat Table Builder API (M213751 series 1.06.1.5), fetched 2026-10-25; Statistics Canada Web Data Service (v41691136), fetched 2026-10-25",
   "pooled": {
-   "e": 0.269,
-   "lo": 0.247,
-   "hi": 0.314,
-   "n": 37,
-   "what": "median of the national slopes; the range is their middle half"
+   "e": 0.264,
+   "lo": 0.241,
+   "hi": 0.291,
+   "n": 49,
+   "what": "median of the national slopes, for reference (a country without a series has no estimate); the range is their middle half"
   },
+  "noisy": [],
   "countries": {
    "ALB": {
     "e": 0.204,
@@ -22,7 +23,10 @@
     "n": 109,
     "from": "2016-12",
     "to": "2025-12",
-    "series": "Eurostat HICP motor fuels (CP0722)"
+    "series": "Eurostat HICP motor fuels (CP0722)",
+    "source": "Eurostat HICP, prc_hicp_minr",
+    "code": "CP0722",
+    "collected": "2026-10-25"
    },
    "AUT": {
     "e": 0.316,
@@ -33,7 +37,10 @@
     "n": 204,
     "from": "2009-01",
     "to": "2025-12",
-    "series": "Eurostat HICP motor fuels (CP0722)"
+    "series": "Eurostat HICP motor fuels (CP0722)",
+    "source": "Eurostat HICP, prc_hicp_minr",
+    "code": "CP0722",
+    "collected": "2026-10-25"
    },
    "BEL": {
     "e": 0.287,
@@ -44,7 +51,10 @@
     "n": 204,
     "from": "2009-01",
     "to": "2025-12",
-    "series": "Eurostat HICP motor fuels (CP0722)"
+    "series": "Eurostat HICP motor fuels (CP0722)",
+    "source": "Eurostat HICP, prc_hicp_minr",
+    "code": "CP0722",
+    "collected": "2026-10-25"
    },
    "BGR": {
     "e": 0.32,
@@ -55,7 +65,10 @@
     "n": 204,
     "from": "2009-01",
     "to": "2025-12",
-    "series": "Eurostat HICP motor fuels (CP0722)"
+    "series": "Eurostat HICP motor fuels (CP0722)",
+    "source": "Eurostat HICP, prc_hicp_minr",
+    "code": "CP0722",
+    "collected": "2026-10-25"
    },
    "HRV": {
     "e": 0.271,
@@ -66,7 +79,10 @@
     "n": 204,
     "from": "2009-01",
     "to": "2025-12",
-    "series": "Eurostat HICP motor fuels (CP0722)"
+    "series": "Eurostat HICP motor fuels (CP0722)",
+    "source": "Eurostat HICP, prc_hicp_minr",
+    "code": "CP0722",
+    "collected": "2026-10-25"
    },
    "CYP": {
     "e": 0.283,
@@ -77,7 +93,10 @@
     "n": 204,
     "from": "2009-01",
     "to": "2025-12",
-    "series": "Eurostat HICP motor fuels (CP0722)"
+    "series": "Eurostat HICP motor fuels (CP0722)",
+    "source": "Eurostat HICP, prc_hicp_minr",
+    "code": "CP0722",
+    "collected": "2026-10-25"
    },
    "CZE": {
     "e": 0.287,
@@ -88,7 +107,10 @@
     "n": 204,
     "from": "2009-01",
     "to": "2025-12",
-    "series": "Eurostat HICP motor fuels (CP0722)"
+    "series": "Eurostat HICP motor fuels (CP0722)",
+    "source": "Eurostat HICP, prc_hicp_minr",
+    "code": "CP0722",
+    "collected": "2026-10-25"
    },
    "DNK": {
     "e": 0.26,
@@ -99,7 +121,10 @@
     "n": 204,
     "from": "2009-01",
     "to": "2025-12",
-    "series": "Eurostat HICP motor fuels (CP0722)"
+    "series": "Eurostat HICP motor fuels (CP0722)",
+    "source": "Eurostat HICP, prc_hicp_minr",
+    "code": "CP0722",
+    "collected": "2026-10-25"
    },
    "EST": {
     "e": 0.315,
@@ -110,7 +135,10 @@
     "n": 204,
     "from": "2009-01",
     "to": "2025-12",
-    "series": "Eurostat HICP motor fuels (CP0722)"
+    "series": "Eurostat HICP motor fuels (CP0722)",
+    "source": "Eurostat HICP, prc_hicp_minr",
+    "code": "CP0722",
+    "collected": "2026-10-25"
    },
    "FIN": {
     "e": 0.252,
@@ -121,7 +149,10 @@
     "n": 204,
     "from": "2009-01",
     "to": "2025-12",
-    "series": "Eurostat HICP motor fuels (CP0722)"
+    "series": "Eurostat HICP motor fuels (CP0722)",
+    "source": "Eurostat HICP, prc_hicp_minr",
+    "code": "CP0722",
+    "collected": "2026-10-25"
    },
    "FRA": {
     "e": 0.264,
@@ -132,7 +163,10 @@
     "n": 204,
     "from": "2009-01",
     "to": "2025-12",
-    "series": "Eurostat HICP motor fuels (CP0722)"
+    "series": "Eurostat HICP motor fuels (CP0722)",
+    "source": "Eurostat HICP, prc_hicp_minr",
+    "code": "CP0722",
+    "collected": "2026-10-25"
    },
    "DEU": {
     "e": 0.262,
@@ -143,7 +177,10 @@
     "n": 204,
     "from": "2009-01",
     "to": "2025-12",
-    "series": "Eurostat HICP motor fuels (CP0722)"
+    "series": "Eurostat HICP motor fuels (CP0722)",
+    "source": "Eurostat HICP, prc_hicp_minr",
+    "code": "CP0722",
+    "collected": "2026-10-25"
    },
    "GRC": {
     "e": 0.278,
@@ -154,7 +191,10 @@
     "n": 204,
     "from": "2009-01",
     "to": "2025-12",
-    "series": "Eurostat HICP motor fuels (CP0722)"
+    "series": "Eurostat HICP motor fuels (CP0722)",
+    "source": "Eurostat HICP, prc_hicp_minr",
+    "code": "CP0722",
+    "collected": "2026-10-25"
    },
    "HUN": {
     "e": 0.248,
@@ -165,7 +205,10 @@
     "n": 204,
     "from": "2009-01",
     "to": "2025-12",
-    "series": "Eurostat HICP motor fuels (CP0722)"
+    "series": "Eurostat HICP motor fuels (CP0722)",
+    "source": "Eurostat HICP, prc_hicp_minr",
+    "code": "CP0722",
+    "collected": "2026-10-25"
    },
    "ISL": {
     "e": 0.182,
@@ -176,7 +219,10 @@
     "n": 109,
     "from": "2016-12",
     "to": "2025-12",
-    "series": "Eurostat HICP motor fuels (CP0722)"
+    "series": "Eurostat HICP motor fuels (CP0722)",
+    "source": "Eurostat HICP, prc_hicp_minr",
+    "code": "CP0722",
+    "collected": "2026-10-25"
    },
    "IRL": {
     "e": 0.241,
@@ -187,7 +233,10 @@
     "n": 204,
     "from": "2009-01",
     "to": "2025-12",
-    "series": "Eurostat HICP motor fuels (CP0722)"
+    "series": "Eurostat HICP motor fuels (CP0722)",
+    "source": "Eurostat HICP, prc_hicp_minr",
+    "code": "CP0722",
+    "collected": "2026-10-25"
    },
    "ITA": {
     "e": 0.225,
@@ -198,7 +247,10 @@
     "n": 204,
     "from": "2009-01",
     "to": "2025-12",
-    "series": "Eurostat HICP motor fuels (CP0722)"
+    "series": "Eurostat HICP motor fuels (CP0722)",
+    "source": "Eurostat HICP, prc_hicp_minr",
+    "code": "CP0722",
+    "collected": "2026-10-25"
    },
    "KOS": {
     "e": 0.346,
@@ -209,7 +261,10 @@
     "n": 120,
     "from": "2016-01",
     "to": "2025-12",
-    "series": "Eurostat HICP motor fuels (CP0722)"
+    "series": "Eurostat HICP motor fuels (CP0722)",
+    "source": "Eurostat HICP, prc_hicp_minr",
+    "code": "CP0722",
+    "collected": "2026-10-25"
    },
    "LVA": {
     "e": 0.316,
@@ -220,7 +275,10 @@
     "n": 204,
     "from": "2009-01",
     "to": "2025-12",
-    "series": "Eurostat HICP motor fuels (CP0722)"
+    "series": "Eurostat HICP motor fuels (CP0722)",
+    "source": "Eurostat HICP, prc_hicp_minr",
+    "code": "CP0722",
+    "collected": "2026-10-25"
    },
    "LTU": {
     "e": 0.291,
@@ -231,7 +289,10 @@
     "n": 204,
     "from": "2009-01",
     "to": "2025-12",
-    "series": "Eurostat HICP motor fuels (CP0722)"
+    "series": "Eurostat HICP motor fuels (CP0722)",
+    "source": "Eurostat HICP, prc_hicp_minr",
+    "code": "CP0722",
+    "collected": "2026-10-25"
    },
    "LUX": {
     "e": 0.331,
@@ -242,7 +303,10 @@
     "n": 204,
     "from": "2009-01",
     "to": "2025-12",
-    "series": "Eurostat HICP motor fuels (CP0722)"
+    "series": "Eurostat HICP motor fuels (CP0722)",
+    "source": "Eurostat HICP, prc_hicp_minr",
+    "code": "CP0722",
+    "collected": "2026-10-25"
    },
    "MLT": {
     "e": 0.07,
@@ -253,7 +317,10 @@
     "n": 204,
     "from": "2009-01",
     "to": "2025-12",
-    "series": "Eurostat HICP motor fuels (CP0722)"
+    "series": "Eurostat HICP motor fuels (CP0722)",
+    "source": "Eurostat HICP, prc_hicp_minr",
+    "code": "CP0722",
+    "collected": "2026-10-25"
    },
    "MNE": {
     "e": 0.314,
@@ -264,7 +331,10 @@
     "n": 121,
     "from": "2015-12",
     "to": "2025-12",
-    "series": "Eurostat HICP motor fuels (CP0722)"
+    "series": "Eurostat HICP motor fuels (CP0722)",
+    "source": "Eurostat HICP, prc_hicp_minr",
+    "code": "CP0722",
+    "collected": "2026-10-25"
    },
    "NLD": {
     "e": 0.235,
@@ -275,7 +345,10 @@
     "n": 204,
     "from": "2009-01",
     "to": "2025-12",
-    "series": "Eurostat HICP motor fuels (CP0722)"
+    "series": "Eurostat HICP motor fuels (CP0722)",
+    "source": "Eurostat HICP, prc_hicp_minr",
+    "code": "CP0722",
+    "collected": "2026-10-25"
    },
    "MKD": {
     "e": 0.343,
@@ -286,7 +359,10 @@
     "n": 204,
     "from": "2009-01",
     "to": "2025-12",
-    "series": "Eurostat HICP motor fuels (CP0722)"
+    "series": "Eurostat HICP motor fuels (CP0722)",
+    "source": "Eurostat HICP, prc_hicp_minr",
+    "code": "CP0722",
+    "collected": "2026-10-25"
    },
    "NOR": {
     "e": 0.192,
@@ -297,7 +373,10 @@
     "n": 204,
     "from": "2009-01",
     "to": "2025-12",
-    "series": "Eurostat HICP motor fuels (CP0722)"
+    "series": "Eurostat HICP motor fuels (CP0722)",
+    "source": "Eurostat HICP, prc_hicp_minr",
+    "code": "CP0722",
+    "collected": "2026-10-25"
    },
    "POL": {
     "e": 0.269,
@@ -308,7 +387,10 @@
     "n": 204,
     "from": "2009-01",
     "to": "2025-12",
-    "series": "Eurostat HICP motor fuels (CP0722)"
+    "series": "Eurostat HICP motor fuels (CP0722)",
+    "source": "Eurostat HICP, prc_hicp_minr",
+    "code": "CP0722",
+    "collected": "2026-10-25"
    },
    "PRT": {
     "e": 0.247,
@@ -319,7 +401,10 @@
     "n": 204,
     "from": "2009-01",
     "to": "2025-12",
-    "series": "Eurostat HICP motor fuels (CP0722)"
+    "series": "Eurostat HICP motor fuels (CP0722)",
+    "source": "Eurostat HICP, prc_hicp_minr",
+    "code": "CP0722",
+    "collected": "2026-10-25"
    },
    "ROU": {
     "e": 0.267,
@@ -330,7 +415,10 @@
     "n": 204,
     "from": "2009-01",
     "to": "2025-12",
-    "series": "Eurostat HICP motor fuels (CP0722)"
+    "series": "Eurostat HICP motor fuels (CP0722)",
+    "source": "Eurostat HICP, prc_hicp_minr",
+    "code": "CP0722",
+    "collected": "2026-10-25"
    },
    "SRB": {
     "e": 0.217,
@@ -341,7 +429,10 @@
     "n": 204,
     "from": "2009-01",
     "to": "2025-12",
-    "series": "Eurostat HICP motor fuels (CP0722)"
+    "series": "Eurostat HICP motor fuels (CP0722)",
+    "source": "Eurostat HICP, prc_hicp_minr",
+    "code": "CP0722",
+    "collected": "2026-10-25"
    },
    "SVK": {
     "e": 0.287,
@@ -352,7 +443,10 @@
     "n": 204,
     "from": "2009-01",
     "to": "2025-12",
-    "series": "Eurostat HICP motor fuels (CP0722)"
+    "series": "Eurostat HICP motor fuels (CP0722)",
+    "source": "Eurostat HICP, prc_hicp_minr",
+    "code": "CP0722",
+    "collected": "2026-10-25"
    },
    "SVN": {
     "e": 0.264,
@@ -363,7 +457,10 @@
     "n": 204,
     "from": "2009-01",
     "to": "2025-12",
-    "series": "Eurostat HICP motor fuels (CP0722)"
+    "series": "Eurostat HICP motor fuels (CP0722)",
+    "source": "Eurostat HICP, prc_hicp_minr",
+    "code": "CP0722",
+    "collected": "2026-10-25"
    },
    "ESP": {
     "e": 0.292,
@@ -374,7 +471,10 @@
     "n": 204,
     "from": "2009-01",
     "to": "2025-12",
-    "series": "Eurostat HICP motor fuels (CP0722)"
+    "series": "Eurostat HICP motor fuels (CP0722)",
+    "source": "Eurostat HICP, prc_hicp_minr",
+    "code": "CP0722",
+    "collected": "2026-10-25"
    },
    "SWE": {
     "e": 0.244,
@@ -385,7 +485,10 @@
     "n": 204,
     "from": "2009-01",
     "to": "2025-12",
-    "series": "Eurostat HICP motor fuels (CP0722)"
+    "series": "Eurostat HICP motor fuels (CP0722)",
+    "source": "Eurostat HICP, prc_hicp_minr",
+    "code": "CP0722",
+    "collected": "2026-10-25"
    },
    "CHE": {
     "e": 0.261,
@@ -396,7 +499,10 @@
     "n": 204,
     "from": "2009-01",
     "to": "2025-12",
-    "series": "Eurostat HICP motor fuels (CP0722)"
+    "series": "Eurostat HICP motor fuels (CP0722)",
+    "source": "Eurostat HICP, prc_hicp_minr",
+    "code": "CP0722",
+    "collected": "2026-10-25"
    },
    "TUR": {
     "e": 0.392,
@@ -407,7 +513,10 @@
     "n": 204,
     "from": "2009-01",
     "to": "2025-12",
-    "series": "Eurostat HICP motor fuels (CP0722)"
+    "series": "Eurostat HICP motor fuels (CP0722)",
+    "source": "Eurostat HICP, prc_hicp_minr",
+    "code": "CP0722",
+    "collected": "2026-10-25"
    },
    "USA": {
     "e": 0.532,
@@ -418,7 +527,178 @@
     "n": 203,
     "from": "2009-01",
     "to": "2025-12",
-    "series": "US CPI motor fuel (BLS via FRED)"
+    "series": "US CPI motor fuel (BLS via FRED)",
+    "source": "BLS CPI via FRED",
+    "code": "CUSR0000SETB",
+    "collected": "2026-10-25"
+   },
+   "CHL": {
+    "e": 0.208,
+    "se": 0.044,
+    "lo": 0.135,
+    "hi": 0.28,
+    "r2": 0.39,
+    "n": 168,
+    "from": "2010-01",
+    "to": "2023-12",
+    "series": "national CPI fuels and lubricants, COICOP 07.2.2, via the OECD",
+    "source": "OECD Data Explorer, DF_PRICES_ALL",
+    "code": "CHL.M.N.CPI.IX.CP0722.N._Z",
+    "collected": "2026-10-25"
+   },
+   "COL": {
+    "e": 0.068,
+    "se": 0.035,
+    "lo": 0.01,
+    "hi": 0.125,
+    "r2": 0.06,
+    "n": 193,
+    "from": "2009-12",
+    "to": "2025-12",
+    "series": "national CPI fuels and lubricants, COICOP 07.2.2, via the OECD",
+    "source": "OECD Data Explorer, DF_PRICES_ALL",
+    "code": "COL.M.N.CPI.IX.CP0722.N._Z",
+    "collected": "2026-10-25"
+   },
+   "CRI": {
+    "e": 0.285,
+    "se": 0.03,
+    "lo": 0.235,
+    "hi": 0.335,
+    "r2": 0.59,
+    "n": 156,
+    "from": "2009-01",
+    "to": "2021-12",
+    "series": "national CPI fuels and lubricants, COICOP 07.2.2, via the OECD",
+    "source": "OECD Data Explorer, DF_PRICES_ALL",
+    "code": "CRI.M.N.CPI.IX.CP0722.N._Z",
+    "collected": "2026-10-25"
+   },
+   "GBR": {
+    "e": 0.263,
+    "se": 0.03,
+    "lo": 0.215,
+    "hi": 0.312,
+    "r2": 0.7,
+    "n": 204,
+    "from": "2009-01",
+    "to": "2025-12",
+    "series": "national CPI fuels and lubricants, COICOP 07.2.2, via the OECD",
+    "source": "OECD Data Explorer, DF_PRICES_ALL",
+    "code": "GBR.M.N.CPI.IX.CP0722.N._Z",
+    "collected": "2026-10-25"
+   },
+   "ISR": {
+    "e": 0.244,
+    "se": 0.014,
+    "lo": 0.221,
+    "hi": 0.267,
+    "r2": 0.76,
+    "n": 204,
+    "from": "2009-01",
+    "to": "2025-12",
+    "series": "national CPI fuels and lubricants, COICOP 07.2.2, via the OECD",
+    "source": "OECD Data Explorer, DF_PRICES_ALL",
+    "code": "ISR.M.N.CPI.IX.CP0722.N._Z",
+    "collected": "2026-10-25"
+   },
+   "JPN": {
+    "e": 0.261,
+    "se": 0.04,
+    "lo": 0.195,
+    "hi": 0.327,
+    "r2": 0.64,
+    "n": 150,
+    "from": "2009-01",
+    "to": "2021-06",
+    "series": "national CPI fuels and lubricants, COICOP 07.2.2, via the OECD",
+    "source": "OECD Data Explorer, DF_PRICES_ALL",
+    "code": "JPN.M.N.CPI.IX.CP0722.N._Z",
+    "collected": "2026-10-25"
+   },
+   "KOR": {
+    "e": 0.266,
+    "se": 0.032,
+    "lo": 0.213,
+    "hi": 0.32,
+    "r2": 0.68,
+    "n": 204,
+    "from": "2009-01",
+    "to": "2025-12",
+    "series": "national CPI fuels and lubricants, COICOP 07.2.2, via the OECD",
+    "source": "OECD Data Explorer, DF_PRICES_ALL",
+    "code": "KOR.M.N.CPI.IX.CP0722.N._Z",
+    "collected": "2026-10-25"
+   },
+   "MEX": {
+    "e": 0.106,
+    "se": 0.034,
+    "lo": 0.051,
+    "hi": 0.161,
+    "r2": 0.35,
+    "n": 187,
+    "from": "2009-01",
+    "to": "2024-07",
+    "series": "national CPI fuels and lubricants, COICOP 07.2.2, via the OECD",
+    "source": "OECD Data Explorer, DF_PRICES_ALL",
+    "code": "MEX.M.N.CPI.IX.CP0722.N._Z",
+    "collected": "2026-10-25"
+   },
+   "RUS": {
+    "e": 0.075,
+    "se": 0.032,
+    "lo": 0.023,
+    "hi": 0.128,
+    "r2": 0.28,
+    "n": 158,
+    "from": "2009-01",
+    "to": "2022-02",
+    "series": "national CPI fuels and lubricants, COICOP 07.2.2, via the OECD",
+    "source": "OECD Data Explorer, DF_PRICES_ALL",
+    "code": "RUS.M.N.CPI.IX.CP0722.N._Z",
+    "collected": "2026-10-25"
+   },
+   "ZAF": {
+    "e": 0.269,
+    "se": 0.031,
+    "lo": 0.218,
+    "hi": 0.32,
+    "r2": 0.53,
+    "n": 192,
+    "from": "2009-01",
+    "to": "2024-12",
+    "series": "national CPI fuels and lubricants, COICOP 07.2.2, via the OECD",
+    "source": "OECD Data Explorer, DF_PRICES_ALL",
+    "code": "ZAF.M.N.CPI.IX.CP0722.N._Z",
+    "collected": "2026-10-25"
+   },
+   "CAN": {
+    "e": 0.403,
+    "se": 0.026,
+    "lo": 0.36,
+    "hi": 0.445,
+    "r2": 0.87,
+    "n": 204,
+    "from": "2009-01",
+    "to": "2025-12",
+    "series": "Statistics Canada CPI gasoline, table 18-10-0004-01",
+    "source": "Statistics Canada Web Data Service",
+    "code": "v41691136",
+    "collected": "2026-10-25"
+   },
+   "SGP": {
+    "e": 0.226,
+    "se": 0.036,
+    "lo": 0.167,
+    "hi": 0.284,
+    "r2": 0.68,
+    "n": 120,
+    "from": "2016-01",
+    "to": "2025-12",
+    "series": "SingStat CPI petrol, table M213751",
+    "source": "SingStat Table Builder API",
+    "code": "M213751 series 1.06.1.5",
+    "collected": "2026-10-25"
    }
   }
  },
