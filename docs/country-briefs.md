@@ -54,10 +54,11 @@ Interactions API (`POST /v1beta/interactions`).
     name the model asked for (Google may have served them from `gemini-3.6-flash`, whose quota they used).
   - Countries: main's new country data (fuel pass-through, partner-reported oil trade and IMF cost of living,
     merged the same morning) changed every country's facts, so all 175 were asked again after the flash
-    models' quotas had run out: 145 are from `gemini-3.5-flash-lite` and 30 from `gemini-3.1-flash-lite`. The 28
-    that `gemini-3.5-flash-lite` answered too thinly (two bullets, or a doubled dash) were dropped and asked
-    again of `gemini-3.1-flash-lite`, as were Lebanon and Suriname (each has one fact over 400 characters, which
-    `bake` failed to match until it compared the facts as cut). To replace them with a stronger model's answers, delete the entries from
+    models' quotas had run out: 146 are from `gemini-3.5-flash-lite` and 29 from `gemini-3.1-flash-lite`. Answers
+    `gemini-3.5-flash-lite` gave too thinly (two bullets, or a doubled dash) were dropped and asked again of
+    `gemini-3.1-flash-lite`, as were Lebanon and Suriname (each has one fact over 400 characters, which `bake`
+    failed to match until it compared the facts as cut). The 9 countries whose fuel cost changed in #71 were
+    asked again after it merged. To replace any answer with a stronger model's, delete its entry from
     `ai-panels.json` and run `bake` with that `GEMINI_MODEL` on a day its quota is free.
   - Checked: every `[n]` points to a fact that exists; spot checks of the US, Netherlands and Iran summaries against
     their facts found no wrong numbers. Not checked line by line by the team, and each panel says so.
