@@ -58,7 +58,9 @@ Interactions API (`POST /v1beta/interactions`).
     `gemini-3.5-flash-lite` gave too thinly (two bullets, or a doubled dash) were dropped and asked again of
     `gemini-3.1-flash-lite`, as were Lebanon and Suriname (each has one fact over 400 characters, which `bake`
     failed to match until it compared the facts as cut). The 9 countries whose fuel cost changed in #71 were
-    asked again after it merged. To replace any answer with a stronger model's, delete its entry from
+    asked again after it merged, and the 164 whose cost-of-living forecasts changed with Seb's cross-country model
+    after that; the counts above are after both. El Salvador keeps a two-line answer: its facts hold little beyond
+    its oil imports. To replace any answer with a stronger model's, delete its entry from
     `ai-panels.json` and run `bake` with that `GEMINI_MODEL` on a day its quota is free.
   - Pictures: `bake --images` asks `IMAGE_MODEL` for each resource's picture. On 25 Oct 2026 every image model
     this key lists (`gemini-nano-banana-2.1`, `gemini-3-pro-image`, `gemini-3.1-flash-image`,

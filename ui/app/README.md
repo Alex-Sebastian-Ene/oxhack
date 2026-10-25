@@ -28,10 +28,11 @@ for the colours, with these layers added (`src/`):
 | `mandeb.py`, `mandeb.js` | Bab el-Mandeb in the Strait view: the Hormuz / Bab el-Mandeb switch reloads on `#mandeb`; data from `ui/strait/data/mandeb-scenarios.js` (`uv run experiments/strait_flow.py --strait mandeb`) |
 | `households.py`, `households.js` | The Households view (OXH-8): real pay against 2019 by region, essentials against pay, UK household costs by group, and two model-output cards (real pay by lost flow, each UK group's costs under a closure) that follow the lost-flow slider; also a households step in "The shock" card. Data cut at build time from `notes/household-*.csv` (`uv run experiments/household.py report`); every real series shows its source, code and fetch date |
 | `models.py`, `models.js`, `models.css` | The Models view: one card per model (oil-price distribution, lost flow → Brent, the knock-on links, the Bayesian and global network models with their Fed and SPF comparison, cost of living, industries by country, margins, metals, the first neural ensemble, HDI, the independent check), each with what it answers and two to four headline numbers on the card; how it was tested, what it can't do and each number's context sit behind the card's blue info key. The numbers are read at build time from `notes/` and `docs/` by table cell or phrase, each shown with its note and the date that note was generated; a card whose numbers can't be found is left out with a warning (`python ui/app/src/models.py` lists them) |
+| `focus.js`, `focus.css` | A picked country: the map zooms to it and moves up, its detail opens large below and slides over the map as you scroll, the shock card's column stays in place; only the closure controls show |
 | `kpis.py` | The headline figures: a pixel-art oil barrel (drawn in code) beside each "million barrels a day" figure; "The shock" step 3 tiles with their name in bold, their range below and an info key saying what the range is and where the number comes from; the shock card's source note behind an info key; More under "Most oil cut off" |
 | `product.py` | The Product card: its sources behind a Sources button, and "What it costs buyers" drawn as a share bar, the sum as chips (share × price move = cost move), a range bar for a model forecast and a pace chip |
 | `country_src.py` | The country card's source notes (Cost of living, Trade, Economy, Trends) behind a Sources button at the foot of each tab |
-| `flags.py`, `flags_extra.py` | A flag beside every country title (Most exposed, the country card, the economy picks). `flags_extra.py` draws the flags the page leaves out for size (Spain, Sri Lanka and 20 more) into `ui/app/data/flags-extra.json`; the EU flag stands for the euro area |
+| `flags.py`, `flags_extra.py` | A flag beside every country title (Most oil cut off, the country card, the economy picks). `flags_extra.py` draws the flags the page leaves out for size (Spain, Sri Lanka and 20 more) into `ui/app/data/flags-extra.json`; the EU flag stands for the euro area |
 
 ```bash
 python ui/app/src/build.py                      # writes ui/app/index.html
@@ -53,7 +54,7 @@ python ui/app/src/build.py --fragment out.html  # also writes the body for a cla
 - **What is it?** In Sources, every material and ingredient has a button that asks Gemini for:
   - a short description;
   - a pixel-art picture in the app's style, made by Gemini's image model.
-- **Profile.** In a country's pop-up and panel:
+- **Profile.** From the Profile key beside a country's name in its panel:
   - its main export and biggest production role in our tables;
   - its rank in every production and export table we hold;
   - its exposure numbers and where its key inputs come from.

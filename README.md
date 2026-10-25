@@ -14,5 +14,8 @@ for oil prices, the Fed's interest rate and the cost of living.
   [docs/macro-ensemble.md](docs/macro-ensemble.md); the cost of living built up from basket items
   (food, household energy, motor fuel, air fares, restaurants) in the US, UK and euro area in
   [docs/cost-of-living.md](docs/cost-of-living.md)
+- **The app:** open [ui/app/index.html](ui/app/index.html) in a browser (no server needed); how it is built, layer
+  by layer, is in [ui/app/README.md](ui/app/README.md), and its Gemini panels in
+  [docs/country-briefs.md](docs/country-briefs.md)
 - **How the team works:** [coord/PROTOCOL.md](coord/PROTOCOL.md). New laptop? Start with
   [coord/BOOTSTRAP.md](coord/BOOTSTRAP.md).
