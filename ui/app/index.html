@@ -742,6 +742,12 @@ body.hz-mandeb #link-card, body.hz-mandeb #pw-card, body.hz-mandeb #cap-card { d
 .hz-straitseg button { white-space: nowrap; }
 @media (max-width: 720px) { .hz-straitseg button { padding: 0 8px; font-size: 12px; } }
 
+/* Strait view (strait.py): one row on wide screens, so the map fits the window and opens on the strait */
+@media (min-width: 861px) {
+  #strait-stage { flex-wrap: nowrap; }
+  #strait-stage .hud { flex: 0 0 340px; min-height: 0; position: relative; }   /* relative: screen-reader labels stay inside the scroll */
+}
+
 /* Households page (households.py, households.js) */
 .hz-hh { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 12px; align-content: start; overflow-y: auto; padding-bottom: 16px; }
 .hz-hh[hidden] { display: none !important; }
@@ -4118,7 +4124,7 @@ window.STRAIT = {"geo":{"bbox":[54.6,24.9,57.9,27.5],"clip":[52.5,23.0,60.0,29.0
 
   // ---------------------------------------------------------------- state
   const $ = (id) => document.getElementById(id);
-  const wrap = document.querySelector(".mapwrap");
+  const wrap = document.querySelector("#strait-stage .mapwrap");
   const canvas = $("map");
   const ctx = canvas.getContext("2d");
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
