@@ -144,6 +144,11 @@ def main() -> None:
         '<meta name="claude:viewport-fit-sides" content="cover">\n', '<meta name="claude:viewport-fit-sides" content="cover">\n</head><body>\n', 1)
         + "</body></html>\n", encoding="utf-8")
     print(f"wrote {out.relative_to(APP.parent.parent)} ({out.stat().st_size // 1024} KB)")
+    # the same page at the repo's root, which GitHub Pages serves as the site itself
+    # (https://alex-sebastian-ene.github.io/oxhack/); git stores the two identical files once
+    site = APP.parent.parent / "index.html"
+    site.write_bytes(out.read_bytes())
+    print(f"wrote {site.name} (the same page, for GitHub Pages)")
     if "--fragment" in sys.argv:
         dest = pathlib.Path(sys.argv[sys.argv.index("--fragment") + 1])
         dest.write_text(fragment, encoding="utf-8")

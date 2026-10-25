@@ -36,14 +36,14 @@ for the colours, with these layers added (`src/`):
 | `flags.py`, `flags_extra.py` | A flag beside every country title (Most oil cut off, the country card, the economy picks). `flags_extra.py` draws the flags the page leaves out for size (Spain, Sri Lanka and 20 more) into `ui/app/data/flags-extra.json`; the EU flag stands for the euro area |
 
 ```bash
-python ui/app/src/build.py                      # writes ui/app/index.html
+python ui/app/src/build.py                      # writes ui/app/index.html (and the same page as ./index.html)
 python ui/app/src/build.py --fragment out.html  # also writes the body for a claude.ai artifact
 ```
 
-**Published copy:** https://alex-sebastian-ene.github.io/oxhack/ (GitHub Pages, deployed from `main`). The app is
-served at `ui/app/`, and the root `index.html` forwards there, keeping any `#households`-style address. The
-`gh-pages` branch holds the same page on its own, kept up to date by the `Pages` workflow
-(`.github/workflows/pages.yml`), for if Pages is ever pointed at that branch instead.
+**Published copy:** https://alex-sebastian-ene.github.io/oxhack/ (GitHub Pages, deployed from `main`). `build.py`
+also writes the page to the repo's root `index.html`, so the site's address is the app itself (git stores the two
+identical files once); `ui/app/` serves it too. The `gh-pages` branch holds the same page on its own, kept up to
+date by the `Pages` workflow (`.github/workflows/pages.yml`), for if Pages is ever pointed at that branch instead.
 
 ## Sound and pictures
 
