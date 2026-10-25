@@ -66,6 +66,29 @@ def test_premium_follows_the_curve_and_its_band():
     assert np.all(op.premium(op.LOST_2026, days, np.array([-10.0])) >= 0)  # never a negative premium
 
 
+def test_a_lost_flow_path_takes_each_days_month():
+    days = pd.bdate_range("2026-03-02", "2026-06-30")
+    path = pd.Series([89.0, 84.0], index=pd.DatetimeIndex(["2026-03-01", "2026-04-01"]))
+    lost = op.lost_on(path, days)
+    assert set(lost[days.month == 3]) == {89.0} and set(lost[days.month == 4]) == {84.0}
+    assert set(lost[days.month >= 5]) == {84.0}  # after the last month, the last month's loss holds
+    assert op.lost_on(50.0, days).tolist() == [50.0] * len(days)
+    z = np.array([0.0, 1.0])
+    _, mid, _, _ = op.premium_curve()
+    e = op.premium(lost, len(days), z)
+    assert e[0] == pytest.approx(lost * mid[:len(days)])  # each day's loss times the curve
+    held = op.premium(84.0, len(days), z)  # a held loss is the path of that one number
+    assert np.array_equal(op.premium(np.full(len(days), 84.0), len(days), z), held)
+    with pytest.raises(ValueError):
+        op.premium(lost, len(days), z, "none")  # stock policies are fitted on a held loss
+
+
+def test_iea_path_runs_from_march_2026():
+    path = op.iea_lost_2026()
+    assert path.index[0] == pd.Timestamp("2026-03-01") and path.is_monotonic_increasing is False
+    assert path.iloc[0] == pytest.approx(100 * (1 - 2.27 / 20.66), abs=0.01)  # IEA: 2.27 mb/d against February's 20.66
+
+
 def test_release_policy_scales_the_premium(monkeypatch):
     z = np.array([0.0, 1.0])
     base = op.premium(op.LOST_2026, 40, z)
