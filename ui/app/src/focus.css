@@ -8,8 +8,14 @@
   animation: hz-rise .5s cubic-bezier(.2, .8, .2, 1) both;
 }
 #world-stage.hz-focus .hud > * { min-width: 0; }
-#world-stage.hz-focus .hud > #country-card { grid-column: 1; grid-row: 1 / span 9; }
-#world-stage.hz-focus .hud > :not(#country-card) { grid-column: 2; }
+#world-stage.hz-focus .hud > #country-card { grid-column: 1; grid-row: 1; }
+/* the shock card and the cards under it sit in one column (.hz-side, made by focus.js) that stays in place while the
+   country detail scrolls; it is capped at the screen's height and scrolls on its own. Elsewhere it has no box. */
+.hz-side { display: contents; }
+#world-stage.hz-focus .hud > .hz-side {
+  grid-column: 2; grid-row: 1; display: flex; flex-direction: column; gap: 14px;
+  position: sticky; top: 0; max-height: calc(100vh - 120px); overflow-y: auto; overscroll-behavior: contain;
+}
 /* with the room, the country card's tabs go back on one row and its numbers get bigger */
 #world-stage.hz-focus #ctabs { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; }
 #world-stage.hz-focus #ctabs button { min-width: 0; padding: 0 6px; border-left-width: 2px !important; white-space: normal; line-height: 1.15; }
@@ -19,7 +25,7 @@
    set by focus.js) and the cards turn a little see-through, frosted, so the map shows faintly behind them */
 #world-stage.hz-focus .mapwrap { position: sticky; top: 0; z-index: 0; filter: brightness(calc(1 - .5 * var(--hz-cover, 0))) saturate(calc(1 - .3 * var(--hz-cover, 0))); }
 #world-stage.hz-focus .hud { position: relative; z-index: 1; }
-#world-stage.hz-focus .hud > .card {
+#world-stage.hz-focus .hud > .card, #world-stage.hz-focus .hz-side > .card {
   background-color: rgba(18, 26, 45, calc(1 - .18 * var(--hz-cover, 0))) !important;
   -webkit-backdrop-filter: blur(calc(8px * var(--hz-cover, 0))); backdrop-filter: blur(calc(8px * var(--hz-cover, 0)));
 }
@@ -33,7 +39,9 @@
   /* the page scrolls on a phone, not the stage: the stage must not be a scroll box, or nothing inside it can stay put */
   #world-stage.hz-focus { overflow: visible; }
   #world-stage.hz-focus .hud { grid-template-columns: minmax(0, 1fr); }
-  #world-stage.hz-focus .hud > #country-card, #world-stage.hz-focus .hud > :not(#country-card) { grid-column: 1; grid-row: auto; }
+  #world-stage.hz-focus .hud > #country-card { grid-column: 1; grid-row: auto; }
+  /* one column on a phone: the shock card follows the detail rather than staying beside it */
+  #world-stage.hz-focus .hud > .hz-side { display: contents; }
   #world-stage.hz-focus .mapwrap { height: 40vh; min-height: 240px; }
   #world-stage.hz-focus #ctabs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   /* the band is short on a phone: the legend keeps its title and colour bar, not its line keys */

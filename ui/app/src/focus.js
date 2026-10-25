@@ -5,6 +5,15 @@
   const stage = document.getElementById("world-stage");
   const map = stage && stage.querySelector(".mapwrap");
   if (!stage || !map) return;
+  // the cards beside the country card (the shock card first) go in one column that can stay in place (focus.css);
+  // it has no box of its own outside a picked country, so the side panel looks as before
+  const hud = stage.querySelector(".hud"), cc = document.getElementById("country-card");
+  if (hud && cc && !hud.querySelector(".hz-side")) {
+    const side = document.createElement("div");
+    side.className = "hz-side";
+    [...hud.children].filter((x) => x !== cc).forEach((x) => side.appendChild(x));
+    hud.appendChild(side);
+  }
   const still = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   let seq = 0;
 
