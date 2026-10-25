@@ -24,6 +24,9 @@ TASK=${SLURM_ARRAY_TASK_ID:-0}
 NAME=${NAMES[$((TASK % 11))]}
 MODES=(0 1 bread)
 export COL_FOOD=${MODES[$((TASK / 11))]}
+# COL_LAGGED=1: task j is fold j of the main model, forecast from a month earlier for the Fed/SPF comparison
+#   sbatch --array=0-7 --export=ALL,COL_LAGGED=1 cluster/iridis/cost_of_living.slurm
+if [ "${COL_LAGGED:-0}" = 1 ]; then NAME=fold-$TASK-lagged; export COL_FOOD=bread; fi
 export COL_SAMPLES=${COL_SAMPLES:-1000}  # draws per chain; 500 left one fold just under ESS 100
 
 echo "== $NAME (food drivers: $COL_FOOD) on $(hostname) $(date +%T)"

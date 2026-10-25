@@ -6,10 +6,10 @@ in [macro-ensemble.md](macro-ensemble.md) and the Brent model in [oil-price-mode
 
 | Code | What it does | Output |
 |---|---|---|
-| `experiments/cost_of_living.py` | Basket data and weights, the event misses, the Bayesian item model, Brent and gas paths, folds, event tests, scenario fans | `runs/col/*.json` (git-ignored) |
+| `experiments/cost_of_living.py` | Basket data and weights, the event misses, the Bayesian item model, Brent and gas paths, folds, event tests, scenario fans | `runs/col/*.json`, and with `COL_DRAWS` the folds' 1–3 month forecast draws, `runs/col*/fold-*-draws.npz` (git-ignored) |
 | `experiments/cost_of_living_report.py` | Tables from the runs; leaves out any fit whose chains did not converge; the disruption multiplier for every metric; compares the other versions | `notes/cost-of-living.md`, `notes/cost-of-living-fans.csv`, `notes/cost-of-living-responses.csv`, `notes/cost-of-living-contributions.csv`, `notes/cost-of-living-multipliers.csv` |
 | `cluster/iridis/cost_of_living{_env.sh,.slurm}` | Iridis environment and the 33-task array (11 fits for each of three versions) | |
-| `tests/test_cost_of_living.py` | Rest of basket, average link, simulation terms, driver contributions, CRPS, Brent paths, the World Bank file | |
+| `tests/test_cost_of_living.py` | Rest of basket, average link, simulation terms, driver contributions, CRPS, Brent paths, the World Bank file, the Cleveland nowcast file, the benchmark bands, the quarterly rate | |
 
 ## Why item by item
 
@@ -31,8 +31,9 @@ only if it beats simpler benchmarks out of sample.
 
 ## Basket
 
-Twelve kinds of item in each region, plus the rest of the basket and headline (41 series). The
-items don't overlap, so their weights add up.
+Fourteen kinds of item in each region, plus the rest of the basket and headline (51 basket
+series; with the chain's other metrics, which sit outside the basket, 70 in all). The items don't
+overlap, so their weights add up.
 
 | Kind | US (BLS, seasonally adjusted, via FRED) | UK (ONS, CPI index) | Euro area (Eurostat HICP via FRED) |
 |---|---|---|---|
@@ -47,17 +48,42 @@ items don't overlap, so their weights add up.
 | Motor fuel | `CUSR0000SETB01` (gasoline) | D7EC (fuels and lubricants) | CP0722 |
 | Air fares | `CUSR0000SETG01` | D7EH | CP0733 |
 | Restaurants | `CUSR0000SEFV` (food away from home) | D7EW (restaurants and cafes) | CP1111 |
+| **Housing** | `CUSR0000SEHA` rent and `CUSR0000SEHC` owners' equivalent rent | D7CE actual rents | CP041 actual rentals (`CP0410EZ19M086NEST`) |
+| **Core goods** | `CUSR0000SACL1E` (commodities less food and energy commodities) | DK9J (non-energy industrial goods) | `IGD_NNRG` (non-energy industrial goods, `prc_hicp_minr`, EA19) |
+| **Other services** | services less energy services (`CUSR0000SASLE`) less rent, OER and air fares | services (D7F5) less rents, air fares and restaurants | services (`SERV`, `prc_hicp_minr`, EA19) less rentals, air fares and restaurants |
 | Headline | `CPIAUCSL` | D7BT | CP0000 |
 
+- **Housing** is rent plus, in the US, owners' equivalent rent. UK CPI and the euro-area HICP leave
+  out owner-occupiers' housing costs: the UK counts them in CPIH, and the HICP not at all. So their
+  housing is actual rents only, and the UK and euro-area series aren't comparable with the US one.
+- **Other services** are derived like the rest of the basket: (services weight × services −
+  Σ weight × service item) / (services weight − Σ item weights). Nothing is counted twice. They
+  include medical care, transport services, recreation, education, communication, insurance,
+  personal services and, in the US, lodging away from home.
+- **Euro-area services and core goods** come from Eurostat's COICOP 2018 dataset `prc_hicp_minr`
+  (EA19, 2015 = 100), the only source with them through 2026: the older `prc_hicp_midx` and the
+  ECB's copies stop at 2025-12, and FRED doesn't carry them.
 - **Weights:**
   - US: BLS relative importance, CPI-U, December 2025. BLS blocks scripted downloads, so these
-    were read from the published table on 2026-10-24 and are in the code with that source.
-  - UK: ONS CPI weights (CJWB … CJYL), 2026.
+    were read from the published table (2026-10-24, and 2026-10-25 for rent 7.840, OER 26.204,
+    core goods 19.176 and services less energy services 60.744) and are in the code with that source.
+  - UK: ONS CPI weights (CJWB … CJYL; CJVC rents, A9ER non-energy industrial goods, ICVI services), 2026.
   - Euro area: Eurostat `prc_hicp_inw`, 2025.
-  - The 11 or 12 items are 18% of the US basket, 26% of the UK's and 30% of the euro area's.
-- **Rest of the basket** = (headline − Σ weight × item) / rest weight, each month. The composite
-  (weighted items + rest) therefore equals headline exactly in the data. It can only differ from
-  a direct headline model in its forecasts, which is what the tests check.
+
+  | Share of the basket | US | UK | Euro area |
+  |---|---|---|---|
+  | The original 11 or 12 items | 18% | 26% | 30% |
+  | Housing | 34.0% | 8.4% | 5.9% |
+  | Core goods | 19.2% | 27.7% | 25.6% |
+  | Other services | 25.8% | 32.2% | 30.5% |
+  | Rest of the basket | 2.9% | 5.9% | 7.6% |
+- **Rest of the basket** = (headline − Σ weight × item − weight × other services) / rest weight,
+  each month. The composite (weighted items + other services + rest) therefore equals headline
+  exactly in the data. It can only differ from a direct headline model in its forecasts, which is
+  what the tests check. With the split it is small: other food (beverages, other food at home),
+  alcohol and tobacco outside the US, and other fuels. It also absorbs the aggregation residual,
+  because seasonally adjusted indices and fixed latest weights don't add up exactly over 25 years.
+  So the US rest swings about 3.5% a month on a 2.9% weight: read it as a remainder, not a price.
 - **Drivers:**
   - Brent: monthly average of the daily FRED `DCOILBRENTEU` series.
   - Gas: Henry Hub, monthly (`MHHNGSP`), for the US; the IMF EU gas price (`PNGASEUUSDM`) for the
@@ -80,7 +106,8 @@ multiplier. They are not part of any composite (19 series, 60 in all):
 
 ## Model
 
-One Bayesian model for all 41 series, on monthly log changes (% of the price level), fitted by
+One Bayesian model for all 70 series, on monthly log changes (% of the price level; changes in
+percentage points for unemployment and rates), fitted by
 NUTS (2 chains, 500 warm-up, 1,000 draws per chain):
 
     y[s,k] = a[k] + season[k, month] + rho[k] y[s-1,k] + E[s,k] (1 + kappa[k] D[s]) + F[s,k] + e[s,k]
@@ -147,102 +174,222 @@ NUTS (2 chains, 500 warm-up, 1,000 draws per chain):
 | 2026 event test | Fitted to Feb 2026 with kappa learned from 2022 only: do the bands cover what happened by Sep 2026? |
 | 2022 event test | Fitted to Feb 2022 with no supply-disruption months at all |
 | Scenario fans | From Feb 2026: no closure against 25%, 50% and a full 2026-sized closure. How far the band shifts and widens |
-| Against the Fed and the SPF | US CPI in forecast mode against the Cleveland Fed, Michigan and SPF forecasts and the random walk, from `runs/macro/global-benchmarks.json` (the chain's, same folds, matched by origin month; Diebold–Mariano tests with 12 Newey–West lags) |
+| Against the Fed and the SPF | US CPI in forecast mode against the Cleveland Fed, Michigan and SPF forecasts and the random walk, from `runs/macro/global-benchmarks.json` (the chain's, same folds, matched by origin month; Diebold–Mariano tests with 12 Newey–West lags). Timing matched: our forecast starts a month earlier, with only the CPI the surveys had (`fold-<j>-lagged`) |
+| Against the Cleveland Fed's nowcast | US CPI next month and this quarter, on CPI as first published, with the nowcast taken just after our origin month's CPI is published; the nowcast gets fixed, EWMA and oil-volatility bands from its own earlier errors (Diebold–Mariano tests with 3 Newey–West lags for months, 1 for quarters) |
 | Sampler health | Fits with R-hat above 1.05 or ESS below 100 are left out of every table |
 
 ## Status (2026-10-25)
 
+- **Current run: the basket split and the chain's other metrics, fitted together (Iridis job
+  1973432, 33 fits).** The basket now has housing, core goods and other services as their own
+  series, so 92–97% of each basket is modelled item by item, against 18–30% before. The US industry
+  costs, unemployment and policy rates are fitted alongside, outside the composites (70 series in
+  all).
+  - **Convergence:**
+    - Every fit of the main model: R-hat 1.011–1.023, ESS 103–411, no divergences.
+    - Every fit of the oil-and-gas base: R-hat 1.008–1.024, ESS 171–408.
+    - Folds 0 and 2 of the grain-and-urea variant, the one that was already rejected, fell short
+      at first (R-hat 1.17 with ESS 7; ESS 92). Refitted with 1,500 warm-up and 2,000 draws (job
+      1973701), both converged (R-hat 1.016 and 1.009, ESS 218 and 419), so every fit is in the
+      report.
+  - `notes/cost-of-living.md` and the four CSVs come from this run. The numbers below are from the
+    main model, given the oil and gas that happened, over the 8 folds (2008–2025), unless marked.
+- **Housing, core goods and other services:**
+  - **Skill against climatology:**
+
+    | | Main model | Average link (OLS) | Forecast, Lévy Brent paths | 90% coverage |
+    |---|---|---|---|---|
+    | Housing | +0.085 | −0.169 | +0.123 | 74% |
+    | Core goods | +0.145 | +0.098 | +0.156 | 80% |
+    | Other services | +0.099 | +0.048 | +0.100 | 71% |
+
+    Their bands are too narrow, most for other services and housing. Those prices drift slowly, and
+    one month's momentum doesn't see shifts like the 2021–23 rent surge.
+  - **The composites improve or hold.** Composite skill before → after the split: US +0.355 →
+    **+0.394**, UK +0.211 → +0.214, euro area +0.329 → +0.338. Coverage: US 83% → 85%, UK
+    78% → 77%, euro area 74% → 76%.
+  - **Disruption multipliers below 1:** housing ×0.42–0.51, core goods ×0.25–0.28, other services
+    ×−0.14 to −0.22. Energy costs pass through to these more weakly in supply-disruption months,
+    not more strongly.
+  - **2026 test (fitted to Feb 2026, 7 months on):** of the basket's 54 outcomes, all but one are
+    inside the bands. The miss is euro-area rents: +1.5% against a band of +0.8 to +1.4.
+  - **Scenario from Feb 2026, 12 months on:**
+    - A 2026-sized closure barely moves rents or other services: US rent +2.7% with no closure,
+      +3.0% with one.
+    - It widens the core-goods band, from 5.3 to 9.4 pp in the US.
+  - **Outlook from 2026-09, 12 months, disruption continuing:**
+
+    | | US | UK | Euro area |
+    |---|---|---|---|
+    | Rent | +3.4% (0.8 to 6.1) | +2.8% (0.6 to 5.5) | +1.9% (1.1 to 2.6) |
+    | Owners' equivalent rent | +3.4% (0.7 to 5.8) | | |
+    | Core goods | +0.8% (−2.0 to 4.4) | +0.9% (−1.9 to 3.3) | +1.1% (−2.7 to 4.5) |
+    | Other services | +2.8% (1.5 to 4.5) | +3.6% (1.8 to 5.7) | +2.1% (0.2 to 3.9) |
+    | Composite | +3.4% (0.6 to 6.6) | +3.9% (1.6 to 6.6) | +3.1% (0.5 to 6.5) |
+  - **The remainder is a residual, not a price.** The rest of the basket (3–8%) carries the
+    aggregation residual: the latest weights are fixed, while fuel's share of the basket was larger
+    in earlier years. So it moves with oil out of proportion to its weight: +36% under a 2026-sized
+    closure in the US. Its weighted part is the same residual the old 82% rest held, now visible
+    rather than diluted. Read the composites, not the remainder.
 - **Done:**
-  - Data for 60 series (the basket and the chain's other metrics), the weights, and the event
-    analysis.
+  - Data for 70 series (the basket, split into housing, core goods and other services, and the
+    chain's other metrics), the weights, and the event analysis.
   - The model, the report and the Iridis scripts.
-  - 13 tests (all passing in all three versions).
+  - 18 tests (all passing in all three versions).
 - **Main model (adopted 2026-10-25): oil and gas for every series, plus grain prices for bread
-  and cereals,** now with the chain's other metrics fitted alongside.
-  - Iridis job 1973278; R-hat 1.004–1.016, ESS 234–514, no divergences.
-  - `notes/cost-of-living.md` and the four CSVs come from it.
-  - The basket results barely moved when the other metrics were added. Out of sample:
+  and cereals,** with the chain's other metrics fitted alongside. Out of sample:
   - **Against the average link:**
-    - Basket items: better at every horizon, −0.18 ± 0.02 at 1 month to −0.08 ± 0.01 at 12.
-    - US industry costs: better, −0.09 ± 0.02 to −0.05 ± 0.02.
+    - Basket items: better at every horizon, −0.18 ± 0.02 at 1 month to −0.09 ± 0.01 at 12.
+    - US industry costs: better, −0.09 ± 0.02 to −0.06 ± 0.02.
     - Unemployment and rates: much better, −0.37 ± 0.03 to −0.28 ± 0.09, mostly through momentum.
   - **Composite against direct headline:**
-    - US: better up to 6 months (−0.08 ± 0.02, −0.09 ± 0.02, −0.06 ± 0.03).
-    - Euro area: −0.02 ± 0.01 at 1 month, just under 2 errors.
+    - US: better at every horizon (−0.12 ± 0.02, −0.15 ± 0.03, −0.11 ± 0.03, −0.07 ± 0.03). Before
+      the split it was better only up to 6 months.
+    - Euro area: −0.03 ± 0.02 at 1–6 months, about 2 errors.
     - UK: no difference.
-  - **Against the Fed and the SPF (US CPI, forecast mode, nothing known after the origin):** the
-    composite's CRPS is lower than every institutional forecast up to 3 months, and level with the
-    SPF at 12.
-    - 1 month: 25% below the Cleveland Fed (t −4.8), 23% below Michigan (t −3.9) and 28% below the
-      SPF median at its release months (t −4.4).
-    - 3 months: 13% below Cleveland (t −3.5) and 12% below the SPF (t −2.6); Michigan 9% (t −1.2).
-    - 6 months: 10% below Cleveland (t −2.4); the SPF 5% (t −1.4), not significant.
-    - 12 months: the SPF is 2% better (t +0.5); Cleveland and Michigan are 8% and 13% worse, both
-      within noise.
-    - The direct headline forecast does less well (17–18% below the institutions at 1 month, 4%
-      behind the SPF at 12), so the basket split is what earns the lead. The chain's best member is
-      2–4% behind the SPF at 12 months (`docs/macro-ensemble.md`).
-    - Short horizons favour us: Cleveland and Michigan are 1-year rates scaled down, and the SPF is
-      quarterly. The surveys used data as first published; we score on revised CPI. Our 90% bands
-      hold 82–86% of outcomes. US only: no UK or euro-area institutional forecasts are scored yet.
+  - **Against the Fed and the SPF (US CPI, forecast mode, timing matched): level with the SPF at
+    every horizon.**
+    - **The timing is matched.** A survey taken at the end of month t knows CPI to month t−1, since
+      month t's is published about two weeks into t+1. So our forecast starts at the end of t−1 and
+      is scored on the window the surveys forecast, months t+1 to t+h. It also has a month less of
+      Brent and gas than they had. The 8 folds were refitted for this with the same seeds (Iridis
+      job 1974133, `fold-<j>-lagged`), and their sampler diagnostics match the published folds
+      exactly.
+
+      | Composite's CRPS against | 1 month | 3 months | 6 months | 12 months |
+      |---|---|---|---|---|
+      | Cleveland Fed 1-year expectations | 5% lower (t −2.1) | 7% lower (t −2.8) | 8% lower (t −2.6) | 8% lower (t −1.4) |
+      | Michigan 1-year expectations | 4% lower (t −0.8) | 2% lower (t −0.3) | 5% lower (t −0.5) | 13% lower (t −1.0) |
+      | SPF median, release months | 4% lower (t −1.9) | level (t −0.1) | level (t +0.2) | 1% higher (t +0.3) |
+      | Random walk | 10% lower (t −2.2) | 12% lower (t −1.4) | 16% lower (t −1.5) | 25% lower (t −1.9) |
+
+    - **The head start was most of the earlier short-horizon lead.** Given month t's CPI, the same
+      fits score 22% better at 1 month (t −4.3), 9% at 3 (t −2.7), 4% at 6 and 2% at 12. Without
+      the timing match the composite looked 27–31% ahead of every benchmark at 1 month. Those
+      tables stay in `notes/cost-of-living.md` for comparison.
+    - The direct headline forecast is behind the SPF at every horizon (5–11% higher CRPS, t up to
+      +1.8) and level with Cleveland. So building up from the basket is what brings the forecast
+      level with the SPF. The chain's best member is 2–4% behind the SPF at 12 months
+      (`docs/macro-ensemble.md`; not timing matched).
+    - Our 90% bands hold 81–87% of outcomes. The surveys used data as first published; we score
+      on revised CPI, which flatters us slightly. US only: no UK or euro-area institutional
+      forecasts are scored yet.
+    - **Read it as level with the SPF, not as beating the Fed.**
+      - None of these is the FOMC's own projection.
+      - The Cleveland number is a model of expected inflation from yields, swaps and surveys, risk
+        premia included, scaled down from a 1-year rate at short horizons. So the 5–8% lead over it
+        is against a measure that isn't built as a short-horizon forecast. Michigan is households'
+        expectations.
+      - The benchmarks get a fixed-width band from their own past errors, while ours widens with
+        oil volatility, which helps us in 2008 and 2020–22.
+      - At 1–3 months the fair competitor is the Cleveland Fed's monthly nowcast, and it beats us
+        (next bullet).
+  - **Against the Cleveland Fed's nowcast (US CPI at 1–3 months, as first published): the lead
+    doesn't survive.**
+    - **The test lines up the information.**
+      - Our forecast from month t can be made once month t's CPI is published, about two weeks
+        into t+1. The nowcast is taken on the first business day after that release.
+      - Both are scored on CPI as first published, the actual on the Cleveland charts. For the 52
+        months that can be checked, 51 match the Philadelphia Fed's real-time vintages to 0.005 pp.
+      - The nowcast is a point. It gets three bands from its own earlier errors only: fixed, EWMA,
+        and one that scales with Brent's volatility. The table gives it the best of the three.
+      - Ours are the same 8 folds' forecasts with Lévy Brent paths, refitted to save their draws
+        (`COL_DRAWS`, Iridis job 1973944). The refit reproduces the published fold scores exactly.
+
+    | US CPI (CRPS, pp) | Origins | Our composite | Cleveland, best band (EWMA) | Ours against it |
+    |---|---|---|---|---|
+    | Next month | 135 | 0.123 | 0.087 | 41% higher (t +4.2) |
+    | This quarter (annualised q/q), all 3 months to come | 42 | 0.921 | 0.776 | 19% higher (t +1.4) |
+    | This quarter, 2 months to come | 40 | 0.491 | 0.413 | 19% higher (t +1.1) |
+
+    - The nowcast is clearly better at 1 month and ahead on the quarter, though the quarter's gap is
+      within noise. Our direct headline forecast does worse still: 57% higher at 1 month.
+    - **Why: the month's energy prices as they come in.**
+      - Cleveland's first nowcast of each month, made at its start, doesn't yet have last month's
+        CPI, and its oil runs to the month before, as ours does. It is level with our composite
+        (0.124 against 0.123, t −0.1).
+      - Two weeks later, with that CPI plus daily oil and weekly petrol, it is at 0.087, and at
+        0.075 just before the release.
+      - Our model uses monthly Brent only, so it can't see energy moves inside the month it is
+        forecasting.
+    - **Our bands are calibrated on first-published CPI:** 90% of next-month outcomes fall inside
+      them, and 88–93% on the quarter. Scoring on revised CPI flatters us a little (CRPS 0.113
+      against 0.123).
+    - **So the earlier lead at 1–3 months came from the benchmark and the timing, not a better
+      short-term model.** That benchmark was a 1-year expectation scaled down, taken before the
+      origin month's CPI. For next month's CPI use the Cleveland nowcast. Our model's value is the
+      item detail, the scenarios and the horizons beyond a quarter.
+    - Closing the gap would need intra-month energy prices: daily Brent and weekly petrol, as a
+      part-month input for month t+1.
   - **Brent paths: Lévy is best at 3–12 months.**
-    - Against daily Student-t paths: −0.75 ± 0.53 at 12 months.
-    - Against a monthly GARCH-t: −1.94 ± 1.09 at 12 months.
-    - At 1 month it is level with Student-t and well ahead of the monthly model (CRPS 4.01 against
-      5.28).
+    - Against daily Student-t paths: −0.80 ± 0.51 at 12 months.
+    - Against a monthly GARCH-t: −1.98 ± 1.08 at 12 months.
+    - At 1 month it is level with Student-t and well ahead of the monthly model (CRPS 3.98 against
+      5.29).
   - **About the 2026 test:** it is a what-if. It is given the oil and gas that happened, and it is
     told the months from 2026-03 are a disruption (D = 1, from the calendar). So it shows what the
     model gets right given the scenario, not what it would have foreseen. The forecast mode only
     carries D forward from the origin, and the scenario fans switch D on from the closure severity.
-  - **2026 test (fitted to Feb 2026), basket:** the bands hold 44 of 44 outcomes, against 39
-    without the supply-shock terms and 37 for the average link. The median miss is 2.7 pp, against
-    3.4 and 3.3.
-    - Motor fuel: UK +22.7% predicted against +27.4% actual; euro area +27.2% against +25.4%; US
-      +37.1% against +30.8%.
+  - **2026 test (fitted to Feb 2026), basket:**
+    - The bands hold 53 of 54 outcomes, against 46 without the supply-shock terms and 44 for the
+      average link.
+    - The mean miss of the median is 2.5 pp, against 2.8 and 2.8.
+    - Motor fuel: UK +24.1% predicted against +27.4% actual; euro area +27.7% against +25.4%; US
+      +36.6% against +30.8%.
   - **2026 test, industry costs, unemployment and rates:** 15 of 17 outcomes inside the bands,
-    against 9 of 17 both without the terms and for the average link. The median miss is 8.2 pp,
-    against 9.5 and 10.0.
-    - Diesel: +52.5% actual, against +29.4% predicted (band −7 to +60) and +14.2% from the link.
-    - Jet fuel: +66.2%, against +41.0% (band −16 to +88) and +37.5%.
-    - Refineries: +62.9%, against +41.5% (band 2 to 77) and +32.8%.
+    against 9 of 17 both without the terms and for the average link. The mean miss of the median is
+    7.9 pp, against 9.4 and 10.0.
+    - Diesel: +52.5% actual, against +28.2% predicted (band −6 to +65) and +14.3% from the link.
+    - Jet fuel: +66.2%, against +44.4% (band −17 to +95) and +38.2%.
+    - Refineries: +62.9%, against +42.0% (band 4 to 82) and +33.1%.
     - The link's bands miss all three.
-  - **2022 test: still missed.** 16 of 44 basket outcomes inside the bands, with misses of about
-    12 pp.
-  - **Calibration:** 73–94% of basket outcomes inside the 90% bands, against 61–86% for the
+  - **2022 test: still missed.** 19 of 54 basket outcomes inside the bands (13 for the average
+    link), with misses of about 11 pp.
+  - **Calibration:** 71–94% of basket outcomes inside the 90% bands, against 54–86% for the
     average link.
   - **Scenario from Feb 2026, 12 months on.** A 2026-sized closure lifts cost-of-living inflation:
-    - US: from +2.4% to +4.5%.
-    - UK: from +2.5% to +4.0%.
-    - Euro area: from +2.1% to +4.3%.
-    - It widens the 90% band from 2.9–3.6 pp to 6.0–8.7 pp.
+    - US: from +2.4% to +5.2%.
+    - UK: from +2.6% to +4.9%.
+    - Euro area: from +2.0% to +5.3%.
+    - It widens the 90% band from 3.2–3.9 pp to 5.0–7.3 pp.
 - **The disruption multiplier for every metric** (1 + kappa, all-data fit; the full table is in
   `notes/cost-of-living.md` and `notes/cost-of-living-multipliers.csv`):
   - **Clearly above 1:**
-    - Headline inflation ×1.48 (US), ×1.50 (UK), ×1.55 (euro area); each interval's lower end is
+    - Headline inflation ×1.51 (US), ×1.50 (UK), ×1.58 (euro area); each interval's lower end is
       just above 1.
-    - Motor fuel ×1.46–1.55.
-    - Dairy ×1.9–2.1.
-    - US retail diesel ×1.29 (1.04 to 1.69).
-  - **Clearly below 1:** oils and fats (about ×0) and fruit and vegetables (×0.3–0.5). Their
-    pass-through all but vanished in the disruption months.
-  - **Within noise:** jet fuel ×1.18, refineries ×1.18, freight and air ×1.4–1.5 (wide), materials
-    and fertiliser ×1.0–1.1, household energy, restaurants, the rest of the basket.
-    - Policy rates ×1.3–1.5 on effects of about 0.03 pp.
-  - **Cost of living (composites):** ×1.19 (US), ×1.17 (UK), ×1.29 (euro area), as the ratio of
-    the 12-month responses in disruption and normal months.
-  - **Unemployment ×−0.24 (−0.66 to 0.19):** the usual oil-up, unemployment-down comovement
-    disappears in supply shocks. The effect is about 0.0 pp either way, so it isn't a link to show.
-  - **One multiplier for everything would be wrong.** Use each metric's own: ×1.49 suits motor fuel
+    - Motor fuel ×1.49–1.55.
+    - Dairy ×1.9.
+    - US retail diesel ×1.31 (1.02 to 1.72).
+  - **Clearly below 1:**
+    - Oils and fats (about ×0) and fruit and vegetables (×0.3–0.5): their pass-through all but
+      vanished in the disruption months.
+    - Housing, core goods and other services (above).
+  - **Within noise:**
+    - Jet fuel ×1.20, refineries ×1.19.
+    - Freight and air ×1.5 (wide).
+    - Materials and fertiliser ×1.0–1.1.
+    - Household energy, restaurants, the rest of the basket.
+    - Policy rates ×1.4, on effects of about 0.03 pp.
+  - **Cost of living (composites):** ×1.20 (US), ×0.91 (UK), ×1.25 (euro area), as the ratio of
+    the 12-month responses in disruption and normal months. They are lower than before the split
+    (×1.19, ×1.17, ×1.29) where housing and services carry more weight, as they do in the UK basket.
+  - **Unemployment ×−0.22 to −0.28 (US −0.60 to 0.19):** the usual oil-up, unemployment-down
+    comovement disappears in supply shocks. The effect is about 0.0 pp either way, so it isn't a
+    link to show.
+  - **One multiplier for everything would be wrong.** Use each metric's own: ×1.5 suits motor fuel
     and headline inflation, but it would overstate the composites, freight and materials, and get
-    oils, fruit and vegetables the wrong way round.
+    oils, fruit and vegetables, housing and services the wrong way round.
   - **Learned from 2022 alone they are larger** (the 2026 test's fit, to Feb 2026; the last column
-    of the table and the `multiplier_2022only_*` columns of the CSV). Headline is ×2.07 (US, 1.10
-    to 3.07), ×1.98 (UK) and ×2.08 (euro area), and motor fuel ×1.98–2.14. Adding 2026's months
-    brings both down to about ×1.5, so 2022 overstates how much more of an oil move reached prices
-    in 2026. The US cost series move less: diesel ×1.51, jet ×1.10, refineries ×1.32. The chain's
-    regime test (`docs/chain.md`, also learned from 2022 only) gets diesel ×1.54, jet ×1.14 and
-    refineries ×1.31, but CPI ×2.8–2.9. Its model has no gas input, so its oil multiplier likely
-    also takes up 2022's gas-driven inflation.
+    of the table and the `multiplier_2022only_*` columns of the CSV).
+    - Headline is ×2.07 (US, 1.04 to 3.16), ×1.99 (UK) and ×2.04 (euro area), and motor fuel
+      ×2.05–2.15. Adding 2026's months brings both down to about ×1.5, so 2022 overstates how much
+      more of an oil move reached prices in 2026.
+    - The US cost series move less: diesel ×1.47, jet ×1.12, refineries ×1.28.
+    - Housing, core goods and other services stay below 1, as in the all-data fit: rents ×0.14–0.45,
+      core goods ×0.49–0.56 and other services ×−0.11 to −0.17. Their intervals are wide.
+    - The chain's regime test (`docs/chain.md`, also learned from 2022 only) gets diesel ×1.54, jet
+      ×1.14 and refineries ×1.31, but CPI ×2.8–2.9. Its model has no gas input, so its oil
+      multiplier likely also takes up 2022's gas-driven inflation.
 - **History:** the runs below led to the main model.
 - **First full run (Iridis job 1972141): discarded.**
   - The fits that contain supply-disruption months did not converge: the 2026 test fit had R-hat
@@ -348,6 +495,7 @@ uv run experiments/cost_of_living.py report            # notes/cost-of-living.md
 COL_FOOD=0 uv run experiments/cost_of_living.py fit fold-3  # the oil-and-gas-only base
 COL_FOOD=1 uv run experiments/cost_of_living.py fit fold-3  # grain and urea for every food item (rejected)
 uv run experiments/macro_global.py benchmarks          # Fed and SPF forecasts for the report (skipped if absent)
+COL_DRAWS=us_composite,us_all uv run experiments/cost_of_living.py fit fold-3  # also save the fold's 1-3 month draws
 ```
 
 Fit on Iridis rather than the laptop: a fold takes about a minute there. Copy up `experiments/`,
@@ -359,7 +507,24 @@ sbatch --array=0-21 cluster/iridis/cost_of_living.slurm
 ```
 
 Tasks 0–10 are the base model, 11–21 the food-driver version (`COL_FOOD=1`) and 22–32 the main,
-bread-only version (`COL_FOOD=bread`). All use 1,000 draws per chain (`COL_SAMPLES`).
+bread-only version (`COL_FOOD=bread`). All use 1,000 draws per chain (`COL_SAMPLES`). The nowcast
+test needs the main model's folds with their draws saved:
+
+```bash
+COL_DRAWS=us_composite,us_all sbatch --array=25-32 cluster/iridis/cost_of_living.slurm
+```
+
+Then copy `runs/col-food-bread/fold-*-draws.npz` back and run the report. It fetches the Cleveland
+nowcasts into `data/raw/macro/` and skips the section if the draws are missing.
+
+The timing-matched Fed and SPF tables need the main model's folds forecast from a month earlier
+(`fit fold-<j>-lagged`, written to `runs/col-food-bread/fold-<j>-lagged.json`):
+
+```bash
+sbatch --array=0-7 --export=ALL,COL_LAGGED=1 cluster/iridis/cost_of_living.slurm
+```
+
+Copy those back and run the report. Without all 8 it shows only the untimed tables.
 
 ## Outputs for the UI
 
@@ -396,6 +561,10 @@ bread-only version (`COL_FOOD=bread`). All use 1,000 draws per chain (`COL_SAMPL
   - US fruit and vegetables is one index.
   - Euro-area weights are for the current euro area, while the indices are the 19-country series.
 - **Yearly Lévy fits.** An origin in October uses a fit that ends the previous December.
+- **No energy prices inside the month.** The model takes monthly Brent and gas averages, so at 1–3
+  months it trails the Cleveland Fed's nowcast, which reads daily oil and weekly petrol as they come in.
+- **Trained on revised data.** The nowcast test scores on CPI as first published, but the fits and the
+  starting values use today's revised series (CPI is revised only through its seasonal factors).
 - **Unemployment and rates have no validated oil link.** Their multipliers scale effects of a few
   hundredths of a point, so the app should keep showing 0 or a labelled range.
 - **Industry costs are US only.** Their multipliers are pooled within each group (fuel, transport,

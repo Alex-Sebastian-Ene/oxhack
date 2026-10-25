@@ -12,6 +12,7 @@ Every answer is labelled as AI-written on the page; it is never mixed into the s
 limits: docs/country-briefs.md. BRIEF_FAKE=1 serves labelled test answers with no key, for UI work.
 
     uv run experiments/country_brief.py      # serves http://127.0.0.1:8787
+    uv run experiments/country_brief.py check  # one tiny live call per model, and the models this key can use
 
 The key comes from the GEMINI_API_KEY environment variable, or from a line GEMINI_API_KEY=... in the
 repo's .env (git-ignored). Never put it in git, Linear or the page. The service binds to
@@ -309,7 +310,61 @@ class Handler(BaseHTTPRequestHandler):
         sys.stderr.write(f"{self.address_string()} {fmt % args}\n")
 
 
+def _http_error(e: Exception) -> str:
+    """Google's error message for a failed call (its JSON body), never the request or its headers."""
+    if isinstance(e, urllib.error.HTTPError):
+        try:
+            body = json.loads(e.read())
+            body = (body[0] if body else {}) if isinstance(body, list) else body   # Interactions errors come as a list
+            return f"HTTP {e.code}: {str((body.get('error') or {}).get('message', ''))[:200]}"
+        except (ValueError, OSError, AttributeError):
+            return f"HTTP {e.code}"
+    return str(e)[:200]
+
+
+def check(key: str | None) -> int:
+    """A live smoke test before a demo: list the models this key can use, then one tiny text call and one
+    picture through the Interactions API, and one generateContent call (ui/industry/explain_server.py uses
+    it). Prints what worked and what to change; never prints the key. Returns the number of failures."""
+    if not key:
+        print("no GEMINI_API_KEY (environment or the repo's .env): nothing to check")
+        return 1
+    fails = 0
+    try:
+        req = urllib.request.Request("https://generativelanguage.googleapis.com/v1beta/models?pageSize=200", headers={"x-goog-api-key": key})
+        with urllib.request.urlopen(req, timeout=30) as r:
+            names = [m["name"].removeprefix("models/") for m in json.loads(r.read()).get("models", [])]
+        print(f"key works: {len(names)} models; gemini ones: {', '.join(n for n in names if n.startswith('gemini'))[:900]}")
+        for want in (MODEL, IMAGE_MODEL):
+            print(f"  {want}: {'listed' if want in names else 'NOT LISTED, set GEMINI_MODEL / GEMINI_IMAGE_MODEL to one above'}")
+    except (urllib.error.URLError, TimeoutError, ValueError) as e:
+        print(f"model list failed: {_http_error(e)}"); fails += 1
+    try:
+        text, _ = outputs(interact(MODEL, "Reply with the single word: ready", key))
+        print(f"text ({MODEL}, Interactions): {'ok, said ' + repr(text[:40]) if text else 'answered, but no text found in the response'}")
+        fails += 0 if text else 1
+    except (urllib.error.URLError, TimeoutError, ValueError) as e:
+        print(f"text ({MODEL}, Interactions) failed: {_http_error(e)}"); fails += 1
+    try:
+        _, img = outputs(interact(IMAGE_MODEL, image_prompt("crude oil"), key))
+        print(f"picture ({IMAGE_MODEL}, Interactions): {'ok, ' + str(len(img['data']) * 3 // 4 // 1024) + ' KB ' + str(img.get('mime_type')) if img else 'answered, but no image found in the response'}")
+        fails += 0 if img else 1
+    except (urllib.error.URLError, TimeoutError, ValueError) as e:
+        print(f"picture ({IMAGE_MODEL}, Interactions) failed: {_http_error(e)}"); fails += 1
+    try:
+        resp = ask_gemini({"contents": [{"parts": [{"text": "Reply with the single word: ready"}]}]}, key)
+        text, _ = outputs(resp)
+        print(f"text ({MODEL}, generateContent): {'ok, said ' + repr(text[:40]) if text else 'answered, but no text found'}")
+        fails += 0 if text else 1
+    except (urllib.error.URLError, TimeoutError, ValueError) as e:
+        print(f"text ({MODEL}, generateContent) failed: {_http_error(e)}"); fails += 1
+    print("all good" if not fails else f"{fails} check(s) failed")
+    return fails
+
+
 def main() -> None:
+    if sys.argv[1:2] == ["check"]:
+        sys.exit(1 if check(os.environ.get("GEMINI_API_KEY")) else 0)
     if FAKE:
         print("BRIEF_FAKE=1: serving labelled test answers, not Gemini", file=sys.stderr)
     elif not os.environ.get("GEMINI_API_KEY"):

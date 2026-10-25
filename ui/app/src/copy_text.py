@@ -15,7 +15,7 @@ SWAPS = [
      'if (k.kind === "gulf") out.push(`${nm}: hurt by oil it can\'t ship, not by price.`);', 1),
     ('else if (k.kind === "exp") out.push(`${nm} sells oil abroad, so a higher price helps it.`);',
      'else if (k.kind === "exp") out.push(`${nm} exports oil: a higher price helps.`);', 1),
-    ('out.push(`For ${nm}, fuel would cost about <b>${f0(k.fuel * 100)}% ${k.fuel > 0 ? "more" : "less"}</b> than before the war${k.hz > 0.01 ? `, with an extra shortage premium because ${f0(k.hz * 100)}% of its oil came through Hormuz` : ""}.`);',
+    ('out.push(`For ${nm}, fuel would cost about <b>${f0(k.fuel * 100)}% ${k.fuel > 0 ? "more" : "less"}</b> than before the war${inDisruption(k.s) ? ", with fuel moving about 1.5 times its usual link, as in past supply disruptions" : ""}.`);',
      'out.push(`${nm}: fuel <b>${k.fuel > 0 ? "+" : "−"}${f0(k.fuel * 100)}%</b>${k.hz > 0.01 ? `, ${f0(k.hz * 100)}% of its oil came via Hormuz` : ""}.`);', 1),
     ('$("w-src").textContent = `Change against no disruption, 12 months on (US). Ranges cover 90% of outcomes. ${chainSrc()}; energy bills from US price data (FRED).`;',
      '$("w-src").textContent = `12 months on, vs no disruption, US. 90% ranges. ${chainSrc()}; energy bills: FRED.`;', 1),

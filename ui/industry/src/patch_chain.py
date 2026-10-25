@@ -28,6 +28,8 @@ def sub(old, new, count=1):
 # ---------------------------------------------------------------- data from Seb's chain
 SERIES = {"ind_djfuelusgulf": "jet fuel (US Gulf)", "ind_pcu325311325311": "nitrogen fertiliser (US PPI)",
           "ind_pcu325211325211": "plastics resin (US PPI)", "ind_gasdesw": "diesel at the pump (US)",
+          "ind_pcu481111481111": "passenger air fares (US PPI)", "ind_pcu481112481112": "air freight (US PPI)",
+          "ind_pcu324110324110": "petroleum refineries (US PPI)",
           **{f"{e}_{t}": f"{e}_{t}" for e in ("us", "uk", "ea") for t in ("cpi", "unemp")}}
 chain, meta = {}, {}
 for r in csv.DictReader((root / "notes" / "chain-scenarios-3m-margins.csv").open(encoding="utf-8")):
