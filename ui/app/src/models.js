@@ -40,7 +40,7 @@ window.HZModels = (() => {
       <p class="ax">0 = climatology, the series' own history; higher is better.</p>${src(b.src, b.date)}</figure>`;
   }
   function card(c) {
-    return `<article class="card hz-mc${c.wide ? " wide" : ""}" id="mod-${esc(c.id)}">
+    return `<article class="card hz-mc${c.wide ? " wide" : ""}${c.full ? " full" : ""}" id="mod-${esc(c.id)}">
       <div class="mh"><h3>${esc(c.title)}</h3><span class="kind">${esc(c.kind)}</span></div>
       <p class="asks">${md(c.asks)}</p>
       <div class="stats">${c.stats.map(stat).join("")}</div>
