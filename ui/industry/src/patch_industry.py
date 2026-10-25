@@ -37,7 +37,9 @@ IND_ROWS = {"aviation": "airlines", "shipping": "container_shipping", "freight":
             "manuf": "manufacturing_average", "fishing": "fishing", "agri": "farming_fuel"}
 # product card buyers: (material, buyer label) <- CSV row
 BUYER_ROWS = {("jet_fuel", "Airlines"): "airlines", ("fertiliser", "Farming"): "farming",
-              ("steel", "Construction"): "construction_steel", ("aluminium", "Packaging (cans)"): "can_aluminium"}
+              ("steel", "Construction"): "construction_steel", ("aluminium", "Packaging (cans)"): "can_aluminium",
+              ("polyethylene", "Packaging"): "packaging_resin"}
+POWER_TEXT = rows["textiles_power"]
 for k in list(IND_ROWS.values()) + list(BUYER_ROWS.values()):
     assert k in rows, f"{k} missing from industry_exposure.csv"
 CSV_IND = {key: cite(rows[r]) for key, r in IND_ROWS.items()}
@@ -74,11 +76,23 @@ IND_JS = (
     const out = 1 - (k.d.gulf ? k.d.gulf * k.s : 0);
     return { v: ((1 + k.dB) * out - 1) * 100, trapped: k.d.gulf ? k.d.gulf * k.s : 0 };
   }
+  // where Seb's sector model doesn't reach the country: the US price series in his chain, labelled as US
+  const CHAIN_IND = { refining: ["ind_pcu324110324110", "Petroleum refinery"], tourism: ["ind_pcu481111481111", "Passenger air fare"] };
+  function chainMove(key) {
+    const c = CHAIN_IND[key];
+    if (!c) return null;
+    const e = chainEffect(c[0]);
+    return { v: e.mean, lo: e.lo, hi: e.hi, label: c[1], where: "the US" };
+  }
+  const POWER_SHARE = ''' + json.dumps({"s": float(POWER_TEXT["share_pct"]), "src": f'{POWER_TEXT["measure"]} ({POWER_TEXT["source"]}, {POWER_TEXT["year"]})'}) + r''';
 '''
 sub("  function industries(name) {", IND_JS + "  function industries(name) {")
 sub("      if (!sh) return { key, label, why, v: null };",
-    "      const sec = sectorMove(name, key), earn = (key === \"exports\" || key === \"budget\") ? exportEarnings(name) : null;\n"
-    "      if (!sh) return { key, label, why, v: null, sec, earn };")
+    "      const sec = sectorMove(name, key), earn = (key === \"exports\" || key === \"budget\" || (key === \"upstream\" && !sec)) ? exportEarnings(name) : null;\n"
+    "      const chn = sec ? null : chainMove(key), ports = key === \"ports\" ? { v: -st.lost } : null, power = key === \"textiles\" ? POWER_SHARE : null;\n"
+    "      if (!sh) return { key, label, why, v: null, sec, earn, chn, ports, power };")
+# power generation was a guess in the default importer profile (countries without their own data): drop it there
+sub('const IMP = ["freight", "aviation", "agri", "manuf", "power"];', 'const IMP = ["freight", "aviation", "agri", "manuf"];')
 sub("      return { key, label, why, v: hi, lo: Math.min(lo, hi), hi: Math.max(lo, hi), src: sh.src, lag: sh.lag };",
     "      return { key, label, why, v: hi, lo: Math.min(lo, hi), hi: Math.max(lo, hi), src: sh.src, lag: sh.lag, sec };")
 
@@ -95,11 +109,36 @@ NEW_RENDER = '''      const secLine = (sec) => `${escH(sec.label)} prices in ${e
         return `<li><span class="nm">${i.label}</span><span class="lv mono ${cls}">${pct(i.sec.v / 100, 1)} its prices</span>
         <span class="why">${i.why}. No sourced cost share, so this is how much the industry's own prices rise: ${secLine(i.sec)}</span></li>`;
       }
+      if (i.v == null && i.chn) {
+        const c = i.chn, cls = c.v > 0.05 ? "hurt" : c.v < -0.05 ? "gain" : "";
+        return `<li><span class="nm">${i.label}</span><span class="lv mono ${cls}">${pct(c.v / 100, 1)} ${i.key === "tourism" ? "air fares" : "its prices"}</span>
+        <span class="why">${i.why}. No sourced cost share, and no sector model for this country, so this is ${c.label.toLowerCase()} prices in the US after 12 months (Seb's chain, 90% range ${pct(c.lo / 100, 0)} to ${pct(c.hi / 100, 0)}).${i.key === "tourism" ? " Flights are the main way oil reaches tourism." : ""}</span></li>`;
+      }
+      if (i.v == null && i.ports) return `<li><span class="nm">${i.label}</span><span class="lv mono hurt">−${st.lost}% traffic</span>
+        <span class="why">${i.why}. Hormuz traffic is down ${st.lost}% of normal at the lost flow you set (the shock card).</span></li>`;
+      if (i.v == null && i.power) return `<li><span class="nm">${i.label}</span><span class="lv mono">power ${i.power.s}% of costs</span>
+        <span class="why">The big energy cost here is electricity, not oil: ${escH(i.power.src)}. There is no oil-to-power-price link for this country, so no change is shown.</span></li>`;
       if (i.v == null) return `<li><span class="nm">${i.label}</span><span class="lv">no data</span>
         <span class="why">${i.why}. No sourced cost share yet, and Seb's sector model doesn't cover this industry${TR_GEO && TR_GEO[name] ? "" : " or this country"}.</span></li>`;'''
 sub(OLD_RENDER, NEW_RENDER)
 sub("        <span class=\"why\">Range ${pct(i.lo / 100, 1)} to ${pct(i.hi / 100, 1)}. Reaches costs ${i.lag}. Share: ${i.src}.</span></li>`;",
     "        <span class=\"why\">Range ${pct(i.lo / 100, 1)} to ${pct(i.hi / 100, 1)}.${i.lag ? ` Reaches costs ${i.lag}.` : \"\"} Share: ${i.src}.${i.sec ? ` Its own prices: ${secLine(i.sec)}` : \"\"}</span></li>`;")
+# buyers without a cost share: air freight gets the chain's air-freight prices; food makers are marked indirect
+sub('  for (const [mat, list] of Object.entries(BUYERS)) for (const row of list) {',
+    '  for (const row of BUYERS.jet_fuel) if (row[0] === "Air freight and couriers") row[4] = { chain: "ind_pcu481112481112", text: "air freight prices in the US" };\n'
+    '  for (const row of BUYERS.fertiliser) if (row[0] === "Food manufacturers") row[4] = { indirect: "Fertiliser is a farm cost: it reaches food makers through crop prices, and farmers get 11.8 cents of each US food dollar (USDA ERS Food Dollar Series, 2024), so its share in a food maker\'s costs is small and diluted" };\n'
+    '  for (const [mat, list] of Object.entries(BUYERS)) for (const row of list) {')
+sub('''    $("m-buyers").innerHTML = (BUYERS[m.id] || []).map(([ind, share, src, lag]) => {
+      const c = share == null || !p ? null : share * p.mean / 100;''',
+'''    $("m-buyers").innerHTML = (BUYERS[m.id] || []).map(([ind, share, src, lag, alt]) => {
+      if (alt && alt.chain) {
+        const e = chainEffect(alt.chain), cls = e.mean > 0.05 ? "hurt" : e.mean < -0.05 ? "gain" : "";
+        return `<li><span class="nm">${escH(ind)}</span><span class="lv mono ${cls}">${pctP(e.mean)} prices</span>
+        <span class="why">No sourced fuel share, so this is ${alt.text} after 12 months (Seb's chain, 90% range ${pctP(e.lo, 0)} to ${pctP(e.hi, 0)}). Reaches costs ${escH(lag)}.</span></li>`;
+      }
+      if (alt && alt.indirect) return `<li><span class="nm">${escH(ind)}</span><span class="lv">indirect</span>
+        <span class="why">${escH(alt.indirect)}. Reaches costs ${escH(lag)}.</span></li>`;
+      const c = share == null || !p ? null : share * p.mean / 100;''')
 sub('<ul class="inds" id="c-inds"></ul>',
     '<ul class="inds" id="c-inds"></ul>\n          <p class="faint">Which industries are listed for a country is a hand-picked choice from the original page <i class="illus" title="Not from data: the list per country was chosen by hand">illustrative</i>. Cost shares: notes/industry/industry_exposure.csv.</p>')
 
