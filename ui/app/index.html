@@ -693,6 +693,11 @@ svg.pxi { stroke: none !important; fill: none; overflow: visible; }
 .colkey { display: inline-block; width: 5px; height: 12px; margin-right: 6px; vertical-align: -1px; background: #8fd0f5; border: 1px solid #04060c; }
 .wtip .faint { color: var(--faint); }
 
+/* The "Illustrative" note in the Exposure score sheet keeps the industry page's cream background unless the night
+   theme restyles it: a dark amber tint, light text and the amber edge, so it reads on the night panels. */
+.sheet .illus-note, .illus-note { background: rgba(255, 164, 36, 0.12) !important; border-left: 3px solid var(--oil) !important; color: var(--text) !important; }
+.illus-note b { color: var(--oil-soft, #ffbf5c); }
+
 /* gas on the World view (gas.py): violet, beside the yellow oil */
 #world .gasl path { fill: none; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; pointer-events: stroke; }
 #world .glane { stroke: #b58cff; stroke-dasharray: 5 6; opacity: .9; animation: oilflow 2.2s linear infinite; }
@@ -833,6 +838,12 @@ body.hz-landing-open { overflow: hidden; }
 /* Sources and Profile panels, in the night-shift frame, with Gemini boxes marked off in violet. */
 .hz-panel { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); background: rgba(4, 6, 12, .6); }
 .hz-panel[hidden] { display: none !important; }
+/* The box is capped at the window's height (less the 16px margins) and its body scrolls. max-height: 100% alone
+   doesn't hold inside the centring grid, and a flex child won't shrink below its content without min-height: 0,
+   so a long Profile or Sources list used to run off the bottom of the screen with no way to scroll to it. */
+.hz-panel .hz-p-box { max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); min-height: 0; }
+.hz-panel .hz-p-head { flex: none; }
+.hz-panel .hz-p-body { flex: 1 1 auto; min-height: 0; overscroll-behavior: contain; }
 .hz-p-box { width: min(880px, 100%); max-height: 100%; display: flex; flex-direction: column; background: var(--panel); border: 2px solid var(--ink); box-shadow: var(--frame), 0 20px 60px rgba(0, 0, 0, .6); animation: hz-pop .18s steps(4) both; }
 @keyframes hz-pop { from { transform: translateY(12px); opacity: 0; } to { transform: none; opacity: 1; } }
 .hz-p-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; border-bottom: 2px solid var(--ink); background: var(--panel2); }
