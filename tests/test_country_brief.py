@@ -268,3 +268,19 @@ def test_bake_gives_up_on_a_model_that_keeps_failing(tmp_path, monkeypatch):
     assert cb.bake("k", facts, out, workers=1) == 10
     assert len(asked) == cb.STUCK * 6   # STUCK countries, six tries each, then no more calls
     assert len(json.loads(out.read_text())["missing"]) == 10
+
+
+def test_bake_keeps_an_answer_whose_long_facts_were_cut(tmp_path, monkeypatch):
+    monkeypatch.setattr(cb, "CACHE", tmp_path)
+    monkeypatch.setattr(cb, "FAKE", False)
+    long = "x" * 450   # the service sends at most 400 characters of a fact, and stores what it sent
+    facts = tmp_path / "facts.json"
+    facts.write_text(json.dumps({"setting": "2026-closure", "resources": [], "countries": [{"iso3": "LBN", "country": "Lebanon", "facts": [long]}]}))
+    out = tmp_path / "ai-panels.json"
+    asked = []
+    monkeypatch.setattr(cb, "interact", lambda model, text, key: asked.append(text) or INTERACTION_TEXT)
+    assert cb.bake("k", facts, out, workers=1) == 0 and len(asked) == 1
+    assert json.loads(out.read_text())["countries"]["LBN"]["facts"] == ["x" * 400]
+    for f in tmp_path.glob("cty-*.json"):
+        f.unlink()   # not from the cache: a rerun keeps the baked answer without asking
+    assert cb.bake("k", facts, out, workers=1) == 0 and len(asked) == 1

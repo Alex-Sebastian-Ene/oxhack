@@ -181,9 +181,14 @@ def fake_image() -> dict:
     return {"data": base64.b64encode(png(48, 24, px)).decode(), "mime_type": "image/png"}
 
 
+def clip(facts: list | None) -> list[str]:
+    """The facts as the service passes them on: at most MAX_FACTS, each cut to 400 characters."""
+    return [str(f)[:400] for f in (facts or [])][:MAX_FACTS]
+
+
 def _subject(payload: dict, key: str) -> tuple[str, list[str]]:
     name = str(payload.get(key, ""))[:80].strip()
-    facts = [str(f)[:400] for f in (payload.get("facts") or [])][:MAX_FACTS]
+    facts = clip(payload.get("facts"))
     if not name:
         raise ValueError(f"need {key}")
     return name, facts
@@ -271,7 +276,7 @@ def ask_gemini(body: dict, key: str) -> dict:
 def brief(payload: dict, key: str | None, refresh: bool = False) -> dict:
     iso3 = str(payload.get("iso3", ""))[:3].upper()
     country, material = str(payload.get("country", iso3))[:80], str(payload.get("material", ""))[:80]
-    facts = [str(f)[:400] for f in (payload.get("facts") or [])][:MAX_FACTS]
+    facts = clip(payload.get("facts"))
     if not iso3.isalpha() or not material:
         raise ValueError("need iso3 and material")
     path = CACHE / f"{cache_key(iso3, material, facts)}.json"
@@ -435,7 +440,7 @@ def bake(key: str | None, facts_path: Path = FACTS, out_path: Path = BAKED, work
     def run(job):
         group, k, payload, fn = job
         prev = (old.get(group) or {}).get(k)
-        if prev and prev.get("facts") == payload["facts"]:
+        if prev and prev.get("facts") == clip(payload["facts"]):   # stored as sent, so cut the same way
             done[group][k] = prev
             return
         try:
