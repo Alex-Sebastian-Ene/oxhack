@@ -779,7 +779,7 @@ def regime_report() -> None:
     data = mn.make_dataset(mn.V1_BLOCKS)
     clim = [np.array(mb.load(f"fold-{j}.json")["models"]["climatology"]["crps"], float) for j in range(mn.FOLDS)]
     scale = np.nanmean(np.vstack(clim), 0)
-    acc, joint, hot, diags = {}, {}, {mode: [] for mode in MODES}, []
+    acc, joint, hot, diags, fold_of = {}, {}, {mode: [] for mode in MODES}, [], []
     for j in range(mn.FOLDS):
         npz = {m: np.load(RUNS / f"{stem(j, m)}.npz") for m in need}
         summ = {m: json.loads((RUNS / f"{stem(j, m)}.json").read_text()) for m in need}
@@ -789,6 +789,7 @@ def regime_report() -> None:
         _, test = mn.fold_indices(data["dates"], j)
         y, t = np.array(ref["y"], float), data["t"][test]
         assert np.allclose(data["Y"][test], y, equal_nan=True), f"fold {j}: targets differ from the dataset"
+        fold_of.append(np.full(len(t), j))
         order = np.random.default_rng(1234 + j).permutation(npz["bayes_own"]["whatif"].shape[0])
         for mode in MODES:
             hot[mode].append(mode_regime(data, t, mode).any(1))
@@ -802,6 +803,9 @@ def regime_report() -> None:
         diags.append(summ["bayes_regime"]["diagnostics"])
     rows = {k: {kk: np.vstack(vv) for kk, vv in v.items()} for k, v in acc.items()}
     hot = {mode: np.concatenate(v) for mode, v in hot.items()}
+    fold_of = np.concatenate(fold_of)
+    regime_folds = [j for j, d in enumerate(diags) if d.get("regime")]
+    in_regime_folds = np.isin(fold_of, regime_folds)  # elsewhere bayes_regime is bayes_own
     names, groups = ref["names"], np.array(ref["groups"])
     H = np.array([int(n.split("@")[1]) for n in names])
     y_all = np.vstack([np.array(json.loads((RUNS / f"{stem(j, 'bayes_own')}.json").read_text())["y"], float)
@@ -816,7 +820,10 @@ def regime_report() -> None:
 
     def cell(A, B, c, mask=None):
         d = per_origin(A, B, c, mask)
-        return "–" if len(d) < 2 else f"{np.nanmean(d):+.3f} (t {mb.nw_t(d):+.1f})"
+        if len(d) < 2:
+            return "–"
+        # the Newey-West error needs many more origins than its 12 lags; below that, the mean and the count
+        return f"{np.nanmean(d):+.3f} (t {mb.nw_t(d):+.1f})" if len(d) >= 4 * 12 else f"{np.nanmean(d):+.3f} (n {len(d)}, no t)"
 
     def skill(M, c):
         return 1 - np.nanmean(np.nanmean(M[:, c], 0) / scale[c])
@@ -845,6 +852,22 @@ def regime_report() -> None:
                 for name in ("rec", "rec_regime")}
     keep, why = regime_verdict(t_folds, deciding)
 
+    def rgroup(mode, name, g, what="crps"):
+        c = np.intersect1d(cols(g), np.flatnonzero(pub))
+        return float(np.mean(rscore[(mode, name)][what][c])) if len(c) else np.nan
+
+    # the reviewer's checks (cost-of-living session), reported beside the rule: the lost-82 row improves
+    # inflation and costs without losing coverage, and the what-if row agrees in sign
+    checks = []
+    for g in ("inflation", "cost"):
+        d82 = rgroup("lost_82", "rec_regime", g) - rgroup("lost_82", "rec", g)
+        dwi = rgroup("whatif", "rec_regime", g) - rgroup("whatif", "rec", g)
+        checks.append((f"lost 82, {g}: CRPS rec_regime − rec {d82:+.3f}", d82 < 0))
+        checks.append((f"what-if, {g}: {dwi:+.3f}, same sign as lost 82", np.sign(dwi) == np.sign(d82)))
+    checks.append((f"lost 82, coverage {deciding['rec_regime'][1]:.0%} against {deciding['rec'][1]:.0%}",
+                   deciding["rec_regime"][1] >= deciding["rec"][1]))
+    checks_pass = all(ok for _, ok in checks)
+
     models = ("bayes_own", "bayes_regime", "rec", "rec_regime")
     gen = datetime.now(UTC).date().isoformat()
     on = [j for j, d in enumerate(diags) if d.get("regime")]
@@ -867,7 +890,15 @@ def regime_report() -> None:
            "the scenario: lower mean scaled CRPS and coverage no lower.", "",
            "## Verdict", "",
            ("**Kept.** " if keep else "**Not kept.** ") + ("No group is worse on the folds, and the replay improves." if keep
-                                                             else "; ".join(why) + ".")]
+                                                             else "; ".join(why) + "."), "",
+           "**Reviewer's checks** (the cost-of-living session; reported, not part of the rule): "
+           + "; ".join(f"{label} {'✓' if ok else '✗'}" for label, ok in checks) + ". "
+           + ("They agree with the verdict." if checks_pass == keep else "**They disagree with the verdict.**"), "",
+           f"**How much evidence:** only fold(s) {regime_folds} have a disruption in training, so on the other folds "
+           "bayes_regime is bayes_own and the fold comparison is a no-harm check; "
+           f"{int((hot['whatif'] & in_regime_folds).sum())} what-if origins and "
+           f"{int((hot['levy'] & in_regime_folds).sum())} forecast origins there have D = 1 ahead. The replay is one "
+           "origin. Both are thin evidence either way: κ and ζ are learned from the 10 months of 2022 alone."]
     for mode in MODES:
         out += ["", f"## Folds, {mode}", "",
                 f"Origins whose 12 months ahead include D = 1: {int(hot[mode].sum())} of {len(hot[mode])}.", "",
@@ -877,14 +908,16 @@ def regime_report() -> None:
             c = cols(g)
             out.append(f"| {g} | " + " | ".join(f"{skill(rows[(mode, m)]['crps'], c):+.3f}" for m in models) + " | "
                        + " | ".join(f"{cover(rows[(mode, m)], c):.0%}" for m in models) + " |")
-        out += ["", "Scaled CRPS difference (Newey–West t; negative: the first is better). Last column: only the origins "
-                "whose 12 months ahead include D = 1.", "",
-                "| Target | bayes_regime − bayes_own | rec_regime − rec | rec_regime − rec, D = 1 origins |", "|---|---|---|---|"]
+        out += ["", "Scaled CRPS difference (Newey–West t; negative: the first is better), over all origins, over the "
+                f"folds where the terms are fitted ({regime_folds}), and over those folds' origins whose 12 months ahead "
+                "include D = 1.", "",
+                "| Target | bayes_regime − bayes_own | rec_regime − rec | rec_regime − rec, fitted folds | "
+                "rec_regime − rec, D = 1 origins |", "|---|---|---|---|---|"]
         for g in mb.GROUPS:
             c = cols(g)
+            A, B = rows[(mode, "rec_regime")]["crps"], rows[(mode, "rec")]["crps"]
             out.append(f"| {g} | {cell(rows[(mode, 'bayes_regime')]['crps'], rows[(mode, 'bayes_own')]['crps'], c)} | "
-                       f"{cell(rows[(mode, 'rec_regime')]['crps'], rows[(mode, 'rec')]['crps'], c)} | "
-                       f"{cell(rows[(mode, 'rec_regime')]['crps'], rows[(mode, 'rec')]['crps'], c, hot[mode])} |")
+                       f"{cell(A, B, c)} | {cell(A, B, c, in_regime_folds)} | {cell(A, B, c, hot[mode] & in_regime_folds)} |")
     out += ["", "## Folds, joint forecast (copula shocks)", "",
             "Energy score of all series at each horizon (outputs scaled by their climatology CRPS; lower is better), and "
             "rec_regime minus rec with its Newey–West t.", "", "| Mode | " + " | ".join(models) + " | rec_regime − rec |",
@@ -905,14 +938,16 @@ def regime_report() -> None:
     for mode in REGIME_MODES:
         out.append(f"| {mode} | " + " | ".join(f"{np.mean(rscore[(mode, m)]['crps'][pub]):.3f}" for m in models) + " | "
                    + " | ".join(f"{np.mean(rscore[(mode, m)]['inside'][pub]):.0%}" for m in models) + " |")
-    out += ["", "By target group, lost 82 (scaled CRPS, rec / rec_regime; cover):", "",
-            "| Target | outputs | rec CRPS | rec_regime CRPS | rec cover | rec_regime cover |", "|---|---|---|---|---|---|"]
-    for g in mb.GROUPS:
-        c = np.intersect1d(cols(g), np.flatnonzero(pub))
-        if len(c):
-            r0, r1 = rscore[("lost_82", "rec")], rscore[("lost_82", "rec_regime")]
-            out.append(f"| {g} | {len(c)} | {np.mean(r0['crps'][c]):.3f} | {np.mean(r1['crps'][c]):.3f} | "
-                       f"{np.mean(r0['inside'][c]):.0%} | {np.mean(r1['inside'][c]):.0%} |")
+    out += ["", "By target group (scaled CRPS and cover, rec against rec_regime):", "",
+            "| Mode | Target | outputs | rec CRPS | rec_regime CRPS | rec_regime − rec | rec cover | rec_regime cover |",
+            "|---|---|---|---|---|---|---|---|"]
+    for mode in ("whatif", "lost_82"):
+        for g in mb.GROUPS:
+            c = np.intersect1d(cols(g), np.flatnonzero(pub))
+            if len(c):
+                a, b = rgroup(mode, "rec", g), rgroup(mode, "rec_regime", g)
+                out.append(f"| {mode} | {g} | {len(c)} | {a:.3f} | {b:.3f} | {b - a:+.3f} | "
+                           f"{rgroup(mode, 'rec', g, 'inside'):.0%} | {rgroup(mode, 'rec_regime', g, 'inside'):.0%} |")
     fk = meta["fits"].get("bayes_regime", {})
     if fk.get("kappa"):
         keys = data["target_keys"]
