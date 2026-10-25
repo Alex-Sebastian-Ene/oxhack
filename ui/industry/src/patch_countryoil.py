@@ -117,7 +117,7 @@ sub('  const fmtS = (v) => (v > 0.5 ? "+" : v < -0.5 ? "−" : "") + Math.abs(v)
     '  const cutTxt = (k) => (k.cut ? `${k.cut.txt} ${k.cut.lab}` : "oil cut off: not in our data");')
 sub('<span id="wttl">Exposure score (illustrative)</span>', '<span id="wttl">Oil cut off by the shock</span>')
 sub(': "Exposure score (illustrative)";', ': "Oil cut off by the shock";')
-sub('[[-40, "−40 gains"], [0, "0"], [25, "25"], [65, "65 hurt"]]', '[[-40, "exporters gain"], [0, "0%"], [25, "25%"], [65, "65% of oil imports"]]')
+sub('[[-40, "−40 gains"], [0, "0"], [25, "25"], [65, "65 hurt"]]', '[[-40, "gains"], [0, "0%"], [25, "25%"], [65, "65%"]]')
 sub('Most exposed</span> <i class="illus" title="Illustrative: the score\'s weights are hand-set, not from a model (asked on OXH-3)">illustrative</i>',
     'Most oil cut off</span>')
 sub("    const list = [...names].filter((n) => C[n]).map((n) => [n, calc(n).score]).sort((a, b) => b[1] - a[1]).slice(0, 10);",

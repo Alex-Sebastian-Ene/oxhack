@@ -32,8 +32,20 @@ Open `index.html` in a browser; it needs no server. It is the same page as the s
     - **Fuel cost** uses the country's own Brent to pump-price pass-through, fitted on its motor-fuel prices
       (Europe, Türkiye, the US), or the median of those, marked "pooled". The Industries tab and the fuel-cost
       path use the same pass-through.
-    - **The pop-up adds our models' 12-month what-ifs** where they reach: consumer prices (the Bayesian
-      model: US, UK, euro area) and factory prices (the sector model: Europe, Türkiye, the US).
+    - **Oil cut off** replaces the hand-set exposure score: an importer's Gulf share of oil imports × the share of
+      Hormuz flow lost, a Gulf producer's exports trapped, another exporter's oil earnings. It colours the map and
+      orders "Most oil cut off". It misses Gulf crude that arrives as fuel refined elsewhere (Australia's petrol
+      from Singapore and Korea).
+    - **Cost of living tab** (first in the country panel): prices and food prices now and in Feb 2026, before the
+      closure (FAOSTAT, 206 countries), then what 100 spent today costs after 1, 2, 3, 6 and 12 months, with a
+      chart. Groceries and all prices use the latest 12 months' rate plus Brent's known moves through the
+      country's oil link: our cost-of-living model's link, ridge-updated on the country's own prices. The range
+      is the country's own past misses of that rule (2015-2024). A fitted time-series model lost to the rule in
+      backtests and isn't used. The US, UK and euro area also get the item basket (bread, dairy, meat, fruit and
+      vegetables, energy, eating out) from Seb's cost-of-living model.
+    - **The pop-up** leads with groceries in 12 months, fuel and oil cut off, then prices now and our models'
+      12-month what-ifs: consumer prices (the Bayesian model: US, UK, euro area) and factory prices (the sector
+      model: Europe, Türkiye, the US).
   - **Industries tab:** five hand-picked industries per country (illustrative), then **Add an industry**:
     - any of the page's 16 oil-exposed industries, drawn the same way as the hand-picked ones;
     - any of the 20 industries in Seb's sector model (`notes/country-trends.json`): its producer prices after

@@ -29719,5 +29719,2231 @@
     }
    }
   }
+ },
+ "trade": {
+  "source": "UN Comtrade, public preview API (HS 2709 crude and HS 2710 refined products, imports CIF and exports FOB as each country reports them, US$)",
+  "url": "https://comtradeplus.un.org/",
+  "collected": "2026-10-25",
+  "gulf": [
+   "Saudi Arabia",
+   "Iraq",
+   "United Arab Emirates",
+   "Kuwait",
+   "Qatar",
+   "Bahrain",
+   "Iran"
+  ],
+  "notes": "gulf_share: imports from the seven Gulf producers / all oil imports, an upper bound for oil through the strait (Yanbu and Fujairah bypass it); m: net oil imports / oil imports",
+  "countries": {
+   "DZA": {
+    "imp": 128747692,
+    "exp": 22556064715,
+    "gulf": 6605635,
+    "gulf_share": 0.051,
+    "m": -20.0,
+    "by": {
+     "United Arab Emirates": 3531458,
+     "Bahrain": 2993321,
+     "Saudi Arabia": 80652,
+     "Qatar": 204
+    },
+    "year": 2024
+   },
+   "AGO": {
+    "imp": 2859475044,
+    "exp": 31800093356,
+    "gulf": 101719719,
+    "gulf_share": 0.036,
+    "m": -10.121,
+    "by": {
+     "United Arab Emirates": 77159102,
+     "Kuwait": 23047681,
+     "Saudi Arabia": 1510183,
+     "Qatar": 2754
+    },
+    "year": 2024
+   },
+   "ATG": {
+    "imp": 3548815,
+    "exp": 7042749,
+    "gulf": 23427,
+    "gulf_share": 0.007,
+    "m": -0.985,
+    "by": {
+     "United Arab Emirates": 23427
+    },
+    "year": 2024
+   },
+   "AZE": {
+    "imp": 1741901493,
+    "exp": 14772274134,
+    "gulf": 6559079,
+    "gulf_share": 0.004,
+    "m": -7.481,
+    "by": {
+     "United Arab Emirates": 5106769,
+     "Saudi Arabia": 987589,
+     "Iran": 404407,
+     "Iraq": 60314
+    },
+    "year": 2024
+   },
+   "AUS": {
+    "imp": 38167977161,
+    "exp": 10354829138,
+    "gulf": 668600401,
+    "gulf_share": 0.018,
+    "m": 0.729,
+    "by": {
+     "United Arab Emirates": 668005338,
+     "Bahrain": 440500,
+     "Saudi Arabia": 143204,
+     "Kuwait": 11359
+    },
+    "year": 2024
+   },
+   "AUT": {
+    "imp": 9742391034,
+    "exp": 1632913562,
+    "gulf": 683344582,
+    "gulf_share": 0.07,
+    "m": 0.832,
+    "by": {
+     "Saudi Arabia": 538435534,
+     "Iraq": 144399538,
+     "United Arab Emirates": 501034,
+     "Qatar": 8476
+    },
+    "year": 2024
+   },
+   "BHS": {
+    "imp": 768118781,
+    "exp": 361610502,
+    "gulf": 0,
+    "gulf_share": 0.0,
+    "m": 0.529,
+    "by": {},
+    "year": 2024
+   },
+   "BHR": {
+    "imp": 61933145,
+    "exp": 6945538,
+    "gulf": 41199136,
+    "gulf_share": 0.665,
+    "m": 0.888,
+    "by": {
+     "United Arab Emirates": 36654671,
+     "Saudi Arabia": 4173777,
+     "Qatar": 165031,
+     "Bahrain": 103791,
+     "Iraq": 101768,
+     "Kuwait": 99
+    },
+    "year": 2024
+   },
+   "ARM": {
+    "imp": 469966523,
+    "exp": 1063953,
+    "gulf": 49810098,
+    "gulf_share": 0.106,
+    "m": 0.998,
+    "by": {
+     "Iran": 30434139,
+     "United Arab Emirates": 19375959
+    },
+    "year": 2024
+   },
+   "BEL": {
+    "imp": 37234845681,
+    "exp": 28288536956,
+    "gulf": 681034593,
+    "gulf_share": 0.018,
+    "m": 0.24,
+    "by": {
+     "Saudi Arabia": 246257872,
+     "United Arab Emirates": 206904274,
+     "Bahrain": 110627155,
+     "Kuwait": 90274628,
+     "Qatar": 26970434,
+     "Iraq": 230
+    },
+    "year": 2024
+   },
+   "BOL": {
+    "imp": 2867094080,
+    "exp": 37187475,
+    "gulf": 134649,
+    "gulf_share": 0.0,
+    "m": 0.987,
+    "by": {
+     "United Arab Emirates": 134649
+    },
+    "year": 2024
+   },
+   "BWA": {
+    "imp": 1051197110,
+    "exp": 1907960,
+    "gulf": 1783428,
+    "gulf_share": 0.002,
+    "m": 0.998,
+    "by": {
+     "United Arab Emirates": 1619512,
+     "Saudi Arabia": 88679,
+     "Qatar": 75237
+    },
+    "year": 2024
+   },
+   "BRA": {
+    "imp": 25331970606,
+    "exp": 56536814645,
+    "gulf": 3497441375,
+    "gulf_share": 0.138,
+    "m": -1.232,
+    "by": {
+     "Saudi Arabia": 2120073406,
+     "Kuwait": 607926822,
+     "United Arab Emirates": 526213350,
+     "Qatar": 151960398,
+     "Bahrain": 91189635,
+     "Iraq": 77764
+    },
+    "year": 2024
+   },
+   "BLZ": {
+    "imp": 182444840,
+    "exp": 22309752,
+    "gulf": 38742,
+    "gulf_share": 0.0,
+    "m": 0.878,
+    "by": {
+     "United Arab Emirates": 38742
+    },
+    "year": 2024
+   },
+   "BRN": {
+    "imp": 4694395218,
+    "exp": 5749759628,
+    "gulf": 728298196,
+    "gulf_share": 0.155,
+    "m": -0.225,
+    "by": {
+     "United Arab Emirates": 561940878,
+     "Saudi Arabia": 166357318
+    },
+    "year": 2024
+   },
+   "BGR": {
+    "imp": 4966516546,
+    "exp": 2739071397,
+    "gulf": 1260971858,
+    "gulf_share": 0.254,
+    "m": 0.448,
+    "by": {
+     "Iraq": 694972948,
+     "Saudi Arabia": 540797197,
+     "United Arab Emirates": 24578706,
+     "Iran": 623007
+    },
+    "year": 2024
+   },
+   "KHM": {
+    "imp": 2551172871,
+    "exp": 330970,
+    "gulf": 3328583,
+    "gulf_share": 0.001,
+    "m": 1.0,
+    "by": {
+     "United Arab Emirates": 3328583
+    },
+    "year": 2024
+   },
+   "CAN": {
+    "imp": 31004631005,
+    "exp": 122502588158,
+    "gulf": 1604227550,
+    "gulf_share": 0.052,
+    "m": -2.951,
+    "by": {
+     "Saudi Arabia": 1467530077,
+     "Kuwait": 54667152,
+     "United Arab Emirates": 41767724,
+     "Qatar": 40261849,
+     "Bahrain": 432,
+     "Iran": 315
+    },
+    "year": 2024
+   },
+   "CPV": {
+    "imp": 121806170,
+    "exp": 0,
+    "gulf": 15440005,
+    "gulf_share": 0.127,
+    "m": 1.0,
+    "by": {
+     "Saudi Arabia": 11591856,
+     "United Arab Emirates": 3813652,
+     "Kuwait": 34497
+    },
+    "year": 2024
+   },
+   "CAF": {
+    "imp": 205059293,
+    "exp": 64880,
+    "gulf": 1999319,
+    "gulf_share": 0.01,
+    "m": 1.0,
+    "by": {
+     "United Arab Emirates": 1972250,
+     "Saudi Arabia": 27069
+    },
+    "year": 2024
+   },
+   "LKA": {
+    "imp": 3237360796,
+    "exp": 287612421,
+    "gulf": 1080837466,
+    "gulf_share": 0.334,
+    "m": 0.911,
+    "by": {
+     "United Arab Emirates": 1002715945,
+     "Saudi Arabia": 56620266,
+     "Bahrain": 21472420,
+     "Kuwait": 28835
+    },
+    "year": 2024
+   },
+   "CHL": {
+    "imp": 12726873747,
+    "exp": 1055232293,
+    "gulf": 3740119,
+    "gulf_share": 0.0,
+    "m": 0.917,
+    "by": {
+     "United Arab Emirates": 3525125,
+     "Saudi Arabia": 214994
+    },
+    "year": 2024
+   },
+   "CHN": {
+    "imp": 354526594408,
+    "exp": 42978431851,
+    "gulf": 127910340278,
+    "gulf_share": 0.361,
+    "m": 0.879,
+    "by": {
+     "Saudi Arabia": 48094827931,
+     "Iraq": 38210991259,
+     "United Arab Emirates": 24678080392,
+     "Kuwait": 10131852965,
+     "Qatar": 6738319843,
+     "Bahrain": 56266280,
+     "Iran": 1608
+    },
+    "year": 2024
+   },
+   "COL": {
+    "imp": 5071836914,
+    "exp": 14803827736,
+    "gulf": 3599680,
+    "gulf_share": 0.001,
+    "m": -1.919,
+    "by": {
+     "United Arab Emirates": 3145670,
+     "Saudi Arabia": 454009
+    },
+    "year": 2024
+   },
+   "COG": {
+    "imp": 180942201,
+    "exp": 6845639319,
+    "gulf": 7298716,
+    "gulf_share": 0.04,
+    "m": -20.0,
+    "by": {
+     "United Arab Emirates": 7244052,
+     "Kuwait": 54664
+    },
+    "year": 2024
+   },
+   "COD": {
+    "imp": 2363294323,
+    "exp": 666027693,
+    "gulf": 1405013702,
+    "gulf_share": 0.595,
+    "m": 0.718,
+    "by": {
+     "United Arab Emirates": 822040300,
+     "Bahrain": 350449973,
+     "Saudi Arabia": 164886067,
+     "Kuwait": 40358791,
+     "Qatar": 27278569
+    },
+    "year": 2024
+   },
+   "CRI": {
+    "imp": 2262619082,
+    "exp": 3207366,
+    "gulf": 973103,
+    "gulf_share": 0.0,
+    "m": 0.999,
+    "by": {
+     "United Arab Emirates": 973103
+    },
+    "year": 2024
+   },
+   "HRV": {
+    "imp": 4593747094,
+    "exp": 2277918563,
+    "gulf": 67305330,
+    "gulf_share": 0.015,
+    "m": 0.504,
+    "by": {
+     "Saudi Arabia": 67305330
+    },
+    "year": 2024
+   },
+   "CYP": {
+    "imp": 2472311562,
+    "exp": 1693815511,
+    "gulf": 101082076,
+    "gulf_share": 0.041,
+    "m": 0.315,
+    "by": {
+     "Saudi Arabia": 99780067,
+     "United Arab Emirates": 1302008
+    },
+    "year": 2024
+   },
+   "CZE": {
+    "imp": 7820371648,
+    "exp": 1274157153,
+    "gulf": 284310,
+    "gulf_share": 0.0,
+    "m": 0.837,
+    "by": {
+     "Qatar": 284244,
+     "Saudi Arabia": 66
+    },
+    "year": 2024
+   },
+   "DNK": {
+    "imp": 5880895626,
+    "exp": 2885732821,
+    "gulf": 464190203,
+    "gulf_share": 0.079,
+    "m": 0.509,
+    "by": {
+     "Kuwait": 165875250,
+     "United Arab Emirates": 119614365,
+     "Saudi Arabia": 89754686,
+     "Qatar": 88945902
+    },
+    "year": 2024
+   },
+   "DOM": {
+    "imp": 3720244182,
+    "exp": 55205971,
+    "gulf": 20022283,
+    "gulf_share": 0.005,
+    "m": 0.985,
+    "by": {
+     "United Arab Emirates": 12761856,
+     "Iraq": 6778519,
+     "Saudi Arabia": 442223,
+     "Bahrain": 39686
+    },
+    "year": 2024
+   },
+   "ECU": {
+    "imp": 3938325587,
+    "exp": 8669871892,
+    "gulf": 2815405,
+    "gulf_share": 0.001,
+    "m": -1.201,
+    "by": {
+     "United Arab Emirates": 2815405
+    },
+    "year": 2024
+   },
+   "SLV": {
+    "imp": 1760444900,
+    "exp": 151175493,
+    "gulf": 1331134,
+    "gulf_share": 0.001,
+    "m": 0.914,
+    "by": {
+     "United Arab Emirates": 1331134
+    },
+    "year": 2024
+   },
+   "EST": {
+    "imp": 976469413,
+    "exp": 374810708,
+    "gulf": 25302542,
+    "gulf_share": 0.026,
+    "m": 0.616,
+    "by": {
+     "Qatar": 21633974,
+     "Saudi Arabia": 3668568
+    },
+    "year": 2024
+   },
+   "FJI": {
+    "imp": 696861680,
+    "exp": 269181159,
+    "gulf": 727308,
+    "gulf_share": 0.001,
+    "m": 0.614,
+    "by": {
+     "United Arab Emirates": 727308
+    },
+    "year": 2024
+   },
+   "FIN": {
+    "imp": 8437360837,
+    "exp": 4497983287,
+    "gulf": 254077299,
+    "gulf_share": 0.03,
+    "m": 0.467,
+    "by": {
+     "Qatar": 173393508,
+     "Kuwait": 56656020,
+     "Saudi Arabia": 13121213,
+     "United Arab Emirates": 10906558
+    },
+    "year": 2024
+   },
+   "FRA": {
+    "imp": 64926479854,
+    "exp": 13027398095,
+    "gulf": 13131711285,
+    "gulf_share": 0.202,
+    "m": 0.799,
+    "by": {
+     "Saudi Arabia": 4204310221,
+     "Kuwait": 3750430894,
+     "United Arab Emirates": 2640402866,
+     "Iraq": 2110963050,
+     "Bahrain": 325374335,
+     "Qatar": 100229920
+    },
+    "year": 2024
+   },
+   "GEO": {
+    "imp": 1308567346,
+    "exp": 94601811,
+    "gulf": 11556766,
+    "gulf_share": 0.009,
+    "m": 0.928,
+    "by": {
+     "United Arab Emirates": 9475156,
+     "Iran": 2081610
+    },
+    "year": 2024
+   },
+   "DEU": {
+    "imp": 72703767244,
+    "exp": 20935343004,
+    "gulf": 4690912859,
+    "gulf_share": 0.065,
+    "m": 0.712,
+    "by": {
+     "Iraq": 1828533685,
+     "Saudi Arabia": 1205035790,
+     "United Arab Emirates": 834836057,
+     "Qatar": 399042783,
+     "Kuwait": 394541293,
+     "Bahrain": 28923250
+    },
+    "year": 2024
+   },
+   "GHA": {
+    "imp": 4363178362,
+    "exp": 3831784083,
+    "gulf": 1481992624,
+    "gulf_share": 0.34,
+    "m": 0.122,
+    "by": {
+     "United Arab Emirates": 1136722483,
+     "Bahrain": 287859963,
+     "Saudi Arabia": 57302568,
+     "Kuwait": 60765,
+     "Iraq": 45638,
+     "Iran": 1208
+    },
+    "year": 2024
+   },
+   "GRC": {
+    "imp": 18413559231,
+    "exp": 13849251073,
+    "gulf": 6868529199,
+    "gulf_share": 0.373,
+    "m": 0.248,
+    "by": {
+     "Iraq": 5411749891,
+     "Saudi Arabia": 1447320447,
+     "Kuwait": 7565795,
+     "United Arab Emirates": 1893065
+    },
+    "year": 2024
+   },
+   "GRD": {
+    "imp": 103970252,
+    "exp": 274,
+    "gulf": 21095,
+    "gulf_share": 0.0,
+    "m": 1.0,
+    "by": {
+     "United Arab Emirates": 21095
+    },
+    "year": 2024
+   },
+   "GTM": {
+    "imp": 3972124391,
+    "exp": 129358001,
+    "gulf": 7644066,
+    "gulf_share": 0.002,
+    "m": 0.967,
+    "by": {
+     "United Arab Emirates": 7644066
+    },
+    "year": 2024
+   },
+   "GUY": {
+    "imp": 1213155758,
+    "exp": 17992846469,
+    "gulf": 11570412,
+    "gulf_share": 0.01,
+    "m": -13.831,
+    "by": {
+     "United Arab Emirates": 11570412
+    },
+    "year": 2024
+   },
+   "HUN": {
+    "imp": 5083829165,
+    "exp": 1840727674,
+    "gulf": 37703,
+    "gulf_share": 0.0,
+    "m": 0.638,
+    "by": {
+     "United Arab Emirates": 37219,
+     "Qatar": 484
+    },
+    "year": 2024
+   },
+   "ISL": {
+    "imp": 1040350496,
+    "exp": 134662807,
+    "gulf": 134695877,
+    "gulf_share": 0.129,
+    "m": 0.871,
+    "by": {
+     "Kuwait": 134446292,
+     "United Arab Emirates": 249585
+    },
+    "year": 2024
+   },
+   "IDN": {
+    "imp": 31909945210,
+    "exp": 5948314675,
+    "gulf": 3879393677,
+    "gulf_share": 0.122,
+    "m": 0.814,
+    "by": {
+     "Saudi Arabia": 2878051100,
+     "United Arab Emirates": 765644573,
+     "Qatar": 124066257,
+     "Bahrain": 91956364,
+     "Iraq": 19675383
+    },
+    "year": 2024
+   },
+   "IRQ": {
+    "imp": 2154112705,
+    "exp": 104001369843,
+    "gulf": 24147508,
+    "gulf_share": 0.011,
+    "m": -20.0,
+    "by": {
+     "United Arab Emirates": 23425271,
+     "Iran": 504737,
+     "Saudi Arabia": 213500,
+     "Kuwait": 4000
+    },
+    "year": 2024
+   },
+   "IRL": {
+    "imp": 6021138867,
+    "exp": 543166330,
+    "gulf": 884536782,
+    "gulf_share": 0.147,
+    "m": 0.91,
+    "by": {
+     "Kuwait": 667633501,
+     "United Arab Emirates": 212164619,
+     "Saudi Arabia": 4738443,
+     "Iran": 154,
+     "Qatar": 66
+    },
+    "year": 2024
+   },
+   "ISR": {
+    "imp": 8583565000,
+    "exp": 0,
+    "gulf": 490911000,
+    "gulf_share": 0.057,
+    "m": 1.0,
+    "by": {
+     "United Arab Emirates": 391222000,
+     "Bahrain": 99689000
+    },
+    "year": 2024
+   },
+   "ITA": {
+    "imp": 45516442428,
+    "exp": 17434971111,
+    "gulf": 9310611407,
+    "gulf_share": 0.205,
+    "m": 0.617,
+    "by": {
+     "Saudi Arabia": 4839267371,
+     "Iraq": 2769419958,
+     "United Arab Emirates": 879086670,
+     "Kuwait": 796658897,
+     "Bahrain": 26178510
+    },
+    "year": 2024
+   },
+   "CIV": {
+    "imp": 4168900196,
+    "exp": 2852683277,
+    "gulf": 72174375,
+    "gulf_share": 0.017,
+    "m": 0.316,
+    "by": {
+     "Saudi Arabia": 60041422,
+     "United Arab Emirates": 11712747,
+     "Kuwait": 330139,
+     "Iran": 90067
+    },
+    "year": 2024
+   },
+   "JAM": {
+    "imp": 1530386326,
+    "exp": 451063640,
+    "gulf": 1817799,
+    "gulf_share": 0.001,
+    "m": 0.705,
+    "by": {
+     "United Arab Emirates": 1817799
+    },
+    "year": 2024
+   },
+   "JPN": {
+    "imp": 90068074144,
+    "exp": 7876468224,
+    "gulf": 76259001763,
+    "gulf_share": 0.847,
+    "m": 0.913,
+    "by": {
+     "United Arab Emirates": 34910278757,
+     "Saudi Arabia": 29078324852,
+     "Kuwait": 7161527354,
+     "Qatar": 4869468264,
+     "Bahrain": 222509285,
+     "Iraq": 16893251
+    },
+    "year": 2024
+   },
+   "KAZ": {
+    "imp": 614163213,
+    "exp": 43735051033,
+    "gulf": 5411170,
+    "gulf_share": 0.009,
+    "m": -20.0,
+    "by": {
+     "United Arab Emirates": 5106681,
+     "Iran": 302576,
+     "Kuwait": 1912
+    },
+    "year": 2024
+   },
+   "JOR": {
+    "imp": 2546819620,
+    "exp": 7649531,
+    "gulf": 2304184487,
+    "gulf_share": 0.905,
+    "m": 0.997,
+    "by": {
+     "Saudi Arabia": 2049779446,
+     "Iraq": 235248740,
+     "United Arab Emirates": 17510398,
+     "Kuwait": 1083657,
+     "Qatar": 530349,
+     "Iran": 31897
+    },
+    "year": 2024
+   },
+   "KEN": {
+    "imp": 4133018860,
+    "exp": 1053328578,
+    "gulf": 2810569535,
+    "gulf_share": 0.68,
+    "m": 0.745,
+    "by": {
+     "United Arab Emirates": 2165868197,
+     "Kuwait": 479786256,
+     "Saudi Arabia": 110717743,
+     "Bahrain": 52705181,
+     "Iran": 1472139,
+     "Qatar": 20019
+    },
+    "year": 2024
+   },
+   "KOR": {
+    "imp": 110116985771,
+    "exp": 49522480953,
+    "gulf": 71909228750,
+    "gulf_share": 0.653,
+    "m": 0.55,
+    "by": {
+     "Saudi Arabia": 30150257803,
+     "United Arab Emirates": 16885341727,
+     "Iraq": 8917681544,
+     "Kuwait": 8718989060,
+     "Qatar": 7099979770,
+     "Bahrain": 136955563,
+     "Iran": 23283
+    },
+    "year": 2024
+   },
+   "KGZ": {
+    "imp": 1064932709,
+    "exp": 183555935,
+    "gulf": 1434201,
+    "gulf_share": 0.001,
+    "m": 0.828,
+    "by": {
+     "United Arab Emirates": 1233981,
+     "Iran": 200220
+    },
+    "year": 2024
+   },
+   "LSO": {
+    "imp": 203137112,
+    "exp": 34047,
+    "gulf": 392498,
+    "gulf_share": 0.002,
+    "m": 1.0,
+    "by": {
+     "United Arab Emirates": 354360,
+     "Kuwait": 38138
+    },
+    "year": 2024
+   },
+   "LVA": {
+    "imp": 1404156636,
+    "exp": 394328857,
+    "gulf": 57685318,
+    "gulf_share": 0.041,
+    "m": 0.719,
+    "by": {
+     "Saudi Arabia": 22536936,
+     "United Arab Emirates": 18428585,
+     "Kuwait": 16719797
+    },
+    "year": 2024
+   },
+   "LBR": {
+    "imp": 527184785,
+    "exp": 0,
+    "gulf": 3872231,
+    "gulf_share": 0.007,
+    "m": 1.0,
+    "by": {
+     "United Arab Emirates": 2735746,
+     "Kuwait": 732741,
+     "Bahrain": 403743
+    },
+    "year": 2024
+   },
+   "LTU": {
+    "imp": 5964865832,
+    "exp": 4114970931,
+    "gulf": 2262712371,
+    "gulf_share": 0.379,
+    "m": 0.31,
+    "by": {
+     "Saudi Arabia": 2254868170,
+     "Bahrain": 6562615,
+     "United Arab Emirates": 645622,
+     "Qatar": 635964
+    },
+    "year": 2024
+   },
+   "LUX": {
+    "imp": 1813519435,
+    "exp": 5781370,
+    "gulf": 4,
+    "gulf_share": 0.0,
+    "m": 0.997,
+    "by": {
+     "United Arab Emirates": 4
+    },
+    "year": 2024
+   },
+   "MWI": {
+    "imp": 519535108,
+    "exp": 988,
+    "gulf": 178934341,
+    "gulf_share": 0.344,
+    "m": 1.0,
+    "by": {
+     "United Arab Emirates": 96505342,
+     "Kuwait": 82429000
+    },
+    "year": 2024
+   },
+   "MYS": {
+    "imp": 40422888718,
+    "exp": 31939624440,
+    "gulf": 12448795226,
+    "gulf_share": 0.308,
+    "m": 0.21,
+    "by": {
+     "Saudi Arabia": 7127724541,
+     "United Arab Emirates": 3987894771,
+     "Qatar": 887203178,
+     "Iraq": 203586620,
+     "Kuwait": 192975649,
+     "Bahrain": 49207584,
+     "Iran": 202882
+    },
+    "year": 2024
+   },
+   "MDV": {
+    "imp": 739366352,
+    "exp": 94156,
+    "gulf": 318886412,
+    "gulf_share": 0.431,
+    "m": 1.0,
+    "by": {
+     "United Arab Emirates": 318850199,
+     "Qatar": 36126,
+     "Iran": 87
+    },
+    "year": 2024
+   },
+   "MLT": {
+    "imp": 1441975199,
+    "exp": 344808983,
+    "gulf": 27196,
+    "gulf_share": 0.0,
+    "m": 0.761,
+    "by": {
+     "United Arab Emirates": 27079,
+     "Saudi Arabia": 117
+    },
+    "year": 2024
+   },
+   "MDA": {
+    "imp": 940521937,
+    "exp": 136208623,
+    "gulf": 42028396,
+    "gulf_share": 0.045,
+    "m": 0.855,
+    "by": {
+     "United Arab Emirates": 39435757,
+     "Saudi Arabia": 2081860,
+     "Kuwait": 510779
+    },
+    "year": 2024
+   },
+   "MSR": {
+    "imp": 7020814,
+    "exp": 633,
+    "gulf": 0,
+    "gulf_share": 0.0,
+    "m": 1.0,
+    "by": {},
+    "year": 2024
+   },
+   "MAR": {
+    "imp": 7742946196,
+    "exp": 589014882,
+    "gulf": 2342870778,
+    "gulf_share": 0.303,
+    "m": 0.924,
+    "by": {
+     "Saudi Arabia": 1655549735,
+     "United Arab Emirates": 366341078,
+     "Bahrain": 271448013,
+     "Kuwait": 46107195,
+     "Qatar": 3424757
+    },
+    "year": 2024
+   },
+   "MOZ": {
+    "imp": 1432306704,
+    "exp": 174629678,
+    "gulf": 507859716,
+    "gulf_share": 0.355,
+    "m": 0.878,
+    "by": {
+     "United Arab Emirates": 324933579,
+     "Bahrain": 123148102,
+     "Kuwait": 59127309,
+     "Saudi Arabia": 650726
+    },
+    "year": 2024
+   },
+   "OMN": {
+    "imp": 9873104177,
+    "exp": 40130024000,
+    "gulf": 8017703212,
+    "gulf_share": 0.812,
+    "m": -3.065,
+    "by": {
+     "Kuwait": 4189760644,
+     "Saudi Arabia": 1660303321,
+     "United Arab Emirates": 928405158,
+     "Qatar": 877397908,
+     "Iraq": 354403997,
+     "Bahrain": 7236902,
+     "Iran": 195282
+    },
+    "year": 2024
+   },
+   "NAM": {
+    "imp": 1372646582,
+    "exp": 314810558,
+    "gulf": 520605117,
+    "gulf_share": 0.379,
+    "m": 0.771,
+    "by": {
+     "United Arab Emirates": 275107003,
+     "Bahrain": 171069696,
+     "Qatar": 40398560,
+     "Kuwait": 27321231,
+     "Saudi Arabia": 6708626
+    },
+    "year": 2024
+   },
+   "NLD": {
+    "imp": 80184331238,
+    "exp": 76841865962,
+    "gulf": 10708182260,
+    "gulf_share": 0.134,
+    "m": 0.042,
+    "by": {
+     "Iraq": 4177432428,
+     "Saudi Arabia": 3075482729,
+     "Kuwait": 1716894698,
+     "Qatar": 942539070,
+     "United Arab Emirates": 676455204,
+     "Bahrain": 119378131
+    },
+    "year": 2024
+   },
+   "NZL": {
+    "imp": 6085025038,
+    "exp": 444856866,
+    "gulf": 1530111,
+    "gulf_share": 0.0,
+    "m": 0.927,
+    "by": {
+     "United Arab Emirates": 1529332,
+     "Qatar": 780
+    },
+    "year": 2024
+   },
+   "NIC": {
+    "imp": 1363561924,
+    "exp": 55228356,
+    "gulf": 96795,
+    "gulf_share": 0.0,
+    "m": 0.959,
+    "by": {
+     "Saudi Arabia": 68260,
+     "United Arab Emirates": 28535
+    },
+    "year": 2024
+   },
+   "NOR": {
+    "imp": 5321756709,
+    "exp": 54682902251,
+    "gulf": 282307623,
+    "gulf_share": 0.053,
+    "m": -9.275,
+    "by": {
+     "United Arab Emirates": 246743568,
+     "Kuwait": 33467013,
+     "Qatar": 2097043
+    },
+    "year": 2024
+   },
+   "PAK": {
+    "imp": 11889577154,
+    "exp": 536474383,
+    "gulf": 9558067478,
+    "gulf_share": 0.804,
+    "m": 0.955,
+    "by": {
+     "United Arab Emirates": 4590718364,
+     "Saudi Arabia": 3242322100,
+     "Kuwait": 1493634274,
+     "Iran": 121586000,
+     "Bahrain": 107990845,
+     "Qatar": 1489083,
+     "Iraq": 326813
+    },
+    "year": 2024
+   },
+   "PNG": {
+    "imp": 1097897395,
+    "exp": 864995211,
+    "gulf": 542721,
+    "gulf_share": 0.0,
+    "m": 0.212,
+    "by": {
+     "United Arab Emirates": 542721
+    },
+    "year": 2024
+   },
+   "PRY": {
+    "imp": 1994516633,
+    "exp": 163235,
+    "gulf": 192332676,
+    "gulf_share": 0.096,
+    "m": 1.0,
+    "by": {
+     "United Arab Emirates": 156587942,
+     "Saudi Arabia": 28348112,
+     "Bahrain": 4449248,
+     "Kuwait": 2947374
+    },
+    "year": 2024
+   },
+   "PER": {
+    "imp": 8580575968,
+    "exp": 2712478709,
+    "gulf": 7025279,
+    "gulf_share": 0.001,
+    "m": 0.684,
+    "by": {
+     "United Arab Emirates": 6660392,
+     "Qatar": 207864,
+     "Saudi Arabia": 157023
+    },
+    "year": 2024
+   },
+   "PHL": {
+    "imp": 14780581860,
+    "exp": 355476534,
+    "gulf": 3855931343,
+    "gulf_share": 0.261,
+    "m": 0.976,
+    "by": {
+     "Saudi Arabia": 1793784549,
+     "United Arab Emirates": 1230014332,
+     "Iraq": 474511932,
+     "Qatar": 203808565,
+     "Bahrain": 78326374,
+     "Kuwait": 75485591
+    },
+    "year": 2024
+   },
+   "POL": {
+    "imp": 23903014069,
+    "exp": 3119705862,
+    "gulf": 8410702850,
+    "gulf_share": 0.352,
+    "m": 0.869,
+    "by": {
+     "Saudi Arabia": 8139672891,
+     "Kuwait": 176938611,
+     "United Arab Emirates": 71998411,
+     "Qatar": 21709124,
+     "Bahrain": 383813
+    },
+    "year": 2024
+   },
+   "PRT": {
+    "imp": 9087598882,
+    "exp": 4765631513,
+    "gulf": 514728972,
+    "gulf_share": 0.057,
+    "m": 0.476,
+    "by": {
+     "Saudi Arabia": 420918892,
+     "Kuwait": 93785995,
+     "United Arab Emirates": 24085
+    },
+    "year": 2024
+   },
+   "QAT": {
+    "imp": 2008961439,
+    "exp": 22704295059,
+    "gulf": 778268312,
+    "gulf_share": 0.387,
+    "m": -10.302,
+    "by": {
+     "Kuwait": 652965453,
+     "United Arab Emirates": 89982152,
+     "Saudi Arabia": 35089562,
+     "Iraq": 231146
+    },
+    "year": 2024
+   },
+   "ROU": {
+    "imp": 7873262978,
+    "exp": 2685609187,
+    "gulf": 617903705,
+    "gulf_share": 0.078,
+    "m": 0.659,
+    "by": {
+     "Saudi Arabia": 558803788,
+     "Kuwait": 52377756,
+     "United Arab Emirates": 4402124,
+     "Qatar": 2254826,
+     "Iran": 65210
+    },
+    "year": 2024
+   },
+   "RWA": {
+    "imp": 674294784,
+    "exp": 182072630,
+    "gulf": 314700099,
+    "gulf_share": 0.467,
+    "m": 0.73,
+    "by": {
+     "United Arab Emirates": 263702144,
+     "Kuwait": 28692537,
+     "Saudi Arabia": 16957941,
+     "Bahrain": 5339803,
+     "Iran": 7674
+    },
+    "year": 2024
+   },
+   "SEN": {
+    "imp": 3176249433,
+    "exp": 2042706599,
+    "gulf": 463920295,
+    "gulf_share": 0.146,
+    "m": 0.357,
+    "by": {
+     "United Arab Emirates": 385511646,
+     "Saudi Arabia": 59981545,
+     "Kuwait": 17049346,
+     "Bahrain": 867599,
+     "Qatar": 510159
+    },
+    "year": 2024
+   },
+   "SRB": {
+    "imp": 2499859070,
+    "exp": 463935551,
+    "gulf": 672665760,
+    "gulf_share": 0.269,
+    "m": 0.814,
+    "by": {
+     "Iraq": 613224133,
+     "Saudi Arabia": 44167281,
+     "Kuwait": 8807791,
+     "United Arab Emirates": 4984977,
+     "Iran": 1481578
+    },
+    "year": 2024
+   },
+   "IND": {
+    "imp": 150173642140,
+    "exp": 69192517094,
+    "gulf": 68439161981,
+    "gulf_share": 0.456,
+    "m": 0.539,
+    "by": {
+     "Iraq": 29019766329,
+     "Saudi Arabia": 19924417032,
+     "United Arab Emirates": 14769850545,
+     "Kuwait": 3292430644,
+     "Qatar": 1368741668,
+     "Bahrain": 57604924,
+     "Iran": 6350839
+    },
+    "year": 2024
+   },
+   "SGP": {
+    "imp": 79957232041,
+    "exp": 54562618151,
+    "gulf": 23136114021,
+    "gulf_share": 0.289,
+    "m": 0.318,
+    "by": {
+     "United Arab Emirates": 11252583290,
+     "Saudi Arabia": 4528585424,
+     "Qatar": 4405014864,
+     "Iraq": 1483792948,
+     "Kuwait": 951546674,
+     "Bahrain": 514590822
+    },
+    "year": 2024
+   },
+   "SVK": {
+    "imp": 3947537047,
+    "exp": 1636362884,
+    "gulf": 1269571,
+    "gulf_share": 0.0,
+    "m": 0.585,
+    "by": {
+     "Kuwait": 1227390,
+     "Qatar": 41740,
+     "United Arab Emirates": 441
+    },
+    "year": 2024
+   },
+   "SVN": {
+    "imp": 3777054601,
+    "exp": 1981959539,
+    "gulf": 846094183,
+    "gulf_share": 0.224,
+    "m": 0.475,
+    "by": {
+     "Saudi Arabia": 676955651,
+     "Kuwait": 118820223,
+     "United Arab Emirates": 50318309
+    },
+    "year": 2024
+   },
+   "ZAF": {
+    "imp": 17412876522,
+    "exp": 3017761377,
+    "gulf": 6045214423,
+    "gulf_share": 0.347,
+    "m": 0.827,
+    "by": {
+     "United Arab Emirates": 2363011408,
+     "Saudi Arabia": 1863136632,
+     "Bahrain": 921526012,
+     "Kuwait": 863677392,
+     "Qatar": 32141680,
+     "Iraq": 1721300
+    },
+    "year": 2024
+   },
+   "ZWE": {
+    "imp": 1661058431,
+    "exp": 24156,
+    "gulf": 276911064,
+    "gulf_share": 0.167,
+    "m": 1.0,
+    "by": {
+     "Bahrain": 272832525,
+     "United Arab Emirates": 3796260,
+     "Kuwait": 247459,
+     "Saudi Arabia": 29300,
+     "Qatar": 5520
+    },
+    "year": 2024
+   },
+   "ESP": {
+    "imp": 46802178817,
+    "exp": 16625886037,
+    "gulf": 4347308447,
+    "gulf_share": 0.093,
+    "m": 0.645,
+    "by": {
+     "Saudi Arabia": 2626914408,
+     "Iraq": 1077001786,
+     "Kuwait": 275143032,
+     "United Arab Emirates": 264725494,
+     "Qatar": 81113421,
+     "Bahrain": 22410306
+    },
+    "year": 2024
+   },
+   "SWE": {
+    "imp": 16857695146,
+    "exp": 9274305843,
+    "gulf": 581667001,
+    "gulf_share": 0.035,
+    "m": 0.45,
+    "by": {
+     "Qatar": 355747820,
+     "Kuwait": 197177184,
+     "United Arab Emirates": 28741902,
+     "Saudi Arabia": 95
+    },
+    "year": 2024
+   },
+   "CHE": {
+    "imp": 6945370862,
+    "exp": 829210782,
+    "gulf": 3010450,
+    "gulf_share": 0.0,
+    "m": 0.881,
+    "by": {
+     "Qatar": 1296430,
+     "United Arab Emirates": 1190604,
+     "Bahrain": 431160,
+     "Saudi Arabia": 91232,
+     "Iran": 1022
+    },
+    "year": 2024
+   },
+   "THA": {
+    "imp": 35105831247,
+    "exp": 8586979563,
+    "gulf": 20764667121,
+    "gulf_share": 0.591,
+    "m": 0.755,
+    "by": {
+     "United Arab Emirates": 14970283433,
+     "Saudi Arabia": 3694140165,
+     "Qatar": 1296554770,
+     "Kuwait": 600024835,
+     "Bahrain": 203644585,
+     "Iraq": 19334
+    },
+    "year": 2024
+   },
+   "TTO": {
+    "imp": 1156256264,
+    "exp": 2167213497,
+    "gulf": 777700,
+    "gulf_share": 0.001,
+    "m": -0.874,
+    "by": {
+     "United Arab Emirates": 777700
+    },
+    "year": 2024
+   },
+   "TUN": {
+    "imp": 2831383926,
+    "exp": 1223968096,
+    "gulf": 62454081,
+    "gulf_share": 0.022,
+    "m": 0.568,
+    "by": {
+     "Saudi Arabia": 47039908,
+     "United Arab Emirates": 14523546,
+     "Qatar": 837133,
+     "Bahrain": 53494
+    },
+    "year": 2024
+   },
+   "UGA": {
+    "imp": 2090199663,
+    "exp": 140148978,
+    "gulf": 1285504148,
+    "gulf_share": 0.615,
+    "m": 0.933,
+    "by": {
+     "United Arab Emirates": 1029343575,
+     "Kuwait": 231716694,
+     "Bahrain": 13671200,
+     "Qatar": 4700197,
+     "Saudi Arabia": 4668446,
+     "Iraq": 1394416,
+     "Iran": 9620
+    },
+    "year": 2024
+   },
+   "UKR": {
+    "imp": 6821013165,
+    "exp": 29206198,
+    "gulf": 562884728,
+    "gulf_share": 0.083,
+    "m": 0.996,
+    "by": {
+     "Kuwait": 314170889,
+     "Saudi Arabia": 178443541,
+     "United Arab Emirates": 69896133,
+     "Qatar": 374165
+    },
+    "year": 2024
+   },
+   "EGY": {
+    "imp": 10073653831,
+    "exp": 4950524156,
+    "gulf": 7204659524,
+    "gulf_share": 0.715,
+    "m": 0.509,
+    "by": {
+     "Saudi Arabia": 5440254681,
+     "Kuwait": 912614675,
+     "United Arab Emirates": 386445441,
+     "Iraq": 277400000,
+     "Bahrain": 182713193,
+     "Qatar": 5231535
+    },
+    "year": 2024
+   },
+   "GBR": {
+    "imp": 57384323632,
+    "exp": 32925701768,
+    "gulf": 7335727069,
+    "gulf_share": 0.128,
+    "m": 0.426,
+    "by": {
+     "Kuwait": 3539313422,
+     "United Arab Emirates": 2106715841,
+     "Saudi Arabia": 1293946128,
+     "Qatar": 275383848,
+     "Bahrain": 120367830
+    },
+    "year": 2024
+   },
+   "TZA": {
+    "imp": 2806031356,
+    "exp": 69241111,
+    "gulf": 1571064371,
+    "gulf_share": 0.56,
+    "m": 0.975,
+    "by": {
+     "United Arab Emirates": 1213449282,
+     "Kuwait": 266907454,
+     "Saudi Arabia": 73166658,
+     "Bahrain": 17421681,
+     "Iran": 119296
+    },
+    "year": 2024
+   },
+   "USA": {
+    "imp": 233142632159,
+    "exp": 236037340404,
+    "gulf": 22913414873,
+    "gulf_share": 0.098,
+    "m": -0.012,
+    "by": {
+     "Saudi Arabia": 10705893653,
+     "Iraq": 7643263400,
+     "United Arab Emirates": 1790774816,
+     "Kuwait": 1646718863,
+     "Qatar": 905697703,
+     "Bahrain": 221066438
+    },
+    "year": 2024
+   },
+   "BFA": {
+    "imp": 2350067917,
+    "exp": 54475130,
+    "gulf": 74113968,
+    "gulf_share": 0.032,
+    "m": 0.977,
+    "by": {
+     "United Arab Emirates": 47362176,
+     "Saudi Arabia": 20886800,
+     "Iraq": 3996035,
+     "Iran": 1678736,
+     "Kuwait": 190220
+    },
+    "year": 2024
+   },
+   "URY": {
+    "imp": 1545594224,
+    "exp": 171702,
+    "gulf": 59509231,
+    "gulf_share": 0.039,
+    "m": 1.0,
+    "by": {
+     "United Arab Emirates": 31643665,
+     "Saudi Arabia": 21437958,
+     "Kuwait": 6427608
+    },
+    "year": 2024
+   },
+   "UZB": {
+    "imp": 1836571738,
+    "exp": 547569308,
+    "gulf": 17345913,
+    "gulf_share": 0.009,
+    "m": 0.702,
+    "by": {
+     "Iraq": 9830281,
+     "United Arab Emirates": 3566149,
+     "Qatar": 2360821,
+     "Iran": 1584902,
+     "Saudi Arabia": 3760
+    },
+    "year": 2024
+   },
+   "WSM": {
+    "imp": 89868754,
+    "exp": 13898910,
+    "gulf": 161288,
+    "gulf_share": 0.002,
+    "m": 0.845,
+    "by": {
+     "United Arab Emirates": 161288
+    },
+    "year": 2024
+   },
+   "YEM": {
+    "imp": 392470892,
+    "exp": 74009,
+    "gulf": 386340111,
+    "gulf_share": 0.984,
+    "m": 1.0,
+    "by": {
+     "United Arab Emirates": 376603037,
+     "Saudi Arabia": 9273884,
+     "Iraq": 463190
+    },
+    "year": 2024
+   },
+   "ZMB": {
+    "imp": 2152497009,
+    "exp": 2315826,
+    "gulf": 961949477,
+    "gulf_share": 0.447,
+    "m": 0.999,
+    "by": {
+     "United Arab Emirates": 334572038,
+     "Bahrain": 315572232,
+     "Saudi Arabia": 289936911,
+     "Kuwait": 21678442,
+     "Qatar": 188285,
+     "Iran": 1569
+    },
+    "year": 2024
+   },
+   "ALB": {
+    "imp": 566212468,
+    "exp": 38427615,
+    "gulf": 207654368,
+    "gulf_share": 0.367,
+    "m": 0.932,
+    "by": {
+     "Saudi Arabia": 197932590,
+     "Kuwait": 9721778
+    },
+    "year": 2024
+   },
+   "AND": {
+    "imp": 110050379,
+    "exp": 96141,
+    "gulf": 153006,
+    "gulf_share": 0.001,
+    "m": 0.999,
+    "by": {
+     "United Arab Emirates": 92122,
+     "Saudi Arabia": 36829,
+     "Qatar": 24055
+    },
+    "year": 2024
+   },
+   "ARG": {
+    "imp": 1555881153,
+    "exp": 5885105716,
+    "gulf": 389863026,
+    "gulf_share": 0.251,
+    "m": -2.782,
+    "by": {
+     "United Arab Emirates": 262884384,
+     "Saudi Arabia": 77476155,
+     "Bahrain": 20355512,
+     "Qatar": 18900400,
+     "Kuwait": 10246575
+    },
+    "year": 2024
+   },
+   "BRB": {
+    "imp": 468690276,
+    "exp": 191495126,
+    "gulf": 82483,
+    "gulf_share": 0.0,
+    "m": 0.591,
+    "by": {
+     "United Arab Emirates": 82483
+    },
+    "year": 2024
+   },
+   "BMU": {
+    "imp": 142552463,
+    "exp": 252,
+    "gulf": 0,
+    "gulf_share": 0.0,
+    "m": 1.0,
+    "by": {},
+    "year": 2024
+   },
+   "BIH": {
+    "imp": 1298720565,
+    "exp": 27380505,
+    "gulf": 321414,
+    "gulf_share": 0.0,
+    "m": 0.979,
+    "by": {
+     "Saudi Arabia": 236434,
+     "Bahrain": 39652,
+     "Iraq": 24507,
+     "United Arab Emirates": 20821
+    },
+    "year": 2024
+   },
+   "MMR": {
+    "imp": 4376737295,
+    "exp": 31493707,
+    "gulf": 32346861,
+    "gulf_share": 0.007,
+    "m": 0.993,
+    "by": {
+     "Kuwait": 22536136,
+     "United Arab Emirates": 8652915,
+     "Iran": 1157810
+    },
+    "year": 2024
+   },
+   "CYM": {
+    "imp": 219513833,
+    "exp": 29502000,
+    "gulf": 0,
+    "gulf_share": 0.0,
+    "m": 0.866,
+    "by": {},
+    "year": 2024
+   },
+   "BEN": {
+    "imp": 381791433,
+    "exp": 38905116,
+    "gulf": 24912030,
+    "gulf_share": 0.065,
+    "m": 0.898,
+    "by": {
+     "Saudi Arabia": 11663653,
+     "United Arab Emirates": 7847071,
+     "Kuwait": 5401307
+    },
+    "year": 2024
+   },
+   "PYF": {
+    "imp": 6677368,
+    "exp": 0,
+    "gulf": 0,
+    "gulf_share": 0.0,
+    "m": 1.0,
+    "by": {},
+    "year": 2024
+   },
+   "GMB": {
+    "imp": 311425880,
+    "exp": 13656298,
+    "gulf": 1456163,
+    "gulf_share": 0.005,
+    "m": 0.956,
+    "by": {
+     "United Arab Emirates": 1456163
+    },
+    "year": 2024
+   },
+   "HND": {
+    "imp": 2473284749,
+    "exp": 1824850,
+    "gulf": 1895917,
+    "gulf_share": 0.001,
+    "m": 0.999,
+    "by": {
+     "United Arab Emirates": 1895917
+    },
+    "year": 2024
+   },
+   "HKG": {
+    "imp": 10697405274,
+    "exp": 712083804,
+    "gulf": 411761982,
+    "gulf_share": 0.038,
+    "m": 0.933,
+    "by": {
+     "Qatar": 411551984,
+     "United Arab Emirates": 209998
+    },
+    "year": 2024
+   },
+   "KWT": {
+    "imp": 154096389,
+    "exp": 65345279867,
+    "gulf": 104919525,
+    "gulf_share": 0.681,
+    "m": -20.0,
+    "by": {
+     "United Arab Emirates": 97669252,
+     "Saudi Arabia": 4143262,
+     "Qatar": 2269350,
+     "Iraq": 837661
+    },
+    "year": 2024
+   },
+   "LBN": {
+    "imp": 4221075414,
+    "exp": 271535005,
+    "gulf": 692487601,
+    "gulf_share": 0.164,
+    "m": 0.936,
+    "by": {
+     "Saudi Arabia": 670206749,
+     "United Arab Emirates": 19781104,
+     "Iraq": 2403570,
+     "Iran": 61330,
+     "Kuwait": 34848
+    },
+    "year": 2024
+   },
+   "MAC": {
+    "imp": 85082959,
+    "exp": 0,
+    "gulf": 0,
+    "gulf_share": 0.0,
+    "m": 1.0,
+    "by": {},
+    "year": 2024
+   },
+   "MDG": {
+    "imp": 825108718,
+    "exp": 63232671,
+    "gulf": 156597260,
+    "gulf_share": 0.19,
+    "m": 0.923,
+    "by": {
+     "United Arab Emirates": 125390986,
+     "Kuwait": 13492646,
+     "Qatar": 10670962,
+     "Bahrain": 6910689,
+     "Iraq": 131921,
+     "Saudi Arabia": 56
+    },
+    "year": 2024
+   },
+   "MLI": {
+    "imp": 2049614326,
+    "exp": 103317259,
+    "gulf": 17545891,
+    "gulf_share": 0.009,
+    "m": 0.95,
+    "by": {
+     "United Arab Emirates": 17486350,
+     "Saudi Arabia": 59541
+    },
+    "year": 2024
+   },
+   "MRT": {
+    "imp": 1612345430,
+    "exp": 21583949,
+    "gulf": 692756825,
+    "gulf_share": 0.43,
+    "m": 0.987,
+    "by": {
+     "United Arab Emirates": 692756825
+    },
+    "year": 2024
+   },
+   "MUS": {
+    "imp": 1263853467,
+    "exp": 136260,
+    "gulf": 736880690,
+    "gulf_share": 0.583,
+    "m": 1.0,
+    "by": {
+     "United Arab Emirates": 707320687,
+     "Saudi Arabia": 27651065,
+     "Kuwait": 1908938
+    },
+    "year": 2024
+   },
+   "MEX": {
+    "imp": 30717931647,
+    "exp": 27599031067,
+    "gulf": 10506294,
+    "gulf_share": 0.0,
+    "m": 0.102,
+    "by": {
+     "Bahrain": 4362860,
+     "Saudi Arabia": 4273058,
+     "United Arab Emirates": 1870376
+    },
+    "year": 2024
+   },
+   "MNE": {
+    "imp": 338909186,
+    "exp": 31131221,
+    "gulf": 9950,
+    "gulf_share": 0.0,
+    "m": 0.908,
+    "by": {
+     "Kuwait": 9950
+    },
+    "year": 2024
+   },
+   "NER": {
+    "imp": 92466937,
+    "exp": 886732957,
+    "gulf": 227205,
+    "gulf_share": 0.002,
+    "m": -8.59,
+    "by": {
+     "United Arab Emirates": 123456,
+     "Saudi Arabia": 101806,
+     "Kuwait": 1943
+    },
+    "year": 2024
+   },
+   "NGA": {
+    "imp": 14654361713,
+    "exp": 37469381498,
+    "gulf": 1663255907,
+    "gulf_share": 0.113,
+    "m": -1.557,
+    "by": {
+     "United Arab Emirates": 994665436,
+     "Saudi Arabia": 668518419,
+     "Qatar": 44188,
+     "Kuwait": 27864
+    },
+    "year": 2024
+   },
+   "PAN": {
+    "imp": 2476647370,
+    "exp": 11393058,
+    "gulf": 818392,
+    "gulf_share": 0.0,
+    "m": 0.995,
+    "by": {
+     "United Arab Emirates": 755982,
+     "Saudi Arabia": 62410
+    },
+    "year": 2024
+   },
+   "STP": {
+    "imp": 49532400,
+    "exp": 0,
+    "gulf": 0,
+    "gulf_share": 0.0,
+    "m": 1.0,
+    "by": {},
+    "year": 2024
+   },
+   "SAU": {
+    "imp": 12691409848,
+    "exp": 218089637043,
+    "gulf": 2718022954,
+    "gulf_share": 0.214,
+    "m": -16.184,
+    "by": {
+     "United Arab Emirates": 1860003079,
+     "Bahrain": 607090780,
+     "Qatar": 138469357,
+     "Kuwait": 88838679,
+     "Iraq": 23621058
+    },
+    "year": 2024
+   },
+   "SYC": {
+    "imp": 303067678,
+    "exp": 218260157,
+    "gulf": 299962557,
+    "gulf_share": 0.99,
+    "m": 0.28,
+    "by": {
+     "United Arab Emirates": 299962557
+    },
+    "year": 2024
+   },
+   "SUR": {
+    "imp": 225125936,
+    "exp": 41667781,
+    "gulf": 1104121,
+    "gulf_share": 0.005,
+    "m": 0.815,
+    "by": {
+     "United Arab Emirates": 1104121
+    },
+    "year": 2024
+   },
+   "TGO": {
+    "imp": 210893322,
+    "exp": 114370960,
+    "gulf": 17587674,
+    "gulf_share": 0.083,
+    "m": 0.458,
+    "by": {
+     "Kuwait": 11447906,
+     "United Arab Emirates": 5655435,
+     "Saudi Arabia": 484333
+    },
+    "year": 2024
+   },
+   "TUR": {
+    "imp": 20926213912,
+    "exp": 14011188291,
+    "gulf": 1902329088,
+    "gulf_share": 0.091,
+    "m": 0.33,
+    "by": {
+     "Iraq": 1240295938,
+     "United Arab Emirates": 289007709,
+     "Saudi Arabia": 244562809,
+     "Kuwait": 66295455,
+     "Qatar": 48112816,
+     "Bahrain": 9461480,
+     "Iran": 4592881
+    },
+    "year": 2024
+   },
+   "MKD": {
+    "imp": 835364013,
+    "exp": 79977711,
+    "gulf": 17456636,
+    "gulf_share": 0.021,
+    "m": 0.904,
+    "by": {
+     "Saudi Arabia": 16961790,
+     "Iran": 206093,
+     "Kuwait": 145498,
+     "United Arab Emirates": 71092,
+     "Iraq": 63244,
+     "Qatar": 8918
+    },
+    "year": 2024
+   },
+   "CMR": {
+    "imp": 1875004756,
+    "exp": 1983933064,
+    "gulf": 227973260,
+    "gulf_share": 0.122,
+    "m": -0.058,
+    "by": {
+     "United Arab Emirates": 107652591,
+     "Saudi Arabia": 94347144,
+     "Kuwait": 25972984,
+     "Bahrain": 542
+    },
+    "year": 2023
+   },
+   "COM": {
+    "imp": 26948340,
+    "exp": 1385,
+    "gulf": 26765252,
+    "gulf_share": 0.993,
+    "m": 1.0,
+    "by": {
+     "United Arab Emirates": 26765252
+    },
+    "year": 2023
+   },
+   "DMA": {
+    "imp": 52260388,
+    "exp": 1659,
+    "gulf": 5197,
+    "gulf_share": 0.0,
+    "m": 1.0,
+    "by": {
+     "United Arab Emirates": 5197
+    },
+    "year": 2023
+   },
+   "ETH": {
+    "imp": 2423630265,
+    "exp": 91446,
+    "gulf": 2359427186,
+    "gulf_share": 0.974,
+    "m": 1.0,
+    "by": {
+     "Kuwait": 1326590787,
+     "Saudi Arabia": 938474330,
+     "United Arab Emirates": 94362069
+    },
+    "year": 2023
+   },
+   "GAB": {
+    "imp": 226431797,
+    "exp": 6843163180,
+    "gulf": 65182961,
+    "gulf_share": 0.288,
+    "m": -20.0,
+    "by": {
+     "Saudi Arabia": 52648214,
+     "United Arab Emirates": 12534747
+    },
+    "year": 2023
+   },
+   "LAO": {
+    "imp": 1260356652,
+    "exp": 82557,
+    "gulf": 140763,
+    "gulf_share": 0.0,
+    "m": 1.0,
+    "by": {
+     "United Arab Emirates": 140763
+    },
+    "year": 2023
+   },
+   "MNG": {
+    "imp": 1874277235,
+    "exp": 370614131,
+    "gulf": 1328098,
+    "gulf_share": 0.001,
+    "m": 0.802,
+    "by": {
+     "United Arab Emirates": 1319469,
+     "Qatar": 8352,
+     "Saudi Arabia": 278
+    },
+    "year": 2023
+   },
+   "VNM": {
+    "imp": 15799985042,
+    "exp": 2817798611,
+    "gulf": 5652487499,
+    "gulf_share": 0.358,
+    "m": 0.822,
+    "by": {
+     "Kuwait": 5600386954,
+     "United Arab Emirates": 50476885,
+     "Qatar": 1359141,
+     "Saudi Arabia": 264519
+    },
+    "year": 2023
+   },
+   "SWZ": {
+    "imp": 269407902,
+    "exp": 43811,
+    "gulf": 34474315,
+    "gulf_share": 0.128,
+    "m": 1.0,
+    "by": {
+     "United Arab Emirates": 14022259,
+     "Bahrain": 12712660,
+     "Kuwait": 4663685,
+     "Qatar": 2907876,
+     "Saudi Arabia": 167835
+    },
+    "year": 2023
+   },
+   "TJK": {
+    "imp": 63655834,
+    "exp": 23900,
+    "gulf": 1492602,
+    "gulf_share": 0.023,
+    "m": 1.0,
+    "by": {
+     "United Arab Emirates": 1446161,
+     "Iran": 46441
+    },
+    "year": 2023
+   },
+   "ARE": {
+    "imp": 19494157757,
+    "exp": 246441314684,
+    "gulf": 10369776080,
+    "gulf_share": 0.532,
+    "m": -11.642,
+    "by": {
+     "Iraq": 4152303669,
+     "Kuwait": 1845058129,
+     "Saudi Arabia": 1711546637,
+     "Qatar": 1564993168,
+     "Bahrain": 1091778160,
+     "Iran": 4096318
+    },
+    "year": 2023
+   },
+   "BTN": {
+    "imp": 175297016,
+    "exp": 169,
+    "gulf": 0,
+    "gulf_share": 0.0,
+    "m": 1.0,
+    "by": {},
+    "year": 2023
+   },
+   "BDI": {
+    "imp": 247220691,
+    "exp": 2340238,
+    "gulf": 230736514,
+    "gulf_share": 0.933,
+    "m": 0.991,
+    "by": {
+     "United Arab Emirates": 160217743,
+     "Saudi Arabia": 70518771
+    },
+    "year": 2023
+   },
+   "DJI": {
+    "imp": 346403750,
+    "exp": 18078294,
+    "gulf": 283418524,
+    "gulf_share": 0.818,
+    "m": 0.948,
+    "by": {
+     "Saudi Arabia": 249376292,
+     "United Arab Emirates": 34042232
+    },
+    "year": 2023
+   },
+   "PSE": {
+    "imp": 907533094,
+    "exp": 1290678,
+    "gulf": 3784157,
+    "gulf_share": 0.004,
+    "m": 0.999,
+    "by": {
+     "United Arab Emirates": 2110096,
+     "Saudi Arabia": 1483606,
+     "Kuwait": 190455
+    },
+    "year": 2023
+   },
+   "IRN": {
+    "imp": 266417681,
+    "exp": 52373652991,
+    "gulf": 146593257,
+    "gulf_share": 0.55,
+    "m": -20.0,
+    "by": {
+     "United Arab Emirates": 142858524,
+     "Iraq": 3519524,
+     "Kuwait": 215209
+    },
+    "year": 2023
+   },
+   "ABW": {
+    "imp": 89807996,
+    "exp": 65747,
+    "gulf": 0,
+    "gulf_share": 0.0,
+    "m": 0.999,
+    "by": {},
+    "year": 2023
+   },
+   "TLS": {
+    "imp": 187770397,
+    "exp": 106444744,
+    "gulf": 0,
+    "gulf_share": 0.0,
+    "m": 0.433,
+    "by": {},
+    "year": 2023
+   },
+   "VCT": {
+    "imp": 41233225,
+    "exp": 11251,
+    "gulf": 10169,
+    "gulf_share": 0.0,
+    "m": 1.0,
+    "by": {
+     "Saudi Arabia": 10169
+    },
+    "year": 2023
+   },
+   "TON": {
+    "imp": 49499184,
+    "exp": 1014,
+    "gulf": 0,
+    "gulf_share": 0.0,
+    "m": 1.0,
+    "by": {},
+    "year": 2023
+   }
+  }
  }
 }
