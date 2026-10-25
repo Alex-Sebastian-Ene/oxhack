@@ -1,5 +1,5 @@
 // Landing page: the night refinery, three headline numbers with their sources, sound, and "Open the valve",
-// which turns the wheel, sounds the horn and wipes through to the app. #app, #mandeb or #households in the address skips it.
+// which turns the wheel, sounds the horn and wipes through to the app. #app, #mandeb, #households or #models in the address skips it.
 window.HZIcons = {
   valve: ["...KKKKK...", ".KK..K..KK.", ".K...K...K.", "K....K....K", "K...KKK...K", "KKKKKGKKKKK", "K...KKK...K", "K....K....K", ".K...K...K.", ".KK..K..KK.", "...KKKKK..."],
   sound: ["....K......", "...KK...K..", "KKKKK.K..K.", "KKKKK..K.K.", "KKKKK..K.K.", "KKKKK.K..K.", "...KK...K..", "....K......"],
@@ -139,7 +139,7 @@ window.HZIcons = {
   L.addEventListener("touchmove", (e) => { if (ty != null && ty - e.touches[0].clientY > 60) { ty = null; openApp(); } }, { passive: true });
 
   window.HZLanding = { show: showLanding, open: openApp, soundUI };
-  if (location.hash === "#app" || location.hash === "#mandeb" || location.hash === "#households") { L.hidden = true; }
+  if (["#app", "#mandeb", "#households", "#models"].includes(location.hash)) { L.hidden = true; }
   else { document.body.classList.add("hz-landing-open"); window.HZScene.start(scene); setTimeout(() => $("hz-l-go").focus({ preventScroll: true }), 50); }
   if (L.hidden) window.HZScene.start(scene), window.HZScene.stop();
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", stats); else stats();

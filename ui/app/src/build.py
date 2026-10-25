@@ -12,7 +12,7 @@ check, node on PATH.
 import base64, pathlib, re, shutil, subprocess, sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-import copy_text, flags, gas, households, mandeb, world  # noqa: E402  (World view, flags, gas lines, households, Bab el-Mandeb, copy)
+import copy_text, flags, gas, households, mandeb, models, strait, world  # noqa: E402  (World view, flags, gas lines, households, Bab el-Mandeb, Strait layout, models, copy)
 
 HERE = pathlib.Path(__file__).resolve().parent
 APP = HERE.parent
@@ -40,6 +40,7 @@ SWAPS = [
     ('.range([d3.interpolateLab("#ffffff", h)(0.32), h, d3.hsl(h).darker(0.9).formatHex()])',
      '.range([d3.interpolateLab("#1a2439", h)(0.4), h, d3.hsl(h).brighter(0.75).formatHex()])', 1),
     ('if (!v) return "#eceff3";', 'if (!v) return "#243049";', 1),
+    ('const NODATA = "#eceff3";', 'const NODATA = "#243049";', 1),
     ('c.properties.name === st.sel ? "#aab5c2" : fillFor(c.properties.name)', 'c.properties.name === st.sel ? "#070b16" : fillFor(c.properties.name)', 1),
     ('(n === st.sel ? "#14202e" : "var(--bg)")', '(n === st.sel ? "#ffd27a" : "var(--bg)")', 1),
     # 3D globe: a night sea, light labels, a gold edge and ring for the chosen country
@@ -91,7 +92,7 @@ def mandeb_data() -> str:
 
 def main() -> None:
     page = SRC.read_text(encoding="utf-8")
-    for old, new, n in SWAPS + world.SWAPS + gas.SWAPS + mandeb.SWAPS + copy_text.SWAPS + flags.SWAPS:
+    for old, new, n in SWAPS + world.SWAPS + gas.SWAPS + mandeb.SWAPS + strait.SWAPS + copy_text.SWAPS + flags.SWAPS:
         got = page.count(old)
         if got != n:
             sys.exit(f"expected {n} of {old[:70]!r}, found {got}: the industry page changed, update SWAPS")
@@ -108,21 +109,23 @@ def main() -> None:
     body = page[page.index("<style>", page.index('<meta name="claude:viewport-fit-sides"')):]
     first_style_end = body.index("</style>") + len("</style>")
     read = lambda f: (HERE / f).read_text(encoding="utf-8")
+    models_data = models.script()   # the Models page, from Seb's notes; empty if no card could be read
     early = (
-        f"\n<style>\n{font_css()}\n{read('theme.css')}\n{gas.CSS}\n{mandeb.CSS}\n{households.CSS}\n{flags.CSS}\n{read('landing.css')}\n{read('ai.css')}\n{read('steps.css')}</style>\n"
-        f"{gas_data()}{mandeb_data()}{flags.script()}{households.script()}<script>\n{read('mandeb.js')}\n</script>\n"
+        f"\n<style>\n{font_css()}\n{read('theme.css')}\n{gas.CSS}\n{mandeb.CSS}\n{strait.CSS}\n{households.CSS}\n{flags.CSS}\n{read('landing.css')}\n{read('ai.css')}\n{read('steps.css')}\n{read('models.css')}\n{read('info.css')}</style>\n"
+        f"{gas_data()}{mandeb_data()}{flags.script()}{households.script()}{models_data}<script>\n{read('mandeb.js')}\n</script>\n"
         f"{read('landing.html')}"
         f"<script>\n{read('pixel.js')}\n</script>\n<script>\n{read('sound.js')}\n</script>\n<script>\n{read('landing.js')}\n</script>\n"
     )
     body = body[:first_style_end] + early + body[first_style_end:]
-    body += f"\n<script>\n{read('shell.js')}\n</script>\n<script>\n{read('ai.js')}\n</script>\n"
+    body += f"\n<script>\n{read('shell.js')}\n</script>\n<script>\n{read('ai.js')}\n</script>\n<script>\n{read('strait.js')}\n</script>\n"
     if households.data() is not None:   # the Households page, from Seb's notes (OXH-8)
         body += f"<script>\n{read('households.js')}\n</script>\n"
-    body += f"<script>\n{read('steps.js')}\n</script>\n"   # "The shock" steps open and close like an accordion
+    if models_data:   # the Models page: each model's results, tests and limits, read from notes/ and docs/
+        body += f"<script>\n{read('models.js')}\n</script>\n"
     fragment = '<title>Hormuz Flow</title>\n<meta name="claude:viewport-fit-sides" content="cover">\n' + body
 
     if shutil.which("node"):
-        for f in ("pixel.js", "sound.js", "landing.js", "shell.js", "ai.js", "mandeb.js", "households.js", "steps.js"):
+        for f in ("pixel.js", "sound.js", "landing.js", "shell.js", "ai.js", "strait.js", "mandeb.js", "households.js", "models.js"):
             r = subprocess.run(["node", "--check", str(HERE / f)], capture_output=True, text=True)
             if r.returncode:
                 sys.exit(f"{f}: {r.stderr.strip()}")
