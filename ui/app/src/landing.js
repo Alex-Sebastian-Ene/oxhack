@@ -44,11 +44,11 @@ window.HZIcons = {
     const sc = S.scenarios.aug2026 || Object.values(S.scenarios)[0], flow = sc.estimate.total.p50, lost = Math.round((1 - flow / 20) * 100);
     const i = PW.dates.length - 1, day = new Date(PW.dates[i] + "T00:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
     $("hz-l-tickets").innerHTML =
-      `<span class="hz-l-ticket"><b>${flow.toFixed(1)}</b><span>million barrels a day through Hormuz (est.)</span></span>` +
-      `<span class="hz-l-ticket"><b class="lost">${lost}%</b><span>of the pre-war 20 mb/d lost</span></span>` +
-      `<span class="hz-l-ticket"><b class="real">${PW.n_total[i]}</b><span>ships crossed on ${day} (real count)</span></span>`;
-    $("hz-l-src").textContent = `Flow: our estimator on the simulated "${sc.label}" scenario, against about 20 mb/d before the war (EIA, 2024 average). ` +
-      `Ship count: IMF PortWatch, cached, collected ${String(PW.collected_at).slice(0, 10)}. Nothing here is live.`;
+      `<span class="hz-l-ticket"><b>${flow.toFixed(1)}</b><span>mb/d getting through (est.)</span></span>` +
+      `<span class="hz-l-ticket"><b class="lost">${lost}%</b><span>of normal flow lost</span></span>` +
+      `<span class="hz-l-ticket"><b class="real">${PW.n_total[i]}</b><span>ships on ${day} (real)</span></span>`;
+    $("hz-l-src").textContent = `Flow: our estimate, simulated ${sc.label.split(",")[0]} scenario, vs 20 mb/d pre-war (EIA 2024). ` +
+      `Ships: IMF PortWatch, cached ${String(PW.collected_at).slice(0, 10)}. Not live.`;
     window.HZScene.setFlow(flow / 20);
   }
 

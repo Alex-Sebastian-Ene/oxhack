@@ -17,6 +17,8 @@ for the colours, with these layers added (`src/`):
 | `shell.js` | The pipe strip under the header (its oil runs at the share of Hormuz flow getting through), the home, sound and music keys |
 | `ai.js`, `ai.css` | Sources (every material and ingredient with its datasets) and country Profiles, each with an optional Gemini panel |
 | `build.py` | Puts it together; each colour swap in Eileen's page must match exactly, so the build stops if her page changes |
+| `world.py` | World view: Made and Shipped together (front layer fills, back layer stands as columns, faint arcs), flags in every tooltip |
+| `copy_text.py` | Shorter copy for the panels; same facts and sources |
 
 ```bash
 python ui/app/src/build.py                      # writes ui/app/index.html

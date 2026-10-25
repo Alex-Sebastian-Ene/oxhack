@@ -89,3 +89,16 @@ a.hz-src:hover { background: #163257; }
   .hz-ai-res { grid-template-columns: 1fr; } .hz-rk { grid-template-columns: minmax(0, 1fr) 90px; } .hz-rk-b { display: none; }
   .hz-row { grid-template-columns: 1fr; }
 }
+/* flags in rank order: gold 40%+ of world, silver 20%+, bronze 10%+ */
+.hz-fstrip { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 5px; }
+.hz-fs { display: inline-flex; padding: 1px; border: 2px solid transparent; }
+.hz-fs .flag { width: 20px; height: 14px; }
+.hz-fc { display: inline-flex; align-items: center; gap: 6px; padding: 3px 7px 3px 4px; background: var(--panel); border: 2px solid var(--ink); cursor: default; }
+.hz-fc .flag { width: 24px; height: 17px; }
+.hz-fc b { font: 400 17px/1 var(--mono); color: var(--oil-soft); }
+.hz-fs.gold, .hz-fc.gold { border-color: #ffcf3f; box-shadow: 0 0 0 1px #04060c, 0 0 8px rgba(255, 207, 63, .45); }
+.hz-fs.silver, .hz-fc.silver { border-color: #c9d3e3; }
+.hz-fs.bronze, .hz-fc.bronze { border-color: #c98a4b; }
+.hz-more { font: 400 16px var(--mono); color: var(--faint); }
+.hz-tierkey { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--faint); }
+.hz-tierkey i { display: inline-block; width: 10px; height: 10px; margin-right: 5px; vertical-align: -1px; border: 2px solid; }
