@@ -41,9 +41,26 @@ Interactions API (`POST /v1beta/interactions`).
 - **Written ahead.** `uv run experiments/country_brief.py bake` writes both panels ahead of time for
   every resource and every country, from the facts `node ui/app/src/ai_facts.cjs` reads off the built
   app at the 2026-closure setting. They go into `ui/app/data/ai-panels.json`, which the app build puts in the
-  page. Run on 25 Oct 2026 with a free-tier key: 14 of 16 resources and 4 of 174 countries were written
-  before the daily quotas (20 requests per model) ran out. `gemini-3.8-flash` was also returning "high
-  demand" errors, so most of them are from `gemini-3.5-flash`. Each panel names its model.
+  page. Each panel names the model that wrote it, as Gemini's response names it.
+- **The bake of 25 Oct 2026** (free-tier key) covers every panel: the 16 resources and the 175 countries
+  you can select on the World map, at the 2026-closure setting (Hong Kong, Malta, Mauritius, Northern Cyprus,
+  Somaliland, Antarctica and the French Southern Lands have no shape to click, so no summary).
+  - The free tier allows 20 requests a day for each full-size flash model; `gemini-3.5-flash-lite` allowed 15 a
+    minute and was not used up by about 200. Requests to `gemini-3.5-flash` counted against
+    `gemini-3.6-flash`'s quota, and `gemini-3.7-flash` and `gemini-flash-latest` against `gemini-3.8-flash`'s.
+    The pro models have no free quota (limit 0). `gemini-3.8-flash` also returned "high demand" errors and
+    120 s timeouts.
+  - Resources: all 16 from `gemini-3.5-flash`, written before `bake` recorded the model that answered, so they
+    name the model asked for (Google may have served them from `gemini-3.6-flash`, whose quota they used).
+  - Countries: main's new country data (fuel pass-through, partner-reported oil trade and IMF cost of living,
+    merged the same morning) changed every country's facts, so all 175 were asked again after the flash
+    models' quotas had run out: 145 are from `gemini-3.5-flash-lite` and 30 from `gemini-3.1-flash-lite`. The 28
+    that `gemini-3.5-flash-lite` answered too thinly (two bullets, or a doubled dash) were dropped and asked
+    again of `gemini-3.1-flash-lite`, as were Lebanon and Suriname (each has one fact over 400 characters, which
+    `bake` failed to match until it compared the facts as cut). To replace them with a stronger model's answers, delete the entries from
+    `ai-panels.json` and run `bake` with that `GEMINI_MODEL` on a day its quota is free.
+  - Checked: every `[n]` points to a fact that exists; spot checks of the US, Netherlands and Iran summaries against
+    their facts found no wrong numbers. Not checked line by line by the team, and each panel says so.
 
 ## Why an LLM, and why Gemini
 
