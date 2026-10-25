@@ -25,10 +25,10 @@ training months only:
     (every step hits the tree-depth limit, ~8 min a fold on 2 cores); run it on Iridis.
   - `--vol own`: psi[k] times each series' own recent volatility (log EWMA of its past |changes|,
     standardised). Observation-driven, like GARCH, so there is nothing latent to sample.
-- Supply-disruption regime (`fit(..., regime=True)`, the chain's `bayes_regime` member): in months
-  with D[s] = 1 (REGIME: 2022-03..2022-12 and 2026-03..2026-12, the months of cost_of_living.py's
-  SUPPLY) the oil term is multiplied by (1 + kappa[k]), kappa pooled by target group, and the scale
-  by exp(zeta[k]). A fit whose training months hold no disruption leaves both out, so it is the
+- Supply-disruption regime (`fit(..., regime="all")`, the chain's `bayes_regime` member; "cost" puts
+  the terms on the cost group only, `bayes_regime_cost`): in months with D[s] = 1 (REGIME:
+  2022-03..2022-12 and 2026-03..2026-12, the months of cost_of_living.py's SUPPLY) the oil term is
+  multiplied by (1 + kappa[k]), kappa pooled by target group, and the scale by exp(zeta[k]). A fit whose training months hold no disruption leaves both out, so it is the
   model without them. After the origin D is the calendar (what-if), D at the origin carried on
   (forecast), or set by the flow scenario (regime_scenario).
 
@@ -222,7 +222,8 @@ def market_inputs(data: dict) -> dict:
 
 # --- model -----------------------------------------------------------------------------------
 
-def model(Xp, Xn, v, yprev, y, u, D, lagmask, cluster, n_clusters, floor, vgroup, n_vgroups, own, own_us, regime=False):
+def model(Xp, Xn, v, yprev, y, u, D, lagmask, cluster, n_clusters, floor, vgroup, n_vgroups, own, own_us, regime=False,
+          kmask=None):
     S, K = y.shape
     mu = numpyro.sample("mu", dist.Normal(0, 0.5).expand([n_clusters, LAGS]).to_event(2))
     tau = numpyro.sample("tau", dist.HalfNormal(0.2).expand([n_clusters, 1]).to_event(2))
@@ -247,12 +248,13 @@ def model(Xp, Xn, v, yprev, y, u, D, lagmask, cluster, n_clusters, floor, vgroup
         psi = numpyro.deterministic("psi", OWN_MAX * own_us * jnp.tanh(numpyro.sample("psi_raw", dist.Normal(0, 1).expand([K]).to_event(1))))
         logs = logs + psi * u
     if regime:  # supply disruption (D = 1): extra pass-through pooled by target group, and a wider band
+        # kmask (regime_mask) is 1 on the series that take the terms, 0 elsewhere
         mu_k = numpyro.sample("mu_kappa", dist.Normal(0, 1).expand([len(GROUPS)]).to_event(1))
         tau_k = numpyro.sample("tau_kappa", dist.HalfNormal(0.5))
         kz = numpyro.sample("kz", dist.Normal(0, 1).expand([K]).to_event(1))
-        kappa = numpyro.deterministic("kappa", mu_k[vgroup] + tau_k * kz)  # non-centred pooling
+        kappa = numpyro.deterministic("kappa", (mu_k[vgroup] + tau_k * kz) * kmask)  # non-centred pooling
         zeta = numpyro.sample("zeta", dist.Normal(0, 0.5).expand([K]).to_event(1))
-        logs = logs + zeta * D[:, None]
+        logs = logs + zeta * kmask * D[:, None]
     logs = jnp.clip(logs, *LOG_SCALE_CLIP)
     ok = jnp.isfinite(y) & jnp.isfinite(yprev)
     if regime:
@@ -271,14 +273,24 @@ SITES = ("mu", "tau", "bz", "a", "rho_raw", "alpha_raw", "sigma_raw", "phi", "nu
          "mu_kappa", "tau_kappa", "kz", "zeta")
 
 
-def fit(data: dict, last_month: int, seed: int = 0, vol: str = "oil", regime: bool = False) -> tuple[dict, Stats, dict, dict]:
+def regime_mask(info: dict, kind: str | None) -> np.ndarray:
+    """Which series take the supply-disruption terms: all of them ("all"), the cost group only ("cost"), none."""
+    groups = np.array(info["groups"])
+    return np.ones(len(groups)) if kind == "all" else (groups == "cost").astype(float) if kind == "cost" else np.zeros(len(groups))
+
+
+def fit(data: dict, last_month: int, seed: int = 0, vol: str = "oil", regime: str | None = None) -> tuple[dict, Stats, dict, dict]:
     """NUTS on months 13..last_month. Returns posterior draws (KEEP), stats, series info, diagnostics.
-    regime: add the supply-disruption terms, if the training months hold a disruption (else the fit is
-    the same as without them: nothing would identify kappa and zeta but their priors)."""
+    regime: add the supply-disruption terms on every series ("all") or on the cost group only ("cost"),
+    if the training months hold a disruption (else the fit is the same as without them: nothing would
+    identify kappa and zeta but their priors)."""
     info = series_info(data)
     st = Stats(data, last_month)
     d = design(data, st, last_month)
-    regime = regime and bool(d["D"].any())
+    regime = "all" if regime is True else regime
+    assert regime in (None, False, "all", "cost"), f"regime {regime!r}: use 'all' or 'cost'"
+    regime = regime if regime and d["D"].any() else None
+    kmask = regime_mask(info, regime)
     lagmask = (np.arange(LAGS)[None, :] <= info["lags"][:, None]).astype(float)
     warm, samp = (40, 40) if QUICK else (WARMUP, SAMPLES)
     mcmc = MCMC(NUTS(model, target_accept_prob=0.9, max_tree_depth=TREE_DEPTH), num_warmup=warm,
@@ -288,7 +300,8 @@ def fit(data: dict, last_month: int, seed: int = 0, vol: str = "oil", regime: bo
              **{k: jnp.asarray(v) for k, v in d.items()}, lagmask=jnp.asarray(lagmask),
              cluster=jnp.asarray(info["cluster"]), n_clusters=len(info["clusters"]),
              floor=jnp.asarray(info["floor"]), vgroup=jnp.asarray(info["vgroup"]),
-             n_vgroups=len(GROUPS) if vol == "cdv" else 0, own=vol == "own", own_us=jnp.asarray(st.us), regime=regime)
+             n_vgroups=len(GROUPS) if vol == "cdv" else 0, own=vol == "own", own_us=jnp.asarray(st.us), regime=bool(regime),
+             kmask=jnp.asarray(kmask))
     grouped = mcmc.get_samples(group_by_chain=True)
     # every sampled site, hyperparameters included (they mix slowest in a non-centred hierarchy)
     summ = numpyro.diagnostics.summary({k: np.asarray(grouped[k]) for k in SITES if k in grouped})
@@ -298,9 +311,11 @@ def fit(data: dict, last_month: int, seed: int = 0, vol: str = "oil", regime: bo
     diag = {"seconds": round(time.time() - t0, 1), "chains": CHAINS, "warmup": warm, "samples": samp, "vol": vol,
             "divergences": int(np.sum(extra["diverging"])), "max_r_hat": round(rhat, 3), "min_ess": round(ess, 1),
             "tree_depth_hits": int(np.sum(np.asarray(extra["num_steps"]) >= 2 ** TREE_DEPTH - 1)),
-            "months": int(np.isfinite(d["y"]).any(1).sum()), "regime": regime, "regime_months": int(d["D"].sum())}
+            "months": int(np.isfinite(d["y"]).any(1).sum()), "regime": regime or False, "regime_months": int(d["D"].sum())}
     samples = mcmc.get_samples()
     post = {k: np.asarray(v) for k, v in samples.items() if k in KEEP}
+    if "zeta" in post:  # as the model uses it: zero where the terms are masked out
+        post["zeta"] = post["zeta"] * kmask
     if "h" in samples:
         post["h_last"] = np.asarray(samples["h"])[:, -1, :]  # drifting volatility at the last training month
     n = len(post["a"])

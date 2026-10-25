@@ -159,6 +159,20 @@ def test_regime_after_the_origin_by_mode():
     assert mb.regime_scenario(data, np.array([dec25]), 82.0).min() == 1
 
 
+def test_cost_only_regime_masks_every_other_group():
+    info = {"groups": ["inflation", "unemployment", "rate", "cost", "cost"]}
+    assert mb.regime_mask(info, "all").tolist() == [1, 1, 1, 1, 1]
+    assert mb.regime_mask(info, "cost").tolist() == [0, 0, 0, 1, 1]
+    assert mb.regime_mask(info, None).tolist() == [0, 0, 0, 0, 0]
+    # a masked series: kappa 0 and zeta 0 leave it exactly as without the terms
+    post, st, info2, data = regime_toy(kappa=0.0, zeta=0.0, b0=1.0)
+    fut = np.zeros((1, 1, 12))
+    fut[0, 0, 0] = 0.1
+    on = mb.simulate(post, st, info2, data, np.array([40]), fut, np.random.default_rng(0), noise=False, regime=np.ones((1, 12)))
+    del post["kappa"], post["zeta"]
+    assert np.array_equal(on, mb.simulate(post, st, info2, data, np.array([40]), fut, np.random.default_rng(0), noise=False))
+
+
 def test_regime_months_are_the_cost_of_living_models():
     col = pytest.importorskip("cost_of_living")
     assert [(a, b) for a, b, _ in mb.REGIME] == [(a, b) for a, b, _ in col.SUPPLY]

@@ -22,6 +22,9 @@ Members (fixed before scoring):
                 (`fold J bayes_regime`, CHAIN_MEMBERS). D after the
                 origin: the calendar in whatif, D at the origin carried on in levy and bootstrap,
                 set by the flow scenario in the replay (REGIME_LOST points or more)
+    bayes_regime_cost  the same terms on the cost group (the ind_* series) only; inflation,
+                unemployment and rates as in bayes_own. Post hoc: chosen after seeing the 2026
+                replay of bayes_regime, so only later 2026 outcomes test it
 
 Oil modes, the same draws for every member (draw n always uses oil path n, so oil and model
 uncertainty travel together):
@@ -41,7 +44,9 @@ folds before j (equal weights for fold 0). Equal weights are reported as the rob
     CHAIN_MARGINS=1 uv run experiments/macro_chain.py report    # with the margin member (after `fold J margins`)
     uv run experiments/macro_chain.py regime                # bayes_regime against bayes_own: folds and replay
                                                             # (after `fold J bayes_own bayes_regime` and
-                                                            # CHAIN_MEMBERS=bayes_own,bayes_regime,global_lin,global CHAIN_TAG=regime replay)
+                                                            # CHAIN_MEMBERS=bayes_own,bayes_regime,global_lin,global CHAIN_TAG=regime replay;
+                                                            # the cost-only member: `fold J bayes_regime_cost` and
+                                                            # CHAIN_MEMBERS=bayes_regime_cost CHAIN_TAG=regimecost replay)
 """
 
 from __future__ import annotations
@@ -65,9 +70,11 @@ import oil_paths as op
 
 RUNS, NOTES = mb.RUNS, mb.NOTES
 MEMBERS = ("bayes_own", "global_lin", "global", "global_tcn", "xattn")
-OPTIONAL = ("bayes_regime",)  # fitted and reported only when named
+REGIME_KIND = {"bayes_regime": "all", "bayes_regime_cost": "cost"}  # which series take the disruption terms
+OPTIONAL = tuple(REGIME_KIND)  # fitted and reported only when named
 RECOMMENDED = ("bayes_own", "global_lin", "global")  # the ensemble the earlier runs chose (docs/chain.md)
 REGIME_REC = ("bayes_regime", "global_lin", "global")  # RECOMMENDED with bayes_regime in place of bayes_own
+COST_REC = ("bayes_regime_cost", "global_lin", "global")  # and with the cost-only member
 MODES = ("whatif", "levy", "bootstrap")
 JOINT_MODES = ("whatif", "levy")  # modes scored jointly, with independent and copula shocks
 STEP = 0.25
@@ -125,8 +132,8 @@ def member_simulator(data: dict, info: dict, st: mb.Stats, last: int, t: np.ndar
                      bayes_seed: int):
     """Fit one member on months 13..last; return (simulate(future, rng, regime=None) -> [N, origins, outputs],
     extra info). regime: D in the 12 months after each origin [origins, 12], used by bayes_regime only."""
-    if member in ("bayes_own", "bayes_regime"):  # the same seed: without a disruption in training they are one fit
-        post, st_b, info_b, diag = mb.fit(data, last, seed=bayes_seed, vol="own", regime=member == "bayes_regime")
+    if member in ("bayes_own", *REGIME_KIND):  # the same seed: without a disruption in training they are one fit
+        post, st_b, info_b, diag = mb.fit(data, last, seed=bayes_seed, vol="own", regime=REGIME_KIND.get(member))
         return (lambda fut, rng, regime=None: mb.simulate(post, st_b, info_b, data, t, fut, rng, regime=regime)), \
             {"diagnostics": diag} | ({"kappa": quantiles(post["kappa"]), "zeta": quantiles(post["zeta"])} if "kappa" in post else {})
     if member == "xattn":
@@ -585,6 +592,18 @@ SHOWN = ("us_cpi", "uk_cpi", "ea_cpi", "us_rate", "ind_gasdesw", "ind_djfuelusgu
          "ind_pcu325311325311")
 
 
+def replay_actual(data: dict, m: int) -> dict:
+    """What happened after origin month m: each output's change over its h months, where every one of
+    those months is published (else NaN)."""
+    actual = {}
+    for nm in data["names"]:
+        key, h = nm.split("@")
+        k, h = data["target_keys"].index(key), int(h)
+        seg = data["dM"][m + 1:m + 1 + h, k]
+        actual[nm] = float(seg.sum()) if len(seg) == h and np.isfinite(seg).all() else np.nan
+    return actual
+
+
 def replay(origin: str = REPLAY_ORIGIN) -> None:
     """Fit every member on months before the origin, simulate from it with (a) the Brent path that
     happened, (b) GARCH-CGMY paths alone and (c) GARCH-CGMY paths plus the flow scenario, mix them
@@ -640,14 +659,7 @@ def replay(origin: str = REPLAY_ORIGIN) -> None:
                                       n=mb.DRAWS)[:, 0]
         ens[mode] = with_margins(np.stack(parts), D[mode], equal, order, fuel_columns(names))  # [N, outputs]
     ens_cop = {mode: with_margins(np.stack(parts), D[mode], equal, order, fuel_columns(names)) for mode, parts in S_cop.items()}
-    # what happened: the change over h months after the origin, where every month is published
-    dM = data["dM"]
-    actual = {}
-    for c, nm in enumerate(names):
-        key, h = nm.split("@")
-        k, h = data["target_keys"].index(key), int(h)
-        seg = dM[m + 1:m + 1 + h, k]
-        actual[nm] = float(seg.sum()) if len(seg) == h and np.isfinite(seg).all() else np.nan
+    actual = replay_actual(data, m)
 
     gen = datetime.now(UTC).date().isoformat()
     lines = [f"# Replaying the 2026 Hormuz closure from {origin}", "",
@@ -738,6 +750,8 @@ KEEP_T = 2.0  # a group is worse if candidate minus incumbent has a Newey-West t
 # What was decided once the results were in (the rule's outcome alone did not settle it)
 REGIME_DECISION = ("Not adopted (2026-10-25): the recommended ensemble stays `rec`. The rule's pass is narrow and comes "
                    "from the mixture's spread; inflation, the app's headline, is worse in the scenario run.")
+REGIME_COST_DECISION = ("not adopted: `rec` stays recommended until the recheck on 2026 outcomes published after the "
+                        "replay (the 12-month horizon).")
 REGIME_MODES = ("whatif", "lost_0", "lost_82")  # replay modes scored; lost_82 (D from the scenario) decides
 
 
@@ -748,14 +762,18 @@ def regime_scores(M: np.ndarray, y: np.ndarray) -> dict:
             "lo": np.quantile(M, 0.05, 0), "hi": np.quantile(M, 0.95, 0)}
 
 
-def regime_models(get, order: np.ndarray) -> dict:
-    """The four models compared, from get(member) -> draws [N, ...]: each Bayesian member alone, and
-    the recommended ensemble with each of them (equal weights, the same draw order, so draw n comes
-    from the Bayesian member in both ensembles or in neither)."""
+def regime_models(get, order: np.ndarray, cost: bool = False) -> dict:
+    """The models compared, from get(member) -> draws [N, ...]: each Bayesian member alone, and the
+    recommended ensemble with each of them (equal weights, the same draw order, so draw n comes from
+    the Bayesian member in every ensemble or in none). cost: also the cost-only member and its ensemble."""
     w = np.full(len(RECOMMENDED), 1 / len(RECOMMENDED))
-    return {"bayes_own": get("bayes_own"), "bayes_regime": get("bayes_regime"),
-            "rec": mixture(np.stack([get(m) for m in RECOMMENDED]), w, order),
-            "rec_regime": mixture(np.stack([get(m) for m in REGIME_REC]), w, order)}
+    out = {"bayes_own": get("bayes_own"), "bayes_regime": get("bayes_regime"),
+           "rec": mixture(np.stack([get(m) for m in RECOMMENDED]), w, order),
+           "rec_regime": mixture(np.stack([get(m) for m in REGIME_REC]), w, order)}
+    if cost:
+        out |= {"bayes_regime_cost": get("bayes_regime_cost"),
+                "rec_regime_cost": mixture(np.stack([get(m) for m in COST_REC]), w, order)}
+    return out
 
 
 def regime_verdict(t_folds: dict, replay: dict) -> tuple[bool, list[str]]:
@@ -780,15 +798,19 @@ def regime_report() -> None:
     missing += [f"replay-regime-{m}.npz" for m in need if not (RUNS / f"replay-regime-{m}.npz").exists()]
     if missing:
         raise SystemExit(f"missing in runs/macro: {', '.join(missing)}")
+    # the cost-only member, if its runs are there (folds tagged like the rest; its own replay run, tag regimecost)
+    cm = "bayes_regime_cost"
+    cost = all((RUNS / f"{stem(j, cm)}.npz").exists() for j in range(mn.FOLDS)) and (RUNS / f"replay-regimecost-{cm}.npz").exists()
+    load_as = need + [cm] * cost
     data = mn.make_dataset(mn.V1_BLOCKS)
     clim = [np.array(mb.load(f"fold-{j}.json")["models"]["climatology"]["crps"], float) for j in range(mn.FOLDS)]
     scale = np.nanmean(np.vstack(clim), 0)
-    acc, joint, hot, diags, fold_of = {}, {}, {mode: [] for mode in MODES}, [], []
+    acc, joint, hot, diags, diags_cost, fold_of = {}, {}, {mode: [] for mode in MODES}, [], [], []
     for j in range(mn.FOLDS):
-        npz = {m: np.load(RUNS / f"{stem(j, m)}.npz") for m in need}
-        summ = {m: json.loads((RUNS / f"{stem(j, m)}.json").read_text()) for m in need}
+        npz = {m: np.load(RUNS / f"{stem(j, m)}.npz") for m in load_as}
+        summ = {m: json.loads((RUNS / f"{stem(j, m)}.json").read_text()) for m in load_as}
         ref = summ["bayes_own"]
-        for m in need:
+        for m in load_as:
             assert summ[m]["test_dates"] == ref["test_dates"] and summ[m]["names"] == ref["names"], f"fold {j} {m}: origins differ"
         _, test = mn.fold_indices(data["dates"], j)
         y, t = np.array(ref["y"], float), data["t"][test]
@@ -797,14 +819,16 @@ def regime_report() -> None:
         order = np.random.default_rng(1234 + j).permutation(npz["bayes_own"]["whatif"].shape[0])
         for mode in MODES:
             hot[mode].append(mode_regime(data, t, mode).any(1))
-            for name, M in regime_models(lambda m: npz[m][mode], order).items():
+            for name, M in regime_models(lambda m: npz[m][mode], order, cost).items():
                 for k, v in regime_scores(M, y).items():
                     acc.setdefault((mode, name), {}).setdefault(k, []).append(v)
         H = np.array([int(n.split("@")[1]) for n in ref["names"]])
         for mode in JOINT_MODES:
-            for name, M in regime_models(lambda m: npz[m][f"{mode}_cop"], order).items():
+            for name, M in regime_models(lambda m: npz[m][f"{mode}_cop"], order, cost).items():
                 joint.setdefault((mode, name), []).append(cp.joint_scores(M.astype(float), y, scale, H, mn.HORIZONS)[0])
         diags.append(summ["bayes_regime"]["diagnostics"])
+        if cost:
+            diags_cost.append(summ[cm]["diagnostics"])
     rows = {k: {kk: np.vstack(vv) for kk, vv in v.items()} for k, v in acc.items()}
     hot = {mode: np.concatenate(v) for mode, v in hot.items()}
     fold_of = np.concatenate(fold_of)
@@ -839,17 +863,29 @@ def regime_report() -> None:
     t_folds = {(mode, g): mb.nw_t(per_origin(rows[(mode, "rec_regime")]["crps"], rows[(mode, "rec")]["crps"], cols(g)))
                for mode in ("whatif", "levy") for g in mb.GROUPS}
 
-    # the replay
+    # the replay. Outcomes come from the current data, so a rerun after a refresh scores the months
+    # published since (the draws stay those of the fits to the origin)
+    import pandas as pd
+
     meta = json.loads((RUNS / "replay-regime.json").read_text())
     rep = {m: np.load(RUNS / f"replay-regime-{m}.npz") for m in need}
     assert meta["names"] == names, "replay outputs differ from the folds'"
-    actual = np.array([np.nan if a is None else a for a in meta["actual"]], float)
+    meta_cost = {}
+    if cost:
+        meta_cost = json.loads((RUNS / "replay-regimecost.json").read_text())
+        assert (meta_cost["origin"], meta_cost["fitted_to"], meta_cost["names"]) == (meta["origin"], meta["fitted_to"], names), \
+            "the cost-only replay was run from another origin or fit"
+        rep[cm] = np.load(RUNS / f"replay-regimecost-{cm}.npz")
+    m0 = int(mb.month_index(data).get_loc(pd.Timestamp(meta["origin"])))
+    got = replay_actual(data, m0)
+    actual = np.array([got[nm] for nm in names], float)
     sd = np.array(meta["train_sd"], float)
     pub = np.isfinite(actual) & (H <= 6)
+    late = np.isfinite(actual) & (H >= 7)  # published only after the replay's run: the recheck
     order = np.random.default_rng(1234).permutation(rep["bayes_own"]["whatif"].shape[0])  # the replay's own order
     rscore = {}
     for mode in REGIME_MODES:
-        for name, M in regime_models(lambda m: rep[m][mode], order).items():
+        for name, M in regime_models(lambda m: rep[m][mode], order, cost).items():
             r = regime_scores(M, actual)
             rscore[(mode, name)] = {"crps": r["crps"] / sd, "inside": (actual >= r["lo"]) & (actual <= r["hi"])}
     deciding = {name: (float(np.mean(rscore[("lost_82", name)]["crps"][pub])), float(np.mean(rscore[("lost_82", name)]["inside"][pub])))
@@ -873,6 +909,82 @@ def regime_report() -> None:
     checks_pass = all(ok for _, ok in checks)
     alone = {mode: [float(np.mean(rscore[(mode, m)][w][pub])) for m in ("bayes_own", "bayes_regime", "rec", "rec_regime")
                     for w in ("crps", "inside")] for mode in ("whatif", "lost_82")}
+
+    def mean_at(mode, name, mask, what="crps"):
+        return float(np.mean(rscore[(mode, name)][what][mask])) if mask.any() else np.nan
+
+    def cost_section() -> tuple[str, list[str]]:
+        """The cost-only variant: its verdict line and its section."""
+        t_cost = {(mode, g): mb.nw_t(per_origin(rows[(mode, "rec_regime_cost")]["crps"], rows[(mode, "rec")]["crps"], cols(g)))
+                  for mode in ("whatif", "levy") for g in mb.GROUPS}
+        keep_c, why_c = regime_verdict(t_cost, {"rec": deciding["rec"], "rec_regime": (mean_at("lost_82", "rec_regime_cost", pub),
+                                                                                       mean_at("lost_82", "rec_regime_cost", pub, "inside"))})
+        line = ("**Cost-only variant, post hoc (chosen after seeing this replay):** "
+                + ("passes the same rule on these numbers" if keep_c else "fails the same rule (" + "; ".join(why_c) + ")")
+                + f"; {REGIME_COST_DECISION} {int(late.sum())} replay outcomes after horizon 6 are published so far.")
+        on_c = [j for j, d in enumerate(diags_cost) if d.get("regime")]
+        o = ["", "## The cost-only variant (post hoc)", "",
+             "**Post hoc: chosen after seeing the 2026 replay above.** `bayes_regime_cost` puts κ and ζ on the cost group (the "
+             "ind_* series) only; inflation, unemployment and rates are modelled as in bayes_own, so their draws differ from "
+             f"bayes_own's only by the Monte Carlo noise of a separate MCMC run (the terms fitted on fold(s) {on_c}). "
+             f"`rec_regime_cost` = equal weights on ({', '.join(COST_REC)}). Its replay scores at horizons 1–6 are not a "
+             "test, since the variant was picked from them; the test is the outcomes published after the replay was run "
+             "(the 12-month horizon, complete from 2027-02).", "", line, ""]
+        for mode in MODES:
+            o += [f"**Folds, {mode}:** scaled CRPS difference (Newey–West t, or mean and count where too few origins) and "
+                  "coverage.", "", "| Target | bayes_regime_cost − bayes_own | rec_regime_cost − rec | fitted folds | "
+                  "D = 1 origins | rec cover | rec_regime_cost cover |", "|---|---|---|---|---|---|---|"]
+            for g in mb.GROUPS:
+                c = cols(g)
+                A, B = rows[(mode, "rec_regime_cost")]["crps"], rows[(mode, "rec")]["crps"]
+                o.append(f"| {g} | {cell(rows[(mode, cm)]['crps'], rows[(mode, 'bayes_own')]['crps'], c)} | {cell(A, B, c)} | "
+                         f"{cell(A, B, c, in_regime_folds)} | {cell(A, B, c, hot[mode] & in_regime_folds)} | "
+                         f"{cover(rows[(mode, 'rec')], c):.0%} | {cover(rows[(mode, 'rec_regime_cost')], c):.0%} |")
+            o.append("")
+        o += ["**Folds, joint forecast** (energy score, copula shocks): " + "; ".join(
+            f"{mode} rec {np.nanmean(np.vstack(joint[(mode, 'rec')])):.3f}, rec_regime_cost "
+            f"{np.nanmean(np.vstack(joint[(mode, 'rec_regime_cost')])):.3f}" for mode in JOINT_MODES) + ".", "",
+              "**The replay**, scored apart on horizons 1–6 (in sample for the choice) and horizon 12 (published after the "
+              "run: the recheck). Mean scaled CRPS and coverage.", "",
+              "| Mode | h 1–6: rec | h 1–6: rec_regime_cost | rec cover | rec_regime_cost cover | h ≥ 7 published | "
+              "h ≥ 7: rec | h ≥ 7: rec_regime_cost |", "|---|---|---|---|---|---|---|---|"]
+        for mode in REGIME_MODES:
+            f7 = (lambda nm: f"{mean_at(mode, nm, late):.3f}" if late.any() else "–")  # noqa: E731
+            o.append(f"| {mode} | {mean_at(mode, 'rec', pub):.3f} | {mean_at(mode, 'rec_regime_cost', pub):.3f} | "
+                     f"{mean_at(mode, 'rec', pub, 'inside'):.0%} | {mean_at(mode, 'rec_regime_cost', pub, 'inside'):.0%} | "
+                     f"{int(late.sum())} | {f7('rec')} | {f7('rec_regime_cost')} |")
+        o += ["", "By target group, horizons 1–6:", "",
+              "| Mode | Target | rec CRPS | rec_regime_cost CRPS | difference | rec cover | rec_regime_cost cover |",
+              "|---|---|---|---|---|---|---|"]
+        for mode in ("whatif", "lost_82"):
+            for g in mb.GROUPS:
+                a, b = rgroup(mode, "rec", g), rgroup(mode, "rec_regime_cost", g)
+                o.append(f"| {mode} | {g} | {a:.3f} | {b:.3f} | {b - a:+.3f} | {rgroup(mode, 'rec', g, 'inside'):.0%} | "
+                         f"{rgroup(mode, 'rec_regime_cost', g, 'inside'):.0%} |")
+        fc, fa = meta_cost.get("fits", {}).get(cm, {}), meta["fits"].get("bayes_regime", {})
+        if fc.get("kappa"):
+            keys = data["target_keys"]
+            o += ["", f"**Cost multipliers, replay fit** (to {meta['fitted_to']}, learned from 2022 only), the cost-only member "
+                  "against bayes_regime: 1 + κ and exp(ζ), posterior mean and 90% interval.", "",
+                  "| Series | cost-only 1 + κ | cost-only exp(ζ) | bayes_regime 1 + κ | bayes_regime exp(ζ) |", "|---|---|---|---|---|"]
+
+            def pk(f, i):
+                return f"{1 + f['kappa']['mean'][i]:.2f} ({1 + f['kappa']['q05'][i]:.2f}..{1 + f['kappa']['q95'][i]:.2f})"
+
+            def pz(f, i):
+                return f"{np.exp(f['zeta']['mean'][i]):.2f} ({np.exp(f['zeta']['q05'][i]):.2f}..{np.exp(f['zeta']['q95'][i]):.2f})"
+            for i, key in enumerate(keys):
+                if groups[names.index(f"{key}@1")] == "cost":
+                    o.append(f"| {key} | {pk(fc, i)} | {pz(fc, i)} | {pk(fa, i) if fa.get('kappa') else '–'} | "
+                             f"{pz(fa, i) if fa.get('zeta') else '–'} |")
+        o += ["", "**Sampler health (bayes_regime_cost):** " + "; ".join(
+            f"fold {j} {'on' if d.get('regime') else 'off'} R-hat {d['max_r_hat']} ESS {d['min_ess']} div {d['divergences']}"
+            for j, d in enumerate(diags_cost))
+              + (f"; replay {'on' if fc['diagnostics'].get('regime') else 'off'} R-hat {fc['diagnostics']['max_r_hat']} "
+                 f"ESS {fc['diagnostics']['min_ess']} div {fc['diagnostics']['divergences']}" if fc.get("diagnostics") else "") + "."]
+        return line, o
+
+    cost_line, cost_lines = cost_section() if cost else ("", [])
 
     models = ("bayes_own", "bayes_regime", "rec", "rec_regime")
     gen = datetime.now(UTC).date().isoformat()
@@ -911,6 +1023,8 @@ def regime_report() -> None:
            f"{int((hot['whatif'] & in_regime_folds).sum())} what-if origins and "
            f"{int((hot['levy'] & in_regime_folds).sum())} forecast origins there have D = 1 ahead. The replay is one "
            "origin. Both are thin evidence either way: κ and ζ are learned from the 10 months of 2022 alone."]
+    if cost_line:
+        out += ["", cost_line]
     for mode in MODES:
         out += ["", f"## Folds, {mode}", "",
                 f"Origins whose 12 months ahead include D = 1: {int(hot[mode].sum())} of {len(hot[mode])}.", "",
@@ -970,6 +1084,7 @@ def regime_report() -> None:
         for i, key in enumerate(keys):
             out.append(f"| {key} | {1 + k['mean'][i]:.2f} ({1 + k['q05'][i]:.2f}..{1 + k['q95'][i]:.2f}) | "
                        f"{np.exp(z['mean'][i]):.2f} ({np.exp(z['q05'][i]):.2f}..{np.exp(z['q95'][i]):.2f}) |")
+    out += cost_lines
     out += ["", "## Sampler health (bayes_regime)", "", "| Fit | Regime | Disruption months | Max R-hat | Min ESS | Divergences |",
             "|---|---|---|---|---|---|"]
     for j, d in enumerate(diags):
