@@ -125,11 +125,14 @@ sub("    const list = [...names].filter((n) => C[n]).map((n) => [n, calc(n).scor
 sub('<span class="v">${fmtS(v)}</span></button>', '<span class="v">${Math.round(v)}%</span></button>')
 sub('''    t.innerHTML = `<b>${name}</b><span>Exposure <span class="mono ${k.score > 0.5 ? "hurt" : k.score < -0.5 ? "gain" : ""}">${fmtS(k.score)}</span></span>
       <span>Fuel cost <span class="mono">${pct(k.fuel)}</span></span>${k.d.h ? `<span>Via Hormuz <span class="mono">${(k.hz * 100).toFixed(0)}% of use</span></span>` : ""}`;''',
-    '''    const pr = COIL.prices[isoOf[name]], al = pr && pr.all && pr.all.now, fd = pr && pr.food && pr.food.now;
-    t.innerHTML = `<b>${name}</b><span class="mono ${k.score > 0.5 ? "hurt" : k.score < -0.5 ? "gain" : ""}">${cutTxt(k)}</span>
-      <span>Fuel <span class="mono">${pct(k.fuel)}${k.d.pt.own ? "" : " (pooled)"}</span></span>${al ? `<span>Prices <span class="mono">${pctP(al.v)}</span>, food <span class="mono">${fd ? pctP(fd.v) : "–"}</span> (${ymLabel(al.month)})</span>` : ""}`;''')
+    "    t.innerHTML = tipHtml(name);")
+# the flat map and the globe share one tooltip: oil cut off in its harm colour, fuel, and prices now
 sub('''    return `<b>${escH(name)}</b><span>Exposure <span class="mono">${fmtS(k.score)}</span></span><span>Fuel cost <span class="mono">${pct(k.fuel)}</span></span>`;''',
-    '''    return `<b>${escH(name)}</b><span class="mono">${cutTxt(k)}</span><span>Fuel <span class="mono">${pct(k.fuel)}${k.d.pt.own ? "" : " (pooled)"}</span></span>`;''')
+    '''    const pr = COIL.prices[isoOf[name]], al = pr && pr.all && pr.all.now, fd = pr && pr.food && pr.food.now;
+    return `<b>${escH(name)}</b><span class="mono ${k.score > 0.5 ? "hurt" : k.score < -0.5 ? "gain" : ""}">${cutTxt(k)}</span><span>Fuel <span class="mono">${pct(k.fuel)}${k.d.pt.own ? "" : " (pooled)"}</span></span>${al ? `<span>Prices <span class="mono">${pctP(al.v)}</span>, food <span class="mono">${fd ? pctP(fd.v) : "–"}</span> (${ymLabel(al.month)})</span>` : ""}`;''')
+# red is the worst, yellow mild harm, teal gains
+sub('const STOPS = [[-40, "#00a88f"], [-15, "#4fd1b6"], [0, "#dfe5ec"], [10, "#ffb59c"], [25, "#ff7b55"], [40, "#ee3b2b"], [65, "#b8100c"]];',
+    'const STOPS = [[-40, "#00a88f"], [-15, "#4fd1b6"], [0, "#dfe5ec"], [8, "#f5d547"], [25, "#ff9a2e"], [45, "#ee3b2b"], [65, "#b8100c"]];')
 
 # 3. country card: tag, line under the name, oil cut off, Gulf share
 sub('    tag.textContent = k.kind === "gulf" ? "Gulf producer" : k.kind === "exp" ? "Net exporter" : "Net importer";',
@@ -241,15 +244,16 @@ sub('''        + kpi(fmtS(k.score), "exposure score, illustrative", k.score > 0.
 sub('''      kpis = kpi(fmtS(k.score), "exposure score, illustrative", k.score > 0.5 ? "hurt" : k.score < -0.5 ? "gain" : "")
         + kpi(pct(k.fuel), "fuel cost, in a disruption", k.fuel > 0.005 ? "hurt" : k.fuel < -0.005 ? "gain" : "")
         + kpi(k.kind === "imp" ? `${(k.hz * 100).toFixed(0)}%` : "–", "of its oil via Hormuz");''',
-    '''      const P = COIL.prices[iso] || {}, fd = P.food, al = P.all, g = fd && fd.out && fd.out["12"];
+    '''      const P = COIL.prices[iso] || {}, fd = P.food, al = P.all, g = fd && fd.out && fd.out["12"], ga = al && al.out && al.out["12"];
       kpis = kpi(g ? pctP(g[1]) : "–", g ? `groceries by ${ymAdd(fd.from, 12)}` : "groceries: not in our data", g && g[1] > 0.05 ? "hurt" : "")
-        + kpi(pct(k.fuel), k.d.pt.own ? "fuel at the pump" : "fuel, pooled estimate", k.fuel > 0.005 ? "hurt" : k.fuel < -0.005 ? "gain" : "")
+        + kpi(ga ? pctP(ga[1]) : "–", ga ? `all prices by ${ymAdd(al.from, 12)}` : "all prices: not in our data", ga && ga[1] > 0.05 ? "hurt" : "")
         + kpi(k.cut ? k.cut.txt : "–", k.cut ? k.cut.lab : "oil cut off: not in our data", k.score > 0.5 ? "hurt" : k.score < -0.5 ? "gain" : "");''')
 sub('''"Pick a product above to see what it makes and trades.";
     }
     $("cp-kpis").innerHTML = kpis;''', '''"Pick a product above to see what it makes and trades.";
       line = (al && al.now ? `Prices now <b>${pctP(al.now.v)}</b>, food <b>${fd && fd.now ? pctP(fd.now.v) : "–"}</b> on a year earlier (${ymLabel(al.now.month)}, FAOSTAT). ` : "")
-        + (k.kind === "imp" && k.hz != null ? `${Math.round(k.hz * 100)}% of its oil imports came from the Gulf. ` : "") + line + predHtml(name);
+        + (k.kind === "imp" && k.hz != null ? `${Math.round(k.hz * 100)}% of its oil imports came from the Gulf. ` : "")
+        + `Fuel at the pump ${pct(k.fuel)}${k.d.pt.own ? "" : " (pooled estimate)"}. ` + line + predHtml(name);
     }
     $("cp-kpis").innerHTML = kpis;''')
 sub("  // pop-up for the selected country: headline facts only; the panel holds the full analysis\n  function renderPop() {",
