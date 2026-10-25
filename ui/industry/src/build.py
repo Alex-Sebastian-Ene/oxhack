@@ -20,6 +20,8 @@ STEPS = [
     "patch_chain.py",    # Seb's recommended chain: lost Hormuz flow drives Brent, products, diesel, CPI
     "patch_explain.py",  # optional "Why these numbers?": Gemini explains the shown numbers, checked against them
     "patch_labels.py",   # mark the exposure score and the shortage premium as illustrative (hand-set; asked on OXH-3)
+    "patch_straitui.py", # Strait panel: result first, labelled numbers, real vs simulated tags, link to the World view
+    "patch_tidy.py",     # plain source lines and shorter info sheets for viewers (build notes stay in README and docs)
 ]
 for step in STEPS:
     r = subprocess.run([sys.executable, "-I", str(here / step)], capture_output=True, text=True)

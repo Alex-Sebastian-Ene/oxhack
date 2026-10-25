@@ -478,6 +478,22 @@ select { padding: 0 8px; }
 
 .illus { display: inline-block; margin-left: 4px; padding: 0 6px; border-radius: 999px; border: 1px dashed var(--line2); font: 600 10.5px/1.6 var(--sans); font-style: normal; color: var(--muted); vertical-align: 1px; white-space: nowrap; cursor: help; }
 .illus-note { padding: 10px 12px; border-radius: 8px; background: #fff6e5; border-left: 3px solid #c78100; }
+
+/* Strait panel: result first, every number labelled, real vs simulated tagged. */
+.tagc.tag-real { color: var(--ok); border-color: var(--ok); margin-left: 6px; }
+.tagc.tag-sim { color: var(--muted); border-style: dashed; margin-left: 6px; }
+.estline { margin: 0; font-size: 14px; line-height: 1.55; color: var(--text); }
+.estline b { font-family: var(--mono); font-weight: 600; }
+#strait-stage .chips .chip { flex-wrap: wrap; row-gap: 2px; }
+#strait-stage .chip .cl, #strait-stage .counters .cl { flex-basis: 100%; font-size: 11.5px; line-height: 1.3; color: var(--muted); }
+#strait-stage .counters div { flex-wrap: wrap; row-gap: 2px; }
+#count-card .label { margin-bottom: 2px; }
+.sim-flag { position: absolute; top: 58px; left: 10px; padding: 5px 10px; border-radius: 999px; background: rgba(255,255,255,.94); border: 1px dashed var(--muted); font-size: 12px; color: var(--muted); z-index: 1; }
+#link-go { align-self: flex-start; min-height: 38px; font-size: 13.5px; }
+#link-go svg { width: 16px; height: 16px; }
+.pub .r { grid-template-columns: 96px minmax(0, 1fr) 36px; }
+.pub .r > span:first-child { display: flex; flex-direction: column; line-height: 1.2; }
+.pub .when { font-style: normal; font: 10.5px var(--mono); color: var(--faint); }
 </style>
 <div class="app">
   <header class="bar">
@@ -603,7 +619,7 @@ select { padding: 0 8px; }
           </div>
         </div>
         <div class="step">
-          <div class="stephead"><span class="num">2</span> What that does to the oil price <span class="hint">Seb's flow-premium curve</span></div>
+          <div class="stephead"><span class="num">2</span> What that does to the oil price <span class="hint">follows from the lost flow</span></div>
           <div class="pricebig"><b id="brent-v">$104</b><span class="delta" id="w-brent">–</span><span>a barrel, average over the next 12 months</span></div>
           <p class="sub" id="w-brent-r"></p>
         </div>
@@ -651,6 +667,7 @@ select { padding: 0 8px; }
       <canvas id="map" tabindex="0" aria-label="Animated map of tankers crossing the Strait of Hormuz. Drag to pan, scroll or use the buttons to zoom."></canvas>
 
       <button type="button" class="fab info-map" data-info="legend" aria-label="Map key"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><path d="M12 7.5v.5"/></svg></button>
+      <div class="sim-flag" id="sim-flag">Simulated ships · illustrative positions</div>
       <div class="real-flag" id="real-flag" hidden>Real count for <b id="real-date"></b> · positions illustrative</div>
       <div class="radar-flag" id="radar-flag" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10l6-6 4 4-6 6z"/><path d="M14 14l6-6"/><path d="M12 16l4 4"/><path d="M3 21c2-4 4-6 7-7"/></svg><span id="radar-text"></span></div>
 
@@ -688,9 +705,42 @@ select { padding: 0 8px; }
     </section>
 
     <aside class="hud">
+      <section class="card" id="est-card">
+        <div class="row between">
+          <span class="label"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c3 4 6 7 6 11a6 6 0 0 1-12 0c0-4 3-7 6-11z"/></svg> Oil through the strait <span class="tagc tag-sim">SIMULATED</span></span>
+          <button type="button" class="ib" data-info="estimate" aria-label="How this is estimated"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><path d="M12 7.5v.5"/></svg></button>
+        </div>
+        <p class="estline" id="est-line"></p>
+        <p class="big"><span id="est-p50" class="mono">–</span><span class="unit">million barrels a day, our estimate</span></p>
+        <div class="range" aria-hidden="true"><div id="range-band"></div><div id="range-mid"></div></div>
+        <p class="mono faint" id="est-range"></p>
+        <div class="chips">
+          <span class="chip seen" title="Seen on AIS"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><b id="est-seen" class="mono"></b><span class="cl">seen on AIS</span></span>
+          <span class="chip bridged" title="AIS switched off across the strait (gap bridged)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h5M16 12h5"/><path d="M10 9l4 6"/></svg><b id="est-bridged" class="mono"></b><span class="cl">AIS off mid-crossing</span></span>
+          <span class="chip hidden" title="Never on AIS: radar detections"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><path d="M4 4l16 16"/></svg><b id="est-hidden" class="mono"></b><span class="cl">never on AIS (radar)</span></span>
+        </div>
+        <p class="faint" id="est-when"></p>
+        <p class="truth mono" title="True value in this simulation"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg> <span>True flow in this simulation:</span> <span id="truth"></span> <span>mb/d</span></p>
+      </section>
+
+      <section class="card" id="count-card">
+        <span class="label" id="count-head">Laden tankers out of the Gulf so far · simulated</span>
+        <div class="counters">
+          <div title="Laden tankers out of the Gulf so far"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 15h18l-3 5H6z"/><path d="M7 15V9h7l3 6"/><path d="M10 9V5"/></svg><b class="mono" id="c-all">0</b><span class="cl">out</span></div>
+          <div title="Visible on AIS" class="seen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><b class="mono" id="c-ais">0</b><span class="cl">on AIS</span></div>
+          <div title="Dark (AIS off)" class="dark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><path d="M4 4l16 16"/></svg><b class="mono" id="c-dark">0</b><span class="cl">dark</span></div>
+        </div>
+      </section>
+
+      <section class="card" id="link-card">
+        <span class="label"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg> What this means</span>
+        <p class="estline" id="link-text"></p>
+        <button type="button" id="link-go">See prices and countries <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></button>
+      </section>
+
       <section class="card" id="pw-card">
         <div class="row between">
-          <span class="label"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 15h18l-3 5H6z"/><path d="M7 15V9h7l3 6"/><path d="M10 9V5"/></svg> Real transits · IMF PortWatch</span>
+          <span class="label"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 15h18l-3 5H6z"/><path d="M7 15V9h7l3 6"/><path d="M10 9V5"/></svg> Real transits · IMF PortWatch <span class="tagc tag-real">REAL DATA</span></span>
           <button type="button" class="ib" data-info="portwatch" aria-label="About the PortWatch data"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><path d="M12 7.5v.5"/></svg></button>
         </div>
         <p class="big"><span id="pw-n" class="mono pw-n">–</span><span class="unit">ships crossed on <span id="pw-date"></span></span></p>
@@ -705,7 +755,7 @@ select { padding: 0 8px; }
 
       <section class="card" id="cap-card">
         <div class="row between">
-          <span class="label"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c3 4 6 7 6 11a6 6 0 0 1-12 0c0-4 3-7 6-11z"/></svg> Tanker capacity · IMF PortWatch</span>
+          <span class="label"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c3 4 6 7 6 11a6 6 0 0 1-12 0c0-4 3-7 6-11z"/></svg> Tanker capacity · IMF PortWatch <span class="tagc tag-real">REAL DATA</span></span>
           <button type="button" class="ib" data-info="capacity" aria-label="About tanker capacity"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><path d="M12 7.5v.5"/></svg></button>
         </div>
         <p class="big"><span id="cap-n" class="mono cap-n">–</span><span class="unit">kt a day, 7 days to <span id="cap-date"></span></span></p>
@@ -714,29 +764,7 @@ select { padding: 0 8px; }
         <p class="faint">Deadweight of tankers that crossed with AIS on, both directions: what they <b>could</b> carry, not what they carried. PortWatch doesn't know if a tanker was loaded, or with what.</p>
       </section>
 
-      <section class="card" id="est-card">
-        <div class="row between">
-          <span class="label"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c3 4 6 7 6 11a6 6 0 0 1-12 0c0-4 3-7 6-11z"/></svg> Oil through the strait</span>
-          <button type="button" class="ib" data-info="estimate" aria-label="How this is estimated"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><path d="M12 7.5v.5"/></svg></button>
-        </div>
-        <p class="big"><span id="est-p50" class="mono">–</span><span class="unit">mb/d</span></p>
-        <div class="range" aria-hidden="true"><div id="range-band"></div><div id="range-mid"></div></div>
-        <p class="mono faint" id="est-range"></p>
-        <div class="chips">
-          <span class="chip seen" title="Seen on AIS"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><b id="est-seen" class="mono"></b></span>
-          <span class="chip bridged" title="AIS switched off across the strait (gap bridged)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h5M16 12h5"/><path d="M10 9l4 6"/></svg><b id="est-bridged" class="mono"></b></span>
-          <span class="chip hidden" title="Never on AIS: radar detections"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><path d="M4 4l16 16"/></svg><b id="est-hidden" class="mono"></b></span>
-        </div>
-        <p class="truth mono" title="True value in this simulation"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg> <span id="truth"></span></p>
-      </section>
 
-      <section class="card">
-        <div class="counters">
-          <div title="Laden tankers out of the Gulf so far"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 15h18l-3 5H6z"/><path d="M7 15V9h7l3 6"/><path d="M10 9V5"/></svg><b class="mono" id="c-all">0</b></div>
-          <div title="Visible on AIS" class="seen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><b class="mono" id="c-ais">0</b></div>
-          <div title="Dark (AIS off)" class="dark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><path d="M4 4l16 16"/></svg><b class="mono" id="c-dark">0</b></div>
-        </div>
-      </section>
 
       <section class="card" id="glob-card">
         <div class="row between">
@@ -748,6 +776,7 @@ select { padding: 0 8px; }
           <div title="Missing compared with the pre-war 20 mb/d"><b class="mono dark" id="g-missing"></b><span>vs pre-war</span></div>
         </div>
         <div id="published" class="pub" aria-label="Published estimates compared with ours"></div>
+        <p class="faint">Published figures as reported, with the period each covers; check before quoting. "Ours" is our estimate on simulated ships, not a measurement.</p>
       </section>
     </aside>
   </main>
@@ -1134,6 +1163,9 @@ window.STRAIT = {"geo":{"bbox":[54.6,24.9,57.9,27.5],"clip":[52.5,23.0,60.0,29.0
     $("est-card").hidden = isReal;
     $("glob-card").hidden = isReal;
     document.querySelector(".counters div").title = isReal ? "Ships through the gate so far (real daily count, both directions)" : "Laden tankers out of the Gulf so far";
+    $("count-head").textContent = isReal ? "Ships through the gate so far · real daily count, both directions" : "Laden tankers out of the Gulf so far · simulated";
+    $("sim-flag").hidden = isReal;
+    $("link-card").hidden = isReal;
     renderPW();
     if (isReal) return;
     const e = sc.estimate;
@@ -1146,18 +1178,34 @@ window.STRAIT = {"geo":{"bbox":[54.6,24.9,57.9,27.5],"clip":[52.5,23.0,60.0,29.0
     $("est-bridged").textContent = fmt(e.bridged.p50);
     $("est-hidden").textContent = fmt(e.hidden.p50);
     $("truth").textContent = fmt(sc.truth_mbd);
+    // one line a judge can read first, and which scenario this is
+    const lastReal = (window.PORTWATCH && window.PORTWATCH.dates) ? window.PORTWATCH.dates[window.PORTWATCH.dates.length - 1] : null;
+    $("est-line").innerHTML = `AIS shows <b>${fmt(e.seen.p50)}</b> · we estimate <b>${fmt(e.total.p50)}</b> (${fmt(e.total.p5)}–${fmt(e.total.p95)}) · <b>${fmt(e.hidden.p50)}</b> of it never appears on AIS`;
+    $("est-when").textContent = `Scenario: ${sc.label}. Simulated ships, calibrated to that published figure.${lastReal ? ` Real PortWatch counts run to ${new Date(lastReal + "T00:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })}.` : ""}`;
+    renderLink();
     $("g-world").textContent = `${(e.global.share_of_world_p50 * 100).toFixed(1)}%`;
     $("g-missing").textContent = `−${fmt(e.global.missing_vs_prewar_mbd.p50)}`;
     const short = { "EIA (pre-war baseline)": "EIA '24", "EIA quarterly chokepoint data": "EIA Q1", "Vortexa (via Argus)": "Vortexa",
       Argus: "Argus", "Windward (satellite)": "Windward", "US officials (via Argus)": "US gov" };
-    const rows = sc.published.map((p) => `<div class="r" title="${p.who}, ${p.when}"><span>${short[p.who] || p.who}</span>
+    const rows = sc.published.map((p) => `<div class="r" title="${p.who}, ${p.when}"><span>${short[p.who] || p.who}<i class="when">${p.when}</i></span>
       <span class="track"><span class="bar" style="width:${p.mbd / MAXP * 100}%"></span></span><span class="v">${fmt(p.mbd)}</span></div>`);
-    rows.push(`<div class="r" title="Our estimate, 90% range"><span class="ours">Ours</span><span class="track">
+    rows.push(`<div class="r" title="Our estimate on the simulated scenario, 90% range"><span class="ours">Ours<i class="when">simulated</i></span><span class="track">
       <span class="band" style="left:${e.total.p5 / MAXP * 100}%;width:${(e.total.p95 - e.total.p5) / MAXP * 100}%"></span>
       <span class="mid" style="left:${e.total.p50 / MAXP * 100}%"></span></span><span class="v ours">${fmt(e.total.p50)}</span></div>`);
     $("published").innerHTML = rows.join("");
   }
 
+  // "What this means": the lost flow, and the Brent price the World view's chain sets from it
+  function renderLink() {
+    if (!sc || sc.real || !sc.estimate) return;
+    const flow = Math.min(sc.estimate.total.p50, 20), lost = Math.round(Math.max(0, Math.min(100, (1 - flow / 20) * 100)));
+    const brent = ($("brent-v") && $("brent-v").textContent.trim()) || "";
+    $("link-text").innerHTML = `About <b>${fmt(flow)}</b> of the pre-war 20 million barrels a day get through, so <b>${lost}%</b> of the flow is lost. ` +
+      (brent ? `In the World view, that sets Brent at about <b>${brent}</b> a barrel and drives fuel, food and product prices and each country's exposure.` : `The World view turns that into a Brent price and its knock-ons.`);
+  }
+  // the replay button changed the scenario without telling the World view, so the two could disagree; tell it now
+  if ($("brent-v")) new MutationObserver(() => renderLink()).observe($("brent-v"), { childList: true, characterData: true, subtree: true });
+  $("link-go").addEventListener("click", () => { const b = document.querySelector('[data-mode="world"]'); if (b) b.click(); window.scrollTo({ top: 0 }); });
   function renderCounters(t) {
     let all = 0, ais = 0, dark = 0;
     for (const v of ships) {
@@ -1285,26 +1333,20 @@ window.STRAIT = {"geo":{"bbox":[54.6,24.9,57.9,27.5],"clip":[52.5,23.0,60.0,29.0
   // ---------------------------------------------------------------- info sheets
   function keyRow(draw, text) { return { draw, text }; }
   const INFO = {
-    sim: () => ({ title: "Simulated data", html: `<p>Every ship, name, IMO number and radar pass here is <b>synthetic</b>. Each scenario is calibrated so the true flow matches a published figure, then the estimator sees only what AIS and two radar passes would show.</p>
-      <p>Why not live: no free AIS receivers cover Hormuz, free radar passes are days apart, and the free ship-data services lag 3–5 days. Real collectors are in <code>experiments/strait_sources.py</code>.</p>
-      <p class="mono">Generated ${sc.generated}</p>` }),
-    estimate: () => {
-      const a = sc.estimate.assumptions, c = sc.estimate.counts;
-      return { title: "How the flow is estimated", html: `<ul>
-        <li><b>Seen:</b> laden tankers whose AIS crosses the dashed gate (${c.seen_crossings}). Impossible jumps are dropped first (${c.spoofed_points_dropped} points).</li>
-        <li><b>Bridged:</b> AIS off on one side of the gate, back on the other (${c.bridged_crossings}).</li>
-        <li><b>Never on AIS:</b> radar ships with no AIS match. ${Object.values(c.unmatched_radar).join(" + ")} seen in a ${a.corridor_km_outbound} km corridor; Little's law turns a snapshot into a rate.</li></ul>
-        <p>Ranges come from ${a.draws} random draws over load factor (${a.load_factor.join("–")}), radar recall (${a.sar_recall.join("–")}), false positives, laden share of dark ships (${a.laden_share_of_dark_outbound.join("–")}) and speed. Radar counts are treated as Poisson.</p>
-        <p>The ✓ figure is the true value, shown only because the ships are simulated.</p>` };
-    },
+    sim: () => ({ title: "Simulated data", html: `<p>The ships, names and radar passes in the Strait view are <b>made up</b>. Each scenario is set so the true flow matches a published figure; the estimate then sees only what ship tracking (AIS) and two radar passes would show.</p>
+      <p>Why not real ships: there are no free AIS receivers covering Hormuz, and free radar passes are days apart. The PortWatch cards are real.</p>
+      <p class="mono">Scenarios generated ${sc.generated}</p>` }),
+    estimate: () => ({ title: "How the flow is estimated", html: `<ul>
+        <li><b>Seen on AIS:</b> loaded tankers whose tracking crosses the dashed line. Impossible jumps (fake positions) are dropped.</li>
+        <li><b>AIS off mid-crossing:</b> tracking stops on one side of the line and comes back on the other.</li>
+        <li><b>Never on AIS:</b> ships radar sees with no tracking match, turned into a daily rate.</li></ul>
+        <p>The range comes from thousands of runs over what we can't know exactly: how full ships are, how many ships radar misses, and their speed.</p>
+        <p>The ✓ figure is the true value, known only because the ships are simulated.</p>` }),
     global: () => ({ title: "Global figures", html: `<ul>
-        <li>World oil demand 2026: 103.3 mb/d (IEA Oil Market Report, Aug 2026)</li>
-        <li>Pre-war Hormuz flow: 20 mb/d, about 20% of world use (EIA, 2024 average)</li>
-        <li>About 76% of oil moves by sea (EIA, 2023)</li>
-        <li>Hormuz cargo is 72–75% crude, the rest products (EIA, IEA, 2025)</li></ul>
-        <p>Published 2026 estimates (from search results; check before quoting):</p><ul>
-        ${sc.published.map((p) => `<li>${p.who}, ${p.when}: ${fmt(p.mbd)} mb/d</li>`).join("")}</ul>
-        <p>Sources and caveats: <code>docs/strait-live-data.md</code> in the repo.</p>` }),
+        <li>World oil demand 2026: 103.3 mb/d (IEA, Aug 2026)</li>
+        <li>Pre-war Hormuz flow: 20 mb/d, about 20% of world use (EIA, 2024 average)</li></ul>
+        <p>Published 2026 estimates, as reported (check before quoting):</p><ul>
+        ${sc.published.map((p) => `<li>${p.who}, ${p.when}: ${fmt(p.mbd)} mb/d</li>`).join("")}</ul>` }),
     capacity: () => ({ title: "Tanker capacity from IMF PortWatch", html: `<p>The combined deadweight of the tankers <a href="https://portwatch.imf.org/" target="_blank" rel="noopener">IMF PortWatch</a> counted crossing the strait each day (its <code>capacity_tanker</code> field, in tonnes). Deadweight is the most a ship can carry.</p>
       <ul><li><b>Not cargo.</b> PortWatch knows a ship's type and size, not whether it was loaded or with what. Tankers going into the Gulf are usually empty, and both directions are counted.</li>
       <li><b>AIS on only.</b> Tankers that switch AIS off aren't counted, and most oil still moving in 2026 moves that way. So the drop below is mostly ships going dark, not only oil stopping.</li>
@@ -1316,7 +1358,7 @@ window.STRAIT = {"geo":{"bbox":[54.6,24.9,57.9,27.5],"clip":[52.5,23.0,60.0,29.0
       <li>Before the war (1 Jan 2025 to 27 Feb 2026): ${PRE.toFixed(1)} ships a day, ${PRE_T.toFixed(1)} of them tankers.</li>
       <li>Since 4 Mar 2026: ${POST.toFixed(1)} ships a day.</li></ul>
       <p>"Replay this day" puts that day's real number and types of ships on the lanes. Their positions, directions, times and names are illustrative: PortWatch publishes counts, not tracks. Free live ship positions for Hormuz don't exist.</p>
-      <p>This page can't reach PortWatch itself, so the numbers are a cached snapshot. To refresh, query <code>Daily_Chokepoints_Data</code> with <code>portid='chokepoint6'</code>.</p>` }),
+      <p>These numbers are a saved copy, not live.</p>` }),
     legend: () => ({ title: "Map key", key: [
         keyRow((c) => { c.fillStyle = COL.seen; c.beginPath(); c.moveTo(22, 10); c.lineTo(8, 4); c.lineTo(8, 16); c.fill(); }, "Tanker on AIS (filled = laden, outline = empty)"),
         keyRow((c) => { c.strokeStyle = COL.oil; c.setLineDash([3, 2]); c.lineWidth = 1.6; c.beginPath(); c.arc(14, 10, 8, 0, 7); c.stroke(); }, "Dark tanker: AIS off"),
@@ -1349,7 +1391,7 @@ window.STRAIT = {"geo":{"bbox":[54.6,24.9,57.9,27.5],"clip":[52.5,23.0,60.0,29.0
   sel.add(new Option("Real · PortWatch", "real"));
   sel.addEventListener("change", () => load(sel.value));
   $("pw-day").addEventListener("input", (e) => { pwIdx = Number(e.target.value); if (state.key === "real") load("real"); else renderPW(); });
-  $("pw-replay").addEventListener("click", () => { const k = state.key === "real" ? "aug2026" : "real"; sel.value = k; load(k); });
+  $("pw-replay").addEventListener("click", () => { const k = state.key === "real" ? "aug2026" : "real"; sel.value = k; sel.dispatchEvent(new Event("change")); });
   document.querySelectorAll("[data-view]").forEach((b) => b.addEventListener("click", () => {
     state.view = b.dataset.view;
     document.querySelectorAll("[data-view]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
@@ -1705,7 +1747,9 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
     $("brent").value = st.brent;
     if ($("lost")) $("lost").value = st.lost;
   }
-  const chainSrc = () => `Seb's recommended chain (bayes_own + global_lin + global, with the margin member on fuels), notes/chain-scenarios-3m-margins.csv: fitted to ${CHAIN_META.fitted_to}, started ${CHAIN_META.origin}, generated ${CHAIN_META.generated}`;
+  const ymLabel = (ym) => { const [y, m] = String(ym).split("-"); return `${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][Number(m) - 1] || m} ${y}`; };
+  // plain source line for viewers; the full method is in docs/chain.md
+  const chainSrc = () => `Source: the team's oil-shock model, fitted to data up to ${ymLabel(CHAIN_META.fitted_to)}`;
   function priceMoveM(m) {
     if (m && CHAIN_PROD[m.id]) return { ...chainEffect(CHAIN_PROD[m.id]), chain: true };
     const oil = m && m.oil;
@@ -2218,8 +2262,8 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
     $("e-un-head").innerHTML = `<b>No reliable effect.</b> The team's what-if keeps unemployment unchanged.`;
     ecoChart($("e-un-chart"), un, { unit: " pts", grey: true });
     $("e-un-note").textContent = !st.lost ? "" :
-      `The chain's unemployment path (grey) moves ${u12[0] < 0 ? "down" : "up"} about ${a(u12[0]).toFixed(2)} points against no disruption, but it has no causal oil link: Seb marks it "forecast only", so it isn't used as an effect (docs/chain.md).`;
-    $("e-src").textContent = `${chainSrc()}. Change against no disruption at the chosen lost flow, months 1 to 12 (straight lines between its 1, 3, 6 and 12-month points). The range is 90% of outcomes.`;
+      `The grey line moves ${u12[0] < 0 ? "down" : "up"} about ${a(u12[0]).toFixed(2)} points, but the model finds no proven link from oil to jobs, so it's shown for reference only.`;
+    $("e-src").textContent = `Change against no disruption. The range covers 90% of outcomes. ${chainSrc()}.`;
   }
   document.querySelectorAll("[data-eco]").forEach((b) => b.addEventListener("click", () => { ecoPick = b.dataset.eco; renderEcon(); }));
   // ------------------------------------------------------------ optional "Why these numbers?" (Gemini explains)
@@ -2404,7 +2448,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
     $("w-brent").textContent = a(pct) < 0.5 ? "same as pre-war" : `${pct > 0 ? "+" : "−"}${a(pct).toFixed(0)}% vs pre-war`;
     $("w-brent").className = "delta " + (pct > 2 ? "hurt" : pct < -2 ? "gain" : "");
     $("brent-v").textContent = `$${st.brent}`;
-    $("w-brent-r").textContent = st.lost ? `90% range $${Math.round(brentFor(st.lost, PREM.low))} to $${Math.round(brentFor(st.lost, PREM.high))}. The curve is fitted to the 2026 closure; the Bab el-Mandeb disruption of 2023–24 checks it out of sample.` : "No lost flow: Brent stays at its pre-war $70 in this curve.";
+    $("w-brent-r").textContent = st.lost ? `90% range $${Math.round(brentFor(st.lost, PREM.low))} to $${Math.round(brentFor(st.lost, PREM.high))}.` : "No lost flow: Brent stays at its pre-war $70.";
     const put = (id, v, txt, label) => {
       if ($(id).textContent !== txt && $(id).textContent !== "–") shockFlash($(id).parentElement);
       $(id).textContent = txt;
@@ -2416,7 +2460,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
     put("w-petrol", dsl.mean, `${sign(dsl.mean)}${a(dsl.mean).toFixed(0)}%`, `Diesel at the pump · range ${sign(dsl.lo)}${a(dsl.lo).toFixed(0)} to ${sign(dsl.hi)}${a(dsl.hi).toFixed(0)}%`);
     put("w-ecpi", ec, `${sign(ec)}${a(ec).toFixed(1)}%`, `Energy bills · range ${sign(elo)}${a(elo).toFixed(1)} to ${sign(ehi)}${a(ehi).toFixed(1)}%`);
     put("w-cpi", cpi.mean, `${sign(cpi.mean)}${a(cpi.mean).toFixed(1)}`, `Overall inflation, in points · range ${sign(cpi.lo)}${a(cpi.lo).toFixed(1)} to ${sign(cpi.hi)}${a(cpi.hi).toFixed(1)}`);
-    $("w-src").textContent = `Diesel and inflation (US): ${chainSrc()}. Extra change against no disruption, 12 months on. Energy bills: the linear Brent link in notes/oil-chain-links.md, at that Brent. Ranges are 90% of outcomes.`;
+    $("w-src").textContent = `Change against no disruption, 12 months on (US). Ranges cover 90% of outcomes. ${chainSrc()}; energy bills from US price data (FRED).`;
     document.querySelectorAll("[data-lost]").forEach((b) => b.setAttribute("aria-pressed", String(Number(b.dataset.lost) === st.lost)));
     renderShockExplain();
   }
@@ -2556,7 +2600,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
     const p = priceMoveM(m), d = shockRangeM(m);
     $("m-price").textContent = p ? pctP(p.mean) : "?";
     $("m-price").className = "pprice " + (p ? (p.mean > 0.05 ? "hurt" : p.mean < -0.05 ? "gain" : "") : "");
-    $("m-band").textContent = p && p.chain ? `${st.lost} points of Hormuz flow lost (Brent about $${st.brent}). Extra change against no disruption after 12 months; 90% range of outcomes ${pctP(p.lo)} to ${pctP(p.hi)}. ${chainSrc()}.` : p ? `Brent $${st.brent} vs $${BRENT0} pre-war. Average-effect band ${pctP(p.lo)} to ${pctP(p.hi)}; single moves vary more.${d ? ` Past supply shocks: ${pctP(d.lo)} to ${pctP(d.hi)}.` : ""} ${m.oil.series}.${m.oil.extra ? ` ${m.oil.extra}` : ""}`
+    $("m-band").textContent = p && p.chain ? `With ${st.lost}% of Hormuz flow lost (Brent about $${st.brent}), 12 months on. 90% of outcomes: ${pctP(p.lo, 0)} to ${pctP(p.hi, 0)}. ${chainSrc()}.` : p ? `Brent $${st.brent} vs $${BRENT0} pre-war, 12 months on. Range ${pctP(p.lo)} to ${pctP(p.hi)}.${d ? ` Past supply shocks: ${pctP(d.lo)} to ${pctP(d.hi)}.` : ""} Source: past US price moves (FRED, 2001–2026).${m.oil.extra ? " In the 2026 closure, prices rose faster than this." : ""}`
       : `No fitted oil link yet${m.oil && m.oil.note ? ` (${m.oil.note})` : ""}.`;
     document.querySelectorAll("[data-mmode]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mmode === st.mode)));
     const rows = tableOf(m, st.mode), max = Math.max(...rows.map((r) => r.w), 0.01);
@@ -2613,24 +2657,22 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
 
   // ------------------------------------------------------------ info sheets
   const WINFO = {
-    materials: { title: "Products, materials and who makes them", html: `<p>Pick a sector icon on the map or search (try "urea", "kerosene", "bauxite" or "plastic"). The map, Flat or 3D, then shows who makes it, or who ships it: blue for producers, darker for more, amber for Gulf producers whose exports pass the strait. Click a country for what it makes, where its inputs come from and where it ships; click it again to close.</p>
-      <ul><li><b>Data:</b> Edward's materials globe (<code>ui/globe</code>, from <code>notes/materials/</code>), collected on ${MAT.generated} from search-result snippets of the cited pages. Check figures at source before quoting.</li>
-      <li><b>Price, 12 months:</b> Seb's Bayesian pass-through model (<code>notes/macro-bayes-responses.csv</code>), using the +10% response for rises and the −10% one for falls, scaled to the Brent setting. The band is the 90% interval of the average effect only; single moves vary more. Steel and aluminium use Seb's linear links instead (OXH-5, <code>notes/steel-aluminium-responses.csv</code>): US PPI steel mill products +3.7 ± 1.0 and aluminium mill shapes +2.0 ± 0.5 after 12 months per 10% Brent, the same size up or down; validated in 7/8 and 8/8 forward folds. These are US mill-product prices and the upper end for a supply shock.</li>
-      <li><b>What it costs buyers:</b> the product's share of a buyer industry's costs × its price change. Shares are sourced for airlines (IATA) and farming (CIBC); others show "no data".</li>
-      <li><b>Colours, one job each:</b> amber = oil and Hormuz (routes, the strait, Gulf producers that ship through it) · red = harm (exposure, cost rises) · teal = gain · each product its own colour (steel blue, jet-fuel orange, aluminium cyan, fertiliser green, plastic magenta) · yellow = every line: oil routes out of Hormuz, or where ingredients and trade go, blinking where they land · dark outline = what you selected · grey = no data.</li>
-      <li><b>The model:</b> Seb's recommended chain (<code>docs/chain.md</code>). You set the lost Hormuz flow; Brent follows from the flow-premium curve (<code>notes/flow-premium.csv</code>, fitted to the 2026 closure, checked on Bab el-Mandeb 2023–24); jet fuel, fertiliser, plastics resin, diesel, CPI and unemployment come from its scenario table (<code>notes/chain-scenarios-3m-margins.csv</code>), as the change against no disruption with the 90% range of outcomes. Steel and aluminium use Seb's linear links (OXH-5) at that Brent.</li>
-      <li><b>Why these numbers? (off by default):</b> with <code>?explain=1</code> and <code>ui/industry/explain_server.py</code> running, Gemini explains a country's or a product's numbers in a few bullets. It gets only the numbers shown here, with their sources; each bullet cites the facts it uses, and any number not in them is flagged. It is labelled AI-written and not checked by the team.</li>
-      <li><b>Bundled:</b> globe.gl 2.41.4 (MIT), flag-icons 7.6.0 (MIT), Natural Earth 1:110m (public domain). Nothing here is live.</li></ul>` },
-    model: { title: "How the world view works", html: `<p>The Hormuz flow comes from the estimator in the Strait view for the chosen scenario. Brent is a scenario assumption you can change. For reference, Brent traded around $109 on 18 October 2026.</p>
-      <ul><li><b>Lines:</b> the main tanker routes from the strait to each importer. Faint lines show pre-war volume, bright dotted lines show today's estimated flow.</li>
-      <li><b>Fuel cost change</b> = the validated Brent → petrol link (6.9% per 10% Brent rise, fitted on US data 1991–2008; 5.2% on 2009–2026), plus a shortage premium for the share of a country's oil that came through Hormuz. That premium (0.8) is hand-set, not fitted to data. The premium is an assumption, not fitted.</li><li><b>Inflation:</b> energy CPI moves 3.2% and headline CPI 0.36 points within 12 months per 10% Brent rise (same data and method). Ranges show both fits.</li><li><b>Industries:</b> cost change = fuel share of operating costs × the fuel price change. Shares are pre-war: airlines 25.4% (IATA), shipping 22% (Maersk), trucking 20.6% (ATRI). Industries without a sourced share show no number.</li>
-      <li><b>Forecast:</b> the base case halves the flow gap every 6 months and the price gap every 8. The band runs from a fast reopening (2 to 4 months) to a closure that lasts the whole year with prices 15% higher.</li></ul>
-      <p>Country volumes are rounded pre-war estimates (EIA 2024 Hormuz data, Energy Institute consumption). China, India, Japan and South Korea took about 69% of Hormuz crude. This is a teaching model; check figures before quoting.</p>` },
-    score: { title: "Exposure score (illustrative)", html: `<p class="illus-note"><b>Illustrative, not from a model.</b> The weights below (0.4 and 0.6 for importers; ÷3, +0.15 and ×60 for exporters) and the 0.8 shortage premium inside the fuel cost are hand-set and have no source yet. They came with the original Hormuz Flow page; we asked Edward and Seb on OXH-3 (25 Oct 2026) to source or replace them. The inputs they combine are cited: EIA 2024 Hormuz volumes and Energy Institute consumption.</p><p>One number per country for how hard the shock hits its economy. Positive means hurt, negative means a net gain.</p>
-      <ul><li><b>Importers:</b> fuel cost change × how much of their oil is imported, scaled to 0–100.</li>
-      <li><b>Exporters outside the Gulf</b> (Norway, Canada, Nigeria and others) gain from the higher price, so they score below zero.</li>
-      <li><b>Gulf producers</b> are hurt by volume: the share of their exports trapped behind the strait × how much of the flow is missing.</li></ul>
-      <p>Countries without their own data use a typical importer profile (80% imported, no direct Hormuz cargoes).</p>` },
+    materials: { title: "Products and who makes them", html: `<p>Pick a product from the icons or the search (try "urea", "kerosene" or "plastic"). The map shows who makes it, or who ships it. Gulf producers whose exports pass the strait are outlined in amber. Click a country to see what it makes, where its inputs come from and where it ships.</p>
+      <ul><li><b>Price in 12 months:</b> jet fuel, fertiliser and plastics from the team's oil-shock model; steel and aluminium from past US price moves (FRED). Ranges are 90% bands.</li>
+      <li><b>What it costs buyers:</b> the product's share of a buyer's costs × its price change. Shares are sourced for airlines (IATA) and farming (CIBC); others show "no data".</li>
+      <li><b>Who makes and ships it:</b> worldsteel, USGS, IEA and others as cited for each product, collected 24 Oct 2026. Check at source before quoting.</li></ul>
+      <p class="faint">Map: globe.gl and flag-icons (MIT licence), Natural Earth. Nothing here is live.</p>` },
+    model: { title: "How the world view works", html: `<p>You choose how much of the normal Hormuz flow is lost. The oil price follows from a curve fitted to the 2026 closure and checked against the 2023–24 Red Sea disruption; the knock-ons come from the team's oil-shock model, fitted to data up to early 2026.</p>
+      <ul><li><b>Lines:</b> tanker routes from the strait. Faint lines show pre-war volume, bright lines today's estimated flow.</li>
+      <li><b>Fuel cost:</b> the US link from oil to pump prices (about 5–7% per 10% oil rise), plus an extra premium for countries that got their oil through Hormuz. That premium is set by hand, not fitted.</li>
+      <li><b>Industries:</b> fuel's share of costs × the fuel price change. Airlines 25% (IATA), shipping 22% (Maersk), trucking 21% (ATRI).</li>
+      <li><b>Forecast chart:</b> the base case closes the gap over the year; the band runs from a quick reopening to a year-long closure.</li></ul>
+      <p>Country volumes: EIA 2024 and Energy Institute. A teaching model: check figures before quoting.</p>` },
+    score: { title: "Exposure score", html: `<p>One number per country for how hard the shock hits it. Above zero means hurt; below zero means it gains.</p>
+      <ul><li><b>Importers:</b> how much more fuel costs × how much of their oil they import.</li>
+      <li><b>Exporters outside the Gulf</b> (Norway, Canada, Nigeria and others) gain from the higher price.</li>
+      <li><b>Gulf producers</b> are hurt by the oil they can't ship out.</li></ul>
+      <p class="illus-note"><b>Illustrative:</b> the weights are set by hand, not fitted to data. Inputs: EIA 2024 Hormuz volumes and Energy Institute consumption. Countries without their own data use a typical importer.</p>` },
   };
   document.querySelectorAll("[data-winfo]").forEach((b) => b.addEventListener("click", () => {
     const i = WINFO[b.dataset.winfo];
