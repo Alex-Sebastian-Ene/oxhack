@@ -17,7 +17,7 @@ for the colours, with these layers added (`src/`):
 | `pixel.js` | The landing scene, drawn in code as pixel art: refinery, flare, tankers (one running dark), water, the pipeline and its valve |
 | `sound.js` | Sound, all synthesised in the browser: "Night Shift" (an original chiptune loop), harbour ambience and interface sounds |
 | `shell.js` | The pipe strip under the header (its oil runs at the share of Hormuz flow getting through), the home, sound and music keys |
-| `ai.js`, `ai.css` | Sources (every material and ingredient with its datasets) and country Profiles, each with an optional Gemini panel |
+| `ai.js`, `ai.css` | Sources (every material and ingredient with its datasets) and country Profiles, each with an optional Gemini panel; answers written ahead come from `data/ai-panels.json` (`ai_facts.cjs` reads the facts each panel sends) |
 | `info.css` | The blue info keys on every view (World, Strait, Households, Models), and the info panel's sections and source rows |
 | `infokey.js` | One behaviour for every info key: the panel opens beside its key (below, above or to the side, inside the window; a bottom sheet on phones), the same key closes it again, and ×, Escape or a click outside close it and return focus to the key |
 | `strait.py`, `strait.js` | Strait view: the map fits the window and opens on the strait; each card's dates and notes move into its info panel |
@@ -59,7 +59,22 @@ python ui/app/src/build.py --fragment out.html  # also writes the body for a cla
   fact it came from, and a reference to a fact that doesn't exist is flagged.
 - **Labelling.** Both answers are labelled AI-written, with the model and time. They never feed the maps
   or the numbers.
-- **The service.** Both call the local service in `experiments/country_brief.py`, at
+- **Written ahead (baked).** Answers written ahead of time are built into the page from
+  `ui/app/data/ai-panels.json`, so the panels work offline and in the claude.ai artifact. Each shows
+  "AI-written by Gemini", the model and the date it was written. A country summary also says it was written at
+  the 2026-closure setting, and warns when your setting differs. To refresh them:
+
+  ```bash
+  python3 ui/app/src/build.py && node ui/app/src/ai_facts.cjs   # the facts each panel sends, at the 2026 closure
+  uv run experiments/country_brief.py bake                      # Gemini answers -> ui/app/data/ai-panels.json
+  python3 ui/app/src/build.py                                   # bake them into the page
+  ```
+
+  `bake` keeps any answer whose facts haven't changed, and asks about the countries we hold most facts on
+  first. It stops cleanly when the key's daily quota runs out (20 requests per model on the free tier) and
+  lists what is still missing, so run it again the next day, or with another `GEMINI_MODEL`. Pictures are
+  not baked, since they would add megabytes to the page.
+- **The service.** Anything not baked calls the local service in `experiments/country_brief.py`, at
   `http://127.0.0.1:8787` (or `?ai=<url>`). It needs `GEMINI_API_KEY` in the environment or in the repo's
   `.env` (git-ignored). `BRIEF_FAKE=1` serves labelled test answers for UI work. Details:
   `docs/country-briefs.md`.

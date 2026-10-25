@@ -28,6 +28,15 @@
   background-color: rgba(18, 26, 45, calc(1 - .18 * var(--hz-cover, 0))) !important;
   -webkit-backdrop-filter: blur(calc(8px * var(--hz-cover, 0))); backdrop-filter: blur(calc(8px * var(--hz-cover, 0)));
 }
+/* only that country: beside it, just what sets the closure (the Hormuz slider and presets, Bab el-Mandeb); the shock's
+   steps after it (oil price, the next 12 months, households), stocks, the ranking and the product card go, and the
+   map keeps the country and its routes but drops the sea and strait labels and the legend's line keys, which
+   overlapped the country's own tag */
+#world-stage.hz-focus .hz-shockcard > .step ~ .step, #world-stage.hz-focus .hz-shockcard .kpis2,
+#world-stage.hz-focus .hz-shockcard #w-est, #world-stage.hz-focus .hz-shockcard .resv, #world-stage.hz-focus .hz-shockcard #w-src,
+#world-stage.hz-focus .hz-rankcard, #world-stage.hz-focus #prod-card,
+#world-stage.hz-focus svg text.sea, #world-stage.hz-focus svg text.hzlabel, #world-stage.hz-focus svg text.bablabel,
+#world-stage.hz-focus .legendbar .flowkey { display: none !important; }
 @keyframes hz-rise { from { opacity: 0; transform: translateY(28px); } to { opacity: 1; transform: none; } }
 /* the country's title (flag, name, Profile, close) stays at the top of the detail while its tabs scroll under it */
 #world-stage.hz-focus #country-card .ctitle {

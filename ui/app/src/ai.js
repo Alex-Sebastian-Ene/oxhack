@@ -3,8 +3,10 @@
 //    dataset with its source pages and year, and "What is it?": a Gemini description and pixel-art picture.
 //  - Profile (in a country's pop-up and panel): its main export and its rank in every table we hold, the
 //    exposure numbers from the panel, and "Summarise with Gemini", written only from those numbers.
-// The sourced parts are built from the page's own data. The Gemini parts come from the local service
-// (experiments/country_brief.py, http://127.0.0.1:8787, or ?ai=<url>) and are labelled AI-written.
+// The sourced parts are built from the page's own data. The Gemini parts are labelled AI-written. They come from
+// answers baked into the build (window.HZ_AI_BAKED, ui/app/data/ai-panels.json, written at the 2026-closure
+// setting by `uv run experiments/country_brief.py bake`), or for anything not baked, from the local service
+// (experiments/country_brief.py, http://127.0.0.1:8787, or ?ai=<url>).
 window.HZAI = (() => {
   const $ = (id) => document.getElementById(id);
   const M = window.MATERIALS, CN = window.COUNTRIES, FLAGS = (window.FLAGS && window.FLAGS.flags) || {};
@@ -35,6 +37,10 @@ window.HZAI = (() => {
   const linkify = (s) => esc(s).replace(URL_RE, (u) => `<a class="hz-src" href="${u}" target="_blank" rel="noopener" title="${u}">${host(u)}</a>`);
   const firstHost = (s) => { const u = String(s || "").match(URL_RE); return u ? host(u[0]) : "see notes"; };
   const play = (k) => window.HZSound && window.HZSound.play(k);
+  const BAKED = window.HZ_AI_BAKED || {}, bakedRes = BAKED.resources || {}, bakedCty = BAKED.countries || {};
+  const day = (t) => new Date(t).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  // the 2026 closure preset in "The shock" card, the setting the baked country summaries were written at
+  const onClosure = () => { const b = document.querySelector('[data-path="iea2026"]'); return !!b && b.getAttribute("aria-pressed") === "true"; };
 
   // ------------------------------------------------------------ one panel for both views
   const panel = document.createElement("div");
@@ -65,9 +71,12 @@ window.HZAI = (() => {
   const bullets = (text, nFacts) => `<ul class="hz-ai-list">${String(text).split(/\n+/).map((l) => l.replace(/^\s*[-*•]\s*/, "").trim()).filter(Boolean)
     .map((l) => `<li>${esc(l).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/\[(\d+)\]/g, (m, n) => (Number(n) <= nFacts ? `<span class="hz-ref">[${n}]</span>` : `<span class="hz-ref bad" title="No such fact">[${n}?]</span>`))}</li>`).join("")}</ul>`;
   const stamp = (b, extra = "") => `<p class="hz-ai-stamp">AI-written by ${esc(b.model)}${b.image_model ? `, picture by ${esc(b.image_model)}` : ""}, ${b.cached ? "cached, written " : ""}${esc(new Date(b.generated_at).toLocaleString())}. Not checked by the team${extra}.</p>`;
-  const helpLine = (msg) => `<p class="hz-ai-off">No answer: ${esc(msg)}. Run <code>uv run experiments/country_brief.py</code> with <code>GEMINI_API_KEY</code> in <code>.env</code>.</p>`;
-  function aiBox(id, label, run) {
-    return `<div class="hz-ai" id="${id}"><div class="hz-ai-head">${px(ICON.spark, "#ffd27a")}<b>${label}</b><span>Gemini, on request</span></div>
+  const bakedStamp = (b, extra = "") => `<p class="hz-ai-stamp"><b>AI-written by Gemini</b> (${esc(b.model)}), ${esc(day(b.generated_at))}. Written ahead and baked into this page, not live${extra}. Not checked by the team.</p>`;
+  const nBaked = Object.keys(bakedRes).length + Object.keys(bakedCty).length;
+  const helpLine = (msg) => (nBaked ? `<p class="hz-ai-off">Not written ahead for this one yet: so far Gemini has written ${Object.keys(bakedRes).length} resources and ${Object.keys(bakedCty).length} countries for this page (its free daily quota ran out). The rest follow in a later build.</p>` : "")
+    + `<p class="hz-ai-off">No live answer: ${esc(msg)}. Run <code>uv run experiments/country_brief.py</code> with <code>GEMINI_API_KEY</code> in <code>.env</code>.</p>`;
+  function aiBox(id, label, run, pre) {
+    return `<div class="hz-ai" id="${id}"><div class="hz-ai-head">${px(ICON.spark, "#ffd27a")}<b>${label}</b><span>${pre ? `AI-written by Gemini, ${esc(day(pre.generated_at))}` : "Gemini, on request"}</span></div>
       <button type="button" class="hz-ai-go" data-run="${id}">${run}</button><div class="hz-ai-out" aria-live="polite"></div></div>`;
   }
 
@@ -112,7 +121,7 @@ window.HZAI = (() => {
           ${ship.length ? `<div class="hz-row"><span class="hz-k">Shipped by</span><div class="hz-chips">${flagRow(ship)}</div></div>` : ""}
           <div class="hz-ds"><span class="hz-badge made">Made</span><span class="hz-yr">${esc(it.year || "")}</span><span class="hz-fine">${esc(it.unit || "")}</span><div class="hz-srcs">${linkify(it.source || "")}</div></div>
           ${it.exports ? `<div class="hz-ds"><span class="hz-badge ship">Shipped</span><span class="hz-yr">${esc(it.exports.year || "")}</span><span class="hz-fine">${esc(it.exports.unit || "")}</span><div class="hz-srcs">${linkify(it.exports.source || "")}</div>${it.exports.note_2026 ? `<p class="hz-fine">${linkify(it.exports.note_2026)}</p>` : ""}</div>` : ""}
-          ${aiBox(`hz-res-${x.id}`, `What is ${esc(it.name.toLowerCase())}?`, "Explain it, with a picture")}
+          ${aiBox(`hz-res-${x.id}`, `What is ${esc(it.name.toLowerCase())}?`, bakedRes[x.id] ? "What is it?" : "Explain it, with a picture", bakedRes[x.id])}
         </div></details>`;
     }).join("");
     return `<p class="hz-lede">Every material on the map, who makes and ships it, and the source of each number.</p><p class="hz-tierkey"><span><i style="border-color:#ffcf3f"></i>40%+ of world</span><span><i style="border-color:#c9d3e3"></i>20%+</span><span><i style="border-color:#c98a4b"></i>10%+</span><span>Hover a flag for its country</span></p>
@@ -124,13 +133,16 @@ window.HZAI = (() => {
   async function runResource(box) {
     const id = box.id.replace("hz-res-", ""), x = items().find((y) => y.id === id), out = box.querySelector(".hz-ai-out"), btn = box.querySelector("button");
     const facts = resourceFacts(x);
-    btn.disabled = true; out.innerHTML = `<p class="hz-ai-wait">Asking Gemini… <span class="hz-dots">▮▮▮</span></p>`;
-    try {
-      const b = await ask("/resource", { id, name: x.item.name, facts });
-      out.innerHTML = `<div class="hz-ai-res">${b.image ? `<figure class="hz-pic"><img src="${esc(b.image)}" alt="AI-made pixel-art picture of ${esc(x.item.name)}"><figcaption>AI-made picture</figcaption></figure>` : ""}
-        <div>${bullets(b.text, (b.facts || facts).length)}<details class="hz-facts"><summary>The ${(b.facts || facts).length} facts Gemini was given</summary><ol>${(b.facts || facts).map((f) => `<li>${esc(f)}</li>`).join("")}</ol></details></div></div>${stamp(b)}`;
+    const show = (b, st) => {
+      out.innerHTML = `<div class="hz-ai-res${b.image ? "" : " nopic"}">${b.image ? `<figure class="hz-pic"><img src="${esc(b.image)}" alt="AI-made pixel-art picture of ${esc(x.item.name)}"><figcaption>AI-made picture</figcaption></figure>` : ""}
+        <div>${bullets(b.text, (b.facts || facts).length)}<details class="hz-facts"><summary>The ${(b.facts || facts).length} facts Gemini was given</summary><ol>${(b.facts || facts).map((f) => `<li>${esc(f)}</li>`).join("")}</ol></details></div></div>${st}`;
       play("select");
-    } catch (e) { out.innerHTML = helpLine(e.message); btn.disabled = false; play("clank"); }
+    };
+    btn.disabled = true;
+    if (bakedRes[id]) return show(bakedRes[id], bakedStamp(bakedRes[id]));
+    out.innerHTML = `<p class="hz-ai-wait">Asking Gemini… <span class="hz-dots">▮▮▮</span></p>`;
+    try { const b = await ask("/resource", { id, name: x.item.name, facts }); show(b, stamp(b)); }
+    catch (e) { out.innerHTML = helpLine(e.message); btn.disabled = false; play("clank"); }
   }
 
   // ------------------------------------------------------------ country profile
@@ -181,19 +193,23 @@ window.HZAI = (() => {
       <div class="hz-bests">${best(ex[0], "Main export in our tables")}${best(mk[0], "Biggest role in production")}</div>
       ${rows.length ? `<h3 class="hz-h3">Where it ranks</h3><div class="hz-rks">${bars}</div>` : ""}
       ${into.length ? `<h3 class="hz-h3">Key inputs come from</h3><div class="hz-chips">${into.join("")}</div>` : ""}
-      ${aiBox("hz-prof-ai", `${esc(nameOf(iso))} in a few lines`, "Summarise with Gemini")}
+      ${aiBox("hz-prof-ai", `${esc(nameOf(iso))} in a few lines`, "Summarise with Gemini", bakedCty[iso])}
       <p class="hz-note">Ranks are within each table's listed countries. Numbers come from Sources or this page's model.</p>`;
   }
   let profIso = null;
   async function runProfile(box) {
     const iso = profIso, out = box.querySelector(".hz-ai-out"), btn = box.querySelector("button"), facts = profileFacts(iso, tables(iso));
-    btn.disabled = true; out.innerHTML = `<p class="hz-ai-wait">Asking Gemini… <span class="hz-dots">▮▮▮</span></p>`;
-    try {
-      const b = await ask("/country", { iso3: iso, country: nameOf(iso), facts });
+    const show = (b, st) => {
       const fx = b.facts || facts;
-      out.innerHTML = `${bullets(b.text, fx.length)}<details class="hz-facts"><summary>The ${fx.length} facts Gemini was given</summary><ol>${fx.map((f) => `<li>${esc(f)}</li>`).join("")}</ol></details>${stamp(b, "; numbers in [brackets] point to the facts")}`;
+      out.innerHTML = `${bullets(b.text, fx.length)}<details class="hz-facts"><summary>The ${fx.length} facts Gemini was given</summary><ol>${fx.map((f) => `<li>${esc(f)}</li>`).join("")}</ol></details>${st}`;
       play("select");
-    } catch (e) { out.innerHTML = helpLine(e.message); btn.disabled = false; play("clank"); }
+    };
+    btn.disabled = true;
+    const pre = bakedCty[iso];
+    if (pre) return show(pre, bakedStamp(pre, `; written at the ${esc(BAKED.setting || "2026-closure")} setting${onClosure() ? "" : ", so its numbers can differ from the tiles above, which follow your setting"}; numbers in [brackets] point to the facts`));
+    out.innerHTML = `<p class="hz-ai-wait">Asking Gemini… <span class="hz-dots">▮▮▮</span></p>`;
+    try { const b = await ask("/country", { iso3: iso, country: nameOf(iso), facts }); show(b, stamp(b, "; numbers in [brackets] point to the facts")); }
+    catch (e) { out.innerHTML = helpLine(e.message); btn.disabled = false; play("clank"); }
   }
   function openProfile(iso) {
     if (!iso) return;
@@ -221,5 +237,8 @@ window.HZAI = (() => {
   if (more) more.after(profBtn("hz-cp-prof", "more hz-prof-btn"));
   const ct = document.querySelector("#country-card .ctitle .row");
   if (ct) ct.prepend(profBtn("hz-c-prof", "hz-prof-btn small"));
-  return { openProfile, openSources: () => $("hz-sources") && $("hz-sources").click(), AI };
+  // the facts each Gemini panel sends, for `node ui/app/src/ai_facts.cjs` (country facts need the country selected)
+  const facts = { resources: () => items().map((x) => ({ id: x.id, name: x.item.name, facts: resourceFacts(x) })),
+    country: (iso) => ({ iso3: iso, country: nameOf(iso), facts: profileFacts(iso, tables(iso)) }), countries: () => Object.keys(where) };
+  return { openProfile, openSources: () => $("hz-sources") && $("hz-sources").click(), AI, facts, selectedIso };
 })();

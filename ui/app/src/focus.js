@@ -14,6 +14,10 @@
     [...hud.children].filter((x) => x !== cc).forEach((x) => side.appendChild(x));
     hud.appendChild(side);
   }
+  // a picked country shows only what sets the closure beside it (focus.css): mark the shock card and the ranking
+  const lost = document.getElementById("lost"), rank = document.getElementById("w-rank");
+  if (lost && lost.closest(".card")) lost.closest(".card").classList.add("hz-shockcard");
+  if (rank && rank.closest(".card")) rank.closest(".card").classList.add("hz-rankcard");
   // each column's sticking point (focus.css): a column taller than the visible area sticks once its bottom meets the
   // bottom of that area; a shorter one sticks at the top. Only the shorter column ever gets to stick, since the taller
   // one sets the row's height.
