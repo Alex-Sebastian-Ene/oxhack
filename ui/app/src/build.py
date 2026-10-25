@@ -12,7 +12,7 @@ check, node on PATH.
 import base64, pathlib, re, shutil, subprocess, sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-import copy_text, flags, gas, households, kpis, mandeb, models, strait, world  # noqa: E402  (World view, flags, gas lines, households, headline figures, Bab el-Mandeb, Strait layout, models, copy)
+import copy_text, country_src, flags, gas, households, kpis, mandeb, models, product, strait, world  # noqa: E402  (World view, flags, gas lines, households, headline figures, Bab el-Mandeb, Strait layout, models, Product card, country sources, copy)
 
 HERE = pathlib.Path(__file__).resolve().parent
 APP = HERE.parent
@@ -99,7 +99,7 @@ def mandeb_data() -> str:
 
 def main() -> None:
     page = SRC.read_text(encoding="utf-8")
-    for old, new, n in SWAPS + world.SWAPS + gas.SWAPS + mandeb.SWAPS + strait.SWAPS + copy_text.SWAPS + flags.SWAPS + kpis.SWAPS:
+    for old, new, n in SWAPS + world.SWAPS + gas.SWAPS + mandeb.SWAPS + strait.SWAPS + copy_text.SWAPS + flags.SWAPS + kpis.SWAPS + product.SWAPS + country_src.SWAPS:
         got = page.count(old)
         if got != n:
             sys.exit(f"expected {n} of {old[:70]!r}, found {got}: the industry page changed, update SWAPS")
@@ -118,7 +118,7 @@ def main() -> None:
     read = lambda f: (HERE / f).read_text(encoding="utf-8")
     models_data = models.script()   # the Models page, from Seb's notes; empty if no card could be read
     early = (
-        f"\n<style>\n{font_css()}\n{read('theme.css')}\n{gas.CSS}\n{mandeb.CSS}\n{strait.CSS}\n{households.CSS}\n{flags.CSS}\n{read('landing.css')}\n{read('ai.css')}\n{read('steps.css')}\n{read('models.css')}\n{read('info.css')}\n{read('focus.css')}\n{kpis.CSS}</style>\n"
+        f"\n<style>\n{font_css()}\n{read('theme.css')}\n{gas.CSS}\n{mandeb.CSS}\n{strait.CSS}\n{households.CSS}\n{flags.CSS}\n{read('landing.css')}\n{read('ai.css')}\n{read('steps.css')}\n{read('models.css')}\n{read('info.css')}\n{read('focus.css')}\n{kpis.CSS}\n{product.CSS}\n{country_src.CSS}</style>\n"
         f"{gas_data()}{mandeb_data()}{ai_data()}{flags.script()}{households.script()}{models_data}<script>\n{read('mandeb.js')}\n</script>\n"
         f"{read('landing.html')}"
         f"<script>\n{read('pixel.js')}\n</script>\n<script>\n{read('sound.js')}\n</script>\n<script>\n{read('landing.js')}\n</script>\n"
