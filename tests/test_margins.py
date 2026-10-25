@@ -104,6 +104,18 @@ def test_known_events_by_mode():
     assert mg.known_events(pd.Timestamp("2024-01-01"), "forecast") == []
     scen = mg.known_events(pd.Timestamp("2026-02-01"), "forecast", lost=41.0)
     assert scen == [(pd.Timestamp("2026-03-01"), 0.5)]
+    # a 0-point scenario carries its crisis at scale 0, so it picks crises like every other scenario
+    assert mg.known_events(pd.Timestamp("2026-02-01"), "forecast", lost=0.0) == [(pd.Timestamp("2026-03-01"), 0.0)]
+
+
+def test_scenarios_pick_crises_from_the_same_random_numbers():
+    f = mg.fit(synthetic(excess=0.08), "diesel", pd.Timestamp("2025-12-01"))
+    origin, onset = pd.Timestamp("2026-01-01"), pd.Timestamp("2026-03-01")
+    r0, r1 = np.random.default_rng(7), np.random.default_rng(7)
+    zero = mg.crisis_paths(f, origin, [(onset, 0.0)], 50, r0)
+    half = mg.crisis_paths(f, origin, [(onset, 0.5)], 50, r1)
+    assert np.all(zero == 0) and np.any(half != 0)
+    assert r0.random() == r1.random()  # both streams moved on by the same draws
 
 
 def test_crisis_paths_land_on_the_right_months():

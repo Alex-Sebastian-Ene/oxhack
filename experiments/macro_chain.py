@@ -60,6 +60,7 @@ import time
 from datetime import UTC, datetime
 
 import numpy as np
+from scipy import stats
 
 import copula as cp
 import macro_bayes as mb
@@ -588,6 +589,33 @@ def report() -> None:
 
 # --- the 2026 closure: replay and scenario fan ------------------------------------------------
 
+class PairedRNG:
+    """A numpy Generator whose standard_t draws take one uniform each, by inverse CDF, so the stream
+    stays in step whatever the df. numpy's own sampler uses a varying number of draws per value, and
+    the networks' df moves with their oil inputs, so two flow scenarios fell out of step after the
+    first month. With it, draw i of every scenario shares all its random numbers, and the difference
+    of two scenarios' draws is the effect of the extra lost flow alone. Every other method passes
+    through."""
+
+    def __init__(self, rng: np.random.Generator) -> None:
+        self.rng = rng
+
+    def standard_t(self, df, size=None):
+        df = np.asarray(df, float)
+        shape = df.shape if size is None else np.broadcast_shapes(df.shape, tuple(np.atleast_1d(size)))
+        u = np.clip(self.rng.random(shape), 1e-12, 1 - 1e-12)
+        return stats.t.ppf(u, np.broadcast_to(df, shape))
+
+    def __getattr__(self, name):
+        return getattr(self.rng, name)
+
+
+def effect(x: np.ndarray, base: np.ndarray) -> tuple[float, float, float, float]:
+    """Mean, 5%, 50% and 95% of the scenario's draws minus the no-disruption draws, draw by draw."""
+    d = x - base
+    return (float(d.mean()), *(float(v) for v in np.quantile(d, [0.05, 0.5, 0.95])))
+
+
 REPLAY_ORIGIN = "2026-02"  # the last month before the closure (7-day flow share below 50% from 2026-03-04)
 LOSTS = (0.0, 25.0, 50.0, 82.0, 100.0)  # points of Hormuz flow lost; 82 is what happened
 SHOWN = ("us_cpi", "uk_cpi", "ea_cpi", "us_rate", "ind_gasdesw", "ind_djfuelusgulf", "ind_pcu324110324110",
@@ -640,7 +668,9 @@ def replay(origin: str = REPLAY_ORIGIN) -> None:
         if "diagnostics" in extra:
             print(f"replay {mm}: {extra['diagnostics']}", flush=True)
         for mode, fut in oil.items():
-            S[mode].append(sim(fut, np.random.default_rng(300), regime=regime[mode])[:, 0])  # [N, outputs]
+            # the flow scenarios share every random number draw by draw, so their differences are effects
+            rng = np.random.default_rng(300)
+            S[mode].append(sim(fut, rng if mode == "whatif" else PairedRNG(rng), regime=regime[mode])[:, 0])  # [N, outputs]
             if mode in S_cop:
                 S_cop[mode].append(sim(fut, cp.CopulaRNG(np.random.default_rng(300), cop), regime=regime[mode])[:, 0])
     RUNS.mkdir(parents=True, exist_ok=True)
@@ -653,12 +683,13 @@ def replay(origin: str = REPLAY_ORIGIN) -> None:
     cm = margins.ChainMargins(data, last) if MARGINS else None
     ens = {}
     D = {}
-    for k, (mode, parts) in enumerate(S.items()):
+    for mode, parts in S.items():
         D[mode] = None
         if cm is not None:  # the margin member from the same oil paths; a scenario adds a crisis scaled lost / 82
-            lost = 0.0 if mode == "whatif" else float(mode.split()[1])
-            D[mode] = cm.member_draws(t, oil[mode], "whatif" if mode == "whatif" else "forecast", lost, seed=(99, k),
-                                      n=mb.DRAWS)[:, 0]
+            # one seed for every flow scenario, so the margin draws stay paired across them too
+            lost = None if mode == "whatif" else float(mode.split()[1])
+            D[mode] = cm.member_draws(t, oil[mode], "whatif" if mode == "whatif" else "forecast", lost,
+                                      seed=(99, 0 if mode == "whatif" else 1), n=mb.DRAWS)[:, 0]
         ens[mode] = with_margins(np.stack(parts), D[mode], equal, order, fuel_columns(names))  # [N, outputs]
     ens_cop = {mode: with_margins(np.stack(parts), D[mode], equal, order, fuel_columns(names)) for mode, parts in S_cop.items()}
     actual = replay_actual(data, m)
@@ -728,7 +759,12 @@ def replay(origin: str = REPLAY_ORIGIN) -> None:
             lines.append(f"| {mode} | {h} | {ei[0, hi]:.3f} | {ec[0, hi]:.3f} | {vi[0, hi]:.2f} | {vc[0, hi]:.2f} |")
     (NOTES / f"chain-replay-2026{suffix()}.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
-    rows = ["series,group,flow_drop_points,months_ahead,mean,q05,q50,q95,actual,unit,validated,origin,source,fitted_to,generated"]
+    # effect_*: the scenario minus no disruption draw by draw (the scenarios share their random numbers)
+    pair = [np.corrcoef(ens["lost 0"][:, c], ens["lost 25"][:, c])[0, 1] for c in range(len(names))]
+    print(f"pairing: correlation of lost 0 and lost 25 draws, median {np.nanmedian(pair):.3f}, min {np.nanmin(pair):.3f}",
+          flush=True)
+    rows = ["series,group,flow_drop_points,months_ahead,mean,q05,q50,q95,effect_mean,effect_q05,effect_q50,effect_q95,"
+            "actual,unit,validated,origin,source,fitted_to,generated"]
     for c, nm in enumerate(names):
         key, h = nm.split("@")
         grp = groups[c]
@@ -737,8 +773,9 @@ def replay(origin: str = REPLAY_ORIGIN) -> None:
         for lost in LOSTS:
             x = ens[f"lost {lost:g}"][:, c]
             q05, q50, q95 = np.quantile(x, [0.05, 0.5, 0.95])
+            eff = ",".join(f"{v:.4f}" for v in effect(x, ens["lost 0"][:, c]))
             a = actual[nm]
-            rows.append(f"{key},{grp},{lost:g},{h},{x.mean():.4f},{q05:.4f},{q50:.4f},{q95:.4f},"
+            rows.append(f"{key},{grp},{lost:g},{h},{x.mean():.4f},{q05:.4f},{q50:.4f},{q95:.4f},{eff},"
                         f"{'' if not np.isfinite(a) else f'{a:.4f}'},{unit},{validated},{origin},"
                         "experiments/macro_chain.py replay (oil: GARCH-CGMY + notes/flow-premium.csv premium sampled in its band; "
                         f"models: {'+'.join(members + ([MARGIN] if MARGINS else []))}),{idx[last]:%Y-%m},{gen}")

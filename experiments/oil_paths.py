@@ -109,11 +109,14 @@ def premium(lost: float, days: int, z: np.ndarray, release: str = "2026") -> np.
 
 
 def monthly_paths(prices: pd.Series, months: pd.DatetimeIndex, n: int, rng, innov: str = "cgmy",
-                  drift: np.ndarray | None = None, lost: float = 0.0, release: str = "2026") -> np.ndarray:
+                  drift: np.ndarray | None = None, lost: float | None = None, release: str = "2026") -> np.ndarray:
     """Monthly log changes of the mean Brent price in the 12 months after each origin month
     [n, len(months), 12], from daily GARCH-Lévy paths. drift: [len(months), 12] expected monthly
     log changes added to the paths (the futures curve); lost: points of Hormuz flow lost from the
-    day after the origin (scenario); release: the emergency-stock policy (premium)."""
+    day after the origin (scenario), None for no scenario at all; release: the emergency-stock
+    policy (premium). Every scenario, 0 points included, draws the same innovations and band scores
+    from the same rng, so path i of one scenario minus path i of another is the effect of the extra
+    lost flow alone; with one origin, lost=0 gives the same paths as None."""
     logp = np.log(prices)
     r = logp.diff().dropna()
     out = np.zeros((n, len(months), mn.OIL_AHEAD))
@@ -128,11 +131,13 @@ def monthly_paths(prices: pd.Series, months: pd.DatetimeIndex, n: int, rng, inno
         month = (days.year - m.year) * 12 + days.month - m.month - 1  # 0..11
         count = np.bincount(month, minlength=mn.OIL_AHEAD)
         step = drift[i][month] / count[month] if drift is not None else np.zeros(len(days))
-        z = rng.standard_normal(n) if lost else np.zeros(n)  # drawn only with a scenario: lost=0 paths are unchanged
-        prem = premium(lost, len(days), z, release)  # [n, days]
+        u = rng.random((len(days), n))
+        # drawn after u and only with a scenario, so every scenario shares u with the others and with
+        # no scenario, and the folds' paths (lost=None) are unchanged
+        z = rng.standard_normal(n) if lost is not None else np.zeros(n)
+        prem = premium(lost or 0.0, len(days), z, release)  # [n, days]
         jump = np.diff(np.column_stack([np.zeros(n), prem]), axis=1)
         x, total = np.zeros(n), np.zeros((n, mn.OIL_AHEAD))  # x: log price relative to the last close
-        u = rng.random((len(days), n))
         for d in range(len(days)):
             e = np.sqrt(s2) * np.interp(u[d], cdf_tab, x_tab)
             x = x + e + step[d]

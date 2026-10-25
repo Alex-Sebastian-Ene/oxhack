@@ -382,14 +382,16 @@ def crisis_paths(f: Fit, origin: pd.Timestamp, events: list[tuple[pd.Timestamp, 
     return out
 
 
-def known_events(origin: pd.Timestamp, mode: str, lost: float = 0.0) -> list[tuple[pd.Timestamp, float]]:
+def known_events(origin: pd.Timestamp, mode: str, lost: float | None = None) -> list[tuple[pd.Timestamp, float]]:
     """Crises a draw knows about. whatif: every listed event (it is given what happened, as it is
-    given the Brent path); forecast: those already under way at the origin; a flow scenario adds a
-    crisis from the next month, scaled by the points of Hormuz flow lost against 2026's 82."""
+    given the Brent path); forecast: those already under way at the origin; a flow scenario (lost not
+    None) adds a crisis from the next month, scaled by the points of Hormuz flow lost against 2026's
+    82. A 0-point scenario adds it at scale 0, so its draws pick past crises from the same random
+    numbers as every other scenario's (crisis_paths) and the scenarios stay paired draw by draw."""
     if mode == "whatif":
         return [(o, 1.0) for o in onsets()]
     out = [(o, 1.0) for o in onsets() if 0 <= months_since(origin, o) < CRISIS_MONTHS]
-    if lost > 0:
+    if lost is not None:
         out.append((origin + pd.DateOffset(months=1), lost / LOST_2026))
     return out
 
@@ -544,14 +546,14 @@ class ChainMargins:
         self.cols = fuel_columns(data["names"])
         self.h = {k: np.array([int(data["names"][c].split("@")[1]) for c in cs]) for k, cs in self.cols.items()}
 
-    def at(self, tt: int, xf: np.ndarray, mode: str, lost: float = 0.0, seed: tuple = ()) -> dict:
+    def at(self, tt: int, xf: np.ndarray, mode: str, lost: float | None = None, seed: tuple = ()) -> dict:
         """layer() at origin tt (panel month index) for oil paths xf [N, 12]."""
         i = int(self.mm["index"].get_loc(self.idx[tt]))
         rng = np.random.default_rng([SEED, *seed, int(tt)])
         return layer(self.fits, self.maps, self.targets, self.mm, i, self.pub, xf,
                      known_events(self.idx[tt], mode, lost), rng)
 
-    def correct(self, M: np.ndarray, t: np.ndarray, oil: np.ndarray, mode: str, lost: float = 0.0,
+    def correct(self, M: np.ndarray, t: np.ndarray, oil: np.ndarray, mode: str, lost: float | None = None,
                 seed: tuple = (), crisis: bool = True) -> np.ndarray:
         """M with the margin news added to the fuel targets' columns."""
         M = M.copy()
@@ -561,7 +563,7 @@ class ChainMargins:
                 M[:, o, cs] += out["margin" if crisis else "margin_nocrisis"][k][:, self.h[k] - 1]
         return M
 
-    def member_draws(self, t: np.ndarray, oil: np.ndarray, mode: str, lost: float = 0.0, seed: tuple = (),
+    def member_draws(self, t: np.ndarray, oil: np.ndarray, mode: str, lost: float | None = None, seed: tuple = (),
                      like: np.ndarray | None = None, n: int | None = None) -> np.ndarray:
         """The margin member's draws [N, origins, outputs]: the fuel targets' columns from the member,
         the others copied from `like` (e.g. any other member's draws, which the mixture never uses for
