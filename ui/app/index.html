@@ -693,6 +693,11 @@ svg.pxi { stroke: none !important; fill: none; overflow: visible; }
 .colkey { display: inline-block; width: 5px; height: 12px; margin-right: 6px; vertical-align: -1px; background: #8fd0f5; border: 1px solid #04060c; }
 .wtip .faint { color: var(--faint); }
 
+/* The "Illustrative" note in the Exposure score sheet keeps the industry page's cream background unless the night
+   theme restyles it: a dark amber tint, light text and the amber edge, so it reads on the night panels. */
+.sheet .illus-note, .illus-note { background: rgba(255, 164, 36, 0.12) !important; border-left: 3px solid var(--oil) !important; color: var(--text) !important; }
+.illus-note b { color: var(--oil-soft, #ffbf5c); }
+
 /* gas on the World view (gas.py): violet, beside the yellow oil */
 #world .gasl path { fill: none; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; pointer-events: stroke; }
 #world .glane { stroke: #b58cff; stroke-dasharray: 5 6; opacity: .9; animation: oilflow 2.2s linear infinite; }
