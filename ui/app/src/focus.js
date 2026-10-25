@@ -14,6 +14,10 @@
     [...hud.children].filter((x) => x !== cc).forEach((x) => side.appendChild(x));
     hud.appendChild(side);
   }
+  // a picked country shows only what sets the closure beside it (focus.css): mark the shock card and the ranking
+  const lost = document.getElementById("lost"), rank = document.getElementById("w-rank");
+  if (lost && lost.closest(".card")) lost.closest(".card").classList.add("hz-shockcard");
+  if (rank && rank.closest(".card")) rank.closest(".card").classList.add("hz-rankcard");
   const still = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   let seq = 0;
 

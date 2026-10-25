@@ -111,6 +111,6 @@ Pooled link (% price change per 1% Brent move over the same months, and the spre
 | energy | +0.0020 (±0.0085) | +0.0028 (±0.0128) | +0.0035 (±0.0160) | +0.0072 (±0.0211) | +0.0127 (±0.0292) |
 | transport | +0.0175 (±0.0291) | +0.0243 (±0.0418) | +0.0321 (±0.0455) | +0.0512 (±0.0520) | +0.0591 (±0.0541) |
 
-Outlook: the latest 12 months' inflation continues, plus the country's oil link applied to Brent's known move since the latest price month; 90% band from this country's past misses of that rule (12-month forecasts from every 6 months, 2015-2024), scaled by the square root of the horizon.
+Outlook: all prices and food: the cross-country model (country_outlook.py) where it applies, else the rule; the rule: the latest 12 months' inflation continues, plus the country's oil link applied to Brent's known move since the latest price month; 90% band from this country's past misses of that rule (12-month forecasts from every 6 months, 2015-2024), scaled by the square root of the horizon.
 
 A per-country time-series model (its own last month, month of year, Brent's last three months) was tried first and lost to the naive rule in the same backtest: skill against naive all +0.07 over 441 forecasts, food +0.17 over 1753 forecasts. So the outlook uses the naive rule plus the oil link.

@@ -41,7 +41,7 @@ def price_entry(v):
     return {"now": v["now"], "before": v["before"], "from": o["from"] if o else None, "out": o["q"] if o else None,
             "b": {h: v["link"][h]["b"] for h in H} if v.get("link") else None,
             "own": {h: v["link"][h]["own"] for h in H} if v.get("link") else None,
-            "src": v.get("src"), "why": v.get("why_none"), "unc": v.get("uncertain", False)}
+            "src": v.get("src"), "why": v.get("why_none"), "unc": v.get("uncertain", False), "rule": o.get("rule") if o else None}
 
 
 # Seb's cost-of-living model: the outlook from its latest origin, by item, for the US, the UK and the euro area
@@ -64,7 +64,7 @@ COIL = {
               for iso, v in trade["countries"].items()},
     "tradeSrc": f'{trade["source"]}, collected {trade["collected"]}' if trade.get("source") else "",
     "prices": {iso: {k: price_entry(v) for k, v in c.items()} for iso, c in prices["countries"].items()},
-    "pricesSrc": prices["source"], "weights": prices.get("weights", {}),
+    "pricesSrc": prices["source"], "weights": prices.get("weights", {}), "skill": prices.get("model", {}).get("skill", {}),
     # the link each country's own is ridge-updated towards: our cost-of-living model for all prices and food, the
     # cross-country average for housing and energy, and transport
     "prior": {k: prices["prior"].get(k) or {h: v[h]["b"] for h in H} for k, v in prices["pooled"].items()},
@@ -201,7 +201,18 @@ COL_JS = r'''  // ------------------------------------------------------------ C
   const COL_ITEMS = [["bread", "Bread"], ["dairy", "Dairy"], ["meat", "Meat"], ["fruit_veg", "Fruit and vegetables"], ["oils_fats", "Oils and fats"],
     ["sugar", "Sugar"], ["electricity", "Electricity"], ["gas", "Gas"], ["fuel", "Motor fuel"], ["restaurants", "Eating out"], ["composite", "Whole basket"]];
   const COL_REGION = { us: "US", uk: "UK", ea: "euro area" };
+  // each row's explanation sits behind a "Why" toggle, closed until opened; which ones are open survives a redraw
+  const colOpen = new Set();
+  const whyBox = (key, label, body) => `<details class="why"${colOpen.has(key) ? " open" : ""}><summary>${label}</summary>${body}</details>`;
   const COL_KINDS = [["food", "Groceries (food)"], ["energy", "Housing and energy"], ["transport", "Transport"], ["all", "All prices"]];
+  // which forecast a row uses, and how the cross-country model scored at this horizon in its backtest
+  const RULE_NAME = { gbm: "gradient-boosted trees", blend: "trees averaged with a median regression", lad: "a median regression", ridge: "a ridge regression" };
+  function fcTxt(r) {
+    const rule = r.rule && r.rule[colH], sk = COIL.skill[r.kind] && COIL.skill[r.kind][colH];
+    if (!rule || rule === "naive" || !sk) return " Forecast: the latest 12 months' rate continues (the naive rule).";
+    return ` Forecast: our cross-country model (${RULE_NAME[rule] || rule}, trained on about 200 countries). In backtests over 2015-2024 it had `
+      + `<b>${Math.round(100 * sk.skill)}% less error</b> than "the latest rate continues" at ${colH} month${colH === "1" ? "" : "s"}, and its 90% range held what happened ${Math.round(100 * sk.coverage)}% of the time.`;
+  }
   let colH = "12", colPick = "food";
   const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const ymAdd = (ym, h) => { const [y, m] = ym.split("-").map(Number), t = y * 12 + m - 1 + Number(h); return `${MON[t % 12]} ${Math.floor(t / 12)}`; };
@@ -220,7 +231,7 @@ COL_JS = r'''  // ------------------------------------------------------------ C
     const W = COIL.weights[isoOf[name]] || {};
     for (const [kind, label] of COL_KINDS) {
       const v = P[kind], share = W[kind] != null ? `${W[kind].toFixed(0)}% of a household budget here` : "";
-      rows.push(v && v.out ? { key: kind, kind, name: label, from: v.from, q: v.out, b: v.b, own: v.own, src: v.src, share, unc: v.unc }
+      rows.push(v && v.out ? { key: kind, kind, name: label, from: v.from, q: v.out, b: v.b, own: v.own, src: v.src, share, unc: v.unc, rule: v.rule }
         : { key: kind, name: label, none: v ? (v.why || "no forecast") : "not in our data", now: v && v.now, src: v && v.src, share });
     }
     if (reg && COIL.col[reg]) for (const [kk, nm] of COL_ITEMS) if (COIL.col[reg][kk]) rows.push({ key: `col_${kk}`, name: nm, from: COIL.colFrom, q: COIL.col[reg][kk], model: reg });
@@ -237,31 +248,40 @@ COL_JS = r'''  // ------------------------------------------------------------ C
     $("col-h").innerHTML = ["1", "2", "3", "6", "12"].map((h) => `<button type="button" data-colh="${h}" aria-pressed="${h === colH}">${h} mo</button>`).join("");
     const rows = colRows(name), shock = 100 * Math.log(st.brent / BRENT0);
     if (!rows.some((r) => r.key === colPick && r.q)) colPick = (rows.find((r) => r.q) || {}).key;
-    const fuelRow = k.fuel == null ? `<li><span class="nm">Fuel at the pump</span><span class="lv">no estimate</span><span class="why">${NOFUEL}</span></li>`
-      : `<li><span class="nm">Fuel at the pump</span><span class="lv mono ${k.fuel > 0.005 ? "hurt" : ""}">${pct(k.fuel)}</span>
-        <span class="why">Against pre-war, at Brent $${st.brent}: ${escH(nm)}'s own pass-through of ${k.d.pt.e.toFixed(2)} (${escH(k.d.pt.series)}, ${k.d.pt.from} to ${k.d.pt.to}, collected ${k.d.pt.collected})${inDisruption(k.s) ? ", times 1.49 in a supply disruption" : ""}. Pump prices follow oil within weeks.</span></li>`;
+    const fuelRow = k.fuel == null ? `<li data-colkey="fuel"><span class="nm">Fuel at the pump</span><span class="lv">no estimate</span>${whyBox("fuel", "Why no estimate", NOFUEL)}</li>`
+      : `<li data-colkey="fuel"><span class="nm">Fuel at the pump</span><span class="lv mono ${k.fuel > 0.005 ? "hurt" : ""}">${pct(k.fuel)}</span>
+        ${whyBox("fuel", k.fuel >= 0 ? "Why it rises" : "Why it falls", `Against pre-war, at Brent $${st.brent}: ${escH(nm)}'s own pass-through of ${k.d.pt.e.toFixed(2)} (${escH(k.d.pt.series)}, ${k.d.pt.from} to ${k.d.pt.to}, collected ${k.d.pt.collected})${inDisruption(k.s) ? ", times 1.49 in a supply disruption" : ""}. Pump prices follow oil within weeks.`)}</li>`;
     $("col-list").innerHTML = rows.map((r) => {
-      if (!r.q) return `<li><span class="nm">${r.name}</span><span class="lv">${r.now ? `${pctP(r.now.v)} a year` : "–"}</span>
-        <span class="why">No forecast: ${escH(r.none)}${r.now ? `. Latest: ${pctP(r.now.v)} on a year earlier in ${ymLabel(r.now.month)} (${r.src})` : ""}.${r.share ? ` ${r.share}.` : ""}</span></li>`;
+      if (!r.q) return `<li data-colkey="${r.key}"><span class="nm">${r.name}</span><span class="lv">${r.now ? `${pctP(r.now.v)} a year` : "–"}</span>
+        ${whyBox(r.key, "Why no forecast", `No forecast: ${escH(r.none)}${r.now ? `. Latest: ${pctP(r.now.v)} on a year earlier in ${ymLabel(r.now.month)} (${r.src})` : ""}.${r.share ? ` ${r.share}.` : ""}`)}</li>`;
       const q = r.q[colH], cls = q[1] > 0.05 ? "hurt" : q[1] < -0.05 ? "gain" : "", w = Math.min(100, Math.abs(q[1]) / 20 * 100);
       const cost = `By ${ymAdd(r.from, colH)}, 100 spent today costs <b>${(100 + q[1]).toFixed(1)}</b> (90% range ${(100 + q[0]).toFixed(1)} to ${(100 + q[2]).toFixed(1)}).`;
       const why = r.model ? `${cost} Seb's cost-of-living model (${COL_REGION[r.model]}), with the disruption continuing.`
-        : `${cost}${r.unc ? " <b>Very uncertain</b>: this country's prices have swung far from the rule before." : ""}${r.share ? ` ${r.share}.` : ""}${q[3] ? ` Oil's moves since ${ymLabel(r.from)} add ${pctP(q[3], 2)}.` : ""}${r.b && r.own && st.brent > BRENT0
+        : `${cost}${fcTxt(r)}${r.unc ? " <b>Very uncertain</b>: this country's prices have swung far from the rule before." : ""}${r.share ? ` ${r.share}.` : ""}${q[3] ? ` Oil's moves since ${ymLabel(r.from)} add ${pctP(q[3], 2)}.` : ""}${r.b && r.own && st.brent > BRENT0
           ? ` Brent at $${st.brent} instead of the pre-war $${BRENT0}, over ${colH} months by itself: ${COIL.priorSrc[r.kind]} ${pctP(COIL.prior[r.kind][colH] * shock, 2)}, `
             + `${escH(nm)}'s own data ${pctP(r.own[colH] * shock, 2)}, combined <b>${pctP(r.b[colH] * shock, 2)}</b> (a ridge update on ${escH(nm)}'s prices).` : ""} Prices to ${ymLabel(r.from)} (${r.src}).`;
       return `<li class="colrow" data-colitem="${r.key}" aria-current="${r.key === colPick}"><span class="nm">${r.name}${r.model ? ` <span class="faint">${COL_REGION[r.model]} model</span>` : ""}</span><span class="lv mono ${cls}">${pctP(q[1])}</span>
-        <span class="tr"><div style="width:${Math.max(w, 2)}%;background:${q[1] < 0 ? "var(--gain)" : color(Math.min(65, Math.max(6, q[1] * 4)))}"></div></span><span class="why">${why}</span></li>`;
+        <span class="tr"><div style="width:${Math.max(w, 2)}%;background:${q[1] < 0 ? "var(--gain)" : color(Math.min(65, Math.max(6, q[1] * 4)))}"></div></span>${whyBox(r.key, q[1] >= 0.05 ? "Why it rises" : q[1] <= -0.05 ? "Why it falls" : "Why it holds", why)}</li>`;
     }).join("") + fuelRow;
     const sel = rows.find((r) => r.key === colPick && r.q);
     $("col-chart-h").innerHTML = sel ? `<b>${sel.name}</b>: % change from ${ymLabel(sel.from)}, with its 90% range. Click a row to chart it.` : "";
     if (sel) ecoChart($("col-chart"), colPath(sel.q), { unit: "%" }); else $("col-chart").innerHTML = "";
-    $("col-src").textContent = `Prices: ${COIL.pricesSrc}. Each row: the latest 12 months' rate continues, plus Brent's known moves through the country's oil link, `
+    $("col-src").textContent = `Prices: ${COIL.pricesSrc}. Groceries and all prices: our cross-country model (experiments/country_outlook.py: gradient-boosted trees, and at 6-12 months their average with a median regression, on recent inflation, the country's longer-run rate, world inflation, the food-all gap, Brent and the season), `
+      + `which beat the naive rule at every horizon in a rolling backtest 2015-2024; the six hyperinflation countries and rates above 50% keep the rule. Housing and energy, and transport: the rule. Every row adds Brent's known moves since its last price month through the country's oil link, `
       + `ridge-updated on the country's own prices (2009-2025) from our cost-of-living model (all prices, food) or the cross-country average (housing and energy, transport). `
       + `The range is how far that rule missed for this country, 2015-2024. A fitted time-series model lost to this rule in backtests, so it isn't used. Budget shares: IMF CPI weights. `
       + (ecoOf(name) ? `Item rows: Seb's cost-of-living model, outlook from ${ymLabel(COIL.colFrom)} (notes/cost-of-living-fans.csv, ${COIL.colGen}); how it compares with the Fed and the SPF is in the Models tab.` : "");
   }
   $("col-h") && $("col-h").addEventListener("click", (e) => { const b = e.target.closest("[data-colh]"); if (b) { colH = b.dataset.colh; renderCol(); } });
-  $("col-list") && $("col-list").addEventListener("click", (e) => { const li = e.target.closest("[data-colitem]"); if (li) { colPick = li.dataset.colitem; renderCol(); } });
+  $("col-list") && $("col-list").addEventListener("click", (e) => {
+    const sm = e.target.closest("summary"), li = e.target.closest("li");
+    if (sm && li) {   // the toggle opens or closes by itself; just remember it
+      const key = li.dataset.colitem || li.dataset.colkey, box = sm.parentElement;
+      setTimeout(() => (box.open ? colOpen.add(key) : colOpen.delete(key)), 0);
+      return;
+    }
+    if (li && li.dataset.colitem) { colPick = li.dataset.colitem; renderCol(); }
+  });
 '''
 sub("  function renderCountry() {", COL_JS + "  function renderCountry() {")
 sub("#c-ind-pick { width: 100%; }",
@@ -271,6 +291,8 @@ sub("#c-ind-pick { width: 100%; }",
     "#col-sec { display: flex; flex-direction: column; gap: 10px; }\n"
     ".col-now { margin: 0; font-size: 13.5px; line-height: 1.5; }\n"
     ".col-list .colrow { cursor: pointer; }\n"
+    ".col-list details.why > summary { cursor: pointer; width: fit-content; color: var(--muted); font-size: 12px; }\n"
+    ".col-list details.why[open] > summary { margin-bottom: 4px; }\n"
     ".col-list .colrow[aria-current=\"true\"] .nm { text-decoration: underline; text-underline-offset: 3px; }")
 
 # 5. pop-up: groceries, fuel, oil cut off; prices now; our models' 12-month what-ifs
