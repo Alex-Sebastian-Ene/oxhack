@@ -1,5 +1,5 @@
 // shared helpers for the Hormuz Flow thumbnails: palette, seeded random, low-res buffers, dither, text
-const W = 1920, H = 1080, TAU = Math.PI * 2;
+const W = window.STILL_W || 1920, H = window.STILL_H || 1080, TAU = Math.PI * 2;
 const P = { bg: "#0a0e1c", panel: "#121a2d", panel2: "#1a2439", line: "#27324c", line2: "#3a4867", text: "#f1e8d2", muted: "#c4baa3",
   faint: "#a0978a", oil: "#ffa424", oilSoft: "#ffbf5c", oilHi: "#ffd27a", oilDeep: "#c26f12", harm: "#ff6a4d", red: "#e0412e", redLo: "#8a1f18",
   sea: "#0b2240", gas: "#b58cff", ais: "#5aa9ff", ink: "#04060c", steel: "#5b6d95", steelHi: "#8b9bc0", steelLo: "#323e5c", crude: "#1a1108", crude2: "#100a04", sheen: "#4a2f12" };
