@@ -16,6 +16,8 @@
       <button type="button" class="pill sim" data-info="sim" aria-label="About this data">SIMULATED</button>
     </div>
     <div class="tools">
+      <label for="strait" class="sr">Strait</label>
+      <select id="strait" hidden><option value="hormuz">Hormuz</option><option value="mandeb">Bab el-Mandeb</option></select>
       <label for="scenario" class="sr">Scenario</label>
       <select id="scenario"></select>
       <div class="seg" role="group" aria-label="What to show">
@@ -109,6 +111,7 @@
 </div>
 
 <script src="data/scenarios.js"></script>
+<script src="data/mandeb-scenarios.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

@@ -117,14 +117,17 @@ TANKER_AIS_TYPES = range(80, 90)  # AIS ship-type codes 80-89 are tankers
 
 
 def observations_to_sim(ais_rows: list[dict], sar_rows: list[dict], t0: datetime, lanes: dict, window_h: float,
-                        corridor_lon=(55.3, 57.6), sar_passes: list[datetime] | None = None) -> dict:
+                        corridor_lon=(55.3, 57.6), sar_passes: list[datetime] | None = None,
+                        strait: str = "hormuz") -> dict:
     """Shape real AIS and radar rows like `strait_flow.simulate` output, so `estimate` runs unchanged.
 
     ais_rows: {"mmsi", "time" (datetime), "lon", "lat", "draught_m", "length_m", "ship_type"}
     sar_rows: {"time" (datetime), "lon", "lat", "length_m", "matched" (bool)}
+    For Bab el-Mandeb pass strait="mandeb" and its corridor (strait_flow.STRAITS["mandeb"]["corridor_lon"]).
     """
     import strait_flow as sf
 
+    lat0 = lanes["outbound"].lat0
     hours = lambda t: (t - t0).total_seconds() / 3600
     tracks: dict[str, list] = {}
     meta: dict[str, dict] = {}
@@ -145,15 +148,15 @@ def observations_to_sim(ais_rows: list[dict], sar_rows: list[dict], t0: datetime
     for r in sar_rows:
         if r.get("matched") or not (corridor_lon[0] <= r["lon"] <= corridor_lon[1]):
             continue
-        # Direction from the nearer lane: outbound traffic keeps to the southern lane.
-        d = {k: min(math.dist(sf.to_km(r["lon"], r["lat"]), sf.to_km(*lanes[k].at(s)))
+        # Direction from the nearer lane (Hormuz: outbound keeps to the southern lane).
+        d = {k: min(math.dist(sf.to_km(r["lon"], r["lat"], lat0), sf.to_km(*lanes[k].at(s), lat0))
                     for s in range(0, int(lanes[k].length), 5)) for k in lanes}
         ships.append({"id": f"SAR-{len(ships)}", "kind": "tanker", "class": sf.class_from_length(r["length_m"]),
                       "lane": min(d, key=d.get), "draught_m": 0.0, "ais": [], "ais_mode": "off",
                       "sar_hits": [{"pass": passes.index(r["time"]), "lon": r["lon"], "lat": r["lat"],
                                     "length_m": r["length_m"]}]})
     return {"ships": ships, "corridor_lon": corridor_lon, "sar_passes_h": [hours(p) for p in passes],
-            "window_h": window_h, "synthetic": False}
+            "window_h": window_h, "synthetic": False, "strait": strait}
 
 
 # --------------------------------------------------------------------------- CLI
