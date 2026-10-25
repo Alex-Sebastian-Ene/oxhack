@@ -58,6 +58,8 @@ def test_request_body_numbers_the_facts_and_uses_no_tools():
     assert "[1] Nitrogen fertiliser price +27.3%" in text and "[3] 46% of India's" in text
     assert "Do not add any number" in text
     assert body["generationConfig"]["responseMimeType"] == "application/json"
+    assert body["generationConfig"]["thinkingConfig"] == {"thinkingLevel": "low"}  # fast: default thinking took over a minute
+    assert body["generationConfig"]["maxOutputTokens"] >= 4096  # thinking counts against this limit
     assert "tools" not in body  # no Google Search: plain quota only
 
 

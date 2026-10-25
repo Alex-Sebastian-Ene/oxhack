@@ -54,6 +54,8 @@ MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.8-flash")  # gemini-2.5-* is de
 API = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 PORT = int(os.environ.get("EXPLAIN_PORT", "8789"))
 MAX_FACTS = 30
+THINKING = os.environ.get("GEMINI_THINKING", "low")  # low, medium or high
+TIMEOUT = 120
 KINDS = {"country": "a country's exposure to the Strait of Hormuz oil shock",
          "product": "how the Hormuz oil shock reaches one product's price and its buyers"}
 
@@ -88,8 +90,11 @@ SCHEMA = {
 
 
 def request_body(kind: str, subject: str, facts: list[str]) -> dict:
+    # Gemini 3 models think at "medium" by default, which made short answers take over a minute; restating given
+    # facts needs little reasoning. Thinking tokens count against maxOutputTokens, so leave plenty of room.
     return {"contents": [{"role": "user", "parts": [{"text": prompt(kind, subject, facts)}]}],
-            "generationConfig": {"maxOutputTokens": 900, "responseMimeType": "application/json", "responseSchema": SCHEMA}}
+            "generationConfig": {"maxOutputTokens": 8192, "thinkingConfig": {"thinkingLevel": THINKING},
+                                 "responseMimeType": "application/json", "responseSchema": SCHEMA}}
 
 
 NUM = re.compile(r"\d[\d,]*(?:\.\d+)?")
@@ -152,7 +157,7 @@ def allowed_origin(origin: str | None) -> bool:
 def ask_gemini(body: dict, key: str) -> dict:
     req = urllib.request.Request(API.format(model=MODEL), data=json.dumps(body).encode(), method="POST",
                                  headers={"Content-Type": "application/json", "x-goog-api-key": key})
-    with urllib.request.urlopen(req, timeout=60) as r:
+    with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
         return json.loads(r.read())
 
 
@@ -207,7 +212,9 @@ class Handler(BaseHTTPRequestHandler):
             msg = {429: "Gemini quota used up (HTTP 429): try later or another GEMINI_MODEL",
                    404: f"model {MODEL} not found (HTTP 404): set GEMINI_MODEL"}.get(e.code, f"Gemini HTTP {e.code}")
             self._send(502, {"error": msg})  # the body can echo the request; keep it out
-        except (ValueError, urllib.error.URLError, TimeoutError) as e:
+        except TimeoutError:
+            self._send(504, {"error": f"Gemini took over {TIMEOUT} s: try again, or set GEMINI_THINKING=low and a Flash model"})
+        except (ValueError, urllib.error.URLError) as e:
             self._send(400 if isinstance(e, ValueError) else 502, {"error": str(e)})
 
     def log_message(self, fmt: str, *args) -> None:  # one line per request, never headers (the key)
