@@ -83,6 +83,12 @@ def gas_data() -> str:
     return f"<script>/* gas routes: ui/app/data/gas.json */\nwindow.GAS = {f.read_text(encoding='utf-8').strip()};\n</script>\n"
 
 
+def ai_data() -> str:
+    """window.HZ_AI_BAKED from ui/app/data/ai-panels.json (country_brief.py bake): the Gemini panels written ahead of time."""
+    f = APP / "data" / "ai-panels.json"
+    return f"<script>/* AI-written by Gemini, not checked by the team: ui/app/data/ai-panels.json */\nwindow.HZ_AI_BAKED = {f.read_text(encoding='utf-8').strip()};\n</script>\n" if f.exists() else ""
+
+
 def mandeb_data() -> str:
     """window.STRAITS.mandeb from ui/strait/data/mandeb-scenarios.js (strait_flow.py --strait mandeb), if present."""
     f = APP.parent / "strait" / "data" / "mandeb-scenarios.js"
@@ -110,13 +116,13 @@ def main() -> None:
     read = lambda f: (HERE / f).read_text(encoding="utf-8")
     models_data = models.script()   # the Models page, from Seb's notes; empty if no card could be read
     early = (
-        f"\n<style>\n{font_css()}\n{read('theme.css')}\n{gas.CSS}\n{mandeb.CSS}\n{strait.CSS}\n{households.CSS}\n{flags.CSS}\n{read('landing.css')}\n{read('ai.css')}\n{read('steps.css')}\n{read('models.css')}</style>\n"
-        f"{gas_data()}{mandeb_data()}{flags.script()}{households.script()}{models_data}<script>\n{read('mandeb.js')}\n</script>\n"
+        f"\n<style>\n{font_css()}\n{read('theme.css')}\n{gas.CSS}\n{mandeb.CSS}\n{strait.CSS}\n{households.CSS}\n{flags.CSS}\n{read('landing.css')}\n{read('ai.css')}\n{read('steps.css')}\n{read('models.css')}\n{read('info.css')}</style>\n"
+        f"{gas_data()}{mandeb_data()}{ai_data()}{flags.script()}{households.script()}{models_data}<script>\n{read('mandeb.js')}\n</script>\n"
         f"{read('landing.html')}"
         f"<script>\n{read('pixel.js')}\n</script>\n<script>\n{read('sound.js')}\n</script>\n<script>\n{read('landing.js')}\n</script>\n"
     )
     body = body[:first_style_end] + early + body[first_style_end:]
-    body += f"\n<script>\n{read('shell.js')}\n</script>\n<script>\n{read('ai.js')}\n</script>\n"
+    body += f"\n<script>\n{read('shell.js')}\n</script>\n<script>\n{read('ai.js')}\n</script>\n<script>\n{read('strait.js')}\n</script>\n"
     if households.data() is not None:   # the Households page, from Seb's notes (OXH-8)
         body += f"<script>\n{read('households.js')}\n</script>\n"
     if models_data:   # the Models page: each model's results, tests and limits, read from notes/ and docs/
@@ -125,7 +131,7 @@ def main() -> None:
     fragment = '<title>Hormuz Flow</title>\n<meta name="claude:viewport-fit-sides" content="cover">\n' + body
 
     if shutil.which("node"):
-        for f in ("pixel.js", "sound.js", "landing.js", "shell.js", "ai.js", "mandeb.js", "households.js", "models.js", "steps.js"):
+        for f in ("pixel.js", "sound.js", "landing.js", "shell.js", "ai.js", "strait.js", "mandeb.js", "households.js", "models.js", "steps.js"):
             r = subprocess.run(["node", "--check", str(HERE / f)], capture_output=True, text=True)
             if r.returncode:
                 sys.exit(f"{f}: {r.stderr.strip()}")
