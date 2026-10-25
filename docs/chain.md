@@ -175,7 +175,28 @@ Every member is fitted on data up to 2026-01 only, then started from 2026-02, th
 - **Without the flow link** the chain misses the closure (58%). That is why the flow → Brent step matters. Its sign and the role of rerouting now have an out-of-sample check (Bab el-Mandeb 2023–24), but its size still rests on this one event.
 - **The 65 outcomes aren't independent.** They come from one event and overlapping horizons, so this is one strong look, not 65.
 
-`notes/chain-scenarios-3m.csv` is the slider's table, from the same fits (`notes/chain-scenarios.csv` is the all-member version, `-3m-margins` the app's): each series' mean, median and 90% band for 0, 25, 50, 82 and 100 points of lost flow held for 12 months, 1–12 months ahead, with the actual where it's published. `notes/chain-scenarios-2026-3m.csv` (and `-margins`) has the same columns for the IEA's 2026 path, `flow_drop_points` = `iea_2026_path`: that, not 82 held, should be the app's 2026 preset (handed to the UI lane). The stock-release replays (`*-3m-d2000-margins*`, `experiments/reserves.py`) still use the trough curve and wait to be restated on the IEA path. Its columns are series, group, flow_drop_points, months_ahead, mean, q05, q50, q95, actual, unit, validated, origin, source, fitted_to and generated. Unemployment and rates are marked `validated=no` (forecast only, no causal oil link). Since flow is already near zero in October 2026, a slider started today would need the *reopening* direction, which no data have tested. The demo should replay February 2026.
+`notes/chain-scenarios-3m.csv` is the slider's table, from the same fits (`notes/chain-scenarios.csv` is the all-member version, `-3m-margins` the app's): each series' mean, median and 90% band for 0, 25, 50, 82 and 100 points of lost flow held for 12 months, 1–12 months ahead, with the actual where it's published. `notes/chain-scenarios-2026-3m.csv` (and `-margins`) has the same columns for the IEA's 2026 path, `flow_drop_points` = `iea_2026_path`: that, not 82 held, should be the app's 2026 preset (handed to the UI lane). The stock-release replays (`*-3m-d2000-margins*`, `experiments/reserves.py`) still use the trough curve and wait to be restated on the IEA path. Its columns are series, group, flow_drop_points, months_ahead, mean, q05, q50, q95, actual, unit, validated, origin, source, fitted_to and generated, plus the effect columns in the `-margins` tables (below). Unemployment and rates are marked `validated=no` (forecast only, no causal oil link). Since flow is already near zero in October 2026, a slider started today would need the *reopening* direction, which no data have tested. The demo should replay February 2026.
+
+**The effect of a scenario, draw by draw.** The app shows what the lost flow *adds* against no disruption. Taking the scenario's band minus the 0-point mean overstates that range: it also carries the ordinary forecast spread. So the scenarios now share every random number, draw by draw (2026-10-25):
+- **Oil paths:** the premium's band score is drawn for every scenario, 0 points and the IEA's 2026 path included, after the daily shocks (`oil_paths.monthly_paths`; `lost=None`, the folds' default, draws exactly what it did before).
+- **Members:** their Student-t noise comes from one uniform per value (`macro_chain.PairedRNG`). numpy's own sampler uses a varying number of random numbers per draw, and the networks' tail index moves with oil, so before this the scenarios fell out of step.
+- **Margin member:** one seed for every scenario, and a 0-point scenario carries its crisis at scale 0, so it picks past crises from the same random numbers (`margins.known_events`).
+- **Not yet paired:** `bayes_gas` (not adopted) still seeds its gas paths per scenario, so a replay with it is paired except in the gas channel. The stock-release tables (`*-3m-d2000-margins*`) compare policies on the same random numbers and become fully paired when they are next run.
+
+`notes/chain-scenarios-3m-margins.csv` and `notes/chain-scenarios-2026-3m-margins.csv` add `effect_mean`, `effect_q05`, `effect_q50` and `effect_q95` after `q95`: the scenario's draw minus the 0-point draw with the same index. They are 0 at 0 points.
+- **Pairing works:** the 0- and 25-point draws correlate at a median of 0.967 (minimum 0.874 over the 88 outputs). Before, the 0-point oil paths were unrelated to the others (correlation −0.05 with 82 points).
+- **The effect bands are narrower than the subtracted ones,** most of all for small shocks. On the app's series at 3 and 12 months, their 90% width is 0.23–0.48 of the old one at 25 points and 0.60–0.89 at 82–100 points.
+  - US CPI after 12 months at 82 points held: +2.7 (−0.4..+8.7), against +2.5 (−2.0..+10.4) the old way.
+  - The IEA's 2026 path against no disruption, US CPI after 12 months: +2.0 (−1.5..+8.2).
+- **What stays wide** is the shock's own uncertainty:
+  - the premium's band (0.08–1.31% per point, averaged over 12 months);
+  - the GARCH feedback: the jump raises Brent's volatility, which deepens falls as well as rises. About a tenth of paired Brent draws at 82 points held end below no disruption after 12 months.
+- **What else moved:**
+  - The what-if column reproduces exactly (89% of 65, the same joint scores).
+  - The scenarios' means moved within simulation noise (median 0.02 of their 90% width, at most 0.09).
+  - In the margins replay, lost 0 now covers 57% of 65 (58% before) and the IEA 2026 run 98% (95% before).
+  - With 400 draws, the fuels' 12-month band edges are noisy. On the trough curve, a bootstrap put the standard error of diesel's 95% edge at about 13 log points and jet fuel's at 16, against 0.8 for US CPI.
+- **Run:** Iridis job 1974232 (`oxhack-paired-iea`), from this code on the IEA curve, 2026-10-25. Jobs 1974181 and 1974208 ran the same edits on the trough curve.
 
 ## Refined-product margins (`notes/margins-results.md`)
 
@@ -236,7 +257,7 @@ Fuel targets on the 8 folds (skill against the v1 climatology, all horizons, the
 
   Inflation, unemployment and rates are unchanged by construction, and cost coverage stays at 89%.
 
-  The replay with it is `notes/chain-replay-2026-3m-margins.md` (Iridis job 1972934), the same fits as `notes/chain-replay-2026-3m.md`. Its joint energy score of all series after 1 month is lower: 3.60 against 3.70 with independent shocks, 3.66 against 3.78 with copula shocks. It is about level at 6 months. The slider's table with it is `notes/chain-scenarios-3m-margins.csv`: same columns, and only the fuel rows differ.
+  The replay with it is `notes/chain-replay-2026-3m-margins.md` (Iridis job 1972934; rerun on the IEA curve with paired scenario draws as job 1974232, which leaves the what-if unchanged), the same fits as `notes/chain-replay-2026-3m.md`. Its joint energy score of all series after 1 month is lower: 3.60 against 3.70 with independent shocks, 3.66 against 3.78 with copula shocks. It is about level at 6 months. The slider's table with it is `notes/chain-scenarios-3m-margins.csv`: the same columns plus the effect columns (above). Since the paired rerun, its non-fuel rows differ from `notes/chain-scenarios-3m.csv` within simulation noise.
   - The copula leaves each series' own distribution unchanged, so the cost-group numbers above hold for the recommended model with copula shocks too.
   - The margin member's draws carry their own shocks; they are not drawn through the copula.
 

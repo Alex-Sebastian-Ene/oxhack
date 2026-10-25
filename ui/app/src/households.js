@@ -295,7 +295,7 @@ window.HZHouseholds = (() => {
     const lo = gRow("Decile 1", sev, 12), hi = gRow("Decile 10", sev, 12), lo0 = gRow("Decile 1", "none", 12), hi0 = gRow("Decile 10", "none", 12);
     $("hh-mini-g").innerHTML = sev === "none" || !lo || !hi ? `${flag("uk")} No closure in the UK household model at this setting.`
       : `${flag("uk")} ${sevName(sev)} adds <b>${sgn(lo.q50 - lo0.q50, 2)}</b> pts to the lowest-income tenth's costs over 12 months, <b>${sgn(hi.q50 - hi0.q50, 2)}</b> to the highest's.`;
-    $("hh-mini-src").innerHTML = "Model output: notes/household-scenarios.csv and household-group-scenarios.csv (nearest modelled case).";
+    $("hh-mini-src").innerHTML = "Model output: the team's household model, nearest modelled case.";
   }
 
   // ------------------------------------------------------------ show / hide, and drawing

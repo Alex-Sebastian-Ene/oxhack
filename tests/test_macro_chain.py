@@ -114,3 +114,54 @@ def test_margin_member_joins_mixtures_on_the_fuel_columns_only():
     assert np.array_equal(mc.with_margins(S, None, w, order, cols), base)
     names = ["us_cpi@1", "ind_gasdesw@3", "ind_djfuelusgulf@12", "ind_pcu324110324110@1", "ind_pcu325311325311@1"]
     assert mc.fuel_columns(names) == [1, 2, 3]
+
+
+def test_paired_rng_keeps_the_student_t_marginal():
+    from scipy import stats
+    x = mc.PairedRNG(np.random.default_rng(0)).standard_t(np.full(20000, 4.0))
+    assert stats.kstest(x, "t", args=(4.0,)).pvalue > 0.01
+    rng = mc.PairedRNG(np.random.default_rng(1))
+    assert rng.standard_t(np.full((5, 1, 3), 6.0), size=(5, 2, 3)).shape == (5, 2, 3)  # as macro_bayes asks
+    assert rng.standard_normal(4).shape == (4,)  # everything else passes through
+
+
+def test_paired_rng_stays_in_step_whatever_the_df():
+    a, b = mc.PairedRNG(np.random.default_rng(3)), mc.PairedRNG(np.random.default_rng(3))
+    xa, xb = a.standard_t(np.full(500, 2.6)), b.standard_t(np.linspace(3, 40, 500))
+    assert np.all(np.sign(xa) == np.sign(xb))  # one uniform each: the same quantile, a different df
+    assert a.random() == b.random()
+
+
+def test_network_noise_is_paired_across_oil_paths():
+    from types import SimpleNamespace
+
+    import macro_global as mg
+    import torch
+    from torch import nn
+
+    class OilTails(nn.Module):
+        """Location 0, unit scale and a tail index that moves with Brent's change at lag 0, as a
+        trained head's can: numpy's own t sampler then uses a different number of draws per path."""
+
+        def forward(self, x, k):
+            return 0 * x[:, 0], torch.ones(len(x)), 2.6 + 30 * torch.abs(x[:, mg.OWN])
+
+    M, K, n = 60, 2, 300
+    st = SimpleNamespace(xs=1.0, x2=1.0, vm=0.0, vs=1.0, ym=np.zeros(K), ys=np.ones(K))
+    info = {"keys": ["s0", "s1"], "pub_lag": np.array([0, 0])}
+    data = {"oil_m": np.zeros(M), "dM": np.zeros((M, K))}
+    calm, shock = np.zeros((n, 1, 12)), np.full((n, 1, 12), 0.3)
+    run = lambda fut: mg.simulate([OilTails()], st, info, data, np.array([40]), fut,  # noqa: E731
+                                  mc.PairedRNG(np.random.default_rng(9)), n=n)[:, 0]
+    a, b = run(calm), run(shock)
+    first = [k * len(mc.mn.HORIZONS) for k in range(K)]  # month 1 of each series
+    assert np.all(np.sign(a[:, first]) == np.sign(b[:, first]))
+    last = [k * len(mc.mn.HORIZONS) + len(mc.mn.HORIZONS) - 1 for k in range(K)]  # month 12
+    assert min(np.corrcoef(a[:, c], b[:, c])[0, 1] for c in last) > 0.8
+
+
+def test_effect_is_taken_draw_by_draw():
+    rng = np.random.default_rng(4)
+    base = rng.normal(size=1000)
+    assert mc.effect(base, base) == (0.0, 0.0, 0.0, 0.0)
+    assert mc.effect(base + 2.0, base) == pytest.approx((2.0, 2.0, 2.0, 2.0))  # no base noise in the band

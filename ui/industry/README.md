@@ -3,7 +3,7 @@
 Edward's strait page with his materials globe built in, aimed at industry users: which products an
 oil shock reaches, which countries make and ship them, and what it does to their price.
 Open `index.html` in a browser; it needs no server. It is the same page as the shared artifact
-<https://claude.ai/artifact/84rJe1aD8Vpe7KvAnq8a39> (version 26).
+<https://claude.ai/artifact/84rJe1aD8Vpe7KvAnq8a39> (version 32).
 
 ## What it shows
 
@@ -116,9 +116,13 @@ only, because its ships are simulated. Everything else follows:
 
 - **The exposure score** (map colours, "Most exposed"): a hand-written formula from the original Hormuz Flow page.
   Its inputs are cited; its weights (0.4 / 0.6 for importers, ÷3, +0.15 and ×60 for exporters) are not.
-- **The shortage premium** inside each country's fuel cost: `0.8 × share of flow missing × share of oil via Hormuz`,
-  hand-set and not fitted to data.
-- **The 12-month fuel-cost path:** that fuel cost, decayed at hand-set recovery speeds.
+- **The 12-month fuel-cost path:** the country's fuel cost, decayed at hand-set recovery speeds.
+
+**Fuel cost in a disruption** (`src/patch_disruption.py`) is no longer hand-set. The old shortage premium
+(`0.8 × share of flow missing × share of oil via Hormuz`) is replaced by Seb's cost-of-living model (OXH-3): in a
+supply disruption retail fuel moves 1.49 times its normal Brent link (90% interval 1.08 to 1.89), pooled over the US,
+UK and euro area and assumed for other countries. It applies to the country card, the exposure score, the fuel-cost
+path (fading as the flow recovers) and the Industries tab, whose ranges use the interval.
 
 ## Where the numbers come from
 

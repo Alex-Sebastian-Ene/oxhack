@@ -48,7 +48,9 @@ def test_month_zero_is_the_actual_monthly_mean(no_noise):
 def test_scenario_premium_reaches_the_monthly_means(no_noise):
     out = op.monthly_paths(prices(), MONTH, 1, np.random.default_rng(0), lost=op.LOST_2026)
     days = pd.bdate_range("2020-02-01", "2021-01-31")
-    z = np.random.default_rng(0).standard_normal(1)  # the path's place in the band, drawn first
+    g = np.random.default_rng(0)
+    g.random((len(days), 1))  # the innovations' uniforms come first ...
+    z = g.standard_normal(1)  # ... then the path's place in the band
     prem = op.premium(op.LOST_2026, len(days), z)[0]
     last = days.month == 1  # month 12 after the origin is January 2021
     assert out[0, 0].sum() == pytest.approx(np.log(np.exp(prem[last]).mean()))
@@ -102,6 +104,20 @@ def test_no_scenario_draws_nothing_extra():
     a = op.monthly_paths(prices(), MONTH, 50, np.random.default_rng(3))
     b = op.monthly_paths(prices(), MONTH, 50, np.random.default_rng(3), lost=0.0)
     assert np.array_equal(a, b)  # so the folds' levy mode is unchanged by the scenario code
+
+
+@pytest.mark.parametrize("months", [MONTH, pd.DatetimeIndex(["2020-01-01", "2020-02-01"])])
+def test_scenarios_share_their_random_numbers(monkeypatch, months):
+    # a tiny scenario moves every path only a little: path i of each scenario sees the same
+    # innovations and band score, in every origin month, so differences are the scenario's effect
+    gauss = SimpleNamespace(table=lf.Gauss().table)
+    monkeypatch.setattr(op, "garch_levy", lambda year, innov="cgmy": (0.0, 2e-6, 0.08, 0.9, gauss, "test"))
+    p = prices() * np.exp(np.random.default_rng(5).normal(0, 0.01, len(prices())).cumsum())
+    base = op.monthly_paths(p, months, 200, np.random.default_rng(4), lost=0.0)
+    tiny = op.monthly_paths(p, months, 200, np.random.default_rng(4), lost=1e-3)
+    assert np.abs(tiny - base).max() < 1e-3
+    big = op.monthly_paths(p, months, 200, np.random.default_rng(4), lost=op.LOST_2026)
+    assert np.corrcoef(base[:, -1, 0], big[:, -1, 0])[0, 1] > 0.5  # still the same paths underneath
 
 
 def test_the_jump_widens_the_band_through_garch(monkeypatch):
