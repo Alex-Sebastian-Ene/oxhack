@@ -1,0 +1,20 @@
+// 8. logo on a plate: the tanker in a riveted pixel plate, like the app's header keys.
+
+function draw() {
+  const sk = sky("#02030d", "#0a1030", 3, 360);
+  const G = globe({ cx: 372, cy: 162, r: 142, rot: [-84, -20, 0], light: [-0.82, -0.42, 0.4] });
+  const atm = atmosphere(G, 0.085), lt = lights(G), A = arcs(G, flowArcs(14, 8), { lift: 0.2 });
+  const hz = marker(G, HZ, "#ff6a4d", 7), bab = marker(G, BAB, "#ff8a5c", 5);
+  layer(sk.b); layer(sk.stars, 3, 0.5);
+  glowOnly(atm, 34, 0.5); layer(atm, 8, 0.3);
+  layer(G.b);
+  layer(lt, 6, 0.9);
+  glowOnly(A, 24, 0.75); layer(A, 6, 0.8);
+  layer(hz.b, 10, 0.9); layer(bab.b, 6, 0.6);
+  txt("Hormuz", 120, 540, { size: 200, shadow: 10 });
+  txt("Flow", 120, 730, { size: 200, color: P.oil, shadow: 10 });
+  chip(124, 786, 380, 164, { fill: "#121a2d" });
+  for (const [rx, ry] of [[138, 800], [478, 800], [138, 924], [478, 924]]) { ctx.fillStyle = P.ink; ctx.fillRect(rx - 2, ry - 2, 12, 12); ctx.fillStyle = P.oil; ctx.fillRect(rx, ry, 8, 8); ctx.fillStyle = P.oilHi; ctx.fillRect(rx, ry, 3, 3); }
+  shipLogo(124 + (380 - 14 * 20) / 2, 786 + (164 - 6 * 20) / 2, 20);
+}
+still(draw);

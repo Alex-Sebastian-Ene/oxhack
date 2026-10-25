@@ -142,3 +142,14 @@ function chip(x, y, w, h, o = {}) {
   ctx.restore();
 }
 function legendKey(x, y, col, label, labCol) { ctx.fillStyle = P.ink; ctx.fillRect(x, y - 24, 28, 28); ctx.fillStyle = col; ctx.fillRect(x + 4, y - 20, 20, 20); txt(label, x + 42, y, { font: "mono", w: 400, size: 40, color: labCol, shadow: 2 }); }
+// the app's logo: the pixel tanker from the header (ui/app/src/landing.js, HZIcons.ship), drawn at full resolution
+const SHIP = ["...........K..", "..........KK..", "...K......KKK.", "KKKKKKKKKKKKKK", ".KKKKKKKKKKKK.", "..KKKKKKKKKK.."];
+function shipLogo(x, y, px, col = P.oil, shadow = Math.round(px / 2)) {
+  ctx.save();
+  for (const [dx, c] of [[shadow, P.ink], [0, col]]) {
+    ctx.fillStyle = c;
+    SHIP.forEach((row, j) => [...row].forEach((ch, i) => { if (ch === "K") ctx.fillRect(x + i * px + dx, y + j * px + dx, px, px); }));
+  }
+  ctx.restore();
+  return { w: SHIP[0].length * px, h: SHIP.length * px };
+}

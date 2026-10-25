@@ -12,6 +12,7 @@ rebuilt. Fonts: Pixelify Sans and VT323 (SIL Open Font License, `ui/app/vendor/f
 | `still-3-knockon.png` | The globe, with three streams from Hormuz running into pixel icons for crude, fuel and prices |
 | `still-4-control.png` | The globe on a CRT in a steel wall, fed by an oil pipe and an LNG pipe, with a gauge and a valve wheel |
 | `still-5-classic-3x2.png` | The classic at 3:2 (1920×1280), the globe enlarged to fill the taller frame |
+| `still-6-logo-plain.png` to `still-9-logo-wake.png` | The 3:2 classic with the app's pixel tanker logo under the title: plain, on a strip of sea, on a riveted plate, and trailing an oil wake (`logo-contact-sheet.png`) |
 
 Arc widths come from the repo's own tables. Oil is pre-war kb/d via Hormuz by destination (`ui/industry`,
 EIA 2024). LNG is Mt/yr from `ui/app/data/gas.json`; those figures come from search results and are unverified.
