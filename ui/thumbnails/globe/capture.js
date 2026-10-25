@@ -3,7 +3,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const path
 const DIR = __dirname, only = process.argv.slice(2);
 (async () => {
   const b = await chromium.launch();
-  const files = fs.readdirSync(DIR).filter((f) => /^still-\d-.*\.html$/.test(f)).filter((f) => !only.length || only.some((s) => f.includes(`-${s}.html`))).sort();
+  const files = fs.readdirSync(DIR).filter((f) => /^still-\d+-.*\.html$/.test(f)).filter((f) => !only.length || only.some((s) => f.includes(`-${s}.html`))).sort();
   for (const f of files) {
     const p = await b.newPage({ viewport: { width: 1920, height: 1080 } }); const errs = [];
     p.on('pageerror', (e) => errs.push(e.message)); p.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); });

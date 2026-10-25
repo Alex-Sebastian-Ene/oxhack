@@ -153,3 +153,90 @@ function shipLogo(x, y, px, col = P.oil, shadow = Math.round(px / 2)) {
   ctx.restore();
   return { w: SHIP[0].length * px, h: SHIP.length * px };
 }
+// the "pour" lettering: the title as chunky low-res letters with a cream rim, black outline and drop shadow.
+// fill: "cream" (solid, shaded) or "oil" (liquid oil with a lit surface and a few bubbles)
+function pixelTitle(lines) {
+  const b = buf(LW, LH), img = b.x.createImageData(LW, LH), d = img.data;
+  for (const l of lines) {
+    const M = textMask(LW, LH, [{ s: l.s, x: l.x, y: l.y, size: l.size, align: "left", ls: l.ls }]);
+    const at = (x, y) => (x < 0 || y < 0 || x >= LW || y >= LH) ? 0 : M[y * LW + x];
+    let top = LH, bot = 0;
+    for (let y = 0; y < LH; y++) for (let x = 0; x < LW; x++) if (M[y * LW + x]) { top = Math.min(top, y); bot = Math.max(bot, y); }
+    for (let y = 0; y < LH; y++) for (let x = 0; x < LW; x++) {
+      const i = y * LW + x, j = i * 4; let c = null;
+      if (M[i]) {
+        const edge = !at(x + 1, y) || !at(x - 1, y) || !at(x, y + 1) || !at(x, y - 1), v = (y - top) / Math.max(1, bot - top);
+        if (l.fill === "oil") {
+          const sv = top + 2 + Math.round(Math.sin(x * 0.3) * 0.8), dd = y - sv;
+          if (edge) c = "#ffe7a8";
+          else if (dd < 0) c = "#141c32";
+          else if (dd < 1) c = (x % 9 === 0) ? "#fff3c4" : "#ffd27a";
+          else if (((x * 7 + y * 13) % 89) === 0) c = "#ffe08a";
+          else if (dd < 3) c = "#ffa424";
+          else c = dith(x, y, v * 0.9) ? "#c86a16" : dith(x, y, 0.2 + v * 0.6) ? "#e0831a" : "#ffa424";
+        } else {
+          c = edge ? "#fffaf0" : dith(x, y, v * 0.7) ? "#d8cdb2" : "#f1e8d2";
+        }
+      } else if (at(x + 1, y) || at(x - 1, y) || at(x, y + 1) || at(x, y - 1) || at(x + 1, y + 1) || at(x - 1, y - 1)) c = "#04060c";
+      else if (at(x - 3, y - 3) || at(x - 2, y - 2)) c = "#05070e";
+      if (c) put(d, j, c);
+    }
+  }
+  b.x.putImageData(img, 0, 0);
+  return b;
+}
+// a sea below the horizon (art row `top`) that reflects whatever is already on the canvas, with ripples,
+// tinted by a palette; returns the water and a glow layer of its bright pixels
+const WATER = {
+  blue: { base: ["#0c2246", "#081a38", "#06122a", "#030a1c"], tint: [0.9, 0.95, 1.08], crest: ["#e4f1ff", "#8fbbe3", "#3d6aa8"], line: "#a9d2f5", refl: 0.6 },
+  gold: { base: ["#b8741a", "#8f5612", "#663b0c", "#3e2207"], tint: [1.25, 0.95, 0.5], crest: ["#fff4cf", "#ffd27a", "#ffb547"], line: "#fff1c9", refl: 0.75, haze: "255,190,90" },
+};
+function sea(top, pal, o = {}) {
+  const src = buf(LW, LH); src.x.imageSmoothingEnabled = true; src.x.drawImage(cv, 0, 0, LW, LH);
+  const sd = src.x.getImageData(0, 0, LW, LH).data;
+  const out = buf(LW, LH), img = out.x.createImageData(LW, LH), d = img.data, gl = buf(LW, LH), gimg = gl.x.createImageData(LW, LH), gd = gimg.data;
+  const q = (v) => clamp(Math.round(v / 20) * 20, 0, 255);
+  for (let y = top; y < LH; y++) {
+    const depth = (y - top) / (LH - top);
+    for (let x = 0; x < LW; x++) {
+      const amp = 0.6 + depth * 7;
+      const sx = clamp(Math.round(x + Math.sin(y * 0.9 + x * 0.05) * amp * 0.5 + Math.sin(y * 0.31 - x * 0.021) * amp), 0, LW - 1);
+      const sy = clamp(Math.round(top - (y - top) * (o.squash ?? 1) - 1), 0, LH - 1);
+      const i = (sy * LW + sx) * 4, j = (y * LW + x) * 4, src3 = [sd[i], sd[i + 1], sd[i + 2]];
+      const n = pal.base.length, f = depth * (n - 1), lv = clamp(Math.floor(f) + (dith(x, y, f % 1) ? 1 : 0), 0, n - 1), base = rgb(pal.base[lv]);
+      // bright things reflect strongly; the dark sky barely does, so the water keeps its own colour
+      const sl = (src3[0] * 0.3 + src3[1] * 0.59 + src3[2] * 0.11) / 255;
+      const k = pal.refl * (1 - depth * 0.55) * (dith(x, y, 0.85) ? 1 : 0.7) * clamp(0.15 + sl * 1.6, 0, 1);
+      let c = base.map((b0, m) => b0 * (1 - k) + src3[m] * k * pal.tint[m]);
+      // crests: short horizontal dashes, tiny and dense at the horizon, longer and sparser close up
+      // and a glitter path under the light (o.glint: its x), where crests crowd and brighten
+      const row = y - top, hsh = ((row * 2654435761) >>> 0), every = depth < 0.3 ? 2 : 3, gw = o.glint != null ? 6 + depth * 90 : 0;
+      const inG = o.glint != null && Math.abs(x - o.glint) < gw, gk = inG ? 1 - Math.abs(x - o.glint) / gw : 0;
+      const period = Math.round((14 + depth * 46 + (hsh % 13)) * (inG ? 0.45 + 0.4 * (1 - gk) : 1)), len = Math.round(1 + depth * 8 + (hsh % 3));
+      const crest = row % every === 0 && (x + (hsh % period)) % period < len;
+      if (crest) { const cc = rgb(inG && gk > 0.35 ? pal.crest[0] : depth < 0.45 || inG ? pal.crest[1] : pal.crest[2]), a = inG ? 0.85 : 0.5 + 0.3 * (1 - depth); c = cc.map((v, m) => v * a + c[m] * (1 - a)); }
+      if (y === top) c = rgb(pal.line).map((v, m) => v * 0.7 + c[m] * 0.3);
+      c = c.map(q);
+      d[j] = c[0]; d[j + 1] = c[1]; d[j + 2] = c[2]; d[j + 3] = 255;
+      const lum = (c[0] * 0.3 + c[1] * 0.59 + c[2] * 0.11) / 255;
+      if (lum > 0.42 || y === top) { gd[j] = c[0]; gd[j + 1] = c[1]; gd[j + 2] = c[2]; gd[j + 3] = 255; }
+    }
+  }
+  out.x.putImageData(img, 0, 0); gl.x.putImageData(gimg, 0, 0);
+  return { b: out, glow: gl };
+}
+// a soft glow band along the horizon (gold water)
+function horizonHaze(top, rgbs, alpha = 0.35, h = 260) {
+  const y = top * S, g = ctx.createLinearGradient(0, y - h * 0.5, 0, y + h);
+  g.addColorStop(0, `rgba(${rgbs},0)`); g.addColorStop(0.33, `rgba(${rgbs},${alpha})`); g.addColorStop(1, `rgba(${rgbs},0)`);
+  ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.fillStyle = g; ctx.fillRect(0, y - h * 0.5, W, h * 1.5); ctx.restore();
+}
+// the logo as a dark silhouette with a lit rim along its top edges (for a bright sea behind it)
+function shipSilhouette(x, y, px, body = "#0a0d18", rim = "#ffe7a8") {
+  const on = (i, j) => j >= 0 && j < SHIP.length && i >= 0 && i < SHIP[0].length && SHIP[j][i] === "K";
+  ctx.save(); ctx.fillStyle = body;
+  SHIP.forEach((row, j) => [...row].forEach((ch, i) => { if (ch === "K") ctx.fillRect(x + i * px, y + j * px, px, px); }));
+  ctx.fillStyle = rim; const t = Math.max(3, Math.round(px / 5));
+  SHIP.forEach((row, j) => [...row].forEach((ch, i) => { if (ch !== "K") return; if (!on(i, j - 1)) ctx.fillRect(x + i * px, y + j * px, px, t); if (!on(i + 1, j)) ctx.fillRect(x + (i + 1) * px - t, y + j * px, t, px); }));
+  ctx.restore();
+}

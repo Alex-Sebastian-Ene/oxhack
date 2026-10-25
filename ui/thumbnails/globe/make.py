@@ -5,7 +5,8 @@ REPO = HERE.resolve().parents[2]  # the repo root
 F = REPO / "ui/app/vendor/fonts"
 # (number, name, width, height): 16:9 unless given; 5 is the classic at 3:2
 STILLS = [(1, "classic", 1920, 1080), (2, "horizon", 1920, 1080), (3, "knockon", 1920, 1080), (4, "control", 1920, 1080), (5, "classic-3x2", 1920, 1280),
-          (6, "logo-plain", 1920, 1280), (7, "logo-sea", 1920, 1280), (8, "logo-plate", 1920, 1280), (9, "logo-wake", 1920, 1280)]
+          (6, "logo-plain", 1920, 1280), (7, "logo-sea", 1920, 1280), (8, "logo-plate", 1920, 1280), (9, "logo-wake", 1920, 1280),
+          (10, "sea-blue", 1920, 1280), (11, "sea-gold", 1920, 1280), (12, "set-blue", 1920, 1280), (13, "set-gold", 1920, 1280)]
 def face(fam, f, w):
     return f'@font-face{{font-family:"{fam}";src:url(data:font/woff2;base64,{base64.b64encode((F / f).read_bytes()).decode()}) format("woff2");font-weight:{w};font-display:block}}'
 fonts = "\n".join([face("Pixelify Sans", "pixelify-sans-latin-400-normal.woff2", 400), face("Pixelify Sans", "pixelify-sans-latin-700-normal.woff2", 700), face("VT323", "vt323-latin-400-normal.woff2", 400)])
