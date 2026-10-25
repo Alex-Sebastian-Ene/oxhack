@@ -70,6 +70,30 @@ def test_forward_choice_uses_earlier_folds_only():
     assert mc.forward_choice(score, 2, equal=0) == 1
 
 
+def test_regime_ensembles_pair_the_bayesian_draws():
+    rng = np.random.default_rng(3)
+    S = {m: rng.normal(size=(30, 2, 3)) for m in ("bayes_own", "bayes_regime", "global_lin", "global")}
+    order = rng.permutation(30)
+    out = mc.regime_models(lambda m: S[m], order)
+    a = mc.assignment(np.full(3, 1 / 3), 30, order)
+    for n in range(30):  # draw n comes from the Bayesian member in both ensembles, or from the same network
+        if a[n] == 0:
+            assert np.array_equal(out["rec"][n], S["bayes_own"][n]) and np.array_equal(out["rec_regime"][n], S["bayes_regime"][n])
+        else:
+            assert np.array_equal(out["rec"][n], out["rec_regime"][n])
+    assert np.array_equal(out["bayes_regime"], S["bayes_regime"])
+
+
+def test_regime_keep_rule():
+    fine = {("whatif", "inflation"): -1.0, ("levy", "cost"): 1.9}
+    better, worse = {"rec": (0.50, 0.80), "rec_regime": (0.40, 0.85)}, {"rec": (0.50, 0.80), "rec_regime": (0.55, 0.85)}
+    assert mc.regime_verdict(fine, better) == (True, [])
+    keep, why = mc.regime_verdict(fine | {("levy", "rate"): 2.4}, better)  # one group worse beyond 2 errors
+    assert not keep and "rate" in why[0]
+    assert not mc.regime_verdict(fine, worse)[0]  # the replay must improve
+    assert not mc.regime_verdict(fine, {"rec": (0.50, 0.80), "rec_regime": (0.40, 0.70)})[0]  # without losing coverage
+
+
 def test_margin_member_joins_mixtures_on_the_fuel_columns_only():
     rng = np.random.default_rng(2)
     S = rng.normal(size=(3, 400, 2, 5))  # members, draws, origins, outputs

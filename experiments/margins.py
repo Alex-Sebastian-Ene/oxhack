@@ -7,7 +7,7 @@
 
 In the 2026 Hormuz closure, diesel, jet fuel and the refinery PPI rose 9-26 points more than every
 knock-on model expected, even given the real Brent path (notes/verification.md, section 5, branch
-claude/silly-fermat-ac28f6). Product margins (crack spreads) widened, and nothing in the chain
+seb/knock-on-verification). Product margins (crack spreads) widened, and nothing in the chain
 modelled them. This layer adds them.
 
 Data: daily spot prices from the EIA's spot price workbook (PET_PRI_SPT_S1_D.xls, no key), in $/bbl:

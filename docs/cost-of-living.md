@@ -147,6 +147,7 @@ NUTS (2 chains, 500 warm-up, 1,000 draws per chain):
 | 2026 event test | Fitted to Feb 2026 with kappa learned from 2022 only: do the bands cover what happened by Sep 2026? |
 | 2022 event test | Fitted to Feb 2022 with no supply-disruption months at all |
 | Scenario fans | From Feb 2026: no closure against 25%, 50% and a full 2026-sized closure. How far the band shifts and widens |
+| Against the Fed and the SPF | US CPI in forecast mode against the Cleveland Fed, Michigan and SPF forecasts and the random walk, from `runs/macro/global-benchmarks.json` (the chain's, same folds, matched by origin month; Diebold–Mariano tests with 12 Newey–West lags) |
 | Sampler health | Fits with R-hat above 1.05 or ESS below 100 are left out of every table |
 
 ## Status (2026-10-25)
@@ -155,7 +156,7 @@ NUTS (2 chains, 500 warm-up, 1,000 draws per chain):
   - Data for 60 series (the basket and the chain's other metrics), the weights, and the event
     analysis.
   - The model, the report and the Iridis scripts.
-  - 12 tests (all passing in all three versions).
+  - 13 tests (all passing in all three versions).
 - **Main model (adopted 2026-10-25): oil and gas for every series, plus grain prices for bread
   and cereals,** now with the chain's other metrics fitted alongside.
   - Iridis job 1973278; R-hat 1.004–1.016, ESS 234–514, no divergences.
@@ -169,6 +170,21 @@ NUTS (2 chains, 500 warm-up, 1,000 draws per chain):
     - US: better up to 6 months (−0.08 ± 0.02, −0.09 ± 0.02, −0.06 ± 0.03).
     - Euro area: −0.02 ± 0.01 at 1 month, just under 2 errors.
     - UK: no difference.
+  - **Against the Fed and the SPF (US CPI, forecast mode, nothing known after the origin):** the
+    composite's CRPS is lower than every institutional forecast up to 3 months, and level with the
+    SPF at 12.
+    - 1 month: 25% below the Cleveland Fed (t −4.8), 23% below Michigan (t −3.9) and 28% below the
+      SPF median at its release months (t −4.4).
+    - 3 months: 13% below Cleveland (t −3.5) and 12% below the SPF (t −2.6); Michigan 9% (t −1.2).
+    - 6 months: 10% below Cleveland (t −2.4); the SPF 5% (t −1.4), not significant.
+    - 12 months: the SPF is 2% better (t +0.5); Cleveland and Michigan are 8% and 13% worse, both
+      within noise.
+    - The direct headline forecast does less well (17–18% below the institutions at 1 month, 4%
+      behind the SPF at 12), so the basket split is what earns the lead. The chain's best member is
+      2–4% behind the SPF at 12 months (`docs/macro-ensemble.md`).
+    - Short horizons favour us: Cleveland and Michigan are 1-year rates scaled down, and the SPF is
+      quarterly. The surveys used data as first published; we score on revised CPI. Our 90% bands
+      hold 82–86% of outcomes. US only: no UK or euro-area institutional forecasts are scored yet.
   - **Brent paths: Lévy is best at 3–12 months.**
     - Against daily Student-t paths: −0.75 ± 0.53 at 12 months.
     - Against a monthly GARCH-t: −1.94 ± 1.09 at 12 months.
@@ -219,6 +235,14 @@ NUTS (2 chains, 500 warm-up, 1,000 draws per chain):
   - **One multiplier for everything would be wrong.** Use each metric's own: ×1.49 suits motor fuel
     and headline inflation, but it would overstate the composites, freight and materials, and get
     oils, fruit and vegetables the wrong way round.
+  - **Learned from 2022 alone they are larger** (the 2026 test's fit, to Feb 2026; the last column
+    of the table and the `multiplier_2022only_*` columns of the CSV). Headline is ×2.07 (US, 1.10
+    to 3.07), ×1.98 (UK) and ×2.08 (euro area), and motor fuel ×1.98–2.14. Adding 2026's months
+    brings both down to about ×1.5, so 2022 overstates how much more of an oil move reached prices
+    in 2026. The US cost series move less: diesel ×1.51, jet ×1.10, refineries ×1.32. The chain's
+    regime test (`docs/chain.md`, also learned from 2022 only) gets diesel ×1.54, jet ×1.14 and
+    refineries ×1.31, but CPI ×2.8–2.9. Its model has no gas input, so its oil multiplier likely
+    also takes up 2022's gas-driven inflation.
 - **History:** the runs below led to the main model.
 - **First full run (Iridis job 1972141): discarded.**
   - The fits that contain supply-disruption months did not converge: the 2026 test fit had R-hat
@@ -323,6 +347,7 @@ uv run experiments/cost_of_living.py check event-2026  # tiny sampler, to smoke-
 uv run experiments/cost_of_living.py report            # notes/cost-of-living.md and the CSVs
 COL_FOOD=0 uv run experiments/cost_of_living.py fit fold-3  # the oil-and-gas-only base
 COL_FOOD=1 uv run experiments/cost_of_living.py fit fold-3  # grain and urea for every food item (rejected)
+uv run experiments/macro_global.py benchmarks          # Fed and SPF forecasts for the report (skipped if absent)
 ```
 
 Fit on Iridis rather than the laptop: a fold takes about a minute there. Copy up `experiments/`,

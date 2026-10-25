@@ -17,7 +17,7 @@ set -euo pipefail
 SSH=(ssh -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=60 "${IRIDIS:-iridis}")
 HERE=$(cd "$(dirname "$0")" && pwd)
 REPO=$(cd "$(git rev-parse --show-toplevel)" && pwd)  # the checkout being run, as a /c/... path for tar
-SHIP=(experiments cluster scripts data/raw notes/industry runs/levy)
+SHIP=(experiments cluster scripts data/raw notes/industry notes/hormuz-iea-flows.csv runs/levy)
 
 die() { echo "run.sh: $*" >&2; exit 1; }
 # a command in a login shell on Iridis (sbatch and squeue are only on the PATH there)

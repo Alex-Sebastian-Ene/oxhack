@@ -10,6 +10,7 @@ oil-price layer in [oil-price-model.md](oil-price-model.md).
 | `experiments/macro_nn.py` | Deep ensemble, baselines, stacker, folds, diagnostics, oil-shock responses | `notes/macro-nn-results.md` |
 | `experiments/macro_bayes.py` | Bayesian pass-through fitted by MCMC: pooled oil lags, momentum, asymmetry, volatility-driven bands (oil, own, drifting); what-if and genuine forecasts; benchmarks | `notes/macro-bayes-results.md`, `notes/macro-bayes-responses.csv` |
 | `experiments/macro_global.py` | One network shared by the 22 targets, one month ahead (own lags, oil lags, series embedding, Student-t head), simulated like the Bayesian model; least-squares benchmark on the same inputs | `notes/macro-global-results.md` |
+| `experiments/sector_global.py` | The global network on industries by country: producer prices and output of 20 mining, refining and metals industries in 30 European countries and the US, plus 9 world mineral prices | `notes/sector-global-results.md` |
 | `experiments/flow_price.py` | Hormuz flow (AIS) → Brent: regression and 2026 closure event study | `notes/flow-price-link.md` |
 | `experiments/hdi_link.py` | Oil prices against UNDP Human Development Index (annual) | `notes/hdi-link.md` |
 | `cluster/iridis/macro_*.{sh,slurm}` | Iridis environment, 9-task main array, diagnostics array | |
@@ -33,6 +34,8 @@ added by adding rows. The full table, with date ranges and fetch dates, is in
 | `uk` | CPI (ONS D7BT), unemployment, SONIA (stands in for Bank Rate), 10y, production, productivity, GBP/USD | ONS, FRED |
 | `ea` | HICP, unemployment (EA21), ECB deposit rate, industrial production, EUR/USD | Eurostat, FRED |
 | `industry` | Diesel, jet fuel, freight PPIs (trucking, deep-sea, air), materials PPIs (plastics, paperboard, fertiliser), refineries, air fares | FRED, read from Eileen's `notes/industry/fred_series.csv` |
+| `sectors` (sector runs only) | Producer prices and output of 20 industries (mining, oil refining, chemicals, cement, basic metals, metal refining, aluminium, copper, …) in every European country that publishes them, and the closest US industries | Eurostat `sts_inppd_m`, `sts_inpr_m`; FRED (BLS PPIs, Fed industrial production) |
+| `commodities` (sector runs only) | World prices of copper, aluminium, nickel, zinc, lead, tin, iron ore, coal, uranium | IMF via FRED |
 
 - **Rules that protect the results:**
   - Only data public at the end of a month enter that month's inputs (the publication lags).
@@ -455,6 +458,9 @@ uv run experiments/macro_global.py forecast 0             # ... to 7: both oil m
 uv run experiments/macro_global.py benchmarks             # Cleveland Fed, Michigan, SPF, random walk (downloads the SPF files)
 uv run experiments/macro_global.py ols                    # least-squares benchmark, all folds
 uv run experiments/macro_global.py report                 # notes/macro-global-results.md
+uv run experiments/sector_global.py check                 # tiny end-to-end run on the industries by country
+uv run experiments/sector_global.py fold 0                # ... to 7 (25-60 min each locally, 3 at a time fit in 16 GB)
+uv run experiments/sector_global.py report                # notes/sector-global-results.md
 uv run experiments/flow_price.py
 uv run experiments/hdi_link.py
 uv run --no-project --with pytest --with numpy --with scipy --with pandas --with xlrd --with openpyxl --with torch --with jax --with numpyro pytest -q tests

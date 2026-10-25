@@ -122,5 +122,5 @@ one year because of price alone.
 
 - [ ] US data (fastest, all on FRED) or UK framing (ONS, fits OxHack)?
 - [ ] Five curated industries for the demo, or all from the BEA summary table?
-- [ ] Who owns flow → Brent (the step before this part)? Ed's `docs/ideas.md` (on branch `claude/trusting-turing-r78njk`) sketches it, and `docs/knock-on-validation.md` asks the research desk for a supply-shock event study.
+- [ ] Who owns flow → Brent (the step before this part)? Ed's `docs/ideas.md` (on `main`) sketches it, and `docs/knock-on-validation.md` asks the research desk for a supply-shock event study.
 - [ ] Seb: are you happy with splits B and C next to your split A, and with "validate, then refit" for the numbers the product shows?

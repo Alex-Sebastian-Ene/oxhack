@@ -1,5 +1,5 @@
 """experiments/macro_bayes.py: sample CRPS, the month-by-month simulation, nowcasting from the last
-published month, the oil-shock response and the bootstrap oil paths.
+published month, the oil-shock response, the bootstrap oil paths and the supply-disruption terms.
 
 Synthetic data only: no downloads and no MCMC. Needs torch, jax and numpyro (skipped otherwise).
 """
@@ -7,6 +7,7 @@ Synthetic data only: no downloads and no MCMC. Needs torch, jax and numpyro (ski
 from types import SimpleNamespace
 
 import numpy as np
+import pandas as pd
 import pytest
 
 pytest.importorskip("torch")
@@ -113,6 +114,68 @@ def test_responses_carry_on_past_the_oil_lags():
     g = np.log(1.10)
     assert e.shape[-1] == 36
     assert e[0, 0, 35] == pytest.approx(g / (1 - 0.5), rel=1e-6)  # the geometric sum of the momentum
+
+
+def regime_toy(kappa=0.0, zeta=0.0, **kw):
+    post, st, info, data = toy(**kw)
+    n = len(post["a"])
+    post["kappa"], post["zeta"] = np.full((n, K), kappa), np.full((n, K), zeta)
+    data["D"] = np.zeros(M)  # calm up to the origin
+    return post, st, info, data
+
+
+def test_disruption_multiplies_the_oil_pass_through():
+    post, st, info, data = regime_toy(kappa=0.5, b0=1.0)
+    fut = np.zeros((1, 1, 12))
+    fut[0, 0, 0] = 0.1
+    on, off = np.ones((1, 12)), np.zeros((1, 12))
+    hit = mb.simulate(post, st, info, data, np.array([40]), fut, np.random.default_rng(0), noise=False, regime=on)
+    calm = mb.simulate(post, st, info, data, np.array([40]), fut, np.random.default_rng(0), noise=False, regime=off)
+    assert hit[0, 0, 0] == pytest.approx(0.15)  # 0.1 x (1 + kappa)
+    assert calm[0, 0, 0] == pytest.approx(0.1)
+    del post["kappa"], post["zeta"]  # without the terms (bayes_own) the regime argument changes nothing
+    plain = mb.simulate(post, st, info, data, np.array([40]), fut, np.random.default_rng(0), noise=False, regime=on)
+    assert np.array_equal(plain, calm)
+
+
+def test_disruption_widens_the_band_only_in_disruption_months():
+    post, st, info, data = regime_toy(zeta=np.log(2.0), n=20_000)
+    post["sigma"][:], post["nu"][:] = 1.0, 1e6
+    on, off = np.ones((1, 12)), np.zeros((1, 12))
+    wide = mb.simulate(post, st, info, data, np.array([40]), np.zeros((1, 1, 12)), np.random.default_rng(0), regime=on)
+    calm = mb.simulate(post, st, info, data, np.array([40]), np.zeros((1, 1, 12)), np.random.default_rng(0), regime=off)
+    assert wide[:, 0, 0].std() / calm[:, 0, 0].std() == pytest.approx(2.0, rel=0.05)
+
+
+def test_regime_after_the_origin_by_mode():
+    data = {"dates": pd.DatetimeIndex(["2021-01-01"]), "t": np.array([0]), "oil_m": np.zeros(72)}  # 2021-01..2026-12
+    jan22, may22, dec25 = 12, 16, 59
+    known = mb.regime_future(data, np.array([jan22]), known=True)[0]
+    assert known.tolist() == [0] + [1] * 10 + [0]  # 2022-02..2023-01: the 2022 disruption is 2022-03..2022-12
+    assert mb.regime_future(data, np.array([jan22]), known=False).sum() == 0  # a forecast can't see it coming
+    assert mb.regime_future(data, np.array([may22]), known=False).min() == 1  # one under way goes on
+    assert mb.regime_scenario(data, np.array([dec25]), 0.0).sum() == 0
+    assert mb.regime_scenario(data, np.array([dec25]), mb.REGIME_LOST).min() == 1
+    assert mb.regime_scenario(data, np.array([dec25]), 82.0).min() == 1
+
+
+def test_cost_only_regime_masks_every_other_group():
+    info = {"groups": ["inflation", "unemployment", "rate", "cost", "cost"]}
+    assert mb.regime_mask(info, "all").tolist() == [1, 1, 1, 1, 1]
+    assert mb.regime_mask(info, "cost").tolist() == [0, 0, 0, 1, 1]
+    assert mb.regime_mask(info, None).tolist() == [0, 0, 0, 0, 0]
+    # a masked series: kappa 0 and zeta 0 leave it exactly as without the terms
+    post, st, info2, data = regime_toy(kappa=0.0, zeta=0.0, b0=1.0)
+    fut = np.zeros((1, 1, 12))
+    fut[0, 0, 0] = 0.1
+    on = mb.simulate(post, st, info2, data, np.array([40]), fut, np.random.default_rng(0), noise=False, regime=np.ones((1, 12)))
+    del post["kappa"], post["zeta"]
+    assert np.array_equal(on, mb.simulate(post, st, info2, data, np.array([40]), fut, np.random.default_rng(0), noise=False))
+
+
+def test_regime_months_are_the_cost_of_living_models():
+    col = pytest.importorskip("cost_of_living")
+    assert [(a, b) for a, b, _ in mb.REGIME] == [(a, b) for a, b, _ in col.SUPPLY]
 
 
 def test_bootstrap_oil_paths_scale_with_recent_volatility():
