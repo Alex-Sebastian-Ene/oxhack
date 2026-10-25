@@ -122,7 +122,7 @@ window.HZHouseholds = (() => {
       <p class="src" id="hh-gs-src" hidden></p>
     </section>
     <section class="card" id="hh-who">
-      ${head(4, "Why them? What each group spends on", REAL, "hh-who-src")}
+      ${head(4, "Why them? What they spend on", REAL, "hh-who-src")}
       <p class="lede">UK household costs by group, with the share of spending on food, home energy and motor fuel.</p>
       <div class="ctrl"><div class="seg" role="group" aria-label="Which groups">${GTYPES.map(([k, l]) => `<button type="button" data-hgt="${k}" aria-pressed="false">${l}</button>`).join("")}</div></div>
       <div class="keys">${PARTS.slice(0, 3).map(([, l, c]) => `<span><i style="background:${c}"></i>${l}</span>`).join("")}</div>
@@ -274,7 +274,7 @@ window.HZHouseholds = (() => {
       const segs = parts.filter((p) => p.v > 0).map((p) => { const w = 100 * p.v / maxv, s = `<span class="seg2" style="left:${left.toFixed(2)}%;width:${w.toFixed(2)}%;background:${p.c}" title="${esc(`${p.l}: ${sgn(p.v, 2)} pts`)}"></span>`; left += w; return s; }).join("");
       const tip = st.outlook ? `Costs ${sgn(r.q50, 2)}% (range up to ${sgn(r.q05)} to ${sgn(r.q95)}%)` : `Costs ${sgn(r.q50, 2)}% against ${sgn(base.q50, 2)}% with no closure`;
       return `<div class="rrow${g.type === "all" ? " all" : ""}"><span class="nm">${esc(gname(g.group))}</span><div class="track">${segs}</div>
-        <span class="v" title="${esc(`${tip}. ${parts.map((p) => `${p.l} ${sgn(p.v, 2)}`).join(", ")} pts`)}">${sgn(total, 2)}${st.outlook ? "%" : " pts"}<br><small>${st.outlook ? `${sgn(r.q05)} to ${sgn(r.q95)}` : `costs ${sgn(r.q50)}%`}</small></span></div>`;
+        <span class="v" title="${esc(`${tip}. ${parts.map((p) => `${p.l} ${sgn(p.v, 2)}`).join(", ")} pts`)}">${sgn(total, 2)}${st.outlook ? "%" : " pts"} <small>${st.outlook ? `${sgn(r.q05)} to ${sgn(r.q95)}` : `· costs ${sgn(r.q50)}%`}</small></span></div>`;
     }).join("") : `<p class="src">No closure, so nothing added. Choose a closure size, or move the slider.</p>`);
     $("hh-gs-src").innerHTML = `Model output: the team's household model. Item price ranges from the basket-item model (run ${esc(D.fans_generated || "–")}) weighted by each group's ${D.weights_year} spending shares (${esc(D.groups_source)}). Mortgage interest is held flat. First-order sums; the range is an upper bound on its width.`;
   }
