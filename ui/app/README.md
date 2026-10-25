@@ -1,7 +1,7 @@
 # Hormuz Flow: the app
 
 One page that holds everything: the World view (exposure map, flat or 3D globe, the five materials),
-the Strait view (simulated ships, real IMF PortWatch counts) and the stats (Seb's chain, the Economy tab).
+the Strait view (simulated ships, real IMF PortWatch counts) and the stats (Seb's chain, the Economy and Trends tabs).
 It opens on a pixel-art landing page and keeps one night-shift theme throughout. Open `index.html` in a
 browser; it needs no server and no network. `#app` at the end of the address skips the landing page.
 

@@ -27,6 +27,14 @@ Open `index.html` in a browser; it needs no server. It is the same page as the s
     for the US, the UK or the euro area (a euro-area country shows euro-area figures; other countries can compare
     the three). Unemployment is drawn in grey and labelled "No reliable effect": its historical link with oil has
     the demand sign, so the what-if keeps it at zero (`docs/macro-ensemble.md`).
+  - **Trends tab:** the country's prices over time, for 37 European countries, Georgia, Kosovo and the US.
+    - **How well we forecast it:** the industry model's forecast error against a naive forecast, for the
+      country's producer prices and output.
+    - **Consumer prices:** annual inflation from 2007, all items against food, motor fuels, electricity or gas.
+    - **One industry at a time:** its producer price index from 2007, the extra change the industry model gives
+      it over 12 months at the shock card's Brent price, and its output index. Output is history only, because
+      oil doesn't move output reliably in the tests.
+    - **Other countries:** the tab says they aren't covered. The UK has all-items inflation only (ONS).
 - **The shock card** sits under the country card and reads as three steps: what the scenario sets, the Brent price
   you choose (with $70 / $109 / $140 quick prices), and what follows, with a plain-English sentence.
 
@@ -97,6 +105,7 @@ Everything is a cached snapshot bundled into the page. Nothing is fetched live.
 | Petrol, energy CPI, headline CPI steps | `notes/oil-chain-links.md` | FRED, see that note |
 | Economy tab: CPI and unemployment paths, US / UK / euro area | Seb's Bayesian responses, `notes/macro-bayes-responses.csv` (`experiments/macro_bayes.py`), read by `src/patch_economy.py` at build time | FRED/ONS/Eurostat to 2026-10, generated 2026-10-24 |
 | Cost to buyers | `notes/industry/`: airlines 31.4% fuel share (IATA), farming 40% fertiliser share (CIBC) | see that folder |
+| Trends tab: inflation, industry prices and output, forecast skill, oil effect by industry | `notes/country-trends.json` (`experiments/country_trends.py`): Eurostat HICP, `sts_inppd_m` and `sts_inpr_m`; BLS CPI and PPIs, Fed industrial production and ONS CPI. Skill and oil effects are `global_lin`'s in the sector run (`notes/sector-global-results.md`). Read by `src/patch_trends.py` at build time | Eurostat and FRED, 2026-10-24/25 |
 
 - All price moves are 12 months after the move in Brent from $70 pre-war, scaled by ln(1+x)/ln(1.1).
   The bands cover the average effect only; single moves vary more.
