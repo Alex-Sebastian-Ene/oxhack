@@ -25,6 +25,7 @@ rows (industry x country) are generated from SECTORS and COUNTRIES.
 
 from __future__ import annotations
 
+import io
 import json
 import re
 import time
@@ -68,6 +69,8 @@ class Series:
     name: str = ""
     freq: str = "M"  # M, or Q for quarterly (placed at the quarter's last month before the lag)
     anchor_lags: int | None = None  # oil lags (months) in the target's linear pass-through; None = by kind
+    geo: str = ""  # sector and goods rows: country code (Eurostat geo, US)
+    item: str = ""  # sector and goods rows: industry or good (NACE, COICOP, BLS or World Bank code)
 
 
 SERIES = [
@@ -158,7 +161,12 @@ SERIES = [
 ]
 BLOCKS = ("oil", "ais", "pipeline", "fuel", "drivers", "us", "uk", "ea", "industry")
 SECTOR_BLOCKS = ("oil", "sectors", "commodities")  # the sector runs: industries by country, world metal prices
-ALL_BLOCKS = BLOCKS + SECTOR_BLOCKS[1:]
+GOODS_BLOCKS = ("oil", "goods", "household", "world")  # the goods runs: specific goods by country, world prices
+NATION_BLOCKS = ("oil", "nations")  # the nations runs: consumer and producer prices in ~170 countries
+OILFLOW_BLOCKS = ("oil", "oilflows")  # the oil-flow runs: crude and product flows in ~115 countries (JODI)
+MARKET_BLOCKS = ("oil", "world", "markets")  # the commodity runs: every world price, by kind of commodity
+ALL_BLOCKS = BLOCKS + SECTOR_BLOCKS[1:] + GOODS_BLOCKS[1:] + NATION_BLOCKS[1:] + OILFLOW_BLOCKS[1:] + MARKET_BLOCKS[2:]
+GENERATED = ("sectors", "goods", "household", "world", "nations", "oilflows", "markets")  # kept only with enough live data
 MASKED = ("ais", "pipeline")  # blocks that start late (2019) and get an availability flag
 
 # Industries by country (the `sectors` block): producer prices and output of mining, refining, metals
@@ -201,7 +209,241 @@ COUNTRIES = {  # Eurostat geo codes; aggregates (EU27, EA20) are left out so no 
 # 2026-10-24 was 2026-08, so both are published two months on.
 EUROSTAT_SECTORS = {"price": "sts_inppd_m?unit=I21&s_adj=NSA&indic_bt=PRC_PRR_DOM&freq=M",
                     "output": "sts_inpr_m?unit=I21&s_adj=SCA&indic_bt=PRD&freq=M"}
-SECTOR_MIN_MONTHS, SECTOR_LIVE_FROM = 120, "2025-01-01"  # a generated sector row needs both to enter the panel
+SECTOR_MIN_MONTHS, SECTOR_LIVE_FROM = 120, "2025-01-01"  # a GENERATED row needs both to enter the panel
+
+# Specific goods (the goods runs). European goods are the finest NACE classes Eurostat publishes
+# (producer prices and output, as for the sectors), kept where at least two countries had 10+ years
+# on 2026-10-25. US goods are BLS commodity PPIs on FRED. Household goods are HICP sub-indices
+# (Eurostat prc_hicp_minr, COICOP 2018, 2015 = 100, from 1996). World prices are the World Bank's
+# monthly Pink Sheet.
+GOODS = [  # (NACE class, good)
+    ("C1011", "Meat"), ("C1041", "Oils and fats"), ("C1051", "Dairy products"), ("C1061", "Flour and grain mill products"),
+    ("C1071", "Bread and fresh pastry"), ("C1081", "Sugar"), ("C1091", "Farm animal feed"), ("C1711", "Pulp"),
+    ("C1712", "Paper and paperboard"), ("C1721", "Corrugated paper and packaging"), ("C2011", "Industrial gases"),
+    ("C2013", "Inorganic basic chemicals"), ("C2014", "Organic basic chemicals"), ("C2015", "Fertilisers"),
+    ("C2016", "Plastics in primary forms"), ("C2017", "Synthetic rubber"), ("C2211", "Tyres"),
+    ("C2221", "Plastic plates, sheets and film"), ("C2222", "Plastic packaging"), ("C2311", "Flat glass"),
+    ("C2313", "Hollow glass (bottles, jars)"), ("C2332", "Bricks and tiles"), ("C2351", "Cement"),
+    ("C2352", "Lime and plaster"), ("C2363", "Ready-mixed concrete"), ("C2434", "Steel wire"), ("C2442", "Aluminium"),
+    ("C2444", "Copper"), ("C2451", "Iron castings"), ("C2592", "Light metal packaging (cans)"),
+]
+US_GOODS = [  # (BLS commodity code on FRED, good)
+    ("WPU0571", "Gasoline"), ("WPU057303", "Diesel (No. 2)"), ("WPU057203", "Jet fuel"), ("WPU0574", "Residual fuel oil"),
+    ("WPU0578", "Lubricating oil base stocks"), ("WPU058102", "Asphalt"), ("WPU0532", "Natural gas liquids"),
+    ("WPU0543", "Industrial electric power"), ("WPU0553", "Industrial natural gas"),
+    ("WPU0613", "Basic inorganic chemicals"), ("WPU0614", "Basic organic chemicals"), ("WPU0652", "Fertiliser materials"),
+    ("WPU065201", "Nitrogen fertilisers"), ("WPU0652013A", "Ammonia, nitric acid, ammonium compounds and urea"),
+    ("WPU0651", "Mixed fertilisers"), ("WPU0662", "Thermoplastic resins (polyethylene, PVC, ...)"),
+    ("WPU0663", "Thermosetting resins"), ("WPU06790918", "Carbon black"), ("WPU0711", "Synthetic rubber"),
+    ("WPU0712", "Tyres"), ("WPU0914", "Paperboard"), ("WPU091203", "Corrugated recyclable paper"),
+    ("WPU09150301", "Corrugated shipping containers"), ("WPU1011", "Iron ore"), ("WPU1012", "Iron and steel scrap"),
+    ("WPU1017", "Steel mill products"), ("WPU101707", "Cold rolled steel sheet"), ("WPU101706", "Steel pipe and tube"),
+    ("WPU101705", "Steel wire"), ("WPU1022", "Primary nonferrous metals"), ("WPU102301", "Copper scrap"),
+    ("WPU102302", "Aluminium scrap"), ("WPU102501", "Aluminium mill shapes"), ("WPU102502", "Copper and brass mill shapes"),
+    ("WPU1026", "Nonferrous wire and cable"), ("WPU103103", "Aluminium cans"), ("WPU1322", "Cement"),
+    ("WPU1333", "Ready-mix concrete"), ("WPU1311", "Flat glass"), ("WPU0212", "Flour"), ("WPU0211", "Bakery products"),
+    ("WPU0221", "Meat"), ("WPU0231", "Fluid milk products"), ("WPU0253", "Refined sugar"),
+    ("WPU0278", "Shortening and cooking oil"), ("WPU0293", "Animal feed"),
+]
+HOUSEHOLD = [  # (COICOP 2018 code, good)
+    ("CP01", "Food and non-alcoholic drinks"), ("CP0111", "Cereals and bread"), ("CP0112", "Meat"),
+    ("CP0114", "Milk, dairy and eggs"), ("CP0115", "Oils and fats"), ("CP0118", "Sugar and confectionery"),
+    ("CP0451", "Electricity"), ("CP0452", "Gas"), ("CP0453", "Heating oil"), ("CP0454", "Solid fuels"),
+    ("CP0722", "Motor fuels"), ("CP07221", "Diesel"), ("CP07222", "Petrol"), ("CP0731", "Rail fares"), ("CP0733", "Air fares"),
+]
+HOUSEHOLD_COUNTRIES = COUNTRIES | {"GE": "Georgia", "XK": "Kosovo"}
+WORLD = [  # (World Bank Pink Sheet column, good, unit); crude oil is left out, Brent is the input
+    ("Coal, Australian", "Coal, Australia", "$/mt"), ("Coal, South African **", "Coal, South Africa", "$/mt"),
+    ("Natural gas, US", "Natural gas, US", "$/mmbtu"), ("Natural gas, Europe", "Natural gas, Europe", "$/mmbtu"),
+    ("Liquefied natural gas, Japan", "LNG, Japan", "$/mmbtu"), ("Cocoa", "Cocoa", "$/kg"),
+    ("Coffee, Arabica", "Coffee, Arabica", "$/kg"), ("Coffee, Robusta", "Coffee, Robusta", "$/kg"),
+    ("Tea, avg 3 auctions", "Tea", "$/kg"), ("Coconut oil", "Coconut oil", "$/mt"), ("Groundnuts", "Groundnuts", "$/mt"),
+    ("Fish meal", "Fish meal", "$/mt"), ("Palm oil", "Palm oil", "$/mt"), ("Palm kernel oil", "Palm kernel oil", "$/mt"),
+    ("Soybeans", "Soybeans", "$/mt"), ("Soybean oil", "Soybean oil", "$/mt"), ("Soybean meal", "Soybean meal", "$/mt"),
+    ("Rapeseed oil", "Rapeseed oil", "$/mt"), ("Sunflower oil", "Sunflower oil", "$/mt"), ("Barley", "Barley", "$/mt"),
+    ("Maize", "Maize", "$/mt"), ("Sorghum", "Sorghum", "$/mt"), ("Rice, Thai 5%", "Rice, Thai 5%", "$/mt"),
+    ("Wheat, US SRW", "Wheat, US soft red", "$/mt"), ("Wheat, US HRW", "Wheat, US hard red", "$/mt"),
+    ("Banana, Europe", "Bananas, Europe", "$/kg"), ("Orange", "Oranges", "$/kg"), ("Beef **", "Beef", "$/kg"),
+    ("Chicken **", "Chicken", "$/kg"), ("Lamb **", "Lamb", "$/kg"), ("Shrimps, Mexican", "Shrimp", "$/kg"),
+    ("Sugar, EU", "Sugar, EU", "$/kg"), ("Sugar, US", "Sugar, US", "$/kg"), ("Sugar, world", "Sugar, world", "$/kg"),
+    ("Tobacco, US import u.v.", "Tobacco", "$/mt"), ("Logs, Malaysian", "Logs, Malaysia", "$/m3"),
+    ("Sawnwood, Malaysian", "Sawnwood, Malaysia", "$/m3"), ("Plywood", "Plywood", "cents/sheet"),
+    ("Cotton, A Index", "Cotton", "$/kg"), ("Rubber, TSR20 **", "Rubber, TSR20", "$/kg"), ("Rubber, RSS3", "Rubber, RSS3", "$/kg"),
+    ("Phosphate rock", "Phosphate rock", "$/mt"), ("DAP", "DAP fertiliser", "$/mt"), ("TSP", "TSP fertiliser", "$/mt"),
+    ("Urea", "Urea", "$/mt"), ("Potassium chloride **", "Potash", "$/mt"), ("Aluminum", "Aluminium", "$/mt"),
+    ("Iron ore, cfr spot", "Iron ore", "$/dmtu"), ("Copper", "Copper", "$/mt"), ("Lead", "Lead", "$/mt"),
+    ("Tin", "Tin", "$/mt"), ("Nickel", "Nickel", "$/mt"), ("Zinc", "Zinc", "$/mt"), ("Gold", "Gold", "$/troy oz"),
+    ("Platinum", "Platinum", "$/troy oz"), ("Silver", "Silver", "$/troy oz"),
+]
+# Kinds of commodity, for the commodity runs' breakdown (a world price's `item`).
+KINDS = [("energy", "Energy"), ("metals", "Base metals and iron ore"), ("precious", "Precious metals"),
+         ("fertilisers", "Fertilisers"), ("food", "Food"), ("beverages", "Beverages"),
+         ("raw", "Agricultural raw materials"), ("indices", "Price indices (IMF, FAO)")]
+WORLD_KIND = {
+    **dict.fromkeys(["Coal, Australia", "Coal, South Africa", "Natural gas, US", "Natural gas, Europe", "LNG, Japan"], "energy"),
+    **dict.fromkeys(["Cocoa", "Coffee, Arabica", "Coffee, Robusta", "Tea"], "beverages"),
+    **dict.fromkeys(["Tobacco", "Logs, Malaysia", "Sawnwood, Malaysia", "Plywood", "Cotton", "Rubber, TSR20",
+                     "Rubber, RSS3"], "raw"),
+    **dict.fromkeys(["Phosphate rock", "DAP fertiliser", "TSP fertiliser", "Urea", "Potash"], "fertilisers"),
+    **dict.fromkeys(["Aluminium", "Iron ore", "Copper", "Lead", "Tin", "Nickel", "Zinc"], "metals"),
+    **dict.fromkeys(["Gold", "Platinum", "Silver"], "precious"),
+}  # every other WORLD good is food
+# The `markets` block: world prices the Pink Sheet doesn't have. IMF primary commodity prices and
+# indices (FRED, monthly averages), US refined-product spot prices (EIA via FRED, daily; known the
+# same month, like Brent) and the FAO food price index with its sub-indices.
+MARKETS = [  # (source, code, name, kind, publication lag)
+    ("fred", "PWOOLCUSDM", "Wool, coarse (IMF)", "raw", 1), ("fred", "PWOOLFUSDM", "Wool, fine (IMF)", "raw", 1),
+    ("fred", "PHIDEUSDM", "Hides (IMF)", "raw", 1), ("fred", "PLOGSKUSDM", "Soft logs (IMF)", "raw", 1),
+    ("fred", "PPORKUSDM", "Pork (IMF)", "food", 1), ("fred", "PSALMUSDM", "Salmon (IMF)", "food", 1),
+    ("fred", "POLVOILUSDM", "Olive oil (IMF)", "food", 1), ("fred", "PBARLUSDM", "Barley (IMF)", "food", 1),
+    ("fred", "PALLFNFINDEXM", "IMF all-commodity price index", "indices", 1),
+    ("fred", "PNRGINDEXM", "IMF energy price index", "indices", 1),
+    ("fred", "PMETAINDEXM", "IMF metals price index", "indices", 1),
+    ("fred", "PINDUINDEXM", "IMF industrial inputs price index", "indices", 1),
+    ("fred", "PRAWMINDEXM", "IMF agricultural raw materials price index", "indices", 1),
+    ("fred", "PBEVEINDEXM", "IMF beverages price index", "indices", 1),
+    ("fred", "PFOODINDEXM", "IMF food price index", "indices", 1),
+    ("fred", "DDFUELNYH", "Ultra-low sulfur diesel, New York Harbor, $/gal (EIA)", "energy", 0),
+    ("fred", "DDFUELUSGULF", "Ultra-low sulfur diesel, US Gulf Coast, $/gal (EIA)", "energy", 0),
+    ("fred", "DDFUELLA", "Ultra-low sulfur diesel, Los Angeles, $/gal (EIA)", "energy", 0),
+    ("fred", "DJFUELUSGULF", "Jet fuel, US Gulf Coast, $/gal (EIA)", "energy", 0),
+    ("fred", "DHOILNYH", "Heating oil, New York Harbor, $/gal (EIA)", "energy", 0),
+    ("fred", "DGASNYH", "Conventional gasoline, New York Harbor, $/gal (EIA)", "energy", 0),
+    ("fred", "DGASUSGULF", "Conventional gasoline, US Gulf Coast, $/gal (EIA)", "energy", 0),
+    ("fred", "DPROPANEMBTX", "Propane, Mont Belvieu, $/gal (EIA)", "energy", 0),
+    ("fao", "Food Price Index", "FAO food price index", "indices", 1), ("fao", "Meat", "FAO meat price index", "indices", 1),
+    ("fao", "Dairy", "FAO dairy price index", "indices", 1), ("fao", "Cereals", "FAO cereals price index", "indices", 1),
+    ("fao", "Oils", "FAO vegetable oils price index", "indices", 1), ("fao", "Sugar", "FAO sugar price index", "indices", 1),
+]
+FAO_URL = "https://www.fao.org/media/docs/worldfoodsituationlibraries/wfs-library/food_price_indices_data.csv"
+
+# Oil flows by country (the `oilflows` block): the JODI Oil World database (Joint Organisations Data
+# Initiative), monthly, in thousand barrels a day, published about two months on. Many values carry
+# JODI's assessment code 3 (not assessed); they are used as published. Countries: every reporting
+# area in 2025, by its JODI (ISO 3166 alpha-2) code.
+JODI_PAGE = "https://www.jodidata.org/oil/database/data-downloads.aspx"
+JODI_FLOWS = [  # (file, product, flow, target group, what)
+    ("primary", "TOTCRUDE", "INDPROD", "production", "crude oil production"),
+    ("primary", "TOTCRUDE", "TOTIMPSB", "imports", "crude oil imports"),
+    ("primary", "TOTCRUDE", "TOTEXPSB", "exports", "crude oil exports"),
+    ("primary", "TOTCRUDE", "REFINOBS", "refining", "refinery crude intake"),
+    ("secondary", "TOTPRODS", "REFGROUT", "refining", "refinery output of oil products"),
+    ("secondary", "TOTPRODS", "TOTIMPSB", "imports", "oil product imports"),
+    ("secondary", "TOTPRODS", "TOTEXPSB", "exports", "oil product exports"),
+    ("secondary", "TOTPRODS", "TOTDEMO", "demand", "oil product demand"),
+    ("secondary", "GASOLINE", "TOTDEMO", "demand", "gasoline demand"),
+    ("secondary", "GASDIES", "TOTDEMO", "demand", "diesel and gasoil demand"),
+    ("secondary", "JETKERO", "TOTDEMO", "demand", "jet fuel demand"),
+    ("secondary", "RESFUEL", "TOTDEMO", "demand", "fuel oil demand"),
+    ("secondary", "LPG", "TOTDEMO", "demand", "LPG demand"),
+]
+JODI_COUNTRIES = {  # JODI area code: (ISO 3166 alpha-3, name)
+    "AE": ("ARE", "United Arab Emirates"), "AL": ("ALB", "Albania"), "AM": ("ARM", "Armenia"),
+    "AO": ("AGO", "Angola"), "AR": ("ARG", "Argentina"), "AT": ("AUT", "Austria"),
+    "AU": ("AUS", "Australia"), "AZ": ("AZE", "Azerbaijan"), "BB": ("BRB", "Barbados"),
+    "BD": ("BGD", "Bangladesh"), "BE": ("BEL", "Belgium"), "BG": ("BGR", "Bulgaria"),
+    "BH": ("BHR", "Bahrain"), "BM": ("BMU", "Bermuda"), "BN": ("BRN", "Brunei Darussalam"),
+    "BO": ("BOL", "Bolivia"), "BR": ("BRA", "Brazil"), "BY": ("BLR", "Belarus"),
+    "BZ": ("BLZ", "Belize"), "CA": ("CAN", "Canada"), "CH": ("CHE", "Switzerland"),
+    "CL": ("CHL", "Chile"), "CN": ("CHN", "China"), "CO": ("COL", "Colombia"),
+    "CR": ("CRI", "Costa Rica"), "CU": ("CUB", "Cuba"), "CY": ("CYP", "Cyprus"),
+    "CZ": ("CZE", "Czechia"), "DE": ("DEU", "Germany"), "DK": ("DNK", "Denmark"),
+    "DO": ("DOM", "Dominican Republic"), "DZ": ("DZA", "Algeria"), "EC": ("ECU", "Ecuador"),
+    "EE": ("EST", "Estonia"), "EG": ("EGY", "Egypt, Arab Rep."), "ES": ("ESP", "Spain"),
+    "FI": ("FIN", "Finland"), "FR": ("FRA", "France"), "GA": ("GAB", "Gabon"),
+    "GB": ("GBR", "United Kingdom"), "GD": ("GRD", "Grenada"), "GE": ("GEO", "Georgia"),
+    "GM": ("GMB", "Gambia, The"), "GQ": ("GNQ", "Equatorial Guinea"), "GR": ("GRC", "Greece"),
+    "GT": ("GTM", "Guatemala"), "GY": ("GUY", "Guyana"), "HK": ("HKG", "Hong Kong SAR, China"),
+    "HN": ("HND", "Honduras"), "HR": ("HRV", "Croatia"), "HT": ("HTI", "Haiti"),
+    "HU": ("HUN", "Hungary"), "ID": ("IDN", "Indonesia"), "IE": ("IRL", "Ireland"),
+    "IN": ("IND", "India"), "IQ": ("IRQ", "Iraq"), "IR": ("IRN", "Iran, Islamic Rep."),
+    "IS": ("ISL", "Iceland"), "IT": ("ITA", "Italy"), "JM": ("JAM", "Jamaica"),
+    "JP": ("JPN", "Japan"), "KR": ("KOR", "Korea, Rep."), "KW": ("KWT", "Kuwait"),
+    "KZ": ("KAZ", "Kazakhstan"), "LT": ("LTU", "Lithuania"), "LU": ("LUX", "Luxembourg"),
+    "LV": ("LVA", "Latvia"), "LY": ("LBY", "Libya"), "MA": ("MAR", "Morocco"),
+    "MD": ("MDA", "Moldova"), "MK": ("MKD", "North Macedonia"), "MM": ("MMR", "Myanmar"),
+    "MT": ("MLT", "Malta"), "MU": ("MUS", "Mauritius"), "MX": ("MEX", "Mexico"),
+    "MY": ("MYS", "Malaysia"), "NE": ("NER", "Niger"), "NG": ("NGA", "Nigeria"),
+    "NI": ("NIC", "Nicaragua"), "NL": ("NLD", "Netherlands"), "NO": ("NOR", "Norway"),
+    "NP": ("NPL", "Nepal"), "NZ": ("NZL", "New Zealand"), "OM": ("OMN", "Oman"),
+    "PA": ("PAN", "Panama"), "PE": ("PER", "Peru"), "PG": ("PNG", "Papua New Guinea"),
+    "PH": ("PHL", "Philippines"), "PL": ("POL", "Poland"), "PT": ("PRT", "Portugal"),
+    "PY": ("PRY", "Paraguay"), "QA": ("QAT", "Qatar"), "RO": ("ROU", "Romania"),
+    "RS": ("SRB", "Serbia"), "RU": ("RUS", "Russian Federation"), "SA": ("SAU", "Saudi Arabia"),
+    "SD": ("SDN", "Sudan"), "SE": ("SWE", "Sweden"), "SG": ("SGP", "Singapore"),
+    "SI": ("SVN", "Slovenia"), "SK": ("SVK", "Slovak Republic"), "SR": ("SUR", "Suriname"),
+    "SV": ("SLV", "El Salvador"), "SY": ("SYR", "Syrian Arab Republic"), "SZ": ("SWZ", "Eswatini"),
+    "TH": ("THA", "Thailand"), "TJ": ("TJK", "Tajikistan"), "TN": ("TUN", "Tunisia"),
+    "TR": ("TUR", "Turkiye"), "TT": ("TTO", "Trinidad and Tobago"), "UA": ("UKR", "Ukraine"),
+    "US": ("USA", "United States"), "UY": ("URY", "Uruguay"), "VE": ("VEN", "Venezuela, RB"),
+    "VN": ("VNM", "Viet Nam"), "YE": ("YEM", "Yemen, Rep."), "ZA": ("ZAF", "South Africa"),
+    "TW": ("TWN", "Taiwan, China"),
+}
+WB_COUNTRIES = "https://api.worldbank.org/v2/country?format=json&per_page=400"  # regions and income groups
+
+# kind: (Eurostat dataset and filters, item dimension, items, cache tag); codes are "kind:geo:item"
+EUROSTAT_PANELS = {
+    "price": (EUROSTAT_SECTORS["price"], "nace_r2", SECTORS, "sectors"),
+    "output": (EUROSTAT_SECTORS["output"], "nace_r2", SECTORS, "sectors"),
+    "goods_price": (EUROSTAT_SECTORS["price"], "nace_r2", GOODS, "goods"),
+    "goods_output": (EUROSTAT_SECTORS["output"], "nace_r2", GOODS, "goods"),
+    "consumer": ("prc_hicp_minr?unit=I15&freq=M", "coicop18", HOUSEHOLD, "household"),
+}
+WB_PAGE = "https://www.worldbank.org/en/research/commodity-markets"
+
+# Nations (the nations runs): monthly consumer and producer prices of every country in the World
+# Bank's Global Database of Inflation (Ha, Kose and Ohnsorge), compiled from national sources and
+# the IMF. Its vintage on 2026-10-25 ends at 2025-03 and many countries end in 2024, so a nation row
+# counts as live with data from NATIONS_LIVE_FROM on. Countries listed: 10+ years since 2000 and data
+# in 2024 or later for at least one measure.
+# Where a country has no energy price index, the database's energy sheet carries its housing,
+# water, electricity, gas and other fuels index (COICOP 04, mostly rents) instead; those rows are a
+# separate group ("utilities"), never mixed with real energy prices.
+NATION_MEASURES = [  # (sheet, target group, measure)
+    ("hcpi_m", "headline", "headline consumer prices"), ("ecpi_m", "energy", "energy consumer prices"),
+    ("ecpi_m_housing", "utilities", "housing and utilities consumer prices (COICOP 04)"),
+    ("fcpi_m", "food", "food consumer prices"), ("ppi_m", "producer", "producer prices"),
+]
+NATIONS = {  # ISO 3166 alpha-3 code: the database's country name
+    "AFG": "Afghanistan", "AGO": "Angola", "ALB": "Albania", "ARE": "United Arab Emirates", "ARM": "Armenia",
+    "ATG": "Antigua and Barbuda", "AUT": "Austria", "AZE": "Azerbaijan", "BDI": "Burundi", "BEL": "Belgium",
+    "BEN": "Benin", "BFA": "Burkina Faso", "BGD": "Bangladesh", "BGR": "Bulgaria", "BHR": "Bahrain",
+    "BHS": "Bahamas", "BIH": "Bosnia and Herzegovina", "BLR": "Belarus", "BLZ": "Belize", "BOL": "Bolivia",
+    "BRA": "Brazil", "BRB": "Barbados", "BRN": "Brunei Darussalam", "BTN": "Bhutan", "BWA": "Botswana",
+    "CAF": "Central African Republic", "CAN": "Canada", "CHE": "Switzerland", "CHL": "Chile", "CHN": "China",
+    "CIV": "CÃ´te d'Ivoire", "CMR": "Cameroon", "COG": "Congo, Rep.", "COL": "Colombia", "CPV": "Cabo Verde",
+    "CRI": "Costa Rica", "CYP": "Cyprus", "CZE": "Czech Republic", "DEU": "Germany", "DJI": "Djibouti",
+    "DMA": "Dominica", "DNK": "Denmark", "DOM": "Dominican Republic", "DZA": "Algeria", "ECU": "Ecuador",
+    "EGY": "Egypt, Arab Rep.", "ESP": "Spain", "EST": "Estonia", "ETH": "Ethiopia", "FIN": "Finland",
+    "FJI": "Fiji", "FRA": "France", "GAB": "Gabon", "GBR": "United Kingdom", "GEO": "Georgia",
+    "GHA": "Ghana", "GIN": "Guinea", "GMB": "Gambia, The", "GRC": "Greece", "GRD": "Grenada",
+    "GTM": "Guatemala", "GUY": "Guyana", "HKG": "Hong Kong SAR, China", "HND": "Honduras", "HRV": "Croatia",
+    "HTI": "Haiti", "HUN": "Hungary", "IDN": "Indonesia", "IND": "India", "IRL": "Ireland",
+    "IRN": "Iran, Islamic Rep.", "ISL": "Iceland", "ISR": "Israel", "ITA": "Italy", "JAM": "Jamaica",
+    "JOR": "Jordan", "JPN": "Japan", "KAZ": "Kazakhstan", "KEN": "Kenya", "KHM": "Cambodia",
+    "KIR": "Kiribati", "KNA": "St. Kitts and Nevis", "KOR": "Korea, Rep.", "KWT": "Kuwait", "LAO": "Lao, PDR",
+    "LBN": "Lebanon", "LBR": "Liberia", "LBY": "Libya", "LCA": "St. Lucia", "LKA": "Sri Lanka",
+    "LSO": "Lesotho", "LTU": "Lithuania", "LUX": "Luxembourg", "LVA": "Latvia", "MAC": "Macao SAR, China",
+    "MAR": "Morocco", "MDA": "Moldova, Rep.", "MDV": "Maldives", "MEX": "Mexico", "MKD": "North Macedonia",
+    "MLI": "Mali", "MLT": "Malta", "MNE": "Montenegro", "MNG": "Mongolia", "MOZ": "Mozambique",
+    "MRT": "Mauritania", "MSR": "Montserratit", "MUS": "Mauritius", "MWI": "Malawi", "MYS": "Malaysia",
+    "NAM": "Namibia", "NER": "Niger", "NGA": "Nigeria", "NIC": "Nicaragua", "NLD": "Netherlands",
+    "NOR": "Norway", "NPL": "Nepal", "OMN": "Oman", "PAK": "Pakistan", "PAN": "Panama",
+    "PER": "Peru", "PHL": "Philippines", "POL": "Poland", "PRT": "Portugal", "PRY": "Paraguay",
+    "PSE": "West Bank and Gaza", "QAT": "Qatar", "ROU": "Romania", "RUS": "Russian Federation", "RWA": "Rwanda",
+    "SAU": "Saudi Arabia", "SEN": "Senegal", "SGP": "Singapore", "SLB": "Solomon Islands", "SLE": "Sierra Leone",
+    "SLV": "El Salvador", "SMR": "San Marino", "SRB": "Serbia", "SSD": "South Sudan", "STP": "Sao Tome and Principe",
+    "SUR": "Suriname", "SVK": "Slovakia", "SVN": "Slovenia", "SWE": "Sweden", "SYC": "Seychelles",
+    "TCD": "Chad", "TGO": "Togo", "THA": "Thailand", "TJK": "Tajikistan", "TLS": "Timor-Leste",
+    "TON": "Tonga", "TTO": "Trinidad and Tobago", "TUN": "Tunisia", "TUR": "Turkey", "TWN": "Taiwan, China",
+    "TZA": "Tanzania, United Rep.", "UGA": "Uganda", "UKR": "Ukraine", "URY": "Uruguay", "USA": "United States",
+    "UZB": "Uzbekistan", "VCT": "St. Vincent and the Grenadines", "VEN": "Venezuela, RB", "VNM": "Vietnam", "WSM": "Samoa",
+    "XKX": "Kosovo", "ZAF": "South Africa", "ZMB": "Zambia",
+}
+NATIONS_LIVE_FROM = "2024-01-01"
+INFL_PAGE = "https://www.worldbank.org/en/research/brief/inflation-database"
+INFL_FILE = r"https://thedocs\.worldbank\.org/[^\"' ]*Inflation-data\.xlsx"
+WB_FILE = r"https://thedocs\.worldbank\.org/[^\"' ]*CMO-Historical-Data-Monthly\.xlsx"  # the address changes monthly
 
 
 def industry_series() -> list[Series]:
@@ -223,14 +465,65 @@ def sector_series() -> list[Series]:
     for nace, industry, us_ppi, us_ip in SECTORS:
         for kind, what in (("price", "producer prices"), ("output", "output")):
             dataset = EUROSTAT_SECTORS[kind].split("?")[0]
-            rows += [Series(f"{kind}_{geo.lower()}_{nace.lower()}", "eurostat_sectors", f"{kind}:{geo}:{nace}",
-                            "sectors", "dlog", 2, kind, f"{country}: {industry} {what} (Eurostat {dataset}, {nace})")
+            rows += [Series(f"{kind}_{geo.lower()}_{nace.lower()}", "eurostat_panel", f"{kind}:{geo}:{nace}",
+                            "sectors", "dlog", 2, kind, f"{country}: {industry} {what} (Eurostat {dataset}, {nace})",
+                            geo=geo, item=nace)
                      for geo, country in COUNTRIES.items()]
         for kind, code, what in (("price", us_ppi, "producer prices (BLS PPI"), ("output", us_ip, "output (Fed")):
             if code:
                 rows.append(Series(f"{kind}_us_{nace.lower()}", "fred", code, "sectors", "dlog", 1, kind,
-                                   f"United States: {industry} {what} {code}, closest NAICS)"))
+                                   f"United States: {industry} {what} {code}, closest NAICS)", geo="US", item=nace))
     return rows
+
+
+def nation_series() -> list[Series]:
+    """The nations runs' targets: each NATION_MEASURES measure in each of NATIONS. As for the
+    sectors, build_panel skips the pairs a country doesn't publish, or publishes too briefly."""
+    return [Series(f"nation_{group}_{iso.lower()}", "wb_inflation", f"{sheet}:{iso}", "nations", "dlog", 1, group,
+                   f"{country}: {measure} (World Bank inflation database)", geo=iso, item=sheet)
+            for sheet, group, measure in NATION_MEASURES for iso, country in NATIONS.items()]
+
+
+def goods_series() -> list[Series]:
+    """The goods runs' targets: producer prices ("price") and output ("output") of GOODS in every
+    country (Eurostat) and of US_GOODS (BLS), consumer prices ("consumer") of HOUSEHOLD goods in
+    every country (Eurostat HICP), and WORLD prices ("commodity"). As for the sectors, build_panel
+    skips pairs that are not published, too short or stopped."""
+    rows = []
+    for nace, good in GOODS:
+        for kind, what in (("price", "producer prices"), ("output", "output")):
+            dataset = EUROSTAT_SECTORS[kind].split("?")[0]
+            rows += [Series(f"good_{kind}_{geo.lower()}_{nace.lower()}", "eurostat_panel", f"goods_{kind}:{geo}:{nace}",
+                            "goods", "dlog", 2, kind, f"{country}: {good} {what} (Eurostat {dataset}, {nace})",
+                            geo=geo, item=nace) for geo, country in COUNTRIES.items()]
+    rows += [Series(f"good_price_us_{code.lower()}", "fred", code, "goods", "dlog", 1, "price",
+                    f"United States: {good} producer prices (BLS {code})", geo="US", item=code) for code, good in US_GOODS]
+    rows += [Series(f"consumer_{geo.lower()}_{code.lower()}", "eurostat_panel", f"consumer:{geo}:{code}", "household",
+                    "dlog", 1, "consumer", f"{country}: {good} consumer prices (Eurostat prc_hicp_minr, {code})",
+                    geo=geo, item=code) for code, good in HOUSEHOLD for geo, country in HOUSEHOLD_COUNTRIES.items()]
+    rows += [Series(f"world_{_slug(good)}", "worldbank", column, "world", "dlog", 1, "commodity",
+                    f"{good}, {unit} (World Bank Pink Sheet)", item=WORLD_KIND.get(good, "food"))
+             for column, good, unit in WORLD]
+    return rows
+
+
+def _slug(text: str) -> str:
+    return "".join(c if c.isalnum() else "_" for c in text.lower()).strip("_")
+
+
+def market_series() -> list[Series]:
+    """The commodity runs' extra world prices (MARKETS), each with its kind of commodity as `item`."""
+    return [Series(f"market_{_slug(name.split(' (')[0])}", source, code, "markets", "dlog", lag, "commodity",
+                   name if source == "fao" or "EIA" in name else f"{name.split(' (')[0]} (IMF via FRED {code})",
+                   item=kind) for source, code, name, kind, lag in MARKETS]
+
+
+def oilflow_series() -> list[Series]:
+    """The oil-flow runs' targets: each JODI_FLOWS flow in each of JODI_COUNTRIES. A flow that is
+    0 (an importer's crude exports) is missing, so build_panel keeps only countries with the flow."""
+    return [Series(f"oil_{group}_{product.lower()}_{iso3.lower()}", "jodi", f"{product}:{flow}:{area}", "oilflows",
+                   "dlog", 2, group, f"{country}: {what}, kb/d (JODI)", geo=iso3, item=f"{product}_{flow}")
+            for _, product, flow, group, what in JODI_FLOWS for area, (iso3, country) in JODI_COUNTRIES.items()]
 
 
 # --- fetching (cached under data/raw/macro/, git-ignored) -----------------------------------
@@ -289,8 +582,8 @@ def fetch_eurostat(query: str) -> pd.Series:
     return pd.Series(vals).sort_index()
 
 
-def jsonstat_frame(j: dict) -> pd.DataFrame:
-    """A Eurostat JSON-stat payload as one column per (geo, nace_r2), one row per month. Values are
+def jsonstat_frame(j: dict, item: str = "nace_r2") -> pd.DataFrame:
+    """A Eurostat JSON-stat payload as one column per (geo, item), one row per month. Values are
     stored flat, keyed by their position in row-major order over the dimensions in j['id']."""
     ids, size = j["id"], j["size"]
     cats = {}
@@ -301,24 +594,171 @@ def jsonstat_frame(j: dict) -> pd.DataFrame:
     df = pd.DataFrame({d: cats[d][p] for d, p in zip(ids, pos)})
     df["value"] = np.array(list(j["value"].values()), dtype=float)
     df["time"] = pd.to_datetime(df["time"] + "-01")
-    return df.pivot_table(index="time", columns=["geo", "nace_r2"], values="value", aggfunc="first")
+    return df.pivot_table(index="time", columns=["geo", item], values="value", aggfunc="first")
 
 
-_SECTOR_FRAMES: dict[str, pd.DataFrame] = {}
+_INFL_SHEETS: dict[str, pd.DataFrame] = {}
 
 
-def fetch_eurostat_sectors(code: str) -> pd.Series:
-    """One country and industry from the Eurostat sector datasets, which are fetched once for every
-    country and SECTORS industry (one request per dataset). Index values <= 0 (an industry that
-    stopped, e.g. Lithuanian steel, reported as 0) are missing."""
-    kind, geo, nace = code.split(":")
-    if kind not in _SECTOR_FRAMES:
-        dataset, params = EUROSTAT_SECTORS[kind].split("?")
-        params += "".join(f"&nace_r2={s[0]}" for s in SECTORS) + "&sinceTimePeriod=1998-01"
-        path = _get(EUROSTAT.format(dataset, params), RAW / f"eurostat_sectors_{dataset}.json")
-        _SECTOR_FRAMES[kind] = jsonstat_frame(json.loads(path.read_text(encoding="utf-8")))
-    frame = _SECTOR_FRAMES[kind]
-    x = frame[(geo, nace)] if (geo, nace) in frame else pd.Series(dtype=float)
+def fetch_wb_inflation(code: str) -> pd.Series:
+    """One country's measure from the World Bank's Global Database of Inflation (Inflation-data.xlsx,
+    one sheet per measure, one column per month as yyyymm). On the energy sheet, rows noted as the
+    housing and utilities index are the "ecpi_m_housing" measure and the others the energy one. A
+    country with two rows of a measure (two sources) gets the one with more months since START."""
+    item, iso = code.split(":")
+    sheet = item.removesuffix("_housing")
+    path = RAW / "worldbank_inflation.xlsx"
+    if not path.exists():
+        req = urllib.request.Request(INFL_PAGE, headers=UA)
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            page = resp.read().decode("utf-8", "ignore")
+        _get(re.search(INFL_FILE, page)[0], path)
+    if sheet not in _INFL_SHEETS:
+        _INFL_SHEETS[sheet] = pd.read_excel(path, sheet_name=sheet)
+    df = _INFL_SHEETS[sheet]
+    rows = df[df["Country Code"] == iso]
+    if sheet == "ecpi_m":
+        housing = rows["Note"].astype(str).str.strip().str.lower().str.startswith("housing")
+        rows = rows[housing if item.endswith("_housing") else ~housing]
+    months = [c for c in df.columns if str(c).isdigit() and len(str(c)) == 6]
+    dates = pd.to_datetime([f"{str(m)[:4]}-{str(m)[4:]}-01" for m in months])
+    best = None
+    for _, r in rows.iterrows():
+        x = pd.Series(pd.to_numeric(r[months], errors="coerce").values, index=dates)
+        x = x.where(x > 0).dropna()
+        if not x.empty and (best is None or (x.loc[START:].size, x.index.max()) > (best.loc[START:].size, best.index.max())):
+            best = x
+    if best is None:
+        raise ValueError("not published")
+    return best
+
+
+def fetch_fao(column: str) -> pd.Series:
+    """One FAO food price index (2014-2016 = 100, monthly) from FAO's food_price_indices_data.csv."""
+    path = _get(FAO_URL, RAW / "fao_food_price_indices.csv")
+    df = pd.read_csv(path, skiprows=2, dtype=str)
+    df = df[df["Date"].astype(str).str.fullmatch(r"\d{4}-\d{2}")]
+    return pd.Series(pd.to_numeric(df[column], errors="coerce").values, index=pd.to_datetime(df["Date"] + "-01")).dropna()
+
+
+_JODI: dict[str, pd.DataFrame] = {}
+
+
+def jodi_frame() -> pd.DataFrame:
+    """Every JODI_FLOWS flow in thousand barrels a day, all areas and months. Built once from JODI's
+    yearly CSV files (primary: crude, secondary: products; about 1 GB in all, read and dropped) and
+    cached as one small file."""
+    path = RAW / "jodi_oil_kbd.csv"
+    if "error" in _JODI:  # a failed build is not retried for every series (it downloads ~1 GB)
+        raise RuntimeError(f"JODI download failed earlier: {_JODI['error']}")
+    if not path.exists():
+        try:
+            _build_jodi(path)
+        except Exception as err:
+            _JODI["error"] = str(err)[:200]
+            raise
+    if "kbd" not in _JODI:
+        df = pd.read_csv(path, dtype=str, keep_default_na=False)
+        df["value"] = pd.to_numeric(df["OBS_VALUE"], errors="coerce")  # "-" (none) and "x" (confidential) are missing
+        df["month"] = pd.to_datetime(df["TIME_PERIOD"] + "-01")
+        _JODI["kbd"] = df
+    return _JODI["kbd"]
+
+
+def _build_jodi(path: Path) -> None:
+    """Download JODI's yearly CSV files, keep the JODI_FLOWS flows in thousand barrels a day, write path."""
+    req = urllib.request.Request(JODI_PAGE, headers=UA)
+    with urllib.request.urlopen(req, timeout=120) as resp:
+        page = resp.read().decode("utf-8", "ignore")
+    keep = {(f, p, fl) for f, p, fl, *_ in JODI_FLOWS}
+    parts = []
+    for link in sorted(set(re.findall(r'/_resources/files/downloads/oil-data/annual-csv/(?:primary|secondary)/[^"]+\.csv', page))):
+        kind = link.split("/")[-2]
+        req = urllib.request.Request("https://www.jodidata.org" + link, headers=UA)
+        with urllib.request.urlopen(req, timeout=300) as resp:
+            df = pd.read_csv(io.BytesIO(resp.read()), dtype=str)
+        pick = np.array([(kind, p, fl) in keep for p, fl in zip(df["ENERGY_PRODUCT"], df["FLOW_BREAKDOWN"])])
+        parts.append(df[(df["UNIT_MEASURE"] == "KBD") & pick].drop(columns="UNIT_MEASURE"))
+        time.sleep(0.5)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    pd.concat(parts).drop_duplicates(["REF_AREA", "TIME_PERIOD", "ENERGY_PRODUCT", "FLOW_BREAKDOWN"]).to_csv(path, index=False)
+
+
+def fetch_jodi(code: str) -> pd.Series:
+    product, flow, area = code.split(":")
+    df = jodi_frame()
+    x = df[(df["REF_AREA"] == area) & (df["ENERGY_PRODUCT"] == product) & (df["FLOW_BREAKDOWN"] == flow)]
+    x = pd.Series(x["value"].values, index=x["month"]).sort_index()
+    x = x.where(x > 0).dropna()
+    if x.empty:
+        raise ValueError("not published")
+    return x
+
+
+def oil_trade_position(start: str = "2015-01-01", end: str = "2024-12-01") -> dict[str, str]:
+    """ISO3 -> "net importer" or "net exporter" of oil (crude plus products), from JODI's average
+    imports minus exports over start..end; countries without all four flows are left out."""
+    df = jodi_frame()
+    df = df[(df["month"] >= start) & (df["month"] <= end) & df["FLOW_BREAKDOWN"].isin(["TOTIMPSB", "TOTEXPSB"])
+            & df["ENERGY_PRODUCT"].isin(["TOTCRUDE", "TOTPRODS"])]
+    mean = df.groupby(["REF_AREA", "ENERGY_PRODUCT", "FLOW_BREAKDOWN"])["value"].mean().unstack(["ENERGY_PRODUCT", "FLOW_BREAKDOWN"])
+    out = {}
+    for area, r in mean.iterrows():
+        if area in JODI_COUNTRIES and r.notna().all():
+            net = r[("TOTCRUDE", "TOTIMPSB")] + r[("TOTPRODS", "TOTIMPSB")] - r[("TOTCRUDE", "TOTEXPSB")] - r[("TOTPRODS", "TOTEXPSB")]
+            out[JODI_COUNTRIES[area][0]] = "net importer" if net > 0 else "net exporter"
+    return out
+
+
+def country_classes() -> dict[str, dict]:
+    """ISO3 -> iso2, name, region and income group of every World Bank economy (aggregates left out)."""
+    path = _get(WB_COUNTRIES, RAW / "worldbank_countries.json")
+    rows = json.loads(path.read_text(encoding="utf-8"))[1]
+    return {r["id"]: {"iso2": r["iso2Code"], "name": r["name"].strip(), "region": r["region"]["value"].strip(),
+                      "income": r["incomeLevel"]["value"].strip()} for r in rows if r["region"]["value"].strip() != "Aggregates"}
+
+
+def iso3(geo: str, classes: dict) -> str | None:
+    """A series' country as ISO 3166 alpha-3: Eurostat codes (EL, UK), alpha-2 or alpha-3."""
+    if geo in classes:
+        return geo
+    two = {"EL": "GR", "UK": "GB"}.get(geo, geo)
+    return next((k for k, v in classes.items() if v["iso2"] == two), None)
+
+
+def fetch_worldbank(column: str) -> pd.Series:
+    """One price from the World Bank's monthly Pink Sheet (CMO-Historical-Data-Monthly.xlsx). The
+    file's address changes with every monthly update, so it is read off the commodity-markets page."""
+    path = RAW / "worldbank_cmo_monthly.xlsx"
+    if not path.exists():
+        req = urllib.request.Request(WB_PAGE, headers=UA)
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            page = resp.read().decode("utf-8", "ignore")
+        _get(re.search(WB_FILE, page)[0], path)
+    df = pd.read_excel(path, sheet_name="Monthly Prices", header=None)
+    head = [str(h).strip() for h in df.iloc[4]]
+    rows = df.iloc[6:]
+    rows = rows[rows[0].astype(str).str.fullmatch(r"\d{4}M\d{2}")]
+    dates = pd.to_datetime(rows[0].str.replace("M", "-") + "-01")
+    return pd.Series(pd.to_numeric(rows[head.index(column.strip())], errors="coerce").values, index=dates).dropna()
+
+
+_PANEL_FRAMES: dict[str, pd.DataFrame] = {}
+
+
+def fetch_eurostat_panel(code: str) -> pd.Series:
+    """One country and industry (or good) from an EUROSTAT_PANELS dataset, which is fetched once for
+    every country and item of the panel (one request per dataset). Index values <= 0 (an industry
+    that stopped, e.g. Lithuanian steel, reported as 0) are missing."""
+    kind, geo, item = code.split(":")
+    if kind not in _PANEL_FRAMES:
+        query, dim, items, tag = EUROSTAT_PANELS[kind]
+        dataset, params = query.split("?")
+        params += "".join(f"&{dim}={i[0]}" for i in items) + "&sinceTimePeriod=1998-01"
+        path = _get(EUROSTAT.format(dataset, params), RAW / f"eurostat_{tag}_{dataset}.json")
+        _PANEL_FRAMES[kind] = jsonstat_frame(json.loads(path.read_text(encoding="utf-8")), dim)
+    frame = _PANEL_FRAMES[kind]
+    x = frame[(geo, item)] if (geo, item) in frame else pd.Series(dtype=float)
     x = x.where(x > 0).dropna()
     if x.empty:
         raise ValueError("not published")
@@ -400,10 +840,13 @@ def fetch_gpr(code: str) -> pd.Series:
 
 FETCH = {"fred": fetch_fred, "ons": fetch_ons, "eurostat": fetch_eurostat, "portwatch": fetch_portwatch,
          "gpr": fetch_gpr, "eia": fetch_eia, "ports": fetch_ports, "gscpi": fetch_gscpi,
-         "eurostat_sectors": fetch_eurostat_sectors}
+         "eurostat_panel": fetch_eurostat_panel, "worldbank": fetch_worldbank, "wb_inflation": fetch_wb_inflation,
+         "fao": fetch_fao, "jodi": fetch_jodi}
 URLS = {"fred": "https://fred.stlouisfed.org/series/{}", "ons": "https://www.ons.gov.uk{}",
         "eurostat": "https://ec.europa.eu/eurostat/databrowser/view/{}", "portwatch": "https://portwatch.imf.org",
-        "eurostat_sectors": "https://ec.europa.eu/eurostat/databrowser/view/sts_inppd_m (prices), sts_inpr_m (output)",
+        "eurostat_panel": "https://ec.europa.eu/eurostat/databrowser/view/sts_inppd_m (prices), sts_inpr_m (output), "
+                          "prc_hicp_minr (consumer prices)", "worldbank": WB_PAGE, "wb_inflation": INFL_PAGE,
+        "fao": "https://www.fao.org/worldfoodsituation/foodpricesindex/en/", "jodi": JODI_PAGE,
         "gpr": "https://www.matteoiacoviello.com/gpr.htm", "eia": "https://www.eia.gov/petroleum/data.php",
         "ports": "https://portwatch.imf.org", "gscpi": "https://www.newyorkfed.org/research/policy/gscpi"}
 
@@ -412,7 +855,13 @@ URLS = {"fred": "https://fred.stlouisfed.org/series/{}", "ons": "https://www.ons
 
 def registry(blocks=BLOCKS) -> list[Series]:
     reg = [s for s in SERIES if s.block in blocks]
-    return reg + (industry_series() if "industry" in blocks else []) + (sector_series() if "sectors" in blocks else [])
+    reg += industry_series() if "industry" in blocks else []
+    reg += sector_series() if "sectors" in blocks else []
+    reg += [s for s in goods_series() if s.block in blocks] if set(blocks) & set(GOODS_BLOCKS[1:]) else []
+    reg += nation_series() if "nations" in blocks else []
+    reg += oilflow_series() if "oilflows" in blocks else []
+    reg += market_series() if "markets" in blocks else []
+    return reg
 
 
 def build_panel(blocks=BLOCKS, ignore_lags: bool = False):
@@ -433,8 +882,9 @@ def build_panel(blocks=BLOCKS, ignore_lags: bool = False):
         except Exception as err:  # a dead source should not take the whole panel down
             prov.append({"series": s, "error": str(err)[:120]})
             continue
-        if s.block == "sectors" and (x.dropna().loc[START:].size < SECTOR_MIN_MONTHS
-                                     or x.dropna().index.max() < pd.Timestamp(SECTOR_LIVE_FROM)):
+        live_from = NATIONS_LIVE_FROM if s.block == "nations" else SECTOR_LIVE_FROM
+        if s.block in GENERATED and (x.dropna().loc[START:].size < SECTOR_MIN_MONTHS
+                                     or x.dropna().index.max() < pd.Timestamp(live_from)):
             prov.append({"series": s, "error": f"skipped: {x.dropna().loc[START:].size} months from {START[:7]}, "
                                                f"last {x.dropna().index.max():%Y-%m}"})
             continue

@@ -10,7 +10,7 @@ oil-price layer in [oil-price-model.md](oil-price-model.md).
 | `experiments/macro_nn.py` | Deep ensemble, baselines, stacker, folds, diagnostics, oil-shock responses | `notes/macro-nn-results.md` |
 | `experiments/macro_bayes.py` | Bayesian pass-through fitted by MCMC: pooled oil lags, momentum, asymmetry, volatility-driven bands (oil, own, drifting); what-if and genuine forecasts; benchmarks | `notes/macro-bayes-results.md`, `notes/macro-bayes-responses.csv` |
 | `experiments/macro_global.py` | One network shared by the 22 targets, one month ahead (own lags, oil lags, series embedding, Student-t head), simulated like the Bayesian model; least-squares benchmark on the same inputs | `notes/macro-global-results.md` |
-| `experiments/sector_global.py` | The global network on industries by country: producer prices and output of 20 mining, refining and metals industries in 30 European countries and the US, plus 9 world mineral prices | `notes/sector-global-results.md` |
+| `experiments/sector_global.py` | The global network on industries by country (`--set sectors`: producer prices and output of 20 mining, refining and metals industries in 35 European countries and the US, 9 world mineral prices), on specific goods (`--set goods`: 30 European goods by country, 46 US goods, 15 household goods in 37 countries, ~50 world prices) and on prices in ~170 nations (`--set nations`: headline, energy, food and producer prices) | `notes/sector-global-results.md`, `notes/goods-global-results.md`, `notes/nations-global-results.md` |
 | `experiments/flow_price.py` | Hormuz flow (AIS) → Brent: regression and 2026 closure event study | `notes/flow-price-link.md` |
 | `experiments/hdi_link.py` | Oil prices against UNDP Human Development Index (annual) | `notes/hdi-link.md` |
 | `cluster/iridis/macro_*.{sh,slurm}` | Iridis environment, 9-task main array, diagnostics array | |
@@ -35,6 +35,10 @@ added by adding rows. The full table, with date ranges and fetch dates, is in
 | `industry` | Diesel, jet fuel, freight PPIs (trucking, deep-sea, air), materials PPIs (plastics, paperboard, fertiliser), refineries, air fares | FRED, read from Eileen's `notes/industry/fred_series.csv` |
 | `sectors` (sector runs only) | Producer prices and output of 20 industries (mining, oil refining, chemicals, cement, basic metals, metal refining, aluminium, copper, …) in every European country that publishes them, and the closest US industries | Eurostat `sts_inppd_m`, `sts_inpr_m`; FRED (BLS PPIs, Fed industrial production) |
 | `commodities` (sector runs only) | World prices of copper, aluminium, nickel, zinc, lead, tin, iron ore, coal, uranium | IMF via FRED |
+| `goods` (goods runs only) | Producer prices and output of 30 specific goods (finest NACE classes: plastics in primary forms, fertilisers, cement, flat glass, paper, sugar, flour, …) by European country; producer prices of 46 US goods (diesel, jet fuel, asphalt, resins, steel mill products, copper wire, cement, …) | Eurostat `sts_inppd_m`, `sts_inpr_m`; FRED (BLS commodity PPIs) |
+| `household` (goods runs only) | Consumer prices of 15 household goods (motor fuels, diesel, petrol, heating oil, gas, electricity, bread, meat, dairy, oils, sugar, rail and air fares) in 37 countries | Eurostat `prc_hicp_minr` (HICP, COICOP 2018) |
+| `world` (goods runs only) | About 50 world prices: fertilisers (urea, DAP, potash), grains, vegetable oils, sugar, coffee, rubber, timber, metals, coal, gas | World Bank Pink Sheet |
+| `nations` (nations runs only) | Headline, energy and food consumer prices and producer prices in 168 countries (housing and utilities where there is no energy index) | World Bank Global Database of Inflation |
 
 - **Rules that protect the results:**
   - Only data public at the end of a month enter that month's inputs (the publication lags).
@@ -435,6 +439,148 @@ What-if skill can't be compared with institutions, because the what-if is given 
    - Every point forecast gets a Gaussian band from its own training errors.
 6. **A caveat in our favour:** the surveys are real-time, while we're scored on revised data. This flatters us slightly: seasonally adjusted CPI is revised only through its seasonal factors.
 
+## Industries by country (`notes/sector-global-results.md`)
+
+`experiments/sector_global.py` asks whether the global one-step network works beyond the 22 macro targets. It runs the same network, training and what-if simulation on the `sectors` and `commodities` blocks.
+
+- **Industries:** 20 of them: coal, oil and gas, metal ore mining, other mining, oil refining, chemicals, fertilisers, plastics, paper, glass and cement, cement, basic metals, iron and steel, non-ferrous metal refining and smelting, aluminium, copper, lead/zinc/tin, foundries, electricity, all manufacturing.
+- **Targets:** each industry's producer prices and output in every country that publishes them for 10+ years and is still publishing. That gives 316 price and 287 output series in 35 European countries and the US.
+- **Also:** 9 world mineral prices (copper, aluminium, nickel, zinc, lead, tin, iron ore, coal, uranium).
+- **Size:** 612 series in one network, with 46k–159k training rows per fold (the macro run had 2k–6k).
+- **Data:** Eurostat `sts_inppd_m` (domestic producer prices) and `sts_inpr_m` (output), fetched in one request each; FRED for the US (BLS PPIs, Fed industrial production) and the IMF metal prices. Fetched 2026-10-24. Publication lags are 2 months for Eurostat and 1 for FRED.
+- **Variants:** `global`, `global_lin`, and `global, no oil` (the same network with its oil inputs set to 0, which measures what oil adds).
+- **Benchmarks:** climatology, least squares on all 26 network inputs, and least squares on 4 of them (own last change and Brent lags 0–2).
+
+**Results:** 8 folds, 214 origins (2008-01 to 2025-10), run locally on 2026-10-24/25, what-if. Skill is against each output's own climatology.
+
+| | Producer prices | Output | World mineral prices |
+|---|---|---|---|
+| **global** | **+0.143** (t −4.7 vs climatology) | +0.033 (t −1.3) | +0.030 (t −0.7) |
+| global_lin | +0.125 | +0.001 | +0.043 |
+| global, no oil | +0.056 | +0.026 | +0.022 |
+| Least squares, 4 inputs | +0.094 | −0.019 | **+0.090** |
+| Least squares, 26 inputs | +0.010 | −0.116 | −0.150 |
+| Share of series where `global` beats climatology | 94% | 69% | 61% |
+| 90% coverage, `global` | 81% | 88% | 80% |
+
+1. **Producer prices are forecastable, and oil is why.**
+   - `global` beats climatology on 94% of the price series.
+   - It beats the 4-input least squares (t −2.8) and the 26-input one (t −4.4).
+   - Knowing the oil path adds 0.089 (t −3.0).
+   - Best industries: oil refining +0.38, all manufacturing +0.26, oil and gas +0.25, iron and steel +0.18, chemicals +0.17, basic metals +0.15.
+2. **Metals priced on world markets are not forecastable this way.** Metal refining and smelting (+0.03), copper (+0.04), lead/zinc/tin (+0.04) and metal ore mining (−0.01) are close to climatology. Oil adds nothing for them. Their prices follow world metal prices, which the network doesn't see; that input is the next thing to add.
+3. **Output is not forecastable from its own history and oil** (+0.033, not significant), and oil adds nothing.
+   - A +10% Brent move raises output by +0.3 to +0.9% in every industry. That is demand comovement, as with unemployment in the macro run, not a supply effect.
+   - So output is not a what-if link.
+4. **World mineral prices are best left to a small per-series model.**
+   - 4-input least squares scores +0.090 against +0.030 for `global` (t +2.1).
+   - The shared network is dominated by the 600 domestic series.
+5. **The 26-input least squares overfits,** which is why it scored below climatology. It has 27 coefficients per series for 80–280 months. Its 90% bands cover 75–80% of outcomes, and only 8% of output series beat climatology with it.
+   - The skill above is a mean of per-series ratios, and a few series where a model blows up (mostly Türkiye producer prices in 2008–10) drag it down. The report therefore also gives the median and the share of series beating climatology.
+6. **`global_lin` stops training at epoch 1–3 in every fold.** Its per-series linear term (612 × 26 coefficients) overfits at once, unlike in the 22-series macro run.
+7. **Responses to +10% Brent after 12 months** (`global_lin`, median over countries, US in brackets). These are unvalidated: no significance test yet.
+   - **Fuels:** oil and gas prices +3.4% (+5.5%), oil refining +3.3% (+4.3%).
+   - **Fertilisers and steel:** fertilisers +1.6%, iron and steel +1.4%.
+   - **Non-ferrous metals:** copper +1.1%, basic metals +0.9%, aluminium +0.8%, non-ferrous metal refining +0.6%.
+   - **Cement:** +0.1%.
+8. **Bands are too narrow for prices,** with 81% coverage of the 90% interval, as in the macro runs.
+
+## Specific goods by country (`notes/goods-global-results.md`)
+
+`sector_global.py --set goods` runs the same network on the `goods`, `household` and `world` blocks:
+
+| Group | What | Series |
+|---|---|---|
+| **price** | 30 European goods at the finest NACE class, 2–10 countries each (plastics in primary forms, fertilisers, cement, flat and hollow glass, paper, pulp, tyres, steel wire, aluminium, copper, sugar, flour, oils, dairy, feed); 46 US goods (BLS commodity PPIs: diesel, jet fuel, asphalt, resins, steel mill products, scrap, copper wire, cement, flour, …) | 207 |
+| **output** | The 30 European goods | 153 |
+| **consumer** | 15 household goods (HICP, COICOP 2018) in 37 countries: motor fuels, diesel, petrol, heating oil, gas, electricity, bread, meat, dairy, oils, sugar, rail and air fares | 508 |
+| **commodity** | World Bank monthly world prices: fertilisers, grains, vegetable oils, sugar, coffee, cocoa, rubber, timber, metals, coal, gas | 53 |
+
+- **Size:** 924 series in one network, 60k–223k training rows per fold.
+- **Variants:** `global` and `global, no oil`; `global_lin` is dropped, since it overfit at once in the sector run.
+- **Data notes:**
+  - Eurostat's old HICP dataset (`prc_hicp_midx`) stops at 2025-12, so consumer prices come from `prc_hicp_minr`, the COICOP 2018 version, which goes back to 1996.
+  - World Bank barley, sorghum and shrimp stopped before 2025, so they're left out.
+  - Fetched 2026-10-24/25.
+- **Run:** Iridis job 1973179 (array tasks 1973182–1973213, 2026-10-25). The laptop's five finished folds agree with it to within 0.7% CRPS (OLS and climatology exactly). They're kept in `runs/iridis/goods-1025-0141/replaced/`.
+
+| | Producer prices | Output | Consumer prices | World prices |
+|---|---|---|---|---|
+| **global** | **+0.087** (t −5.8) | +0.016 (t −0.8) | **+0.151** (t −9.2) | +0.027 (t −1.7) |
+| global, no oil | +0.041 | +0.008 | +0.066 | +0.012 |
+| Least squares, 4 inputs | +0.060 | −0.044 | +0.069 | **+0.037** |
+| Least squares, 26 inputs | −0.057 | −0.135 | −0.034 | −0.135 |
+| Share of series where `global` beats climatology | 88% | 68% | 88% | 71% |
+| 90% coverage, `global` | 82% | 89% | 81% | 83% |
+
+1. **Household prices are the most forecastable group: +0.151 against climatology, 88% of series better.**
+   - **Fuels:** motor fuels +0.38, petrol +0.34, diesel +0.33 and heating oil +0.35 across 22–36 countries. Almost all of that is oil: without it they score +0.00 to +0.02.
+   - **Food:** cereals and bread +0.13 and dairy +0.09, from their own history, with oil adding nothing.
+   - **Other energy and fares:** electricity +0.08, gas +0.12, air fares +0.08, rail fares +0.14.
+   - **By horizon:** skill holds at +0.13 to +0.16 from 1 to 12 months.
+   - The network beats the 4-input least squares here by 0.083 (t −7.4), and oil adds 0.073 (t −5.3).
+2. **Producer prices of goods follow the sectors, but the skill is smaller** (+0.087; oil adds 0.048, t −3.5).
+   - **Refined fuels:** US jet fuel +0.50, gasoline +0.48, diesel +0.46, base oils +0.35, asphalt +0.26.
+   - **Petrochemicals:** organic basic chemicals +0.19 (oil adds 0.19), US resins +0.19, plastics in primary forms +0.14, US nitrogen fertilisers +0.14.
+   - **Steel:** steel wire +0.16 (US +0.19).
+   - **Near zero:** meat, sugar, flat glass, iron ore and recovered paper.
+3. **Output again isn't forecastable** (+0.016). Food output is below climatology (sugar −0.09, oils and fats −0.07).
+4. **World prices: little skill except energy-linked ones.**
+   - **Positive:** LNG Japan +0.11 (oil adds 0.11, as Japanese LNG contracts are oil-indexed), coal +0.11, nickel +0.10, TSP +0.10, urea +0.09.
+   - **Negative or zero:** most farm goods, and phosphate rock at −0.18.
+   - The 4-input least squares is level with the network here (t +1.0).
+5. **A yardstick fix in the report.** Albania's rail fares barely moved in training, so climatology's CRPS at 6 and 12 months is close to 0 and every model's ratio to it is 56–68. Those two outputs pulled consumer skill at 6–12 months from +0.15 to +0.02. The report now leaves out outputs whose climatology CRPS is below 0.05 pp and names them. No sector output is affected: the smallest there is 0.17.
+6. **Responses to +10% Brent after 12 months** (`global`; median over countries). These are unvalidated.
+   - **US:** jet fuel +7.9%, diesel +7.2%, asphalt +4.5%, nitrogen fertilisers +2.8%, resins +1.7%.
+   - **European consumer prices:** heating oil +4.0%, diesel +3.1%, petrol +2.9%, air fares +0.7%, gas +0.1%, electricity +0.0%, bread +0.1%.
+   - **European producer prices:** organic chemicals +2.0%, fertilisers +0.9%, plastics +0.5%, cement +0.1%.
+   - **World prices:** urea +5.2%, rubber +3.8%, soybean oil +2.7%, palm oil and DAP +2.5%, maize and wheat +1.8%, European gas +1.1%, potash +0.2%.
+7. **Bands are still too narrow for prices** (81–82% coverage of the 90% interval).
+
+## Prices by nation (`notes/nations-global-results.md`)
+
+`sector_global.py --set nations` runs the same network on the `nations` block, built from the World Bank's Global Database of Inflation (Ha, Kose and Ohnsorge).
+
+- **What it holds:** monthly consumer and producer prices for ~200 economies, compiled from national sources and the IMF.
+- **Vintage:** the one used, fetched 2026-10-25, ends at 2025-03. So these results stop before the 2026 closure, and they can't be updated live.
+- **Coverage rule:** a country enters with 10+ years since 2000 and data from 2024 on.
+- **Energy:** where a country has no energy price index, the database's energy sheet carries its housing, water, electricity, gas and other fuels index (COICOP 04, mostly rents) as a stand-in.
+  - Those 95 series are a separate group, `utilities`, and never mixed with the 55 real energy indices.
+  - Where a country has two rows of a measure (two sources), the one with more months since 2000 is used.
+- **Size:** 496 series in 167 countries, 24k–112k training rows per fold.
+- **Run:** Iridis job 1973380 (array tasks 1973381–1973422, 2026-10-25).
+
+| | Headline | Energy | Housing and utilities | Food | Producer prices |
+|---|---|---|---|---|---|
+| Series (countries) | 165 | 55 | 95 | 127 | 54 |
+| **global** | **+0.173** (t −9.4) | **+0.247** (t −5.0) | +0.134 (t −7.8) | +0.080 (t −3.2) | **+0.196** (t −3.6) |
+| global, no oil | +0.145 | +0.068 | +0.139 | +0.101 | +0.055 |
+| Least squares, 4 inputs | +0.026 | +0.179 | −0.005 | −0.025 | +0.147 |
+| Least squares, 26 inputs | −0.050 | +0.086 | −0.180 | −0.160 | +0.109 |
+| Share of series where `global` beats climatology | 91% | 97% | 83% | 78% | 96% |
+| 90% coverage, `global` | 87% | 84% | 84% | 87% | 80% |
+
+1. **The model works across nations.** It beats climatology on 91% of the 165 headline CPIs and on all five measures, with |t| from 3.2 to 9.4.
+   - It beats the 4-input least squares on headline (t −10.1), housing and utilities and food.
+   - On energy and producer prices it beats it only weakly (t −1.8 and −1.2).
+2. **Oil drives energy and producer prices, not headline or food.**
+   - **Energy and producer prices:** oil adds 0.182 (t −4.1) and 0.126 (t −3.2).
+   - **Headline:** oil adds 0.031 (t −1.5, not significant).
+   - **Food and housing:** slightly worse with oil.
+   - **Advanced importers are the exception on headline:** oil adds 0.10–0.15 for the US, UK, Germany and Korea, against ~0 for most emerging economies.
+3. **Gulf producers' household energy prices are administered.**
+   - **Household energy:** Kuwait's energy CPI is the best-forecast series (+0.82) and Saudi Arabia's scores +0.37, with or without oil. Oil adds nothing because fuel prices there are set by the state.
+   - **Importers' energy follows oil:** Germany +0.39 (oil adds 0.35), US +0.36 (0.30), UK +0.24 (0.20), South Africa +0.24 (0.21).
+   - **Gulf producer prices are mostly oil:** Qatar +0.36 (oil adds 0.36), Kuwait +0.36 (0.32), Saudi Arabia +0.19 (0.26).
+4. **Weak spots:**
+   - Housing and utilities in some small or Central African economies (Kiribati −0.50, Congo −0.35, Cameroon −0.21).
+   - Food CPIs in Taiwan, Gabon and Rwanda.
+   - Food skill falls at 12 months (+0.04).
+5. **Responses to +10% Brent after 12 months** (median over countries, US in brackets). These are unvalidated.
+   - **Headline:** +0.4% (+0.2%; the validated US link is +0.37).
+   - **Other measures:** energy +1.6% (+3.9%), producer prices +0.7% (+0.8%), food +0.6% (+0.3%), housing and utilities +0.4%.
+6. **It trains, but late in the early folds:** the `global` network's best epoch is 3–12 in folds 0–1 (24k–34k rows, many countries' series start late), then 19–44.
+
 ## Reproduce
 
 ```bash
@@ -458,7 +604,12 @@ uv run experiments/macro_global.py benchmarks             # Cleveland Fed, Michi
 uv run experiments/macro_global.py ols                    # least-squares benchmark, all folds
 uv run experiments/macro_global.py report                 # notes/macro-global-results.md
 uv run experiments/sector_global.py check                 # tiny end-to-end run on the industries by country
-uv run experiments/sector_global.py fold 0                # ... to 7 (25-60 min each locally, 3 at a time fit in 16 GB)
+uv run experiments/sector_global.py fold 0                # ... to 7 (15-52 min each locally, 3 at a time on 8 cores)
+uv run experiments/sector_global.py benchmarks            # least squares on 4 inputs, all folds
+uv run experiments/sector_global.py fold 0 --set goods    # ... to 7, then `benchmarks --set goods`, `report --set goods`
+#   on Iridis: cluster/iridis/run.sh submit <tag> "experiments/sector_global.py fold "{0..7}" --set goods" \
+#                  "experiments/sector_global.py benchmarks --set goods"; then run.sh wait <tag>
+#   the same with --set nations (job 1973380), then `report --set nations`
 uv run experiments/sector_global.py report                # notes/sector-global-results.md
 uv run experiments/flow_price.py
 uv run experiments/hdi_link.py
