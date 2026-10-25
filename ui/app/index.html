@@ -3525,6 +3525,7 @@ window.HZIcons = {
         <div>
           <span class="label" style="margin-bottom:8px">Fuel cost impact by industry, share of operating costs</span>
           <ul class="inds" id="c-inds"></ul>
+          <p class="faint">Which industries are listed for a country is a hand-picked choice from the original page <i class="illus" title="Not from data: the list per country was chosen by hand">illustrative</i>. Cost shares: notes/industry/industry_exposure.csv.</p>
         </div>
         <div id="e-sec">
           <div class="eco-who"><span class="sub" id="e-who"></span>
@@ -4917,15 +4918,41 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
     else { kind = "imp"; score = fuel * (0.4 + 0.6 * d.m) * 100; }
     return { d, hz, fuel, price, dlog, score, kind, s, dB };
   }
+  // Cost shares from notes/industry/industry_exposure.csv (read at build time); sector codes for Seb's sector model
+  const CSV_IND = {"aviation": {"s": 31.4, "src": "jet fuel 31.4%: fuel share of operating costs (IATA forecast; 25.4 in 2025) (IATA via AltexSoft, global, 2026)", "url": "https://www.altexsoft.com/travel-industry-news/iata-warns-profits-will-shrink-as-fuel-costs-hit-350b-dollars/", "year": "2026"}, "shipping": {"s": 25.0, "src": "bunker fuel 25%: bunker share of Maersk shipping operating costs (22 a year earlier) (Ship & Bunker, global, 2026 Q2)", "url": "https://shipandbunker.com/news/world/686042-maersk-q2-bunker-use-down-43-while-costs-jump-36-year-on-year", "year": "2026 Q2"}, "freight": {"s": 20.6, "src": "diesel 20.6%: fuel share of operating cost per mile ($0.482 of $2.336; share computed by us) (ATRI via Transport Topics, US, 2025)", "url": "https://www.ttnews.com/articles/atri-truck-costs-2025", "year": "2025"}, "petchem": {"s": 7.2, "src": "all energy inputs 7.2%: energy inputs as share of revenue (input-output table) (CaixaBank Research, Spain, 2018)", "url": "https://www.caixabankresearch.com/es/analisis-sectorial/observatorio-sectorial/encarecimiento-energia-y-su-impacto-industria", "year": "2018"}, "manuf": {"s": 4.1, "src": "all energy inputs 4.1%: energy inputs as share of revenue (input-output table) (CaixaBank Research, Spain, 2018)", "url": "https://www.caixabankresearch.com/es/analisis-sectorial/observatorio-sectorial/encarecimiento-energia-y-su-impacto-industria", "year": "2018"}, "fishing": {"s": 14.0, "src": "fuel 14%: fuel share of total costs (EU fleet average; up to about 50% for trawlers) (STECF 18-07: The 2018 Annual Economic Report on the EU Fishing Fleet (JRC), EU, 2016)", "url": "https://publications.jrc.ec.europa.eu/repository/handle/JRC112940", "year": "2016"}, "agri": {"s": 5.0, "src": "gasoline, fuels and oils 5.0%: share of total farm production expenses (USDA NASS 2012 Census of Agriculture (Ag Atlas map 12-M062), US, 2012)", "url": "https://agcensus.library.cornell.edu/wp-content/uploads/2012-Ag_Atlas_Maps-Economics-12-M062-RGBChor-largetext.pdf", "year": "2012"}};
+  const CSV_BUY = {"jet_fuel|Airlines": {"s": 31.4, "src": "jet fuel 31.4%: fuel share of operating costs (IATA forecast; 25.4 in 2025) (IATA via AltexSoft, global, 2026)", "url": "https://www.altexsoft.com/travel-industry-news/iata-warns-profits-will-shrink-as-fuel-costs-hit-350b-dollars/", "year": "2026"}, "fertiliser|Farming": {"s": 40.0, "src": "synthetic fertiliser (natural-gas based) 40%: share of variable farming costs (CIBC via Advisor.ca, North America, 2026)", "url": "https://www.advisor.ca/economy/economic-indicators/energy-shock-to-drive-food-inflation-cibc/", "year": "2026"}, "steel|Construction": {"s": 15.0, "src": "steel 15%: all installed steel as share of total building cost (range 14-16% for a structural steel building; structural steel alone 9-10%) (Ed Zarenski (Construction Analytics blog), US, 2016)", "url": "https://edzarenski.com/2016/09/18/how-much-does-a-steel-cost-increase-affect-construction", "year": "2016"}, "aluminium|Packaging (cans)": {"s": 58.0, "src": "aluminium 58%: aluminium metal as share of a can body production cost (78% for a can end; old study) (Michigan State University thesis on aluminium can production costs, US, 1996)", "url": "https://d.lib.msu.edu/etd/29790", "year": "1996"}};
+  const SECTOR = {"refining": "C19", "power": "D35", "upstream": "B06", "petchem": "C20", "manuf": "C", "agri": "C2015"};
+  for (const [key, c] of Object.entries(CSV_IND)) SHARE[key] = { s: c.s, src: c.src, lag: (SHARE[key] && SHARE[key].lag) || "" };
+  for (const [mat, list] of Object.entries(BUYERS)) for (const row of list) {
+    const c = CSV_BUY[`${mat}|${row[0]}`];
+    if (c) { row[1] = c.s; row[2] = c.src; }
+  }
+  // Seb's sector model: the industry's own producer prices, extra change after 12 months at this Brent (average effect)
+  function sectorMove(name, key) {
+    const code = SECTOR[key], geo = typeof TR_GEO !== "undefined" && TR_GEO[name], c = geo && TRENDS.countries[geo];
+    const pr = code && c && c.price && c.price[code];
+    if (!pr || !pr.resp || pr.resp[pr.resp.length - 1] == null) return null;
+    const x = st.brent / BRENT0 - 1, v = x > 0.005 ? pr.resp[pr.resp.length - 1] * Math.log(1 + x) / Math.log(1.1) : 0;
+    const label = (TRENDS.industries.find(([k]) => k === code) || [code, code])[1];
+    return { v, skill: pr.skill, label, where: geo === "US" ? "the US" : geo === "UK" ? "the UK" : c.name };
+  }
+  // oil exporters: earnings = price change x the oil that still gets out
+  function exportEarnings(name) {
+    const k = calc(name);
+    if (!k.d || k.d.m > 0) return null;
+    const out = 1 - (k.d.gulf ? k.d.gulf * k.s : 0);
+    return { v: ((1 + k.dB) * out - 1) * 100, trapped: k.d.gulf ? k.d.gulf * k.s : 0 };
+  }
   function industries(name) {
     const k = calc(name);
     return k.d.ind.map((key) => {
       const [label, , why] = IND[key];
       const sh = SHARE[key];
-      if (!sh) return { key, label, why, v: null };
+      const sec = sectorMove(name, key), earn = (key === "exports" || key === "budget") ? exportEarnings(name) : null;
+      if (!sh) return { key, label, why, v: null, sec, earn };
       // cost change = fuel share of costs × modelled fuel price change; range from the two link fits
       const lo = sh.s * fuelFrac(k.dlog, 1), hi = sh.s * fuelFrac(k.dlog, 0);
-      return { key, label, why, v: hi, lo: Math.min(lo, hi), hi: Math.max(lo, hi), src: sh.src, lag: sh.lag };
+      return { key, label, why, v: hi, lo: Math.min(lo, hi), hi: Math.max(lo, hi), src: sh.src, lag: sh.lag, sec };
     });
   }
   // 12-month path of the fuel cost index (pre-war = 100) for three recovery speeds
@@ -5616,14 +5643,25 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
     const inds = industries(name);
     const mx = 12;   // % of operating costs at full bar
     $("c-inds").innerHTML = inds.map((i) => {
+      const secLine = (sec) => `${escH(sec.label)} prices in ${escH(sec.where)} ${pct(sec.v / 100, 1)} after 12 months at this Brent (Seb's sector model, average effect; ${trSkill(sec.skill)} than a naive forecast).`;
+      if (i.v == null && i.earn) {
+        const e = i.earn, cls = e.v > 0.05 ? "gain" : e.v < -0.05 ? "hurt" : "";
+        return `<li><span class="nm">${i.label}</span><span class="lv mono ${cls}">${pct(e.v / 100, 1)} earnings</span>
+        <span class="why">Oil export earnings: the price change at Brent $${st.brent} × the oil that still gets out${e.trapped ? ` (${Math.round(e.trapped * 100)}% trapped behind the strait)` : ""}. Inputs: this page's country table (EIA, Energy Institute) and the flow-premium curve.</span></li>`;
+      }
+      if (i.v == null && i.sec) {
+        const cls = i.sec.v > 0.05 ? "hurt" : i.sec.v < -0.05 ? "gain" : "";
+        return `<li><span class="nm">${i.label}</span><span class="lv mono ${cls}">${pct(i.sec.v / 100, 1)} its prices</span>
+        <span class="why">${i.why}. No sourced cost share, so this is how much the industry's own prices rise: ${secLine(i.sec)}</span></li>`;
+      }
       if (i.v == null) return `<li><span class="nm">${i.label}</span><span class="lv">no data</span>
-        <span class="why">${i.why}. No sourced fuel cost share yet, so no number is shown.</span></li>`;
+        <span class="why">${i.why}. No sourced cost share yet, and Seb's sector model doesn't cover this industry${TR_GEO && TR_GEO[name] ? "" : " or this country"}.</span></li>`;
       const cls = i.v > 0.05 ? "hurt" : i.v < -0.05 ? "gain" : "";
       const w = Math.min(100, Math.abs(i.v) / mx * 100);
       const col = i.v < 0 ? "var(--gain)" : color(Math.min(65, Math.max(6, i.v * 5)));
       return `<li><span class="nm">${i.label}</span><span class="lv mono ${cls}">${pct(i.v / 100, 1)} costs</span>
         <span class="tr"><div style="width:${Math.max(w, 2)}%;background:${col}"></div></span>
-        <span class="why">Range ${pct(i.lo / 100, 1)} to ${pct(i.hi / 100, 1)}. Reaches costs ${i.lag}. Share: ${i.src}.</span></li>`;
+        <span class="why">Range ${pct(i.lo / 100, 1)} to ${pct(i.hi / 100, 1)}.${i.lag ? ` Reaches costs ${i.lag}.` : ""} Share: ${i.src}.${i.sec ? ` Its own prices: ${secLine(i.sec)}` : ""}</span></li>`;
     }).join("");
     renderTrade();
     renderEcon();
