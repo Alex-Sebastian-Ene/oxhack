@@ -120,8 +120,13 @@ def fold_section(folds: list[dict]) -> list[str]:
     out += ["", "**Does each feature earn its place?** Difference in CRPS (negative = the first is better), in units of "
             "climatology CRPS, ± Newey-West error.", "",
             "| Comparison | Series | " + " | ".join(f"h={h}" for h in col.HS) + " |", "|---|---|" + "---|" * len(col.HS)]
-    item_keys = [s.key for s in col.SERIES if s.kind not in ("rest", "all")]
+    item_keys = [s.key for s in col.SERIES if s.basket and s.kind not in ("rest", "all")]
+    ind_keys = [s.key for s in col.SERIES if s.kind.startswith("ind_")]
+    macro_keys = [s.key for s in col.SERIES if s.kind in ("unemployment", "rate")]
     tests = [("Bayesian vs average link (given oil and gas)", "whatif", "avg_link", item_keys, "all items"),
+             ("Bayesian vs average link (given oil and gas)", "whatif", "avg_link", ind_keys, "US industry costs"),
+             ("Bayesian vs average link (given oil and gas)", "whatif", "avg_link", macro_keys, "unemployment and rates"),
+             ("Supply-shock terms on vs off", "whatif", "whatif_no_regime", ind_keys, "US industry costs"),
              ("Supply-shock terms on vs off", "whatif", "whatif_no_regime", item_keys, "all items"),
              ("Lévy vs Student-t Brent paths (forecast)", "forecast_GARCH-CGMY", "forecast_GARCH-Student-t", item_keys,
               "all items"),
@@ -182,26 +187,65 @@ def event_test(ev: dict, label: str) -> list[str]:
            "| Series | Weight | Actual | Bayesian, supply-shock terms | Bayesian, no supply-shock terms | Average link |",
            "|---|---|---|---|---|---|"]
     w = ev.get("weights") or {}
-    hits = {m: [] for m in ("whatif", "whatif_no_regime", "avg_link")}
-    err = {m: [] for m in hits}
+    models = ("whatif", "whatif_no_regime", "avg_link")
+    basket = {s.key for s in col.SERIES if s.basket} | {f"{r}_composite" for r in col.REGIONS}
+    hits = {g: {m: [] for m in models} for g in ("basket", "other")}
+    err = {g: {m: [] for m in models} for g in ("basket", "other")}
     for k, key in enumerate(KEYS):
         a = act[k]
         if a <= -998:
             continue
+        g = "basket" if key in basket else "other"
         cells = []
-        for m in hits:
+        for m in models:
             f = ev["fans"][m]
             lo, mid, hi_ = f["q05"][hi][k], f["q50"][hi][k], f["q95"][hi][k]
             inside = lo <= a <= hi_
-            hits[m].append(inside)
-            err[m].append(abs(mid - a))
+            hits[g][m].append(inside)
+            err[g][m].append(abs(mid - a))
             cells.append(f"{mid:+.1f} ({lo:+.1f} to {hi_:+.1f}){' ✓' if inside else ''}")
         out.append(f"| {NAME[key]} | {w.get(key, '') if w.get(key) is None else f'{100 * w[key]:.1f}%'} | {a:+.1f} | "
                    + " | ".join(cells) + " |")
-    out += ["", "| | Bayesian, supply-shock terms | Bayesian, no supply-shock terms | Average link |", "|---|---|---|---|",
-            "| Actuals inside the 90% interval | " + " | ".join(f"{sum(hits[m])}/{len(hits[m])}" for m in hits) + " |",
-            "| Mean absolute miss of the median (pp) | " + " | ".join(f"{np.mean(err[m]):.2f}" for m in err) + " |", ""]
-    return out
+    out += ["", "| | Bayesian, supply-shock terms | Bayesian, no supply-shock terms | Average link |", "|---|---|---|---|"]
+    for g, lab in (("basket", "basket items, rest, headline and composites"),
+                   ("other", "industry costs, unemployment and rates")):
+        if hits[g]["whatif"]:
+            out += [f"| Actuals inside the 90% interval, {lab} | " + " | ".join(
+                        f"{sum(hits[g][m])}/{len(hits[g][m])}" for m in models) + " |",
+                    f"| Mean absolute miss of the median, {lab} (pp) | " + " | ".join(
+                        f"{np.mean(err[g][m]):.2f}" for m in models) + " |"]
+    return out + [""]
+
+
+def multipliers_section(fin: dict) -> tuple[list[str], list[list]]:
+    """The supply-disruption multiplier for every metric: how much more of an energy-cost move passes
+    through in a disruption month (1 + kappa), pooled by kind and for each series."""
+    kq, ks = fin["mu_kappa"], fin["kappa"]
+    clear = lambda lo, hi: "clearly above 1" if lo > 1 else ("clearly below 1" if hi < 1 else "within noise")  # noqa: E731
+    out = ["## Supply-disruption multiplier for every metric", "",
+           "In a supply-disruption month each series' energy-cost pass-through is multiplied by 1 + kappa. These are the "
+           "fitted multipliers from the all-data fit, median and 90% interval. Pooled is the kind's mean across regions; "
+           "a series' own value is shrunk towards it.", "", "| Kind | Pooled multiplier | Reading |", "|---|---|---|"]
+    for i, k in enumerate(col.KINDS):
+        lo, mid, hi = (1 + kq[q][i] for q in ("q05", "q50", "q95"))
+        out.append(f"| {col.KIND_NAMES[k]} | ×{mid:.2f} ({lo:.2f} to {hi:.2f}) | {clear(lo, hi)} |")
+    out += ["", "| Series | Multiplier | Reading | 12-month response to +10% Brent, normal → disruption |", "|---|---|---|---|"]
+    rn, rs = fin["response_10pct"]["normal"], fin["response_10pct"]["supply"]
+    rows = []
+    for j, s in enumerate(col.SERIES):
+        lo, mid, hi = (1 + ks[q][j] for q in ("q05", "q50", "q95"))
+        k = KEYS.index(s.key)
+        unit = "pp" if s.transform == "diff" else "%"
+        out.append(f"| {s.name} | ×{mid:.2f} ({lo:.2f} to {hi:.2f}) | {clear(lo, hi)} | {rn['q50'][11][k]:+.2f} → "
+                   f"{rs['q50'][11][k]:+.2f} {unit} |")
+        rows.append([s.key, s.region, s.kind, round(mid, 3), round(lo, 3), round(hi, 3), round(rn["q50"][11][k], 4),
+                     round(rs["q50"][11][k], 4), unit])
+    for r in col.REGIONS:
+        k = KEYS.index(f"{r}_composite")
+        a, b = rn["q50"][11][k], rs["q50"][11][k]
+        out.append(f"| {NAME[f'{r}_composite']} | ×{b / a:.2f} (ratio of medians) | | {a:+.2f} → {b:+.2f} % |")
+        rows.append([f"{r}_composite", r, "composite", round(b / a, 3), "", "", round(a, 4), round(b, 4), "%"])
+    return out + [""], rows
 
 
 def scenario_section(ev: dict, weights: dict) -> list[str]:
@@ -575,6 +619,7 @@ def write() -> None:
         out += scenario_section(runs["event-2026"], data["weights"]["w"])
     if "final" in runs:
         out += final_section(runs["final"], data["weights"]["w"])
+        out += multipliers_section(runs["final"])[0]
     if base_runs:
         out += bread_section(base_runs, runs)
     if base_runs and food_runs:
@@ -583,4 +628,12 @@ def write() -> None:
     (col.NOTES / "cost-of-living.md").write_text("\n".join(out) + "\n", encoding="utf-8")
     write_csvs(runs, data)
     write_contributions(runs)
+    if "final" in runs:
+        _, rows = multipliers_section(runs["final"])
+        with open(col.NOTES / "cost-of-living-multipliers.csv", "w", newline="") as fh:
+            wr = csv.writer(fh)
+            wr.writerow(["series", "region", "kind", "multiplier_q50", "multiplier_q05", "multiplier_q95",
+                         "response_normal_12m", "response_disruption_12m", "unit", "fitted_to", "generated"])
+            gen = datetime.now(UTC).date().isoformat()
+            wr.writerows(r + [runs["final"]["latest"], gen] for r in rows)
     print(f"wrote {col.NOTES / 'cost-of-living.md'} and the CSVs")
