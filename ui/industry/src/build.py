@@ -19,6 +19,7 @@ STEPS = [
     "patch_economy.py",  # Economy tab: prices and unemployment for the US, UK or euro area (Seb's Bayesian responses)
     "patch_chain.py",    # Seb's recommended chain: lost Hormuz flow drives Brent, products, diesel, CPI
     "patch_explain.py",  # optional "Why these numbers?": Gemini explains the shown numbers, checked against them
+    "patch_labels.py",   # mark the exposure score and the shortage premium as illustrative (hand-set; asked on OXH-3)
 ]
 for step in STEPS:
     r = subprocess.run([sys.executable, "-I", str(here / step)], capture_output=True, text=True)
