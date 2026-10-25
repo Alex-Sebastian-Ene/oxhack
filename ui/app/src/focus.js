@@ -5,15 +5,31 @@
   const stage = document.getElementById("world-stage");
   const map = stage && stage.querySelector(".mapwrap");
   if (!stage || !map) return;
-  // name the side panel's cards for the focus layout (focus.css): the shock card stays in place on the right, the
-  // product and most-exposed cards go under the country card on the left
+  // the cards beside the country card (the shock card first) go in one column that can stay in place (focus.css);
+  // it has no box of its own outside a picked country, so the side panel looks as before
   const hud = stage.querySelector(".hud"), cc = document.getElementById("country-card");
-  if (hud && cc) {
-    const rest = [...hud.children].filter((x) => x !== cc && x.id !== "prod-card");
-    const shock = rest.find((x) => x.querySelector("#lost-v"));
-    if (shock) shock.classList.add("hz-shock");
-    rest.filter((x) => x !== shock).forEach((x) => x.classList.add("hz-left"));
+  if (hud && cc && !hud.querySelector(".hz-side")) {
+    const side = document.createElement("div");
+    side.className = "hz-side";
+    [...hud.children].filter((x) => x !== cc).forEach((x) => side.appendChild(x));
+    hud.appendChild(side);
   }
+  // each column's sticking point (focus.css): a column taller than the visible area sticks once its bottom meets the
+  // bottom of that area; a shorter one sticks at the top. Only the shorter column ever gets to stick, since the taller
+  // one sets the row's height.
+  const side = hud && hud.querySelector(".hz-side");
+  function columns() {
+    if (!side || !cc) return;
+    const wide = stage.classList.contains("hz-focus") && window.innerWidth > 860;
+    const view = stage.scrollHeight > stage.clientHeight + 1 ? stage.clientHeight : window.innerHeight;
+    for (const col of [cc, side]) {
+      if (wide) col.style.setProperty("--hz-top", `${Math.min(0, Math.round(view - col.offsetHeight - 8))}px`);
+      else col.style.removeProperty("--hz-top");
+    }
+  }
+  if (side && cc) { const ro = new ResizeObserver(columns); ro.observe(cc); ro.observe(side); ro.observe(stage); }
+  window.addEventListener("resize", columns);
+  document.addEventListener("hz-select", () => setTimeout(columns, 0));
   const still = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   let seq = 0;
 
