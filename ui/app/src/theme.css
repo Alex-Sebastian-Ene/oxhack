@@ -147,7 +147,9 @@ svg.pxi { stroke: none !important; fill: none; overflow: visible; }
 .hz-keys { display: inline-flex; gap: 6px; }
 .hz-key { width: 42px; min-height: 40px; padding: 7px; color: var(--text); }
 .hz-key[aria-pressed="false"] { color: var(--faint); }
-.hz-key.home { width: 52px; color: var(--oil); }
+.hz-home { cursor: pointer; }
+.hz-home:hover .hz-brand { color: #ffbf5c; transform: translate(-1px, -1px); }
+.hz-home:focus-visible { outline: 2px solid var(--oil); outline-offset: 3px; }
 .hz-pipe { position: relative; display: flex; align-items: center; gap: 10px; min-height: 22px; }
 .hz-tube { position: relative; flex: 1 1 auto; height: 14px; border: 2px solid var(--ink); overflow: hidden;
   background: linear-gradient(#4a5a80 0 2px, #2b3550 2px 9px, #141a2c 9px); }
@@ -161,3 +163,8 @@ svg.pxi { stroke: none !important; fill: none; overflow: visible; }
 .hz-read .lost { color: var(--harm); }
 @media (max-width: 720px) { .hz-read { font-size: 15px; } .hz-key { width: 38px; min-height: 36px; padding: 6px; } .hz-brand { display: none; } }
 @media (prefers-reduced-motion: reduce) { .hz-oil { animation: none; } body::after { display: none; } }
+/* World view: the layer not in front (see world.py) */
+#world .arc.faded { animation-duration: 3.6s; filter: none; }
+#world .cols rect { pointer-events: none; stroke: #04060c; stroke-width: 1px; vector-effect: non-scaling-stroke; opacity: .78; shape-rendering: crispEdges; }
+.colkey { display: inline-block; width: 5px; height: 12px; margin-right: 6px; vertical-align: -1px; background: #8fd0f5; border: 1px solid #04060c; }
+.wtip .faint { color: var(--faint); }

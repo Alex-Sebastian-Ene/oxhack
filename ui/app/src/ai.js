@@ -65,7 +65,7 @@ window.HZAI = (() => {
   const bullets = (text, nFacts) => `<ul class="hz-ai-list">${String(text).split(/\n+/).map((l) => l.replace(/^\s*[-*•]\s*/, "").trim()).filter(Boolean)
     .map((l) => `<li>${esc(l).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/\[(\d+)\]/g, (m, n) => (Number(n) <= nFacts ? `<span class="hz-ref">[${n}]</span>` : `<span class="hz-ref bad" title="No such fact">[${n}?]</span>`))}</li>`).join("")}</ul>`;
   const stamp = (b, extra = "") => `<p class="hz-ai-stamp">AI-written by ${esc(b.model)}${b.image_model ? `, picture by ${esc(b.image_model)}` : ""}, ${b.cached ? "cached, written " : ""}${esc(new Date(b.generated_at).toLocaleString())}. Not checked by the team${extra}.</p>`;
-  const helpLine = (msg) => `<p class="hz-ai-off">No answer: ${esc(msg)}. Start <code>uv run experiments/country_brief.py</code> on this machine with <code>GEMINI_API_KEY</code> in the repo's <code>.env</code>, then try again.</p>`;
+  const helpLine = (msg) => `<p class="hz-ai-off">No answer: ${esc(msg)}. Run <code>uv run experiments/country_brief.py</code> with <code>GEMINI_API_KEY</code> in <code>.env</code>.</p>`;
   function aiBox(id, label, run) {
     return `<div class="hz-ai" id="${id}"><div class="hz-ai-head">${px(ICON.spark, "#ffd27a")}<b>${label}</b><span>Gemini, on request</span></div>
       <button type="button" class="hz-ai-go" data-run="${id}">${run}</button><div class="hz-ai-out" aria-live="polite"></div></div>`;
@@ -77,7 +77,11 @@ window.HZAI = (() => {
     ...Object.values(M.inputs).map((i) => ({ id: i.id, item: i, kind: "Ingredient", icon: ICON.ore, color: i.color || "#c4baa3" })),
   ];
   const usedIn = (id) => M.materials.filter((m) => m.inputs.includes(id)).map((m) => m.name);
-  function top(rows, n = 3) { return rows.slice(0, n).map((r) => `<span class="hz-chip">${flag(r.iso3)}${esc(nameOf(r.iso3))} <b>${share(r)}</b></span>`).join(""); }
+  // flags in rank order; the name is on hover. Border by share of world: gold 40%+, silver 20%+, bronze 10%+
+  const tier = (r) => (r.share == null ? "" : r.share >= 0.4 ? " gold" : r.share >= 0.2 ? " silver" : r.share >= 0.1 ? " bronze" : "");
+  const tip = (r, i) => `#${i + 1} ${nameOf(r.iso3)} · ${share(r)}`;
+  function flagRow(rows) { return rows.map((r, i) => `<span class="hz-fc${tier(r)}" title="${esc(tip(r, i))}" aria-label="${esc(tip(r, i))}">${flag(r.iso3)}<b>${share(r)}</b></span>`).join(""); }
+  function flagStrip(rows, n = 10) { return rows.slice(0, n).map((r, i) => `<span class="hz-fs${tier(r)}" title="${esc(tip(r, i))}">${flag(r.iso3)}</span>`).join("") + (rows.length > n ? `<span class="hz-more">+${rows.length - n}</span>` : ""); }
   function resourceFacts(x) {
     const it = x.item, out = [];
     const made = it.producers || [], ship = (it.exports && it.exports.list) || [];
@@ -102,19 +106,19 @@ window.HZAI = (() => {
     const cards = all.map((x) => {
       const it = x.item, made = it.producers || [], ship = (it.exports && it.exports.list) || [], u = usedIn(x.id);
       return `<details class="hz-res" style="--hue:${x.color}"><summary><span class="hz-res-i">${px(x.icon, x.color)}</span><span class="hz-res-t"><b>${esc(it.name)}</b>
-          <small>${x.kind}${u.length ? ` · in ${esc(u.join(", "))}` : ""}${made[0] ? ` · top maker ${esc(nameOf(made[0].iso3))}` : ""}</small></span><span class="hz-chev">▾</span></summary>
+          <small>${x.kind}${u.length ? ` · in ${esc(u.join(", "))}` : ""}</small>${made.length ? `<span class="hz-fstrip" aria-label="Top makers">${flagStrip(made)}</span>` : ""}</span><span class="hz-chev">▾</span></summary>
         <div class="hz-res-b">
-          ${made.length ? `<div class="hz-row"><span class="hz-k">Made by</span><div class="hz-chips">${top(made)}</div></div>` : ""}
-          ${ship.length ? `<div class="hz-row"><span class="hz-k">Shipped by</span><div class="hz-chips">${top(ship)}</div></div>` : ""}
+          ${made.length ? `<div class="hz-row"><span class="hz-k">Made by</span><div class="hz-chips">${flagRow(made)}</div></div>` : ""}
+          ${ship.length ? `<div class="hz-row"><span class="hz-k">Shipped by</span><div class="hz-chips">${flagRow(ship)}</div></div>` : ""}
           <div class="hz-ds"><span class="hz-badge made">Made</span><span class="hz-yr">${esc(it.year || "")}</span><span class="hz-fine">${esc(it.unit || "")}</span><div class="hz-srcs">${linkify(it.source || "")}</div></div>
           ${it.exports ? `<div class="hz-ds"><span class="hz-badge ship">Shipped</span><span class="hz-yr">${esc(it.exports.year || "")}</span><span class="hz-fine">${esc(it.exports.unit || "")}</span><div class="hz-srcs">${linkify(it.exports.source || "")}</div>${it.exports.note_2026 ? `<p class="hz-fine">${linkify(it.exports.note_2026)}</p>` : ""}</div>` : ""}
           ${aiBox(`hz-res-${x.id}`, `What is ${esc(it.name.toLowerCase())}?`, "Explain it, with a picture")}
         </div></details>`;
     }).join("");
-    return `<p class="hz-lede">Every material and ingredient on the map: who makes and ships it, and where each number comes from.</p>
+    return `<p class="hz-lede">Every material on the map, who makes and ships it, and the source of each number.</p><p class="hz-tierkey"><span><i style="border-color:#ffcf3f"></i>40%+ of world</span><span><i style="border-color:#c9d3e3"></i>20%+</span><span><i style="border-color:#c98a4b"></i>10%+</span><span>Hover a flag for its country</span></p>
       <div class="hz-tiles"><div><b>${pages.size}</b><span>source pages</span></div><div><b>${isos.size}</b><span>countries</span></div>
         <div><b>${links}</b><span>supplier links</span></div><div><b>${Math.min(...years)}–${Math.max(...years)}</b><span>data years</span></div></div>
-      <p class="hz-note">Collected by web search on ${esc(M.generated)}. Most primary sites were blocked from our sandbox, so figures are from search-result snippets of the pages cited. ≈ marks a share we estimated from the table's own ratio. Nothing here is live.</p>
+      <p class="hz-note">Collected ${esc(M.generated)} from search results of the pages cited. ≈ is our estimate from the table. Not live.</p>
       <div class="hz-res-list">${cards}</div>`;
   }
   async function runResource(box) {
@@ -175,7 +179,7 @@ window.HZAI = (() => {
       ${rows.length ? `<h3 class="hz-h3">Where it ranks</h3><div class="hz-rks">${bars}</div>` : ""}
       ${into.length ? `<h3 class="hz-h3">Key inputs come from</h3><div class="hz-chips">${into.join("")}</div>` : ""}
       ${aiBox("hz-prof-ai", `${esc(nameOf(iso))} in a few lines`, "Summarise with Gemini")}
-      <p class="hz-note">Ranks are among the countries each table lists, not all countries. Every number above is from the sourced tables (see Sources) or this page's model.</p>`;
+      <p class="hz-note">Ranks are within each table's listed countries. Numbers come from Sources or this page's model.</p>`;
   }
   let profIso = null;
   async function runProfile(box) {

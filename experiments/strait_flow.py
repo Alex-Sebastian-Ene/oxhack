@@ -2,28 +2,32 @@
 # requires-python = ">=3.11"
 # dependencies = ["numpy>=1.26"]
 # ///
-"""Estimate how much oil actually moves through the Strait of Hormuz, and flag likely ghost ships.
+"""Estimate how much oil actually moves through a strait (Hormuz, Bab el-Mandeb), and flag likely
+ghost ships.
 
 Three signals, combined with Monte Carlo ranges (docs/strait-live-data.md explains why):
 
-1. Seen: AIS tracks that cross a gate line across the narrows, outbound and laden, after
-   dropping tracks that fail plausibility checks (spoofing).
+1. Seen: AIS tracks that cross a gate line across the narrows, laden, after dropping tracks that
+   fail plausibility checks (spoofing). Hormuz counts the outbound lane only (tankers come in
+   empty); Bab el-Mandeb counts both lanes, since laden tankers cross it both ways.
 2. Bridged: ships that switch AIS off on one side of the gate and reappear on the other. Their
    crossing is certain even though nobody saw it.
 3. Never seen: radar (SAR) detections in a corridor through the strait that match no AIS track and
    no bridged ship. One snapshot of L such ships, with W hours to cross the corridor, means about
-   L / W crossings per hour (Little's law).
+   L / W crossings per hour (Little's law). Bab el-Mandeb pools the detections of both lanes.
 
-There is no free live AIS or radar feed for Hormuz, so `simulate` builds a synthetic 48-hour
-window calibrated to a published flow figure. The estimator runs on the synthetic observations
-exactly as it would on real ones, and the output keeps the true synthetic value next to the
-estimate so the method can be checked. Everything simulated is labelled SYNTHETIC.
+There is no free live AIS or radar feed for either strait, so `simulate` builds a synthetic
+48-hour window calibrated to a published flow figure. The estimator runs on the synthetic
+observations exactly as it would on real ones, and the output keeps the true synthetic value next
+to the estimate so the method can be checked. Everything simulated is labelled SYNTHETIC.
 
-    uv run experiments/strait_flow.py   # writes ui/strait/data/scenarios.js and notes/strait-flow.md
+    uv run experiments/strait_flow.py                  # Hormuz: ui/strait/data/scenarios.js, notes/strait-flow.md
+    uv run experiments/strait_flow.py --strait mandeb  # ui/strait/data/mandeb-scenarios.js, notes/strait-flow-mandeb.md
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 import math
 from dataclasses import dataclass, field
@@ -33,8 +37,9 @@ from pathlib import Path
 import numpy as np
 
 ROOT = Path(__file__).resolve().parent.parent
-GEO = ROOT / "ui" / "strait" / "data" / "geo.json"
-BUNDLE = ROOT / "ui" / "strait" / "data" / "scenarios.js"
+DATA = ROOT / "ui" / "strait" / "data"
+GEO = DATA / "geo.json"
+BUNDLE = DATA / "scenarios.js"
 NOTE = ROOT / "notes" / "strait-flow.md"
 
 KM_PER_DEG_LAT = 111.32
@@ -150,19 +155,23 @@ def ghost_score(v: dict) -> dict:
 
 # --------------------------------------------------------------------------- geometry
 
-def to_km(lon: float, lat: float, lat0: float = 26.4) -> tuple[float, float]:
+LAT0 = 26.4   # Hormuz; a geo file with its own "lat0" (Bab el-Mandeb: 12.6) overrides it
+
+
+def to_km(lon: float, lat: float, lat0: float = LAT0) -> tuple[float, float]:
     return lon * KM_PER_DEG_LAT * math.cos(math.radians(lat0)), lat * KM_PER_DEG_LAT
 
 
 @dataclass
 class Lane:
     points: list[tuple[float, float]]  # (lon, lat), in direction of travel
+    lat0: float = LAT0                  # latitude used to turn degrees into km
     cum: list[float] = field(init=False)
 
     def __post_init__(self):
         self.cum = [0.0]
         for a, b in zip(self.points, self.points[1:]):
-            (ax, ay), (bx, by) = to_km(*a), to_km(*b)
+            (ax, ay), (bx, by) = to_km(*a, self.lat0), to_km(*b, self.lat0)
             self.cum.append(self.cum[-1] + math.hypot(bx - ax, by - ay))
 
     @property
@@ -185,9 +194,10 @@ class Lane:
 
 
 def load_lanes(geo: dict) -> dict[str, Lane]:
-    # Outbound ships travel west -> east, inbound east -> west.
-    return {"outbound": Lane([tuple(p) for p in geo["lanes"]["outbound"]]),
-            "inbound": Lane([tuple(p) for p in reversed(geo["lanes"]["inbound"])])}
+    # Outbound ships travel west -> east, inbound east -> west (both straits).
+    lat0 = geo.get("lat0", LAT0)
+    return {"outbound": Lane([tuple(p) for p in geo["lanes"]["outbound"]], lat0),
+            "inbound": Lane([tuple(p) for p in reversed(geo["lanes"]["inbound"])], lat0)}
 
 
 def crosses_gate(p: tuple[float, float], q: tuple[float, float], gate) -> bool:
@@ -198,9 +208,9 @@ def crosses_gate(p: tuple[float, float], q: tuple[float, float], gate) -> bool:
     return (orient(g0, g1, p) * orient(g0, g1, q) < 0) and (orient(p, q, g0) * orient(p, q, g1) < 0)
 
 
-def implied_speed_kn(a: tuple, b: tuple) -> float:
+def implied_speed_kn(a: tuple, b: tuple, lat0: float = LAT0) -> float:
     """a, b = (t_hours, lon, lat)."""
-    (ax, ay), (bx, by) = to_km(a[1], a[2]), to_km(b[1], b[2])
+    (ax, ay), (bx, by) = to_km(a[1], a[2], lat0), to_km(b[1], b[2], lat0)
     dt = abs(b[0] - a[0])
     return math.inf if dt == 0 else math.hypot(bx - ax, by - ay) / dt / KNOT_KMH
 
@@ -222,15 +232,150 @@ FLAGS = [("Panama", 351), ("Liberia", 636), ("Marshall Islands", 538), ("Malta",
          ("Greece", 240), ("Bahamas", 311), ("Singapore", 563), ("Hong Kong", 477),
          ("UAE", 470), ("Iran", 422), ("Comoros", 616), ("Cameroon", 613), ("Gabon", 626)]
 
+# --------------------------------------------------------------------------- Bab el-Mandeb
+# Sources were read from search-result snippets on 25 Oct 2026 (eia.gov and the news sites could not
+# be fetched from our cloud session), so every figure here is "verify at source" until someone opens
+# the page. Sources and caveats: docs/strait-live-data.md, section 7.
 
-def simulate(key: str, lanes: dict[str, Lane], gate, seed: int = 7) -> dict:
-    """Synthetic ships for a 48 h window, calibrated so true laden outbound flow = scenario flow."""
-    sc = SCENARIOS[key]
+MANDEB_PREWAR_MBD = 8.7   # EIA Today in Energy (Sep 2024), Vortexa data: crude + products, 2023 average
+MANDEB_PUBLISHED = [
+    {"who": "EIA (pre-crisis baseline)", "when": "2023 average", "mbd": 8.7},
+    {"who": "EIA (Vortexa data)", "when": "Jan-Aug 2024", "mbd": 4.0},
+    {"who": "EIA chokepoint table", "when": "1H 2025", "mbd": 4.2},
+    {"who": "EIA STEO", "when": "Q2 2026", "mbd": 8.1},
+    {"who": "Kpler (via Energy Connects)", "when": "Jun-Jul 2026", "mbd": 7.4},
+    {"who": "Kpler, preliminary (via The National)", "when": "Aug 2026", "mbd": 5.45},
+    {"who": "Kpler, preliminary (via The National)", "when": "Sep 2026", "mbd": 2.56},
+]
+# Assumption, not a published split: a laden VLCC is too deep for the Suez Canal, so before 2026 most
+# Red Sea oil moved on Suezmaxes and smaller tankers. In 2026 the Yanbu cargoes to Asia went on VLCCs,
+# so those scenarios use the Hormuz mix.
+MANDEB_CLASS_SHARE = {"VLCC": 0.1, "Suezmax": 0.3, "Aframax/LR2": 0.25, "MR": 0.35}
+HORMUZ_CLASS_SHARE = {c: CLASSES[c]["share"] for c in CLASSES}
+# AIS destination fields used as security messages in the Red Sea ("Chinese crew on board"; Chinese
+# or Russian crew broadcast after the Jul 2026 blockade threat). Synthetic ships use these strings.
+SECURITY_MSGS = ["ALL CHINESE CREW", "CHINESE CREW ON BOARD", "RUSSIAN CREW ON BOARD", "CHINA OWNER"]
+MANDEB_SCENARIOS = {
+    "pre2023": {
+        "label": "Pre-crisis 2023 (EIA: 8.7 mb/d)", "flow_mbd": 8.7,
+        "source": "EIA Today in Energy, Sep 2024 (Vortexa data): 8.7 mb/d of crude and products in 2023. "
+                  "EIA's chokepoint table (Mar 2026 edition) has 9.3 for 2023, its Jun 2024 edition 8.6; "
+                  "a secondary summary of EIA data gives 8.8 for 1H 2023.",
+        "outbound_share": 0.5, "class_share": MANDEB_CLASS_SHARE, "other_per_day": 20,
+        "dark": {"gap": 0.03, "off": 0.02, "spoof": 0.01}, "msg": 0.0,
+        "dark_basis": "Same low baseline as Hormuz before the war; no published dark share for 2023 found.",
+        "split_basis": "No published split by direction found. A Kpler explainer gives 2023 peaks of 7.7 a day "
+                       "northbound and 7.2 a day southbound (units unclear in the snippet), so half each way.",
+        "other_basis": "About 51 transits a day in Oct 2023 (BigOceanData sample of AIS), less the tankers.",
+    },
+    "y2024": {
+        "label": "2024 after the Houthi attacks (EIA: 4.0 mb/d)", "flow_mbd": 4.0,
+        "source": "EIA Today in Energy, Sep 2024 (Vortexa data): 4.0 mb/d in Jan-Aug 2024, while flows "
+                  "round the Cape of Good Hope rose from 6.0 to 9.2 mb/d. EIA's table: 4.1 for all of 2024.",
+        "outbound_share": 0.5, "class_share": MANDEB_CLASS_SHARE, "other_per_day": 7,
+        "dark": {"gap": 0.06, "off": 0.05, "spoof": 0.01}, "msg": 0.4,
+        "dark_basis": "About 10% of merchant passings were dark (risk report, Feb 2024); dark-fleet ships "
+                      "were 13-15% of transits in Sep-Oct 2024 (Kuehne+Nagel; a different measure). "
+                      "Share broadcasting a security message assumed.",
+        "split_basis": "No published split by direction found: half each way (assumption).",
+        "other_basis": "About 19 transits a day in Jun 2024 (BigOceanData sample of AIS), less the tankers.",
+    },
+    "q2_2026": {
+        "label": "Q2 2026, Hormuz shut, Saudi crude via Yanbu (EIA: 8.1 mb/d)", "flow_mbd": 8.1,
+        "source": "EIA STEO, Aug 2026, as reported by Connaissance des Energies (AFP) and Il Foglio: 8.1 mb/d "
+                  "in Q2 2026, against 5.6 in Q1 2026 and 5.4 before the war. Kpler: 7.4 mb/d in Jun-Jul 2026.",
+        "outbound_share": 0.75, "class_share": HORMUZ_CLASS_SHARE, "other_per_day": 15,
+        "dark": {"gap": 0.06, "off": 0.04, "spoof": 0.02}, "msg": 0.5,
+        "dark_basis": "Kpler daily counts: 4 dark of 49 crossings on one Jul 2026 day, 3 of 26 on 7 Aug (via news "
+                      "reports); Saudi-laden tankers crossed with transponders off (Bloomberg via gCaptain, citing "
+                      "Vortexa and Kpler). "
+                      "Share broadcasting a security message assumed.",
+        "split_basis": "Saudi crude from Yanbu heads mostly south to Asia (Wood Mackenzie, Jun-Jul 2026: no "
+                       "direct European deliveries; cargoes for Ain Sukhna go north without crossing the strait). "
+                       "The 75% share is our assumption.",
+        "other_basis": "42.5 vessel crossings a day on 1-19 Jul 2026, 32.1 on 20-28 Jul (shipping data quoted in "
+                       "Jul 2026 coverage; source article not pinned), less the tankers.",
+    },
+    "sep2026": {
+        "label": "Sep 2026, Houthi blockade of Saudi shipping (Kpler: 2.56 mb/d)", "flow_mbd": 2.56,
+        "source": "Kpler preliminary data via The National, 29 Sep 2026: 2.56 mb/d through Bab el-Mandeb in "
+                  "Sep, from 5.45 in Aug; Saudi flows through the strait 0.45 mb/d in Aug.",
+        "outbound_share": 0.6, "class_share": HORMUZ_CLASS_SHARE, "other_per_day": 10,
+        "dark": {"gap": 0.2, "off": 0.2, "spoof": 0.03}, "msg": 0.7,
+        "dark_basis": "After the 20 Jul 2026 blockade, one report says most ships trying to cross switch "
+                      "transponders off; a 2026 headline says four in five ships talk their way past. Neither "
+                      "gives a measured share, so 40% dark and 70% messaging are assumptions.",
+        "split_basis": "Saudi flows south collapsed (0.45 mb/d in Aug); 60% south is our assumption.",
+        "other_basis": "IMF PortWatch: 24.7 transits a day in the week to 20 Sep 2026 (via Statistics of the "
+                       "World), less the tankers.",
+    },
+}
+
+# Everything that differs between straits. "outbound" is the lane leaving the enclosed sea.
+STRAITS = {
+    "hormuz": {
+        "geo": GEO, "bundle": BUNDLE, "note": NOTE,
+        "js": "window.STRAIT = ",   # scenarios.js is this, then the JSON, then ";\n"
+        "scenarios": SCENARIOS, "published": PUBLISHED, "prewar_mbd": PREWAR_FLOW_MBD,
+        "crude_share": CRUDE_SHARE,
+        "count_lanes": ("outbound",),                      # tankers come in empty
+        "tankers": {"outbound": 1.0, "inbound": 1.0},      # tankers each way per laden tanker
+        "laden_p": {"outbound": 0.97, "inbound": 0.0},     # chance a tanker on the lane is laden
+        "laden_prior": (0.6, 0.98),                        # estimator: laden share of dark ships
+        "class_share": HORMUZ_CLASS_SHARE,
+        "corridor_lon": (55.3, 57.6),  # radar corridor: about one Sentinel-1 IW swath (~250 km)
+        "other_per_day": OTHER_SHIPS_PER_DAY,
+        "flags": FLAGS,
+        "dest_on": {d: ["FUJAIRAH", "SINGAPORE", "NINGBO", "ROTTERDAM", "CHIBA"] for d in ("outbound", "inbound")},
+        "dest_other": ["JEBEL ALI", "DAMMAM", "MUMBAI"],
+    },
+    "mandeb": {
+        "geo": DATA / "mandeb-geo.json", "bundle": DATA / "mandeb-scenarios.js",
+        "note": ROOT / "notes" / "strait-flow-mandeb.md",
+        "js": "window.STRAITS = window.STRAITS || {};\nwindow.STRAITS.mandeb = ",
+        "scenarios": MANDEB_SCENARIOS, "published": MANDEB_PUBLISHED, "prewar_mbd": MANDEB_PREWAR_MBD,
+        "crude_share": (0.45, 0.6),   # assumption: no published crude/products split found for the strait
+        "count_lanes": ("outbound", "inbound"),            # laden tankers cross both ways
+        "seed_tolerance": 0.1,                             # see display_seed
+        "tankers": None,                                   # from each scenario's outbound_share
+        "laden_p": {"outbound": 0.85, "inbound": 0.75},    # assumption: some tankers each way in ballast
+        "laden_prior": (0.6, 0.98),
+        "class_share": MANDEB_CLASS_SHARE,
+        # The lanes span only ~160 km east to west, inside one Sentinel-1 IW swath (250 km), so one
+        # pass can see all of both lanes in the view (220-250 km of lane each).
+        "corridor_lon": (43.05, 44.5),
+        "other_per_day": 20,
+        "flags": [("Panama", 351), ("Liberia", 636), ("Marshall Islands", 538), ("Malta", 215),
+                  ("Greece", 240), ("Bahamas", 311), ("Singapore", 563), ("Hong Kong", 477),
+                  ("Saudi Arabia", 403), ("Russia", 273), ("Comoros", 616), ("Cameroon", 613), ("Gabon", 626)],
+        "dest_on": {"outbound": ["SINGAPORE", "NINGBO", "SIKKA", "ZHOUSHAN", "KARACHI"],
+                    "inbound": ["SUEZ", "ROTTERDAM", "AUGUSTA", "YANBU", "JEDDAH"]},
+        "dest_other": ["JEDDAH", "PORT SAID", "DJIBOUTI", "SALALAH"],
+    },
+}
+
+
+def tanker_mix(cfg: dict, sc: dict) -> tuple[dict, dict]:
+    """Tankers on each lane per laden tanker, and the chance a tanker on each lane is laden."""
+    laden_p = sc.get("laden_p", cfg["laden_p"])
+    if "outbound_share" not in sc:
+        return cfg["tankers"], laden_p
+    s = sc["outbound_share"]
+    return {"outbound": s / laden_p["outbound"], "inbound": (1 - s) / laden_p["inbound"]}, laden_p
+
+
+def simulate(key: str, lanes: dict[str, Lane], gate, seed: int = 7, strait: str = "hormuz") -> dict:
+    """Synthetic ships for a 48 h window, calibrated so the true laden flow = scenario flow."""
+    cfg = STRAITS[strait]
+    sc = cfg["scenarios"][key]
     rng = np.random.default_rng(seed)
     gate_lon = gate[0][0]
     cls_names = list(CLASSES)
-    mean_cargo = sum(CLASSES[c]["cargo"] * CLASSES[c]["share"] for c in cls_names)
-    per_day = sc["flow_mbd"] / (mean_cargo * 0.95)  # laden outbound tankers per day (load ~95%)
+    share = sc.get("class_share", cfg["class_share"])
+    mean_cargo = sum(CLASSES[c]["cargo"] * share[c] for c in cls_names)
+    per_day = sc["flow_mbd"] / (mean_cargo * 0.95)  # laden tankers per day (load ~95%)
+    per_lane, laden_p = tanker_mix(cfg, sc)
+    flags, msg = cfg["flags"], sc.get("msg", 0.0)
     ships = []
 
     def add(direction: str, kind: str, n: int):
@@ -241,7 +386,7 @@ def simulate(key: str, lanes: dict[str, Lane], gate, seed: int = 7) -> dict:
             t_gate = rng.uniform(0, WINDOW_H)            # when it crosses the gate
             t0 = t_gate - s_gate / speed                 # when it was at the lane start
             idx = len(ships)
-            flag, mid = FLAGS[rng.integers(len(FLAGS))]
+            flag, mid = flags[rng.integers(len(flags))]
             v = {"id": f"S{idx:04d}", "kind": kind, "lane": direction, "t0": round(t0, 3),
                  "speed_kmh": round(speed, 2), "t_gate": round(t_gate, 3), "synthetic": True,
                  "name": f"{NAMES[rng.integers(len(NAMES))]} {rng.integers(1, 99)}",
@@ -250,8 +395,9 @@ def simulate(key: str, lanes: dict[str, Lane], gate, seed: int = 7) -> dict:
                  "built": int(rng.integers(1998, 2024)), "flag_changes_12m": 0,
                  "destination": "", "sanctioned": False, "sts": False}
             if kind == "tanker":
-                c = rng.choice(cls_names, p=[CLASSES[c]["share"] for c in cls_names])
-                laden = direction == "outbound" and rng.random() < 0.97
+                c = rng.choice(cls_names, p=[share[c] for c in cls_names])
+                p_laden = laden_p[direction]
+                laden = p_laden > 0 and rng.random() < p_laden
                 load = rng.uniform(0.9, 1.0) if laden else 0.0
                 v.update({"class": c, "length_m": CLASSES[c]["length"], "laden": bool(laden),
                           "cargo_mbbl": round(CLASSES[c]["cargo"] * load, 3),
@@ -275,22 +421,26 @@ def simulate(key: str, lanes: dict[str, Lane], gate, seed: int = 7) -> dict:
                     if rng.random() < 0.15:  # stolen or made-up identity
                         v["imo"] = f"{int(rng.integers(9000000, 9999999))}"
                 else:
-                    v["destination"] = rng.choice(["FUJAIRAH", "SINGAPORE", "NINGBO", "ROTTERDAM", "CHIBA"])
+                    v["destination"] = rng.choice(cfg["dest_on"][direction])
+                    if msg and rng.random() < msg:   # broadcasts who is on board instead (Red Sea)
+                        v["destination"] = rng.choice(SECURITY_MSGS)
             else:
                 v.update({"class": rng.choice(["Container", "Bulk", "General cargo", "LNG"]),
                           "length_m": int(rng.integers(120, 360)), "laden": None, "cargo_mbbl": 0.0,
-                          "ais_mode": "on", "destination": rng.choice(["JEBEL ALI", "DAMMAM", "MUMBAI"])})
+                          "ais_mode": "on", "destination": rng.choice(cfg["dest_other"])})
             ships.append(v)
 
     days = WINDOW_H / 24
-    add("outbound", "tanker", int(round(per_day * days)))
-    add("inbound", "tanker", int(round(per_day * days)))   # mostly in ballast, coming to load
-    add("outbound", "other", OTHER_SHIPS_PER_DAY * 2)
-    add("inbound", "other", OTHER_SHIPS_PER_DAY * 2)
+    other = sc.get("other_per_day", cfg["other_per_day"])
+    # Hormuz: as many tankers come in (in ballast, to load) as go out laden.
+    add("outbound", "tanker", int(round(per_day * days * per_lane["outbound"])))
+    add("inbound", "tanker", int(round(per_day * days * per_lane["inbound"])))
+    add("outbound", "other", other * 2)
+    add("inbound", "other", other * 2)
 
     # Observations: AIS positions every 10 minutes (with gaps, spoofed jumps or nothing) and
     # SAR detections at the two passes.
-    corridor = (55.3, 57.6)  # lon range of the radar corridor: about one Sentinel-1 IW swath (~250 km)
+    corridor = cfg["corridor_lon"]  # lon range of the radar corridor
     for v in ships:
         lane = lanes[v["lane"]]
         track = []
@@ -315,19 +465,19 @@ def simulate(key: str, lanes: dict[str, Lane], gate, seed: int = 7) -> dict:
                     v["sar_hits"].append({"pass": i, "lon": round(lon, 4), "lat": round(lat, 4),
                                           "length_m": round(v["length_m"] * rng.uniform(0.85, 1.15))})
         v["ghost"] = ghost_score(v) if v["kind"] == "tanker" else {"score": 0.0, "codes": [], "reasons": []}
-    truth = sum(v["cargo_mbbl"] for v in ships if v["kind"] == "tanker" and v["lane"] == "outbound"
+    truth = sum(v["cargo_mbbl"] for v in ships if v["kind"] == "tanker" and v["lane"] in cfg["count_lanes"]
                 and 0 <= v["t_gate"] < WINDOW_H) / days
     return {"scenario": key, "label": sc["label"], "ships": ships, "truth_mbd": round(truth, 2),
-            "corridor_lon": corridor, "sar_passes_h": SAR_PASSES_H}
+            "corridor_lon": corridor, "sar_passes_h": SAR_PASSES_H, "strait": strait}
 
 
 # --------------------------------------------------------------------------- estimator
 
-def clean_track(track: list[tuple]) -> tuple[list[tuple], int]:
+def clean_track(track: list[tuple], lat0: float = LAT0) -> tuple[list[tuple], int]:
     """Drop points that imply an impossible speed from the previous kept point."""
     kept, dropped = [], 0
     for p in track:
-        if kept and implied_speed_kn(kept[-1], p) > 40:
+        if kept and implied_speed_kn(kept[-1], p, lat0) > 40:
             dropped += 1
             continue
         kept.append(p)
@@ -338,18 +488,24 @@ def class_from_length(length_m: float) -> str:
     return min(CLASSES, key=lambda c: abs(CLASSES[c]["length"] - length_m))
 
 
-def estimate(sim: dict, lanes: dict[str, Lane], gate, draws: int = 4000, seed: int = 11) -> dict:
-    """Seen + bridged + never-seen laden outbound flow, mb/d, with a Monte Carlo range."""
+def estimate(sim: dict, lanes: dict[str, Lane], gate, draws: int = 4000, seed: int = 11,
+             strait: str | None = None) -> dict:
+    """Seen + bridged + never-seen laden flow through the gate, mb/d, with a Monte Carlo range.
+
+    Counts the strait's laden lanes: outbound only for Hormuz, both ways for Bab el-Mandeb."""
+    cfg = STRAITS[strait or sim.get("strait", "hormuz")]
+    count = cfg["count_lanes"]
+    lat0 = lanes["outbound"].lat0
     rng = np.random.default_rng(seed)
     days = WINDOW_H / 24
-    mean_cargo = sum(c["cargo"] * c["share"] for c in CLASSES.values())
+    mean_cargo = sum(CLASSES[c]["cargo"] * cfg["class_share"][c] for c in CLASSES)
     tankers = [v for v in sim["ships"] if v["kind"] == "tanker"]
     seen, bridged, spoof_dropped = [], [], 0
 
     for v in tankers:
-        track, dropped = clean_track([tuple(p) for p in v["ais"]])
+        track, dropped = clean_track([tuple(p) for p in v["ais"]], lat0)
         spoof_dropped += dropped
-        if v["lane"] != "outbound" or not track:
+        if v["lane"] not in count or not track:
             continue
         g_lon = gate[0][0]
         for p, q in zip(track, track[1:]):
@@ -365,20 +521,23 @@ def estimate(sim: dict, lanes: dict[str, Lane], gate, draws: int = 4000, seed: i
 
     # Radar: detections not explained by an AIS position within 30 min / 5 km, nor by a bridged
     # ship whose position we can interpolate between its last and next AIS points.
-    out_lane = lanes["outbound"]
-    corridor_km = out_lane.s_at_lon(sim["corridor_lon"][1]) - out_lane.s_at_lon(sim["corridor_lon"][0])
+    # With two laden lanes (Bab el-Mandeb) the detections are pooled into one count per pass and W uses
+    # the mean corridor length of the two lanes, so the zero-count prior is not counted twice.
+    c0, c1 = sim["corridor_lon"]
+    lane_km = [abs(lanes[d].s_at_lon(c1) - lanes[d].s_at_lon(c0)) for d in count]
+    corridor_km = sum(lane_km) / len(lane_km)
     unmatched = {i: [] for i in range(len(sim["sar_passes_h"]))}
     for v in tankers:
         for hit in v["sar_hits"]:
             tp = sim["sar_passes_h"][hit["pass"]]
             near = [p for p in v["ais"] if abs(p[0] - tp) <= 0.5]
-            if any(math.dist(to_km(p[1], p[2]), to_km(hit["lon"], hit["lat"])) < 5 for p in near):
+            if any(math.dist(to_km(p[1], p[2], lat0), to_km(hit["lon"], hit["lat"], lat0)) < 5 for p in near):
                 continue
             before = [p for p in v["ais"] if p[0] < tp]
             after = [p for p in v["ais"] if p[0] > tp]
             if before and after:   # explained by dead reckoning between known AIS points
                 continue
-            if v["lane"] == "outbound":   # southern lane = outbound; lane tells the direction
+            if v["lane"] in count:   # the lane a detection sits on tells the direction
                 unmatched[hit["pass"]].append(hit)
 
     def cargo_seen(v, load):
@@ -393,7 +552,7 @@ def estimate(sim: dict, lanes: dict[str, Lane], gate, draws: int = 4000, seed: i
         bridged_mbd[k] = sum(cargo_seen(v, load) for v in bridged) / days
         recall = rng.uniform(0.8, 0.95)
         false_pos = rng.uniform(0.0, 0.08)
-        laden_share = rng.uniform(0.6, 0.98)
+        laden_share = rng.uniform(*cfg["laden_prior"])
         speed = rng.uniform(10.5, 14.5) * KNOT_KMH
         w_hours = corridor_km / speed
         rates = []
@@ -422,12 +581,15 @@ def estimate(sim: dict, lanes: dict[str, Lane], gate, draws: int = 4000, seed: i
             "world_consumption_mbd": WORLD_CONSUMPTION_MBD,
             "share_of_world_p50": round(t["p50"] / WORLD_CONSUMPTION_MBD, 4),
             "share_of_seaborne_p50": round(t["p50"] / (WORLD_CONSUMPTION_MBD * SEABORNE_SHARE), 4),
-            "crude_mbd_p50": [round(t["p50"] * c, 2) for c in CRUDE_SHARE],
-            "missing_vs_prewar_mbd": {k: round(PREWAR_FLOW_MBD - v, 2) for k, v in t.items()},
+            "crude_mbd_p50": [round(t["p50"] * c, 2) for c in cfg["crude_share"]],
+            # Hormuz: against the pre-war 20 mb/d; Bab el-Mandeb: against the pre-crisis 2023 8.7 mb/d.
+            "missing_vs_prewar_mbd": {k: round(cfg["prewar_mbd"] - v, 2) for k, v in t.items()},
         },
         "assumptions": {
             "load_factor": [0.88, 1.0], "sar_recall": [0.8, 0.95], "sar_false_positive": [0.0, 0.08],
-            "laden_share_of_dark_outbound": [0.6, 0.98], "speed_kn": [10.5, 14.5],
+            # Bab el-Mandeb: one range for the dark ships of both lanes, and the corridor length is the
+            # mean of the two lanes.
+            "laden_share_of_dark_outbound": list(cfg["laden_prior"]), "speed_kn": [10.5, 14.5],
             "corridor_km_outbound": round(corridor_km, 1), "draws": draws,
             "radar_count": "Poisson, Jeffreys prior",
         },
@@ -436,7 +598,7 @@ def estimate(sim: dict, lanes: dict[str, Lane], gate, draws: int = 4000, seed: i
 
 # --------------------------------------------------------------------------- output
 
-def ui_ship(v: dict) -> dict:
+def ui_ship(v: dict, lat0: float = LAT0) -> dict:
     keep = ("id", "kind", "lane", "t0", "speed_kmh", "name", "mmsi", "flag", "imo", "built", "class",
             "length_m", "laden", "cargo_mbbl", "draught_m", "ais_mode", "gap_km", "destination", "owner_opaque",
             "sanctioned", "sts", "flag_changes_12m", "sar_hits", "ghost")
@@ -444,44 +606,171 @@ def ui_ship(v: dict) -> dict:
     out["mmsi_flag"] = mmsi_flag(v.get("mmsi"))
     out["imo_valid"] = imo_valid(v.get("imo"))
     if v["ais_mode"] == "spoof":   # the fake positions it broadcast, for the map to show
-        kept, _ = clean_track([tuple(p) for p in v["ais"]])
+        kept, _ = clean_track([tuple(p) for p in v["ais"]], lat0)
         out["spoof_points"] = [p for p in v["ais"] if tuple(p) not in set(kept)]
     return out
 
 
+def display_seed(key: str, lanes: dict[str, Lane], gate, strait: str, start: int = 7) -> int:
+    """Seed of the 48 h window the page shows. Hormuz uses 7. A Bab el-Mandeb window holds only about 5
+    to 23 laden tankers, so one draw can land far from the figure it is calibrated to (the mean over many
+    seeds matches it); the page shows the first seed from 7 whose true flow is within the strait's
+    tolerance of the published figure. The choice looks only at the truth, never at the estimate."""
+    tol = STRAITS[strait].get("seed_tolerance")
+    if tol is None:
+        return start
+    target = STRAITS[strait]["scenarios"][key]["flow_mbd"]
+    for seed in range(start, start + 500):
+        if abs(simulate(key, lanes, gate, seed=seed, strait=strait)["truth_mbd"] / target - 1) <= tol:
+            return seed
+    raise RuntimeError(f"no seed puts {key} within {tol:.0%} of {target}")
+
+
+def coverage(strait: str, lanes: dict[str, Lane], gate, runs: int = 40, draws: int = 1000) -> dict:
+    """How often the 90% range covers the synthetic truth, over `runs` random seeds per scenario."""
+    out = {}
+    for key in STRAITS[strait]["scenarios"]:
+        hits, over, ratio, empty = 0, 0, [], []
+        for seed in range(runs):
+            sim = simulate(key, lanes, gate, seed=100 + seed, strait=strait)
+            est = estimate(sim, lanes, gate, draws=draws, seed=seed, strait=strait)
+            t = est["total"]
+            hits += t["p5"] <= sim["truth_mbd"] <= t["p95"]
+            over += sim["truth_mbd"] < t["p5"]
+            ratio.append(t["p50"] / sim["truth_mbd"])
+            if not any(est["counts"]["unmatched_radar"].values()):   # radar caught no dark ship
+                empty.append(est["hidden"]["p50"])
+        out[key] = {"covered": hits, "over": over, "runs": runs, "draws": draws,
+                    "median_ratio": round(float(np.median(ratio)), 2),
+                    "zero_count_hidden_p50": round(float(np.median(empty)), 2) if empty else None}
+    return out
+
+
+def mandeb_note(now: str, rows: list[str], cov: dict, no_radar: list[str]) -> str:
+    cfg = STRAITS["mandeb"]
+    laden = []   # expected laden tankers in one 48 h window, per scenario (as simulate calibrates them)
+    for sc in cfg["scenarios"].values():
+        share = sc.get("class_share", cfg["class_share"])
+        laden.append(sc["flow_mbd"] / (sum(CLASSES[c]["cargo"] * share[c] for c in CLASSES) * 0.95) * WINDOW_H / 24)
+    lines = [
+        "# Bab el-Mandeb flow estimator on synthetic scenarios", "",
+        f"Generated {now} by `uv run experiments/strait_flow.py --strait mandeb`. **All ships are SYNTHETIC**: "
+        "each scenario is calibrated so the true laden flow through the gate, both directions added, matches "
+        "a published figure. The estimator then sees only what AIS and two radar passes would show. "
+        "Units: million barrels/day.", "",
+        "| Scenario | Seed | Published (calibration) | True (synthetic) | Seen on AIS | Bridged gaps | "
+        "Never seen (radar) | Estimate (90% range) | Truth in range |",
+        "|---|---|---|---|---|---|---|---|---|", *rows, "",
+        f"A 48-hour window at these flows holds on average only {min(laden):.0f} to {max(laden):.0f} laden "
+        "tankers, so one draw can land far from the "
+        f"figure it is calibrated to (the mean over many seeds matches it). Each scenario shows the first seed "
+        f"from 7 whose true flow is within {cfg['seed_tolerance']:.0%} of the published figure; the choice "
+        "looks at the truth only, never at the estimate."
+        + ((f" In all {len(rows)} windows shown" if len(no_radar) == len(rows) else
+            f" In {len(no_radar)} of the {len(rows)} windows shown ({'; '.join(no_radar)})")
+           + " neither radar pass caught a tanker that never used AIS, so the never-seen figure there is the "
+           "zero-count prior alone." if no_radar else ""),
+        "",
+        "How often the 90% range covers the truth, over {runs} other random seeds per scenario ({draws} draws "
+        "each): ".format(**next(iter(cov.values())))
+        + "; ".join(f"{cfg['scenarios'][k]['label'].split(' (')[0]} {c['covered']}/{c['runs']} "
+                    f"(median estimate / truth {c['median_ratio']:.2f})" for k, c in cov.items()) + ". "
+        + ("Every miss is an over-estimate. " if all(c["over"] == c["runs"] - c["covered"] for c in cov.values())
+           else "Misses above the truth: " + ", ".join(str(c["over"]) for c in cov.values()) + ". ")
+        + "Most windows hold no dark tanker that a radar pass catches. The radar count is then zero, and its "
+        "Jeffreys prior still adds a median of "
+        + "/".join(f"{c['zero_count_hidden_p50']:.2f}" if c["zero_count_hidden_p50"] is not None else "-"
+                   for c in cov.values())
+        + " mb/d of never-seen flow (same order). That is what lifts the range above a small truth, and why "
+        "the lowest-flow scenario covers least.", "",
+        "## Where each scenario's numbers come from", "",
+        "Figures were read from search-result snippets on 25 Oct 2026 because our cloud session cannot open "
+        "eia.gov or the news sites: **verify at source** before quoting.", "",
+    ]
+    for key, sc in cfg["scenarios"].items():
+        d = sc["dark"]
+        lines += [
+            f"### {sc['label']}", "",
+            f"- Flow: {sc['source']}",
+            f"- Direction: {sc['outbound_share']:.0%} of laden barrels southbound. {sc['split_basis']}",
+            f"- Dark ships: AIS gap across the gate {d['gap']:.0%} of tankers, never on AIS {d['off']:.0%}, "
+            f"spoofed positions {d['spoof']:.0%}. Of the tankers with AIS on, {sc['msg']:.0%} broadcast a "
+            f"security message instead of a destination. {sc['dark_basis']}",
+            f"- Other ships: {sc['other_per_day']} a day each way, for the picture only. {sc['other_basis']}",
+            "",
+        ]
+    lines += [
+        "## Assumptions shared by all scenarios", "",
+        f"- Tankers laden: {cfg['laden_p']['outbound']:.0%} southbound, {cfg['laden_p']['inbound']:.0%} "
+        "northbound (the rest in ballast). The estimator does not know this: it reads laden from draught for "
+        f"AIS ships and draws a laden share of {cfg['laden_prior'][0]}-{cfg['laden_prior'][1]} for dark ones.",
+        "- Tanker sizes: before 2026 VLCC 10%, Suezmax 30%, Aframax/LR2 25%, MR 35% (assumption: a laden VLCC "
+        "is too deep for the Suez Canal); 2026 scenarios use the Hormuz mix because Yanbu cargoes to Asia "
+        "went on VLCCs.",
+        f"- Crude share {cfg['crude_share'][0]:.0%}-{cfg['crude_share'][1]:.0%}: assumption, no published split "
+        "for the strait found.",
+        f"- Radar corridor: lon {cfg['corridor_lon'][0]}-{cfg['corridor_lon'][1]}, two passes in the 48 hours, "
+        "as for Hormuz. Real Sentinel-1 revisit over the strait is unconfirmed.",
+        "- Lanes and gate: `experiments/strait_geo.py --strait mandeb`, approximate, not for navigation.", "",
+        "Method: `docs/strait-live-data.md` (sections 3 and 7). Hormuz results: `notes/strait-flow.md`.", "",
+    ]
+    return "\n".join(lines)
+
+
 def main() -> None:
-    geo = json.loads(GEO.read_text())
+    ap = argparse.ArgumentParser(description="Simulate a strait and run the flow estimator on it.")
+    ap.add_argument("--strait", choices=sorted(STRAITS), default="hormuz")
+    strait = ap.parse_args().strait
+    cfg = STRAITS[strait]
+    geo = json.loads(cfg["geo"].read_text())
     lanes = load_lanes(geo)
+    lat0 = geo.get("lat0", LAT0)
     now = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
-    rows, payloads = [], {}
-    for key in SCENARIOS:
-        sim = simulate(key, lanes, geo["gate"])
-        est = estimate(sim, lanes, geo["gate"])
+    rows, payloads, no_radar = [], {}, []
+    for key, sc in cfg["scenarios"].items():
+        seed = display_seed(key, lanes, geo["gate"], strait)
+        sim = simulate(key, lanes, geo["gate"], seed=seed, strait=strait)
+        est = estimate(sim, lanes, geo["gate"], strait=strait)
         payload = {
             "generated": now, "synthetic": True, "scenario": key, "label": sim["label"],
             "window_h": WINDOW_H, "sar_passes_h": sim["sar_passes_h"], "corridor_lon": sim["corridor_lon"],
-            "truth_mbd": sim["truth_mbd"], "estimate": est, "published": PUBLISHED,
+            "truth_mbd": sim["truth_mbd"], "estimate": est, "published": cfg["published"],
             "lane_km": {d: round(l.length, 1) for d, l in lanes.items()},
-            "ships": [ui_ship(v) for v in sim["ships"]],
+            "ships": [ui_ship(v, lat0) for v in sim["ships"]],
         }
         payloads[key] = payload
         t = est["total"]
-        rows.append(f"| {sim['label']} | {sim['truth_mbd']:.1f} | {est['seen']['p50']:.1f} | "
-                    f"{est['bridged']['p50']:.1f} | {est['hidden']['p50']:.1f} | "
-                    f"{t['p50']:.1f} ({t['p5']:.1f}–{t['p95']:.1f}) |")
+        if strait == "hormuz":
+            rows.append(f"| {sim['label']} | {sim['truth_mbd']:.1f} | {est['seen']['p50']:.1f} | "
+                        f"{est['bridged']['p50']:.1f} | {est['hidden']['p50']:.1f} | "
+                        f"{t['p50']:.1f} ({t['p5']:.1f}–{t['p95']:.1f}) |")
+        else:
+            inside = "yes" if t["p5"] <= sim["truth_mbd"] <= t["p95"] else "no"
+            if not any(est["counts"]["unmatched_radar"].values()):
+                no_radar.append(sim["label"].split(" (")[0])
+            rows.append(f"| {sim['label'].split(' (')[0]} | {seed} | {sc['flow_mbd']:.2f} | {sim['truth_mbd']:.2f} | "
+                        f"{est['seen']['p50']:.2f} | {est['bridged']['p50']:.2f} | {est['hidden']['p50']:.2f} | "
+                        f"{t['p50']:.2f} ({t['p5']:.2f}-{t['p95']:.2f}) | {inside} |")
         print(f"{key}: truth {sim['truth_mbd']:.2f}, estimate {t['p50']:.2f} [{t['p5']:.2f}, {t['p95']:.2f}]")
     # One script file, so the page also works when opened straight from disk (file://).
-    BUNDLE.write_text("window.STRAIT = " + json.dumps({"geo": geo, "scenarios": payloads}, separators=(",", ":")) + ";\n")
-    print(f"wrote {BUNDLE.relative_to(ROOT)} ({BUNDLE.stat().st_size // 1024} KB)")
-    NOTE.write_text(
-        "# Strait flow estimator on synthetic scenarios\n\n"
-        f"Generated {now} by `uv run experiments/strait_flow.py`. **All ships are SYNTHETIC**: each "
-        "scenario is calibrated so the true laden outbound flow matches a published figure, then the "
-        "estimator sees only what AIS and two radar passes would show. Units: million barrels/day.\n\n"
-        "| Scenario | True (synthetic) | Seen on AIS | Bridged gaps | Never seen (radar) | Estimate (90% range) |\n"
-        "|---|---|---|---|---|---|\n" + "\n".join(rows) + "\n\n"
-        "Method and assumptions: `docs/strait-live-data.md`.\n")
-    print(f"wrote {NOTE.relative_to(ROOT)}")
+    bundle, note = cfg["bundle"], cfg["note"]
+    bundle.write_text(cfg["js"] + json.dumps({"geo": geo, "scenarios": payloads}, separators=(",", ":")) + ";\n")
+    print(f"wrote {bundle.relative_to(ROOT)} ({bundle.stat().st_size // 1024} KB)")
+    if strait == "hormuz":
+        note.write_text(
+            "# Strait flow estimator on synthetic scenarios\n\n"
+            f"Generated {now} by `uv run experiments/strait_flow.py`. **All ships are SYNTHETIC**: each "
+            "scenario is calibrated so the true laden outbound flow matches a published figure, then the "
+            "estimator sees only what AIS and two radar passes would show. Units: million barrels/day.\n\n"
+            "| Scenario | True (synthetic) | Seen on AIS | Bridged gaps | Never seen (radar) | Estimate (90% range) |\n"
+            "|---|---|---|---|---|---|\n" + "\n".join(rows) + "\n\n"
+            "Method and assumptions: `docs/strait-live-data.md`.\n")
+    else:
+        cov = coverage(strait, lanes, geo["gate"])
+        for k, c in cov.items():
+            print(f"{k}: 90% range covered the truth in {c['covered']}/{c['runs']} seeds")
+        note.write_text(mandeb_note(now, rows, cov, no_radar))
+    print(f"wrote {note.relative_to(ROOT)}")
 
 
 if __name__ == "__main__":

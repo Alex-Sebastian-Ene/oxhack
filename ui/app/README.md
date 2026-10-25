@@ -1,7 +1,7 @@
 # Hormuz Flow: the app
 
 One page that holds everything: the World view (exposure map, flat or 3D globe, the five materials),
-the Strait view (simulated ships, real IMF PortWatch counts) and the stats (Seb's chain, the Economy tab).
+the Strait view (simulated ships, real IMF PortWatch counts) and the stats (Seb's chain, the Economy and Trends tabs).
 It opens on a pixel-art landing page and keeps one night-shift theme throughout. Open `index.html` in a
 browser; it needs no server and no network. `#app` at the end of the address skips the landing page.
 
@@ -17,6 +17,10 @@ for the colours, with these layers added (`src/`):
 | `shell.js` | The pipe strip under the header (its oil runs at the share of Hormuz flow getting through), the home, sound and music keys |
 | `ai.js`, `ai.css` | Sources (every material and ingredient with its datasets) and country Profiles, each with an optional Gemini panel |
 | `build.py` | Puts it together; each colour swap in Eileen's page must match exactly, so the build stops if her page changes |
+| `world.py` | World view: Made and Shipped together (front layer fills, back layer stands as columns, faint arcs), flags in every tooltip |
+| `copy_text.py` | Shorter copy for the panels; same facts and sources |
+| `gas.py` | Gas on the World view: LNG lanes (dashed violet, beside the oil lanes) and pipelines, from `ui/app/data/gas.json` (`uv run experiments/gas_routes.py`) |
+| `mandeb.py`, `mandeb.js` | Bab el-Mandeb in the Strait view: the Hormuz / Bab el-Mandeb switch reloads on `#mandeb`; data from `ui/strait/data/mandeb-scenarios.js` (`uv run experiments/strait_flow.py --strait mandeb`) |
 
 ```bash
 python ui/app/src/build.py                      # writes ui/app/index.html

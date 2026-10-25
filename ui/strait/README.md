@@ -10,6 +10,7 @@ Hormuz. Why, and how the estimate works: `docs/strait-live-data.md`.
 |---|---|
 | `data/geo.json` | `uv run experiments/strait_geo.py` (coastline, lanes, gate) |
 | `data/scenarios.js` | `uv run experiments/strait_flow.py` (ships and estimates for each scenario) |
+| `data/mandeb-geo.json`, `data/mandeb-scenarios.js` | the same two scripts with `--strait mandeb` (Bab el-Mandeb; open `index.html?strait=mandeb`) |
 | `index.html`, `style.css`, `app.js` | by hand |
 
 One-file build for sharing or publishing: `uv run experiments/strait_bundle.py hormuz-flow.html`

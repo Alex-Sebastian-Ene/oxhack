@@ -11,6 +11,9 @@ check, node on PATH.
 """
 import base64, pathlib, re, shutil, subprocess, sys
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import copy_text, gas, mandeb, world  # noqa: E402  (World view behaviour, gas lines, Bab el-Mandeb, shorter copy)
+
 HERE = pathlib.Path(__file__).resolve().parent
 APP = HERE.parent
 SRC = APP.parent / "industry" / "index.html"
@@ -27,8 +30,8 @@ SWAPS = [
     # Strait view canvas: sea, land, lanes and labels
     ('const COL = { seen: "#0a4fd0", oil: "#f26b00", oilSoft: "#c24f00", fake: "#e0201b", sea: "#a8d8f8", land: "#efe1c2",\n'
      '    landEdge: "#c2a978", lane: "#ffdc2e", laneEdge: "rgba(20,32,46,0.4)", text: "#14202e", faint: "#1f5f8f", white: "#14202e", other: "#5e6b7a" };',
-     'const COL = { seen: "#5aa9ff", oil: "#ffa424", oilSoft: "#ffbf5c", fake: "#ff4d3a", sea: "#0b2038", land: "#1c2536",\n'
-     '    landEdge: "#3d4c6e", lane: "#d9a92e", laneEdge: "rgba(0,0,0,0.55)", text: "#f1e8d2", faint: "#8fbbe3", white: "#f1e8d2", other: "#8b97ad" };', 1),
+     'const COL = { seen: "#5aa9ff", oil: "#ffa424", oilSoft: "#ffbf5c", fake: "#ff4d3a", sea: "#0a2342", land: "#363a50",\n'
+     '    landEdge: "#6a7194", lane: "#d9a92e", laneEdge: "rgba(0,0,0,0.55)", text: "#f1e8d2", faint: "#8fbbe3", white: "#f1e8d2", other: "#8b97ad" };', 1),
     ('ctx.fillStyle = "rgba(20,32,46,0.5)";', 'ctx.fillStyle = "rgba(241,232,210,0.45)";', 1),
     ('ctx.strokeStyle = "rgba(20,32,46,0.5)";', 'ctx.strokeStyle = "rgba(241,232,210,0.55)";', 1),
     ('ctx.strokeStyle = `rgba(20,32,46,${a})`;', 'ctx.strokeStyle = `rgba(241,232,210,${a})`;', 1),
@@ -71,9 +74,23 @@ def font_css() -> str:
     ])
 
 
+def gas_data() -> str:
+    """window.GAS from ui/app/data/gas.json (experiments/gas_routes.py), or nothing if it isn't there yet."""
+    f = APP / "data" / "gas.json"
+    if not f.exists():
+        return ""
+    return f"<script>/* gas routes: ui/app/data/gas.json */\nwindow.GAS = {f.read_text(encoding='utf-8').strip()};\n</script>\n"
+
+
+def mandeb_data() -> str:
+    """window.STRAITS.mandeb from ui/strait/data/mandeb-scenarios.js (strait_flow.py --strait mandeb), if present."""
+    f = APP.parent / "strait" / "data" / "mandeb-scenarios.js"
+    return f"<script>/* Bab el-Mandeb: ui/strait/data/mandeb-scenarios.js */\n{f.read_text(encoding='utf-8').strip()}\n</script>\n" if f.exists() else ""
+
+
 def main() -> None:
     page = SRC.read_text(encoding="utf-8")
-    for old, new, n in SWAPS:
+    for old, new, n in SWAPS + world.SWAPS + gas.SWAPS + mandeb.SWAPS + copy_text.SWAPS:
         got = page.count(old)
         if got != n:
             sys.exit(f"expected {n} of {old[:70]!r}, found {got}: the industry page changed, update SWAPS")
@@ -91,7 +108,8 @@ def main() -> None:
     first_style_end = body.index("</style>") + len("</style>")
     read = lambda f: (HERE / f).read_text(encoding="utf-8")
     early = (
-        f"\n<style>\n{font_css()}\n{read('theme.css')}\n{read('landing.css')}\n{read('ai.css')}</style>\n"
+        f"\n<style>\n{font_css()}\n{read('theme.css')}\n{gas.CSS}\n{mandeb.CSS}\n{read('landing.css')}\n{read('ai.css')}</style>\n"
+        f"{gas_data()}{mandeb_data()}<script>\n{read('mandeb.js')}\n</script>\n"
         f"{read('landing.html')}"
         f"<script>\n{read('pixel.js')}\n</script>\n<script>\n{read('sound.js')}\n</script>\n<script>\n{read('landing.js')}\n</script>\n"
     )
@@ -100,7 +118,7 @@ def main() -> None:
     fragment = '<title>Hormuz Flow</title>\n<meta name="claude:viewport-fit-sides" content="cover">\n' + body
 
     if shutil.which("node"):
-        for f in ("pixel.js", "sound.js", "landing.js", "shell.js", "ai.js"):
+        for f in ("pixel.js", "sound.js", "landing.js", "shell.js", "ai.js", "mandeb.js"):
             r = subprocess.run(["node", "--check", str(HERE / f)], capture_output=True, text=True)
             if r.returncode:
                 sys.exit(f"{f}: {r.stderr.strip()}")

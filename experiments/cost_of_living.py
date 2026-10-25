@@ -109,16 +109,21 @@ class Item:
     weight: str | None  # ONS weight CDID, Eurostat COICOP, or None (US: US_WEIGHTS)
     nsa: bool  # not seasonally adjusted: month-of-year terms are fitted
     lags: int  # oil and gas lags, months
+    transform: str = "dlog"  # dlog: % change of the level (x100); diff: change in percentage points
+    basket: bool = True  # part of its region's cost-of-living composite
 
 
 KINDS = ("bread", "meat", "dairy", "oils_fats", "fruit_veg", "sugar", "electricity", "gas", "fuel", "air",
-         "restaurants", "housing", "core_goods", "services", "rest", "all")
+         "restaurants", "housing", "core_goods", "services", "rest", "all", "ind_fuel", "ind_transport",
+         "ind_materials", "unemployment", "rate")
 KIND_NAMES = {"bread": "Bread and cereals", "meat": "Meat", "dairy": "Dairy", "oils_fats": "Oils and fats",
               "fruit_veg": "Fruit and vegetables", "sugar": "Sugar and sweets", "electricity": "Electricity",
               "gas": "Household gas", "fuel": "Motor fuel", "air": "Air fares", "restaurants": "Restaurants",
               "housing": "Housing (rent, and owners' equivalent rent in the US)",
               "core_goods": "Core goods (non-energy industrial goods)", "services": "Other services",
-              "rest": "Rest of the basket", "all": "Headline (direct)"}
+              "rest": "Rest of the basket", "all": "Headline (direct)", "ind_fuel": "Industry fuel (US)",
+              "ind_transport": "Freight and air transport (US)", "ind_materials": "Materials (US)",
+              "unemployment": "Unemployment", "rate": "Policy rate"}
 ONS_URI = "/economy/inflationandpriceindices/timeseries/{}/mm23"
 
 
@@ -199,13 +204,49 @@ HEADLINE = {"us": Item("us_all", "us", "all", "fred", "CPIAUCSL", "US CPI, all i
             "ea": Item("ea_all", "ea", "all", "fred", "CP0000EZ19M086NEST", "Euro-area HICP, all items (Eurostat via FRED)",
                        None, True, 12)}
 REGIONS = {"us": "US", "uk": "UK", "ea": "Euro area"}
+
+
+def _ind(key, kind, code, name, lags):
+    return Item(f"ind_{key}", "us", kind, "fred", code, name, None, True, lags, basket=False)
+
+
+# Outside the basket: the chain's other metrics, so each gets its own fitted supply-disruption
+# multiplier. US industry costs (the industry lane's series), unemployment and policy rates.
+OTHER = [
+    _ind("diesel", "ind_fuel", "GASDESW", "US retail diesel (EIA)", 2),
+    _ind("jet", "ind_fuel", "DJFUELUSGULF", "US Gulf Coast jet fuel (EIA)", 2),
+    _ind("refineries", "ind_fuel", "PCU324110324110", "US PPI petroleum refineries (BLS)", 2),
+    _ind("truckload", "ind_transport", "PCU484121484121", "US PPI long-distance truckload (BLS)", 2),
+    _ind("trucking", "ind_transport", "PCU4841248412", "US PPI long-distance trucking (BLS)", 2),
+    _ind("deepsea", "ind_transport", "PCU483111483111", "US PPI deep-sea freight (BLS)", 2),
+    _ind("airfreight", "ind_transport", "PCU481112481112", "US PPI scheduled air freight (BLS)", 2),
+    _ind("airfares", "ind_transport", "PCU481111481111", "US PPI scheduled passenger air (BLS)", 2),
+    _ind("resin", "ind_materials", "PCU325211325211", "US PPI plastics resin (BLS)", 12),
+    _ind("film", "ind_materials", "PCU3261132611", "US PPI plastic film and bags (BLS)", 12),
+    _ind("bottles", "ind_materials", "PCU326160326160", "US PPI plastic bottles (BLS)", 12),
+    _ind("paper", "ind_materials", "WPU0915", "US PPI converted paper and paperboard (BLS)", 12),
+    _ind("fertiliser", "ind_materials", "PCU325311325311", "US PPI nitrogen fertiliser (BLS)", 12),
+    Item("us_unemp", "us", "unemployment", "fred", "UNRATE", "US unemployment rate (BLS)", None, False, 12, "diff", False),
+    Item("uk_unemp", "uk", "unemployment", "fred", "LRHUTTTTGBM156S", "UK unemployment rate (OECD via FRED)", None,
+         False, 12, "diff", False),
+    Item("ea_unemp", "ea", "unemployment", "eurostat", "une_rt_m?geo=EA21&s_adj=SA&age=TOTAL&unit=PC_ACT&sex=T&freq=M",
+         "Euro-area unemployment rate, EA21 (Eurostat)", None, False, 12, "diff", False),
+    Item("us_rate", "us", "rate", "fred", "FEDFUNDS", "Effective fed funds rate (Fed)", None, False, 12, "diff", False),
+    Item("uk_rate", "uk", "rate", "fred", "IUDSOIA", "SONIA overnight rate (Bank of England via FRED)", None, False, 12,
+         "diff", False),
+    Item("ea_rate", "ea", "rate", "fred", "ECBDFR", "ECB deposit facility rate (ECB via FRED)", None, False, 12, "diff",
+         False),
+]
 SERVICE_ITEMS = [Item(f"{r}_services", r, "services", "derived", f"{SERVICES[r][0].key} minus "
                       + ", ".join(SERVICES[r][1]), f"{REGIONS[r]} other services ({SERVICES[r][0].name.split(' (')[0]} "
                       "less the service items above)", None, SERVICES[r][0].nsa, 12) for r in REGIONS]
 SERIES = (ITEMS + SERVICE_ITEMS + [Item(f"{r}_rest", r, "rest", "derived", f"{r}_all minus weighted items",
                                          f"{REGIONS[r]} rest of basket (remainder: other food, other fuels, "
                                          "aggregation residual)", None, HEADLINE[r].nsa, 12) for r in REGIONS]
-          + list(HEADLINE.values()))
+          + list(HEADLINE.values()) + OTHER)
+# Policy rates move in steps and sit still for years, so their error scale needs a wider floor (as
+# in experiments/macro_bayes.py), in units of each series' training sd.
+SIGMA_FLOORS = {"rate": 0.2}
 # US basket weights: BLS relative importance, CPI-U, December 2025 (% of all items), read from
 # https://www.bls.gov/cpi/tables/relative-importance/2025.htm (BLS refuses scripted downloads): the
 # food, energy, fares and restaurant items on 2026-10-24, housing, core goods and services on
@@ -244,6 +285,8 @@ def fetched(it: Item) -> str:
         name = PINK_FILE
     elif it.source == "eurostat18":
         name = "eurostat_prc_hicp_minr_{}_{}.json".format(*it.code.split(":"))
+    elif it.source == "eurostat":
+        name = f"eurostat_{it.code.split('?')[0]}_{it.code.split('geo=')[1].split('&')[0]}.json"
     else:
         name = f"ons_{it.code.strip('/').split('/')[-2]}.csv"
     p = md.RAW / name
@@ -343,13 +386,17 @@ def derive_rest(ch: pd.DataFrame, w: dict) -> pd.DataFrame:
 def load() -> dict:
     """Monthly log changes (x100) of every series from START to the last month all items share."""
     raw = {k: FETCH[src](code) for k, (src, code, _) in DRIVERS.items()}
-    fetched_items = ITEMS + [SERVICES[r][0] for r in REGIONS] + list(HEADLINE.values())
-    raw |= {it.key: FETCH[it.source](it.code) for it in fetched_items}
-    end = min(raw[it.key].dropna().index.max() for it in fetched_items)
+    basket_inputs = ITEMS + [SERVICES[r][0] for r in REGIONS] + list(HEADLINE.values())
+    raw |= {it.key: FETCH[it.source](it.code) for it in basket_inputs + OTHER}
+    # The panel ends with the basket's last month; the other metrics are NaN after their own last month.
+    end = min(raw[it.key].dropna().index.max() for it in basket_inputs)
     idx = pd.date_range(START, end, freq="MS")
-    lv = pd.DataFrame({k: np.log(v.reindex(idx)) for k, v in raw.items()})
+    diff_keys = {s.key for s in OTHER if s.transform == "diff"}
+    lv = pd.DataFrame({k: np.log(v.reindex(idx)) for k, v in raw.items() if k not in diff_keys})
     wt = weights()
     ch = derive_rest(lv.diff() * 100.0, wt["w"])
+    for k in diff_keys:  # unemployment and rates: changes in percentage points
+        ch[k] = raw[k].reindex(idx).diff()
     keys = [s.key for s in SERIES]
     D = np.zeros(len(idx))
     for a, b, _ in SUPPLY:
@@ -368,7 +415,7 @@ def lagmat(z: np.ndarray, lags: int = LAGS - 1, fill: float = np.nan) -> np.ndar
 
 def composite_index(region: str) -> tuple[np.ndarray, np.ndarray]:
     """Indices into SERIES of a region's items and rest, for the composite."""
-    idx = [i for i, s in enumerate(SERIES) if s.region == region and s.kind != "all"]
+    idx = [i for i, s in enumerate(SERIES) if s.region == region and s.basket and s.kind != "all"]
     return np.array(idx), np.array([SERIES[i].key for i in idx])
 
 
@@ -497,10 +544,11 @@ def series_arrays() -> dict:
             "gsel": np.array([s.region == "us" for s in SERIES]),
             "nsa": np.array([s.nsa for s in SERIES], float),
             "kind": np.array([KINDS.index(s.kind) for s in SERIES]),
-            "fmask": np.array([s.kind in DRIVEN_KINDS for s in SERIES], float)}
+            "fmask": np.array([s.kind in DRIVEN_KINDS for s in SERIES], float),
+            "floor": np.array([SIGMA_FLOORS.get(s.kind, SIGMA_FLOOR) for s in SERIES])}
 
 
-def model(Zx, Zus, Zeu, mon, D, v, yprev, y, lagmask, gsel, nsa, kind, fmask, Zgr=None, Zur=None):
+def model(Zx, Zus, Zeu, mon, D, v, yprev, y, lagmask, gsel, nsa, kind, fmask, floor, Zgr=None, Zur=None):
     K = y.shape[1]
     B = numpyro.deterministic("Bm", numpyro.sample("B", dist.Normal(0, 0.3).expand([K, LAGS]).to_event(2)) * lagmask)
     G = numpyro.deterministic("Gm", numpyro.sample("G", dist.Normal(0, 0.3).expand([K, LAGS]).to_event(2)) * lagmask)
@@ -514,7 +562,7 @@ def model(Zx, Zus, Zeu, mon, D, v, yprev, y, lagmask, gsel, nsa, kind, fmask, Zg
     kappa = numpyro.deterministic("kappa", mu_k[kind] + tau_k * kz)
     phi = numpyro.sample("phi", dist.Normal(0, 0.5).expand([K]).to_event(1))
     psi = numpyro.sample("psi", dist.Normal(0, 0.5).expand([K]).to_event(1))
-    sigma = numpyro.deterministic("sigma", SIGMA_FLOOR + numpyro.sample("sigma_raw", dist.HalfNormal(1).expand([K]).to_event(1)))
+    sigma = numpyro.deterministic("sigma", floor + numpyro.sample("sigma_raw", dist.HalfNormal(1).expand([K]).to_event(1)))
     nu = numpyro.deterministic("nu", NU_MIN + numpyro.sample("nu_m", dist.Gamma(2, 0.1).expand([K]).to_event(1)))
     energy = Zx @ B.T + jnp.where(gsel[None, :], Zus @ G.T, Zeu @ G.T)
     m = a + S[:, mon].T + rho * jnp.nan_to_num(yprev) + energy * (1 + kappa * D[:, None])

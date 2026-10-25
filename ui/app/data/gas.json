@@ -1,0 +1,1879 @@
+{
+ "generated": "2026-10-25",
+ "note": "Pre-war baseline: each flow is the latest full year found (2024 or 2025), Mt of LNG a year. Values are customs data or analyst estimates read from web search results on 2026-10-25, so each has verify: true; approx: true marks rounded estimates. Routes reuse the oil sea lanes plus a few waypoints to one representative terminal per buyer, so every line is approximate, as are all pipeline paths. Hormuz LNG has mostly stopped since 28 February 2026.",
+ "terminals": {
+  "QAT": {
+   "name": "Ras Laffan",
+   "at": [51.6, 25.9]
+  },
+  "ARE": {
+   "name": "Das Island",
+   "at": [52.87, 25.15]
+  }
+ },
+ "segments": {
+  "gulf": [
+   [56.3, 26.6],
+   [57.2, 25.9],
+   [58.6, 24.8],
+   [61, 22.5]
+  ],
+  "arab": [
+   [66, 17],
+   [73, 10],
+   [77.5, 6.2],
+   [81, 5.6]
+  ],
+  "bay": [
+   [88, 6],
+   [95, 6],
+   [98, 4.6],
+   [100.6, 2.9],
+   [103.6, 1.15]
+  ],
+  "scs": [
+   [105.6, 3.5],
+   [109, 8.5],
+   [113, 15],
+   [117, 19.5]
+  ],
+  "east": [
+   [121.3, 22.2],
+   [123, 25.5]
+  ],
+  "red": [
+   [58, 17],
+   [52, 13.3],
+   [45, 12.2],
+   [43.3, 12.7],
+   [40, 17],
+   [36, 23],
+   [33.8, 27.6],
+   [32.6, 29.9]
+  ],
+  "med": [
+   [32.4, 31.5],
+   [28, 33.5],
+   [20, 35],
+   [12, 37.3],
+   [8, 37.8]
+  ],
+  "gib": [
+   [0, 37],
+   [-5.6, 35.95],
+   [-9.6, 37],
+   [-9.8, 43],
+   [-5.5, 48.3],
+   [-2, 49.9],
+   [1.5, 50.9]
+  ],
+  "cape": [
+   [60, 15],
+   [56, 0],
+   [46, -15],
+   [41, -25],
+   [33, -33],
+   [20, -36],
+   [12, -30]
+  ]
+ },
+ "lng": [
+  {
+   "from": "QAT",
+   "to": "CHN",
+   "value": 19.44,
+   "unit": "Mt",
+   "year": 2025,
+   "source": "China customs (GAC) via S&P Global; TASS gives 19.43 Mt",
+   "url": "https://www.spglobal.com/energy/en/news-research/latest-news/lng/030226-chinese-lng-traders-eye-strait-of-hormuz-for-potential-supply-disruption-risks",
+   "approx": false,
+   "verify": true,
+   "accessed": "2026-10-25",
+   "via": "hormuz",
+   "from_terminal": "Ras Laffan",
+   "to_terminal": "Zhejiang LNG, Ningbo",
+   "route": {
+    "start": [51.6, 25.9],
+    "segments": [
+     "gulf",
+     "arab",
+     "bay",
+     "scs"
+    ],
+    "end": [
+     [119.5, 24],
+     [122.5, 28.5],
+     [122, 29.9]
+    ],
+    "path": [
+     [51.6, 25.9],
+     [56.3, 26.6],
+     [57.2, 25.9],
+     [58.6, 24.8],
+     [61, 22.5],
+     [66, 17],
+     [73, 10],
+     [77.5, 6.2],
+     [81, 5.6],
+     [88, 6],
+     [95, 6],
+     [98, 4.6],
+     [100.6, 2.9],
+     [103.6, 1.15],
+     [105.6, 3.5],
+     [109, 8.5],
+     [113, 15],
+     [117, 19.5],
+     [119.5, 24],
+     [122.5, 28.5],
+     [122, 29.9]
+    ]
+   },
+   "y2024": {
+    "value": 18.34,
+    "source": "UN Comtrade via World Bank WITS, HS 271111, China-reported 2024 imports",
+    "url": "https://wits.worldbank.org/trade/comtrade/en/country/All/year/2024/tradeflow/Imports/partner/QAT/product/271111"
+   }
+  },
+  {
+   "from": "QAT",
+   "to": "IND",
+   "value": 11.3,
+   "unit": "Mt",
+   "year": 2024,
+   "source": "UN Comtrade via World Bank WITS, HS 271111, India-reported 2024 imports",
+   "url": "https://wits.worldbank.org/trade/comtrade/en/country/IND/year/2024/tradeflow/Imports/partner/ALL/product/271111",
+   "approx": false,
+   "verify": true,
+   "accessed": "2026-10-25",
+   "via": "hormuz",
+   "from_terminal": "Ras Laffan",
+   "to_terminal": "Dahej",
+   "route": {
+    "start": [51.6, 25.9],
+    "segments": [
+     "gulf"
+    ],
+    "end": [
+     [66, 21],
+     [70.5, 20.4],
+     [72.3, 21],
+     [72.55, 21.68]
+    ],
+    "path": [
+     [51.6, 25.9],
+     [56.3, 26.6],
+     [57.2, 25.9],
+     [58.6, 24.8],
+     [61, 22.5],
+     [66, 21],
+     [70.5, 20.4],
+     [72.3, 21],
+     [72.55, 21.68]
+    ]
+   },
+   "note": "No clean calendar-2025 figure found; S&P puts 2025 at over 40% of more than 25 Mt."
+  },
+  {
+   "from": "QAT",
+   "to": "TWN",
+   "value": 8.14,
+   "unit": "Mt",
+   "year": 2025,
+   "source": "Taiwan customs via LNG Prime, 'Taiwan boosts LNG imports in 2025'",
+   "url": "https://lngprime.com/lng-terminals/taiwan-boosts-lng-imports-in-2025/173997/",
+   "approx": false,
+   "verify": true,
+   "accessed": "2026-10-25",
+   "via": "hormuz",
+   "from_terminal": "Ras Laffan",
+   "to_terminal": "Yong-An, Kaohsiung",
+   "route": {
+    "start": [51.6, 25.9],
+    "segments": [
+     "gulf",
+     "arab",
+     "bay",
+     "scs"
+    ],
+    "end": [
+     [120, 22.3],
+     [120.2, 22.8]
+    ],
+    "path": [
+     [51.6, 25.9],
+     [56.3, 26.6],
+     [57.2, 25.9],
+     [58.6, 24.8],
+     [61, 22.5],
+     [66, 17],
+     [73, 10],
+     [77.5, 6.2],
+     [81, 5.6],
+     [88, 6],
+     [95, 6],
+     [98, 4.6],
+     [100.6, 2.9],
+     [103.6, 1.15],
+     [105.6, 3.5],
+     [109, 8.5],
+     [113, 15],
+     [117, 19.5],
+     [120, 22.3],
+     [120.2, 22.8]
+    ]
+   },
+   "y2024": {
+    "value": 5.4,
+    "source": "Taiwan customs via LNG Prime",
+    "url": "https://lngprime.com/lng-terminals/taiwan-boosts-lng-imports-in-2025/173997/"
+   }
+  },
+  {
+   "from": "QAT",
+   "to": "KOR",
+   "value": 6.97,
+   "unit": "Mt",
+   "year": 2025,
+   "source": "Korea Customs Service via S&P Global (Hellenic Shipping News reprint); Kpler gives 7.16 Mt",
+   "url": "https://www.hellenicshippingnews.com/u-s-lng-fills-qatar-gap-as-south-korea-shifts-imports-and-boosts-profits/",
+   "approx": false,
+   "verify": true,
+   "accessed": "2026-10-25",
+   "via": "hormuz",
+   "from_terminal": "Ras Laffan",
+   "to_terminal": "Tongyeong",
+   "route": {
+    "start": [51.6, 25.9],
+    "segments": [
+     "gulf",
+     "arab",
+     "bay",
+     "scs",
+     "east"
+    ],
+    "end": [
+     [125.5, 31],
+     [127.8, 33.6],
+     [128.43, 34.8]
+    ],
+    "path": [
+     [51.6, 25.9],
+     [56.3, 26.6],
+     [57.2, 25.9],
+     [58.6, 24.8],
+     [61, 22.5],
+     [66, 17],
+     [73, 10],
+     [77.5, 6.2],
+     [81, 5.6],
+     [88, 6],
+     [95, 6],
+     [98, 4.6],
+     [100.6, 2.9],
+     [103.6, 1.15],
+     [105.6, 3.5],
+     [109, 8.5],
+     [113, 15],
+     [117, 19.5],
+     [121.3, 22.2],
+     [123, 25.5],
+     [125.5, 31],
+     [127.8, 33.6],
+     [128.43, 34.8]
+    ]
+   },
+   "y2024": {
+    "value": 8.88,
+    "source": "UN Comtrade via World Bank WITS, HS 271111, Korea-reported 2024 imports",
+    "url": "https://wits.worldbank.org/trade/comtrade/en/country/All/year/2024/tradeflow/Imports/partner/QAT/product/271111"
+   }
+  },
+  {
+   "from": "QAT",
+   "to": "PAK",
+   "value": 6.57,
+   "unit": "Mt",
+   "year": 2025,
+   "source": "S&P Global Commodity Insights (CERA data): 6.57 of 6.63 Mt imported",
+   "url": "https://www.spglobal.com/energy/en/news-research/latest-news/lng/042426-pakistan-receives-four-bids-for-upcoming-delivery-of-three-spot-lng-cargoes",
+   "approx": false,
+   "verify": true,
+   "accessed": "2026-10-25",
+   "via": "hormuz",
+   "from_terminal": "Ras Laffan",
+   "to_terminal": "Port Qasim",
+   "route": {
+    "start": [51.6, 25.9],
+    "segments": [
+     "gulf"
+    ],
+    "end": [
+     [64, 23.8],
+     [66.9, 24.6],
+     [67.3, 24.77]
+    ],
+    "path": [
+     [51.6, 25.9],
+     [56.3, 26.6],
+     [57.2, 25.9],
+     [58.6, 24.8],
+     [61, 22.5],
+     [64, 23.8],
+     [66.9, 24.6],
+     [67.3, 24.77]
+    ]
+   },
+   "y2024": {
+    "value": 6.66,
+    "source": "UN Comtrade via World Bank WITS, HS 271111, Pakistan-reported 2024 imports",
+    "url": "https://wits.worldbank.org/trade/comtrade/en/country/All/year/2024/tradeflow/Imports/partner/QAT/product/271111"
+   }
+  },
+  {
+   "from": "QAT",
+   "to": "ITA",
+   "value": 4.8,
+   "unit": "Mt",
+   "year": 2025,
+   "source": "Anne-Sophie Corbeau (Columbia CGEP) quoted by EnterpriseAM, 'Qatari LNG is trickling back through Hormuz', 15 Sep 2026",
+   "url": "https://enterpriseam.com/logistics/2026/09/15/qatari-lng-is-trickling-back-through-hormuz-but-the-real-divide-now-is-who-can-afford-to-keep-bidding-for-gas/",
+   "approx": true,
+   "verify": true,
+   "accessed": "2026-10-25",
+   "via": "hormuz",
+   "from_terminal": "Ras Laffan",
+   "to_terminal": "Adriatic LNG, Porto Viro",
+   "route": {
+    "start": [51.6, 25.9],
+    "segments": [
+     "gulf",
+     "red"
+    ],
+    "end": [
+     [32.4, 31.5],
+     [28, 33.5],
+     [22, 35.2],
+     [18.9, 39.9],
+     [16, 42.6],
+     [13.4, 44.6],
+     [12.6, 45.09]
+    ],
+    "path": [
+     [51.6, 25.9],
+     [56.3, 26.6],
+     [57.2, 25.9],
+     [58.6, 24.8],
+     [61, 22.5],
+     [58, 17],
+     [52, 13.3],
+     [45, 12.2],
+     [43.3, 12.7],
+     [40, 17],
+     [36, 23],
+     [33.8, 27.6],
+     [32.6, 29.9],
+     [32.4, 31.5],
+     [28, 33.5],
+     [22, 35.2],
+     [18.9, 39.9],
+     [16, 42.6],
+     [13.4, 44.6],
+     [12.6, 45.09]
+    ]
+   },
+   "alt_route": {
+    "start": [51.6, 25.9],
+    "segments": [
+     "gulf",
+     "cape"
+    ],
+    "end": [
+     [3, -10],
+     [-12, 2],
+     [-20, 15],
+     [-20, 28],
+     [-11, 36],
+     [-5.6, 35.95],
+     [0, 37],
+     [8, 37.8],
+     [12, 37.3],
+     [14.5, 36.3],
+     [18.9, 39.9],
+     [16, 42.6],
+     [13.4, 44.6],
+     [12.6, 45.09]
+    ],
+    "path": [
+     [51.6, 25.9],
+     [56.3, 26.6],
+     [57.2, 25.9],
+     [58.6, 24.8],
+     [61, 22.5],
+     [60, 15],
+     [56, 0],
+     [46, -15],
+     [41, -25],
+     [33, -33],
+     [20, -36],
+     [12, -30],
+     [3, -10],
+     [-12, 2],
+     [-20, 15],
+     [-20, 28],
+     [-11, 36],
+     [-5.6, 35.95],
+     [0, 37],
+     [8, 37.8],
+     [12, 37.3],
+     [14.5, 36.3],
+     [18.9, 39.9],
+     [16, 42.6],
+     [13.4, 44.6],
+     [12.6, 45.09]
+    ],
+    "used": "2024-2025",
+    "note": "Normal lane is Suez. From January 2024 QatarEnergy paused Red Sea transits after the Houthi attacks and sent European cargoes round the Cape of Good Hope; this applied to Qatari cargoes generally, not only to this buyer.",
+    "source": "gCaptain (Reuters), 'Qatar reroutes LNG as more tankers avoid the Red Sea', Jan 2024; Anadolu Agency, 'Qatar LNG vessels seem to pause gas shipments via Red Sea'",
+    "url": "https://gcaptain.com/qatar-reroutes-lng-as-more-tankers-avoid-the-red-sea/"
+   },
+   "y2024": {
+    "value": 4.75,
+    "source": "UN Comtrade via World Bank WITS, HS 271111, Italy-reported 2024 imports",
+    "url": "https://wits.worldbank.org/trade/comtrade/en/country/All/year/2024/tradeflow/Imports/partner/QAT/product/271111"
+   }
+  },
+  {
+   "from": "QAT",
+   "to": "BGD",
+   "value": 4.15,
+   "unit": "Mt",
+   "year": 2025,
+   "source": "Egypt Oil & Gas, 'QatarEnergy cuts LNG deliveries to Bangladesh' (of nearly 7 Mt imported)",
+   "url": "https://egyptoil-gas.com/news/qatarenergy-cuts-lng-deliveries-to-bangladesh/",
+   "approx": true,
+   "verify": true,
+   "accessed": "2026-10-25",
+   "via": "hormuz",
+   "from_terminal": "Ras Laffan",
+   "to_terminal": "Moheshkhali",
+   "route": {
+    "start": [51.6, 25.9],
+    "segments": [
+     "gulf",
+     "arab"
+    ],
+    "end": [
+     [86, 10],
+     [90, 18],
+     [91.85, 21.55]
+    ],
+    "path": [
+     [51.6, 25.9],
+     [56.3, 26.6],
+     [57.2, 25.9],
+     [58.6, 24.8],
+     [61, 22.5],
+     [66, 17],
+     [73, 10],
+     [77.5, 6.2],
+     [81, 5.6],
+     [86, 10],
+     [90, 18],
+     [91.85, 21.55]
+    ]
+   }
+  },
+  {
+   "from": "QAT",
+   "to": "JPN",
+   "value": 2.87,
+   "unit": "Mt",
+   "year": 2024,
+   "source": "Japan Ministry of Finance via AGBI; UN Comtrade via WITS gives the same",
+   "url": "https://www.agbi.com/oil-and-gas/2025/05/lng-qatar-japan-sales/",
+   "approx": false,
+   "verify": true,
+   "accessed": "2026-10-25",
+   "via": "hormuz",
+   "from_terminal": "Ras Laffan",
+   "to_terminal": "Tokyo Bay",
+   "route": {
+    "start": [51.6, 25.9],
+    "segments": [
+     "gulf",
+     "arab",
+     "bay",
+     "scs",
+     "east"
+    ],
+    "end": [
+     [129, 30],
+     [134, 32.8],
+     [139.3, 34.6],
+     [139.8, 35.3]
+    ],
+    "path": [
+     [51.6, 25.9],
+     [56.3, 26.6],
+     [57.2, 25.9],
+     [58.6, 24.8],
+     [61, 22.5],
+     [66, 17],
+     [73, 10],
+     [77.5, 6.2],
+     [81, 5.6],
+     [88, 6],
+     [95, 6],
+     [98, 4.6],
+     [100.6, 2.9],
+     [103.6, 1.15],
+     [105.6, 3.5],
+     [109, 8.5],
+     [113, 15],
+     [117, 19.5],
+     [121.3, 22.2],
+     [123, 25.5],
+     [129, 30],
+     [134, 32.8],
+     [139.3, 34.6],
+     [139.8, 35.3]
+    ]
+   }
+  },
+  {
+   "from": "QAT",
+   "to": "THA",
+   "value": 2.2,
+   "unit": "Mt",
+   "year": 2024,
+   "source": "UN Comtrade via World Bank WITS, HS 271111, Thailand-reported 2024 imports",
+   "url": "https://wits.worldbank.org/trade/comtrade/en/country/THA/year/2024/tradeflow/Imports/partner/ALL/product/271111",
+   "approx": false,
+   "verify": true,
+   "accessed": "2026-10-25",
+   "via": "hormuz",
+   "from_terminal": "Ras Laffan",
+   "to_terminal": "Map Ta Phut",
+   "route": {
+    "start": [51.6, 25.9],
+    "segments": [
+     "gulf",
+     "arab",
+     "bay"
+    ],
+    "end": [
+     [104.5, 4],
+     [102.5, 9],
+     [101.15, 12.6]
+    ],
+    "path": [
+     [51.6, 25.9],
+     [56.3, 26.6],
+     [57.2, 25.9],
+     [58.6, 24.8],
+     [61, 22.5],
+     [66, 17],
+     [73, 10],
+     [77.5, 6.2],
+     [81, 5.6],
+     [88, 6],
+     [95, 6],
+     [98, 4.6],
+     [100.6, 2.9],
+     [103.6, 1.15],
+     [104.5, 4],
+     [102.5, 9],
+     [101.15, 12.6]
+    ]
+   }
+  },
+  {
+   "from": "QAT",
+   "to": "BEL",
+   "value": 1.7,
+   "unit": "Mt",
+   "year": 2025,
+   "source": "Anne-Sophie Corbeau (Columbia CGEP) quoted by EnterpriseAM, 'Qatari LNG is trickling back through Hormuz', 15 Sep 2026",
+   "url": "https://enterpriseam.com/logistics/2026/09/15/qatari-lng-is-trickling-back-through-hormuz-but-the-real-divide-now-is-who-can-afford-to-keep-bidding-for-gas/",
+   "approx": true,
+   "verify": true,
+   "accessed": "2026-10-25",
+   "via": "hormuz",
+   "from_terminal": "Ras Laffan",
+   "to_terminal": "Zeebrugge",
+   "route": {
+    "start": [51.6, 25.9],
+    "segments": [
+     "gulf",
+     "red",
+     "med",
+     "gib"
+    ],
+    "end": [
+     [3.2, 51.34]
+    ],
+    "path": [
+     [51.6, 25.9],
+     [56.3, 26.6],
+     [57.2, 25.9],
+     [58.6, 24.8],
+     [61, 22.5],
+     [58, 17],
+     [52, 13.3],
+     [45, 12.2],
+     [43.3, 12.7],
+     [40, 17],
+     [36, 23],
+     [33.8, 27.6],
+     [32.6, 29.9],
+     [32.4, 31.5],
+     [28, 33.5],
+     [20, 35],
+     [12, 37.3],
+     [8, 37.8],
+     [0, 37],
+     [-5.6, 35.95],
+     [-9.6, 37],
+     [-9.8, 43],
+     [-5.5, 48.3],
+     [-2, 49.9],
+     [1.5, 50.9],
+     [3.2, 51.34]
+    ]
+   },
+   "alt_route": {
+    "start": [51.6, 25.9],
+    "segments": [
+     "gulf",
+     "cape"
+    ],
+    "end": [
+     [3, -10],
+     [-12, 2],
+     [-20, 15],
+     [-20, 28],
+     [-11.5, 38],
+     [-9.8, 43],
+     [-5.5, 48.3],
+     [-2, 49.9],
+     [1.5, 50.9],
+     [3.2, 51.34]
+    ],
+    "path": [
+     [51.6, 25.9],
+     [56.3, 26.6],
+     [57.2, 25.9],
+     [58.6, 24.8],
+     [61, 22.5],
+     [60, 15],
+     [56, 0],
+     [46, -15],
+     [41, -25],
+     [33, -33],
+     [20, -36],
+     [12, -30],
+     [3, -10],
+     [-12, 2],
+     [-20, 15],
+     [-20, 28],
+     [-11.5, 38],
+     [-9.8, 43],
+     [-5.5, 48.3],
+     [-2, 49.9],
+     [1.5, 50.9],
+     [3.2, 51.34]
+    ],
+    "used": "2024-2025",
+    "note": "Normal lane is Suez. From January 2024 QatarEnergy paused Red Sea transits after the Houthi attacks and sent European cargoes round the Cape of Good Hope; this applied to Qatari cargoes generally, not only to this buyer.",
+    "source": "gCaptain (Reuters), 'Qatar reroutes LNG as more tankers avoid the Red Sea', Jan 2024; Anadolu Agency, 'Qatar LNG vessels seem to pause gas shipments via Red Sea'",
+    "url": "https://gcaptain.com/qatar-reroutes-lng-as-more-tankers-avoid-the-red-sea/"
+   },
+   "y2024": {
+    "value": 1.88,
+    "source": "UN Comtrade via World Bank WITS, HS 271111, Belgium-reported 2024 imports",
+    "url": "https://wits.worldbank.org/trade/comtrade/en/country/All/year/2024/tradeflow/Imports/partner/QAT/product/271111"
+   }
+  },
+  {
+   "from": "QAT",
+   "to": "SGP",
+   "value": 1.69,
+   "unit": "Mt",
+   "year": 2024,
+   "source": "UN Comtrade via World Bank WITS, HS 271111, Singapore-reported 2024 imports",
+   "url": "https://wits.worldbank.org/trade/comtrade/en/country/SGP/year/2024/tradeflow/Imports/partner/ALL/product/271111",
+   "approx": false,
+   "verify": true,
+   "accessed": "2026-10-25",
+   "via": "hormuz",
+   "from_terminal": "Ras Laffan",
+   "to_terminal": "Jurong Island",
+   "route": {
+    "start": [51.6, 25.9],
+    "segments": [
+     "gulf",
+     "arab",
+     "bay"
+    ],
+    "end": [
+     [103.7, 1.24]
+    ],
+    "path": [
+     [51.6, 25.9],
+     [56.3, 26.6],
+     [57.2, 25.9],
+     [58.6, 24.8],
+     [61, 22.5],
+     [66, 17],
+     [73, 10],
+     [77.5, 6.2],
+     [81, 5.6],
+     [88, 6],
+     [95, 6],
+     [98, 4.6],
+     [100.6, 2.9],
+     [103.6, 1.15],
+     [103.7, 1.24]
+    ]
+   },
+   "note": "Qatar's own records show 5.06 Mt to Singapore; the gap is usual for a trading hub."
+  },
+  {
+   "from": "QAT",
+   "to": "POL",
+   "value": 1.6,
+   "unit": "Mt",
+   "year": 2025,
+   "source": "Anne-Sophie Corbeau (Columbia CGEP) quoted by EnterpriseAM, 'Qatari LNG is trickling back through Hormuz', 15 Sep 2026",
+   "url": "https://enterpriseam.com/logistics/2026/09/15/qatari-lng-is-trickling-back-through-hormuz-but-the-real-divide-now-is-who-can-afford-to-keep-bidding-for-gas/",
+   "approx": true,
+   "verify": true,
+   "accessed": "2026-10-25",
+   "via": "hormuz",
+   "from_terminal": "Ras Laffan",
+   "to_terminal": "Swinoujscie",
+   "route": {
+    "start": [51.6, 25.9],
+    "segments": [
+     "gulf",
+     "red",
+     "med",
+     "gib"
+    ],
+    "end": [
+     [4.5, 53],
+     [7.5, 57.2],
+     [10.7, 57.9],
+     [11.4, 56.9],
+     [11.1, 56.2],
+     [10.8, 55.85],
+     [10.95, 55.5],
+     [11, 55],
+     [11.2, 54.6],
+     [12, 54.45],
+     [13, 54.75],
+     [13.6, 54.85],
+     [14, 54.4],
+     [14.27, 53.93]
+    ],
+    "path": [
+     [51.6, 25.9],
+     [56.3, 26.6],
+     [57.2, 25.9],
+     [58.6, 24.8],
+     [61, 22.5],
+     [58, 17],
+     [52, 13.3],
+     [45, 12.2],
+     [43.3, 12.7],
+     [40, 17],
+     [36, 23],
+     [33.8, 27.6],
+     [32.6, 29.9],
+     [32.4, 31.5],
+     [28, 33.5],
+     [20, 35],
+     [12, 37.3],
+     [8, 37.8],
+     [0, 37],
+     [-5.6, 35.95],
+     [-9.6, 37],
+     [-9.8, 43],
+     [-5.5, 48.3],
+     [-2, 49.9],
+     [1.5, 50.9],
+     [4.5, 53],
+     [7.5, 57.2],
+     [10.7, 57.9],
+     [11.4, 56.9],
+     [11.1, 56.2],
+     [10.8, 55.85],
+     [10.95, 55.5],
+     [11, 55],
+     [11.2, 54.6],
+     [12, 54.45],
+     [13, 54.75],
+     [13.6, 54.85],
+     [14, 54.4],
+     [14.27, 53.93]
+    ]
+   },
+   "alt_route": {
+    "start": [51.6, 25.9],
+    "segments": [
+     "gulf",
+     "cape"
+    ],
+    "end": [
+     [3, -10],
+     [-12, 2],
+     [-20, 15],
+     [-20, 28],
+     [-11.5, 38],
+     [-9.8, 43],
+     [-5.5, 48.3],
+     [-2, 49.9],
+     [1.5, 50.9],
+     [4.5, 53],
+     [7.5, 57.2],
+     [10.7, 57.9],
+     [11.4, 56.9],
+     [11.1, 56.2],
+     [10.8, 55.85],
+     [10.95, 55.5],
+     [11, 55],
+     [11.2, 54.6],
+     [12, 54.45],
+     [13, 54.75],
+     [13.6, 54.85],
+     [14, 54.4],
+     [14.27, 53.93]
+    ],
+    "path": [
+     [51.6, 25.9],
+     [56.3, 26.6],
+     [57.2, 25.9],
+     [58.6, 24.8],
+     [61, 22.5],
+     [60, 15],
+     [56, 0],
+     [46, -15],
+     [41, -25],
+     [33, -33],
+     [20, -36],
+     [12, -30],
+     [3, -10],
+     [-12, 2],
+     [-20, 15],
+     [-20, 28],
+     [-11.5, 38],
+     [-9.8, 43],
+     [-5.5, 48.3],
+     [-2, 49.9],
+     [1.5, 50.9],
+     [4.5, 53],
+     [7.5, 57.2],
+     [10.7, 57.9],
+     [11.4, 56.9],
+     [11.1, 56.2],
+     [10.8, 55.85],
+     [10.95, 55.5],
+     [11, 55],
+     [11.2, 54.6],
+     [12, 54.45],
+     [13, 54.75],
+     [13.6, 54.85],
+     [14, 54.4],
+     [14.27, 53.93]
+    ],
+    "used": "2024-2025",
+    "note": "Normal lane is Suez. From January 2024 QatarEnergy paused Red Sea transits after the Houthi attacks and sent European cargoes round the Cape of Good Hope; this applied to Qatari cargoes generally, not only to this buyer.",
+    "source": "gCaptain (Reuters), 'Qatar reroutes LNG as more tankers avoid the Red Sea', Jan 2024; Anadolu Agency, 'Qatar LNG vessels seem to pause gas shipments via Red Sea'",
+    "url": "https://gcaptain.com/qatar-reroutes-lng-as-more-tankers-avoid-the-red-sea/"
+   },
+   "y2024": {
+    "value": 1.75,
+    "source": "UN Comtrade via World Bank WITS, HS 271111, exporter-reported 2024",
+    "url": "https://wits.worldbank.org/trade/comtrade/en/country/All/year/2024/tradeflow/Exports/partner/POL/product/271111"
+   }
+  },
+  {
+   "from": "QAT",
+   "to": "ESP",
+   "value": 0.64,
+   "unit": "Mt",
+   "year": 2024,
+   "source": "UN Comtrade via World Bank WITS, HS 271111, Spain-reported 2024 imports",
+   "url": "https://wits.worldbank.org/trade/comtrade/en/country/All/year/2024/tradeflow/Imports/partner/QAT/product/271111",
+   "approx": false,
+   "verify": true,
+   "accessed": "2026-10-25",
+   "via": "hormuz",
+   "from_terminal": "Ras Laffan",
+   "to_terminal": "Cartagena",
+   "route": {
+    "start": [51.6, 25.9],
+    "segments": [
+     "gulf",
+     "red",
+     "med"
+    ],
+    "end": [
+     [-0.95, 37.57]
+    ],
+    "path": [
+     [51.6, 25.9],
+     [56.3, 26.6],
+     [57.2, 25.9],
+     [58.6, 24.8],
+     [61, 22.5],
+     [58, 17],
+     [52, 13.3],
+     [45, 12.2],
+     [43.3, 12.7],
+     [40, 17],
+     [36, 23],
+     [33.8, 27.6],
+     [32.6, 29.9],
+     [32.4, 31.5],
+     [28, 33.5],
+     [20, 35],
+     [12, 37.3],
+     [8, 37.8],
+     [-0.95, 37.57]
+    ]
+   },
+   "alt_route": {
+    "start": [51.6, 25.9],
+    "segments": [
+     "gulf",
+     "cape"
+    ],
+    "end": [
+     [3, -10],
+     [-12, 2],
+     [-20, 15],
+     [-20, 28],
+     [-11, 36],
+     [-5.6, 35.95],
+     [-2.5, 36.4],
+     [-0.95, 37.57]
+    ],
+    "path": [
+     [51.6, 25.9],
+     [56.3, 26.6],
+     [57.2, 25.9],
+     [58.6, 24.8],
+     [61, 22.5],
+     [60, 15],
+     [56, 0],
+     [46, -15],
+     [41, -25],
+     [33, -33],
+     [20, -36],
+     [12, -30],
+     [3, -10],
+     [-12, 2],
+     [-20, 15],
+     [-20, 28],
+     [-11, 36],
+     [-5.6, 35.95],
+     [-2.5, 36.4],
+     [-0.95, 37.57]
+    ],
+    "used": "2024-2025",
+    "note": "Normal lane is Suez. From January 2024 QatarEnergy paused Red Sea transits after the Houthi attacks and sent European cargoes round the Cape of Good Hope; this applied to Qatari cargoes generally, not only to this buyer.",
+    "source": "gCaptain (Reuters), 'Qatar reroutes LNG as more tankers avoid the Red Sea', Jan 2024; Anadolu Agency, 'Qatar LNG vessels seem to pause gas shipments via Red Sea'",
+    "url": "https://gcaptain.com/qatar-reroutes-lng-as-more-tankers-avoid-the-red-sea/"
+   }
+  },
+  {
+   "from": "QAT",
+   "to": "GBR",
+   "value": 0.58,
+   "unit": "Mt",
+   "year": 2024,
+   "source": "UN Comtrade via World Bank WITS, HS 271111, UK-reported 2024 imports",
+   "url": "https://wits.worldbank.org/trade/comtrade/en/country/GBR/year/2024/tradeflow/Imports/partner/ALL/product/271111",
+   "approx": false,
+   "verify": true,
+   "accessed": "2026-10-25",
+   "via": "hormuz",
+   "from_terminal": "Ras Laffan",
+   "to_terminal": "South Hook, Milford Haven",
+   "route": {
+    "start": [51.6, 25.9],
+    "segments": [
+     "gulf",
+     "red",
+     "med"
+    ],
+    "end": [
+     [0, 37],
+     [-5.6, 35.95],
+     [-9.6, 37],
+     [-9.8, 43],
+     [-5.5, 48.3],
+     [-6.2, 50],
+     [-5.3, 51.6],
+     [-5.05, 51.7]
+    ],
+    "path": [
+     [51.6, 25.9],
+     [56.3, 26.6],
+     [57.2, 25.9],
+     [58.6, 24.8],
+     [61, 22.5],
+     [58, 17],
+     [52, 13.3],
+     [45, 12.2],
+     [43.3, 12.7],
+     [40, 17],
+     [36, 23],
+     [33.8, 27.6],
+     [32.6, 29.9],
+     [32.4, 31.5],
+     [28, 33.5],
+     [20, 35],
+     [12, 37.3],
+     [8, 37.8],
+     [0, 37],
+     [-5.6, 35.95],
+     [-9.6, 37],
+     [-9.8, 43],
+     [-5.5, 48.3],
+     [-6.2, 50],
+     [-5.3, 51.6],
+     [-5.05, 51.7]
+    ]
+   },
+   "alt_route": {
+    "start": [51.6, 25.9],
+    "segments": [
+     "gulf",
+     "cape"
+    ],
+    "end": [
+     [3, -10],
+     [-12, 2],
+     [-20, 15],
+     [-20, 28],
+     [-11.5, 38],
+     [-9.8, 43],
+     [-5.5, 48.3],
+     [-6.2, 50],
+     [-5.3, 51.6],
+     [-5.05, 51.7]
+    ],
+    "path": [
+     [51.6, 25.9],
+     [56.3, 26.6],
+     [57.2, 25.9],
+     [58.6, 24.8],
+     [61, 22.5],
+     [60, 15],
+     [56, 0],
+     [46, -15],
+     [41, -25],
+     [33, -33],
+     [20, -36],
+     [12, -30],
+     [3, -10],
+     [-12, 2],
+     [-20, 15],
+     [-20, 28],
+     [-11.5, 38],
+     [-9.8, 43],
+     [-5.5, 48.3],
+     [-6.2, 50],
+     [-5.3, 51.6],
+     [-5.05, 51.7]
+    ],
+    "used": "2024-2025",
+    "note": "Normal lane is Suez. From January 2024 QatarEnergy paused Red Sea transits after the Houthi attacks and sent European cargoes round the Cape of Good Hope; this applied to Qatari cargoes generally, not only to this buyer.",
+    "source": "gCaptain (Reuters), 'Qatar reroutes LNG as more tankers avoid the Red Sea', Jan 2024; Anadolu Agency, 'Qatar LNG vessels seem to pause gas shipments via Red Sea'",
+    "url": "https://gcaptain.com/qatar-reroutes-lng-as-more-tankers-avoid-the-red-sea/"
+   },
+   "note": "Statista gives 8.6 TWh for 2024, about the same tonnage."
+  },
+  {
+   "from": "QAT",
+   "to": "FRA",
+   "value": 0.26,
+   "unit": "Mt",
+   "year": 2024,
+   "source": "UN Comtrade via World Bank WITS, HS 271111, France-reported 2024 imports",
+   "url": "https://wits.worldbank.org/trade/comtrade/en/country/All/year/2024/tradeflow/Imports/partner/QAT/product/271111",
+   "approx": false,
+   "verify": true,
+   "accessed": "2026-10-25",
+   "via": "hormuz",
+   "from_terminal": "Ras Laffan",
+   "to_terminal": "Fos",
+   "route": {
+    "start": [51.6, 25.9],
+    "segments": [
+     "gulf",
+     "red",
+     "med"
+    ],
+    "end": [
+     [5.5, 41.5],
+     [4.85, 43.35]
+    ],
+    "path": [
+     [51.6, 25.9],
+     [56.3, 26.6],
+     [57.2, 25.9],
+     [58.6, 24.8],
+     [61, 22.5],
+     [58, 17],
+     [52, 13.3],
+     [45, 12.2],
+     [43.3, 12.7],
+     [40, 17],
+     [36, 23],
+     [33.8, 27.6],
+     [32.6, 29.9],
+     [32.4, 31.5],
+     [28, 33.5],
+     [20, 35],
+     [12, 37.3],
+     [8, 37.8],
+     [5.5, 41.5],
+     [4.85, 43.35]
+    ]
+   },
+   "alt_route": {
+    "start": [51.6, 25.9],
+    "segments": [
+     "gulf",
+     "cape"
+    ],
+    "end": [
+     [3, -10],
+     [-12, 2],
+     [-20, 15],
+     [-20, 28],
+     [-11, 36],
+     [-5.6, 35.95],
+     [0, 37],
+     [5, 39.3],
+     [5, 42],
+     [4.85, 43.35]
+    ],
+    "path": [
+     [51.6, 25.9],
+     [56.3, 26.6],
+     [57.2, 25.9],
+     [58.6, 24.8],
+     [61, 22.5],
+     [60, 15],
+     [56, 0],
+     [46, -15],
+     [41, -25],
+     [33, -33],
+     [20, -36],
+     [12, -30],
+     [3, -10],
+     [-12, 2],
+     [-20, 15],
+     [-20, 28],
+     [-11, 36],
+     [-5.6, 35.95],
+     [0, 37],
+     [5, 39.3],
+     [5, 42],
+     [4.85, 43.35]
+    ],
+    "used": "2024-2025",
+    "note": "Normal lane is Suez. From January 2024 QatarEnergy paused Red Sea transits after the Houthi attacks and sent European cargoes round the Cape of Good Hope; this applied to Qatari cargoes generally, not only to this buyer.",
+    "source": "gCaptain (Reuters), 'Qatar reroutes LNG as more tankers avoid the Red Sea', Jan 2024; Anadolu Agency, 'Qatar LNG vessels seem to pause gas shipments via Red Sea'",
+    "url": "https://gcaptain.com/qatar-reroutes-lng-as-more-tankers-avoid-the-red-sea/"
+   }
+  },
+  {
+   "from": "ARE",
+   "to": "IND",
+   "value": 3.16,
+   "unit": "Mt",
+   "year": 2024,
+   "source": "UN Comtrade via World Bank WITS, HS 271111, India-reported 2024 imports",
+   "url": "https://wits.worldbank.org/trade/comtrade/en/country/All/year/2024/tradeflow/Imports/partner/ARE/product/271111",
+   "approx": false,
+   "verify": true,
+   "accessed": "2026-10-25",
+   "via": "hormuz",
+   "from_terminal": "Das Island",
+   "to_terminal": "Dahej",
+   "route": {
+    "start": [52.87, 25.15],
+    "segments": [
+     "gulf"
+    ],
+    "end": [
+     [66, 21],
+     [70.5, 20.4],
+     [72.3, 21],
+     [72.55, 21.68]
+    ],
+    "path": [
+     [52.87, 25.15],
+     [56.3, 26.6],
+     [57.2, 25.9],
+     [58.6, 24.8],
+     [61, 22.5],
+     [66, 21],
+     [70.5, 20.4],
+     [72.3, 21],
+     [72.55, 21.68]
+    ]
+   }
+  },
+  {
+   "from": "ARE",
+   "to": "JPN",
+   "value": 0.96,
+   "unit": "Mt",
+   "year": 2024,
+   "source": "UN Comtrade via World Bank WITS, HS 271111, Japan-reported 2024 imports",
+   "url": "https://wits.worldbank.org/trade/comtrade/en/country/All/year/2024/tradeflow/Imports/partner/ARE/product/271111",
+   "approx": false,
+   "verify": true,
+   "accessed": "2026-10-25",
+   "via": "hormuz",
+   "from_terminal": "Das Island",
+   "to_terminal": "Tokyo Bay",
+   "route": {
+    "start": [52.87, 25.15],
+    "segments": [
+     "gulf",
+     "arab",
+     "bay",
+     "scs",
+     "east"
+    ],
+    "end": [
+     [129, 30],
+     [134, 32.8],
+     [139.3, 34.6],
+     [139.8, 35.3]
+    ],
+    "path": [
+     [52.87, 25.15],
+     [56.3, 26.6],
+     [57.2, 25.9],
+     [58.6, 24.8],
+     [61, 22.5],
+     [66, 17],
+     [73, 10],
+     [77.5, 6.2],
+     [81, 5.6],
+     [88, 6],
+     [95, 6],
+     [98, 4.6],
+     [100.6, 2.9],
+     [103.6, 1.15],
+     [105.6, 3.5],
+     [109, 8.5],
+     [113, 15],
+     [117, 19.5],
+     [121.3, 22.2],
+     [123, 25.5],
+     [129, 30],
+     [134, 32.8],
+     [139.3, 34.6],
+     [139.8, 35.3]
+    ]
+   }
+  },
+  {
+   "from": "ARE",
+   "to": "CHN",
+   "value": 0.85,
+   "unit": "Mt",
+   "year": 2024,
+   "source": "UN Comtrade via World Bank WITS, HS 271111, China-reported 2024 imports",
+   "url": "https://wits.worldbank.org/trade/comtrade/en/country/All/year/2024/tradeflow/Imports/partner/ARE/product/271111",
+   "approx": false,
+   "verify": true,
+   "accessed": "2026-10-25",
+   "via": "hormuz",
+   "from_terminal": "Das Island",
+   "to_terminal": "Zhejiang LNG, Ningbo",
+   "route": {
+    "start": [52.87, 25.15],
+    "segments": [
+     "gulf",
+     "arab",
+     "bay",
+     "scs"
+    ],
+    "end": [
+     [119.5, 24],
+     [122.5, 28.5],
+     [122, 29.9]
+    ],
+    "path": [
+     [52.87, 25.15],
+     [56.3, 26.6],
+     [57.2, 25.9],
+     [58.6, 24.8],
+     [61, 22.5],
+     [66, 17],
+     [73, 10],
+     [77.5, 6.2],
+     [81, 5.6],
+     [88, 6],
+     [95, 6],
+     [98, 4.6],
+     [100.6, 2.9],
+     [103.6, 1.15],
+     [105.6, 3.5],
+     [109, 8.5],
+     [113, 15],
+     [117, 19.5],
+     [119.5, 24],
+     [122.5, 28.5],
+     [122, 29.9]
+    ]
+   }
+  },
+  {
+   "from": "ARE",
+   "to": "TWN",
+   "value": 0.47,
+   "unit": "Mt",
+   "year": 2024,
+   "source": "UN Comtrade via World Bank WITS, HS 271111, Taiwan-reported 2024 imports (listed as 'Other Asia, nes')",
+   "url": "https://wits.worldbank.org/trade/comtrade/en/country/All/year/2024/tradeflow/Imports/partner/ARE/product/271111",
+   "approx": false,
+   "verify": true,
+   "accessed": "2026-10-25",
+   "via": "hormuz",
+   "from_terminal": "Das Island",
+   "to_terminal": "Yong-An, Kaohsiung",
+   "route": {
+    "start": [52.87, 25.15],
+    "segments": [
+     "gulf",
+     "arab",
+     "bay",
+     "scs"
+    ],
+    "end": [
+     [120, 22.3],
+     [120.2, 22.8]
+    ],
+    "path": [
+     [52.87, 25.15],
+     [56.3, 26.6],
+     [57.2, 25.9],
+     [58.6, 24.8],
+     [61, 22.5],
+     [66, 17],
+     [73, 10],
+     [77.5, 6.2],
+     [81, 5.6],
+     [88, 6],
+     [95, 6],
+     [98, 4.6],
+     [100.6, 2.9],
+     [103.6, 1.15],
+     [105.6, 3.5],
+     [109, 8.5],
+     [113, 15],
+     [117, 19.5],
+     [120, 22.3],
+     [120.2, 22.8]
+    ]
+   }
+  },
+  {
+   "from": "ARE",
+   "to": "KOR",
+   "value": 0.42,
+   "unit": "Mt",
+   "year": 2024,
+   "source": "UN Comtrade via World Bank WITS, HS 271111, Korea-reported 2024 imports",
+   "url": "https://wits.worldbank.org/trade/comtrade/en/country/All/year/2024/tradeflow/Imports/partner/ARE/product/271111",
+   "approx": false,
+   "verify": true,
+   "accessed": "2026-10-25",
+   "via": "hormuz",
+   "from_terminal": "Das Island",
+   "to_terminal": "Tongyeong",
+   "route": {
+    "start": [52.87, 25.15],
+    "segments": [
+     "gulf",
+     "arab",
+     "bay",
+     "scs",
+     "east"
+    ],
+    "end": [
+     [125.5, 31],
+     [127.8, 33.6],
+     [128.43, 34.8]
+    ],
+    "path": [
+     [52.87, 25.15],
+     [56.3, 26.6],
+     [57.2, 25.9],
+     [58.6, 24.8],
+     [61, 22.5],
+     [66, 17],
+     [73, 10],
+     [77.5, 6.2],
+     [81, 5.6],
+     [88, 6],
+     [95, 6],
+     [98, 4.6],
+     [100.6, 2.9],
+     [103.6, 1.15],
+     [105.6, 3.5],
+     [109, 8.5],
+     [113, 15],
+     [117, 19.5],
+     [121.3, 22.2],
+     [123, 25.5],
+     [125.5, 31],
+     [127.8, 33.6],
+     [128.43, 34.8]
+    ]
+   }
+  }
+ ],
+ "excluded": [
+  {
+   "from": "QAT",
+   "to": "KWT",
+   "reason": "Al-Zour is inside the Gulf, so these cargoes never pass Hormuz. Contracts are 3 Mtpa from 2022 plus 3 Mtpa from 2025; no actual 2024 or 2025 tonnage found.",
+   "url": "https://www.offshore-technology.com/news/qatarenergy-kuwait-petroleum-lng-supply/"
+  },
+  {
+   "from": "QAT",
+   "to": "EGY",
+   "reason": "Egypt imported 9.01 Mt in 2025, 90.9% from the US; no Qatari tonnage found. QatarEnergy agreed to supply Sokhna and Damietta in January 2026.",
+   "url": "https://www.spglobal.com/energy/en/news-research/latest-news/lng/011426-egypts-2025-lng-imports-hit-record-high-as-energy-appetite-grows"
+  },
+  {
+   "from": "QAT",
+   "to": "TUR",
+   "reason": "No Qatari tonnage found for 2024 or 2025.",
+   "url": "https://wits.worldbank.org/trade/comtrade/en/country/All/year/2024/tradeflow/Imports/partner/QAT/product/271111"
+  },
+  {
+   "from": "QAT",
+   "to": "NLD",
+   "reason": "No Qatari tonnage found for 2024 or 2025.",
+   "url": "https://wits.worldbank.org/trade/comtrade/en/country/All/year/2024/tradeflow/Imports/partner/QAT/product/271111"
+  },
+  {
+   "from": "QAT",
+   "to": "DEU",
+   "reason": "No Qatari tonnage found for 2024 or 2025.",
+   "url": "https://wits.worldbank.org/trade/comtrade/en/country/All/year/2024/tradeflow/Imports/partner/QAT/product/271111"
+  }
+ ],
+ "outside_strait": [
+  {
+   "name": "Oman LNG, Qalhat (near Sur)",
+   "iso3": "OMN",
+   "at": [59.37, 22.7],
+   "approx": true,
+   "note": "Loads on the Gulf of Oman coast, outside the strait, so it kept shipping in 2026. Nameplate 10.4 Mtpa (IGU), raised to 11.5 Mtpa (Oman Observer).",
+   "exports": {
+    "value": 11.9,
+    "unit": "Mt",
+    "year": 2025,
+    "source": "IGU World LNG Report 2026 via Oman Observer",
+    "url": "https://www.omanobserver.om/article/1192704/business/oman-lng-exports-reach-119-million-tonnes"
+   }
+  }
+ ],
+ "pipelines": [
+  {
+   "name": "Dolphin (Ras Laffan to Taweelah)",
+   "from": "QAT",
+   "to": "ARE",
+   "capacity": 3.2,
+   "unit": "bcf/d",
+   "year": 2007,
+   "length_km": 364,
+   "diameter_in": 48,
+   "status": "operating",
+   "flow": {
+    "value": 2.0,
+    "unit": "bcf/d",
+    "basis": "contracted, typical delivery",
+    "source": "Gulf News, 'Dolphin Energy is to raise gas flow to UAE'",
+    "url": "https://gulfnews.com/business/energy/dolphin-energy-is-to-raise-gas-flow-to-uae-1.623037"
+   },
+   "source": "Offshore Technology, Dolphin Gas Project (design capacity); Dolphin Energy operations page",
+   "url": "https://www.offshore-technology.com/projects/dolphin-gas/",
+   "bypasses_hormuz": true,
+   "note": "Subsea and wholly inside the Gulf: Qatari gas reaches the UAE and Oman without the strait, but the line is exposed to attacks inside the Gulf.",
+   "path": [
+    [51.6, 25.9],
+    [52.4, 25.55],
+    [53.4, 25.15],
+    [54.2, 24.9],
+    [54.69, 24.77]
+   ],
+   "capacity_bcm_y": 33.1,
+   "approx": true,
+   "verify": true,
+   "accessed": "2026-10-25"
+  },
+  {
+   "name": "Dolphin Taweelah-Fujairah",
+   "from": "ARE",
+   "to": "ARE",
+   "capacity": 1.6,
+   "unit": "bcf/d",
+   "year": 2010,
+   "length_km": 244,
+   "diameter_in": 48,
+   "status": "operating",
+   "source": "Gulf News, 'Dolphin Energy completes Taweelah-Fujairah pipeline'; MEED",
+   "url": "https://gulfnews.com/business/energy/dolphin-energy-completes-taweelah---fujairah-pipeline-1.720870",
+   "bypasses_hormuz": true,
+   "note": "Carries Qatari gas across the UAE to Fujairah's power plants on the Gulf of Oman coast. Year is approximate.",
+   "path": [
+    [54.69, 24.77],
+    [55.2, 24.85],
+    [55.75, 25],
+    [56.1, 25.2],
+    [56.35, 25.3]
+   ],
+   "capacity_bcm_y": 16.5,
+   "approx": true,
+   "verify": true,
+   "accessed": "2026-10-25"
+  },
+  {
+   "name": "Dolphin to Oman (Al Ain to Sohar)",
+   "from": "ARE",
+   "to": "OMN",
+   "capacity": 200,
+   "unit": "MMscf/d",
+   "year": 2008,
+   "status": "operating",
+   "source": "Oil & Gas Journal, 'Dolphin Energy begins supplying gas to Oman' (25-year contract from 2005)",
+   "url": "https://www.ogj.com/pipelines-transportation/article/17267973/dolphin-energy-begins-supplying-gas-to-oman",
+   "bypasses_hormuz": true,
+   "note": "Capacity is the contracted volume. Gas runs through Dolphin's eastern system to Al Ain, then Oman's line from Al Buraimi to Sohar.",
+   "path": [
+    [54.69, 24.77],
+    [55.2, 24.5],
+    [55.76, 24.22],
+    [56.3, 24.35],
+    [56.74, 24.36]
+   ],
+   "capacity_bcm_y": 2.1,
+   "approx": true,
+   "verify": true,
+   "accessed": "2026-10-25"
+  },
+  {
+   "name": "Iran-Turkey (Tabriz to Ankara)",
+   "from": "IRN",
+   "to": "TUR",
+   "capacity": 14,
+   "unit": "bcm/y",
+   "year": 2001,
+   "length_km": 2577,
+   "status": "operating; contract reported expired 29 Jul 2026",
+   "flow": {
+    "value": 7.81,
+    "unit": "bcm/y",
+    "year": 2025,
+    "basis": "imports, 13.5% of Turkey's gas imports",
+    "source": "MEES, 'Turkey open to Iran gas contract extension', 24 Apr 2026",
+    "url": "https://www.mees.com/2026/4/24/news-in-brief/turkey-open-to-iran-gas-contract-extension/8161dba0-3fcb-11f1-a220-af3d2a70a45d"
+   },
+   "contract": {
+    "value": 9.6,
+    "unit": "bcm/y",
+    "source": "The New Arab (Reuters)",
+    "url": "https://www.newarab.com/news/turkey-says-iran-gas-pipeline-contract-nearing-expiry"
+   },
+   "source": "Global Energy Monitor, Tabriz-Ankara Pipeline",
+   "url": "https://gem.wiki/Tabriz-Ankara_Pipeline",
+   "bypasses_hormuz": true,
+   "note": "Overland. One outlet reports the 25-year contract lapsed on 29 July 2026 with flows continuing on temporary terms; not confirmed elsewhere.",
+   "path": [
+    [46.29, 38.08],
+    [44.39, 39.39],
+    [44.08, 39.55],
+    [41.27, 39.9],
+    [39.49, 39.75],
+    [37.02, 39.75],
+    [35.48, 38.72],
+    [32.85, 39.93]
+   ],
+   "capacity_bcm_y": 14.0,
+   "approx": true,
+   "verify": true,
+   "accessed": "2026-10-25"
+  },
+  {
+   "name": "Iran-Iraq (Naft Shahr to Baghdad)",
+   "from": "IRN",
+   "to": "IRQ",
+   "capacity": 25,
+   "unit": "mcm/d",
+   "year": 2017,
+   "status": "operating, cut in 2026",
+   "flow": {
+    "value": 15,
+    "unit": "mcm/d",
+    "year": 2026,
+    "basis": "upper bound, April 2026, Iraq total",
+    "source": "S&P Global, 'Iraq faces critical gas shortage as Middle East war cuts vital imports'",
+    "url": "https://www.spglobal.com/energy/en/news-research/latest-news/shipping/042726-iraq-faces-critical-gas-shortage-as-middle-east-war-cuts-vital-imports"
+   },
+   "contract": {
+    "value": 50,
+    "unit": "mcm/d",
+    "basis": "Iraq's whole contract, renewed 2024",
+    "source": "S&P Global",
+    "url": "https://www.spglobal.com/energy/en/news-research/latest-news/shipping/042726-iraq-faces-critical-gas-shortage-as-middle-east-war-cuts-vital-imports"
+   },
+   "source": "Argus, 'Iraq insecurity delays Iran gas project' (up to 25 mcm/d for three Baghdad plants)",
+   "url": "https://www.argusmedia.com/en/news-and-insights/latest-market-news/927476-iraq-insecurity-delays-iran-gas-project",
+   "bypasses_hormuz": true,
+   "note": "Overland. Feeds Baghdad-area power plants (Mansuriya, Quds, Baghdad, Bismaya). Year is approximate.",
+   "path": [
+    [46.4, 33.75],
+    [45.9, 33.95],
+    [45.5, 34],
+    [45, 34.05],
+    [44.6, 33.55],
+    [44.4, 33.3]
+   ],
+   "capacity_bcm_y": 9.1,
+   "approx": true,
+   "verify": true,
+   "accessed": "2026-10-25"
+  },
+  {
+   "name": "Iran-Iraq (Shalamcheh to Basra)",
+   "from": "IRN",
+   "to": "IRQ",
+   "capacity": 25,
+   "unit": "mcm/d",
+   "year": 2017,
+   "length_km": 141,
+   "diameter_in": 48,
+   "status": "built; steady flows not confirmed",
+   "source": "Shana (Iran oil ministry news), Shalamcheh terminal maximum 25 mcm/d to Basra",
+   "url": "https://en.shana.ir/news/280695/Shana",
+   "bypasses_hormuz": true,
+   "note": "Overland branch of IGAT-6 via Ahvaz and Khorramshahr. Sources found date from 2015 to 2018; none confirms regular flows since. Year is approximate.",
+   "path": [
+    [48.68, 31.32],
+    [48.25, 30.6],
+    [47.98, 30.5],
+    [47.75, 30.5]
+   ],
+   "capacity_bcm_y": 9.1,
+   "approx": true,
+   "verify": true,
+   "accessed": "2026-10-25"
+  },
+  {
+   "name": "Iran-Pakistan (IP, unfinished)",
+   "from": "IRN",
+   "to": "PAK",
+   "capacity": 750,
+   "unit": "MMcf/d",
+   "year": 2024,
+   "status": "Iranian section built; Pakistani section (about 781 km) not built; no gas has flowed",
+   "source": "World Pipelines, 'First phase of Iran-Pakistan gas pipeline approved', Feb 2024 (design capacity)",
+   "url": "https://www.worldpipelines.com/business-news/27022024/first-phase-of-iran-pakistan-gas-pipeline-approved/",
+   "bypasses_hormuz": true,
+   "note": "Would give Pakistan, which takes 99% of its LNG from the Gulf, gas without the strait. path is the built Iranian side; planned_path is the Pakistani side to Nawabshah.",
+   "path": [
+    [52.61, 27.48],
+    [54.5, 27.3],
+    [56.4, 27.4],
+    [58.3, 27.4],
+    [60.68, 27.2],
+    [61.6, 25.3]
+   ],
+   "planned_path": [
+    [61.6, 25.3],
+    [62.33, 25.13],
+    [63.47, 25.26],
+    [64.64, 25.21],
+    [66.5, 25.5],
+    [68.41, 26.25]
+   ],
+   "capacity_bcm_y": 7.8,
+   "approx": true,
+   "verify": true,
+   "accessed": "2026-10-25"
+  }
+ ],
+ "pipelines_left_out": "Arab Gas Pipeline (Egypt to Jordan, Syria, Lebanon): carries Egyptian and Israeli gas, not Gulf gas, so a Hormuz closure does not change it. Saudi Arabia's Master Gas System is domestic only.",
+ "facts": [
+  {
+   "label": "Share of world LNG trade through Hormuz",
+   "value": 20,
+   "unit": "%",
+   "year": 2024,
+   "source": "EIA, 'About one-fifth of global LNG trade flows through the Strait of Hormuz', 24 Jun 2025",
+   "url": "https://www.eia.gov/todayinenergy/detail.php?id=65584",
+   "approx": true,
+   "verify": true,
+   "accessed": "2026-10-25"
+  },
+  {
+   "label": "Qatar LNG through Hormuz",
+   "value": 9.3,
+   "unit": "bcf/d",
+   "year": 2024,
+   "source": "EIA, 'About one-fifth of global LNG trade flows through the Strait of Hormuz', 24 Jun 2025",
+   "url": "https://www.eia.gov/todayinenergy/detail.php?id=65584",
+   "approx": true,
+   "verify": true,
+   "accessed": "2026-10-25"
+  },
+  {
+   "label": "UAE LNG through Hormuz",
+   "value": 0.7,
+   "unit": "bcf/d",
+   "year": 2024,
+   "source": "EIA, 'About one-fifth of global LNG trade flows through the Strait of Hormuz', 24 Jun 2025",
+   "url": "https://www.eia.gov/todayinenergy/detail.php?id=65584",
+   "approx": true,
+   "verify": true,
+   "accessed": "2026-10-25"
+  },
+  {
+   "label": "Share of Hormuz LNG going to Asia",
+   "value": 83,
+   "unit": "%",
+   "year": 2024,
+   "source": "EIA, 'About one-fifth of global LNG trade flows through the Strait of Hormuz', 24 Jun 2025",
+   "url": "https://www.eia.gov/todayinenergy/detail.php?id=65584",
+   "approx": false,
+   "verify": true,
+   "accessed": "2026-10-25"
+  },
+  {
+   "label": "LNG through Hormuz",
+   "value": 110,
+   "unit": "bcm",
+   "year": 2025,
+   "source": "IEA, Strait of Hormuz page ('over 110 bcm')",
+   "url": "https://www.iea.org/about/oil-security-and-emergency-response/strait-of-hormuz",
+   "approx": true,
+   "verify": true,
+   "accessed": "2026-10-25"
+  },
+  {
+   "label": "Share of world LNG trade through Hormuz",
+   "value": 20,
+   "unit": "%",
+   "year": 2025,
+   "source": "IEA, Strait of Hormuz factsheet, Feb 2026",
+   "url": "https://iea.blob.core.windows.net/assets/c8248eba-8689-46d9-ae4b-b858b59c0f1c/StraitofHormuz2026-Factsheet.pdf",
+   "approx": true,
+   "verify": true,
+   "accessed": "2026-10-25"
+  },
+  {
+   "label": "Share of Hormuz LNG going to Asia",
+   "value": 90,
+   "unit": "%",
+   "year": 2025,
+   "source": "IEA, Strait of Hormuz factsheet, Feb 2026",
+   "url": "https://iea.blob.core.windows.net/assets/c8248eba-8689-46d9-ae4b-b858b59c0f1c/StraitofHormuz2026-Factsheet.pdf",
+   "approx": true,
+   "verify": true,
+   "accessed": "2026-10-25"
+  },
+  {
+   "label": "Qatar LNG exports",
+   "value": 81.5,
+   "unit": "Mt",
+   "year": 2025,
+   "source": "IGU World LNG Report 2026 via The Peninsula",
+   "url": "https://thepeninsulaqatar.com/article/30/07/2026/qatar-strengthens-lng-leadership-as-exports-reach-record-high-in-2025",
+   "approx": false,
+   "verify": true,
+   "accessed": "2026-10-25"
+  },
+  {
+   "label": "Qatar LNG exports",
+   "value": 77.23,
+   "unit": "Mt",
+   "year": 2024,
+   "source": "IGU World LNG Report 2025 via SAFETY4SEA",
+   "url": "https://safety4sea.com/igu-world-lng-report-lng-trade-grew-by-2-4-in-2024/",
+   "approx": false,
+   "verify": true,
+   "accessed": "2026-10-25"
+  },
+  {
+   "label": "UAE LNG exports",
+   "value": 7,
+   "unit": "bcm",
+   "year": 2025,
+   "source": "IEA, Strait of Hormuz factsheet, Feb 2026",
+   "url": "https://iea.blob.core.windows.net/assets/c8248eba-8689-46d9-ae4b-b858b59c0f1c/StraitofHormuz2026-Factsheet.pdf",
+   "approx": true,
+   "verify": true,
+   "accessed": "2026-10-25"
+  },
+  {
+   "label": "World LNG trade",
+   "value": 436.98,
+   "unit": "Mt",
+   "year": 2025,
+   "source": "IGU World LNG Report 2026 via Oil & Gas Journal",
+   "url": "https://www.ogj.com/general-interest/economics-markets/news/55392446/global-lng-trade-hits-record-in-2025-as-2026-tests-market-resilience",
+   "approx": false,
+   "verify": true,
+   "accessed": "2026-10-25"
+  },
+  {
+   "label": "World LNG trade",
+   "value": 411.24,
+   "unit": "Mt",
+   "year": 2024,
+   "source": "IGU World LNG Report 2025 via IIR",
+   "url": "https://iifiir.org/en/news/world-lng-report-2025-lng-trade-continues-to-grow-requiring-increased-global-decarbonisation-efforts",
+   "approx": false,
+   "verify": true,
+   "accessed": "2026-10-25"
+  },
+  {
+   "label": "Qatar LNG to the EU and UK",
+   "value": 9.2,
+   "unit": "Mt",
+   "year": 2025,
+   "source": "Kpler, 'Middle East conflict: gas market implications'",
+   "url": "https://www.kpler.com/blog/middle-east-conflict---gas-market-implications-a-continuing-assessment",
+   "approx": false,
+   "verify": true,
+   "accessed": "2026-10-25"
+  },
+  {
+   "label": "Qatar LNG capacity lost to the 2026 strikes (trains 4 and 6)",
+   "value": 12.8,
+   "unit": "Mtpa",
+   "year": 2026,
+   "source": "GIIGNL Annual Report 2026",
+   "url": "https://giignl-documents.s3.fr-par.scw.cloud/public/giignl-2026-annual-report.pdf",
+   "approx": false,
+   "verify": true,
+   "accessed": "2026-10-25"
+  }
+ ]
+}

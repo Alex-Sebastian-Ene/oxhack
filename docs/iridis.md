@@ -14,6 +14,29 @@ Southampton's Iridis X cluster, and the things that tripped us up. The job scrip
 - Work under `/scratch/$USER`; home has a small quota. `scripts/hpc_env.sh` moves uv's cache and
   Python downloads to scratch.
 
+## From the laptop in one command
+
+[cluster/iridis/run.sh](../cluster/iridis/run.sh) does the copy, submit and fetch for any
+experiment command, so nothing heavy has to run on the laptop:
+
+```bash
+bash cluster/iridis/run.sh submit goods "experiments/sector_global.py fold "{0..7}" --set goods" \
+    "experiments/sector_global.py benchmarks --set goods"
+bash cluster/iridis/run.sh wait goods    # blocks until the tasks finish, then copies outputs back
+```
+
+- `submit <tag> <command>...` copies the current checkout's working tree (uncommitted edits
+  included) to a new `/scratch/$USER/oxhack-<tag>` and submits one array task per command. Each
+  command is the arguments to python. It refuses a tag that already exists, so each code version
+  gets its own folder. `SOURCE.txt` in that folder records the branch, commit and uncommitted
+  files.
+- `wait <tag>` / `fetch <tag>` copy back what the tasks wrote under `runs/`. A local file they
+  replace is kept in `runs/iridis/<tag>/replaced/`, and the Slurm logs go to `runs/iridis/<tag>/`.
+  `status <tag>` shows the queue and exit states. `runs/iridis/jobs.tsv` lists every submission.
+- `CPUS`, `MEM`, `TIME`, `PARTITION` and `VENV` set the resources and the venv (default
+  `../oxhack-chain/.venv-nn`, built by `cluster/iridis/macro_env.sh`). `IRIDIS` is the ssh target,
+  default `iridis` (the `~/.ssh/config` alias under Access).
+
 ## One-time setup (login node; compute nodes have no internet)
 
 ```bash

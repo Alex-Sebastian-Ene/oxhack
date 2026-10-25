@@ -1,10 +1,35 @@
 // Hormuz Flow: zoomable, animated map of tankers crossing the strait, with the flow estimate beside it.
-// Data comes from data/scenarios.js, written by `uv run experiments/strait_flow.py`.
+// Data comes from data/scenarios.js (window.STRAIT, Hormuz) and data/mandeb-scenarios.js
+// (window.STRAITS.mandeb), written by `uv run experiments/strait_flow.py [--strait mandeb]`.
+// Both have the same shape; ?strait=mandeb picks Bab el-Mandeb.
 (() => {
-  const D = window.STRAIT;
+  const want = new URLSearchParams(location.search).get("strait");
+  const KEY = want === "mandeb" && window.STRAITS && window.STRAITS.mandeb ? "mandeb" : "hormuz";
+  const D = KEY === "mandeb" ? window.STRAITS.mandeb : window.STRAIT;
   const geo = D.geo;
+  // Words and display settings that differ between straits. The numbers they quote come from the
+  // data files (and docs/strait-live-data.md for their sources).
+  const COPY = {
+    hormuz: { title: "Hormuz Flow", place: "the Strait of Hormuz", start: "aug2026", maxp: 22, vs: "vs pre-war",
+      vsTitle: "Missing compared with the pre-war 20 mb/d", countTitle: "Laden tankers out of the Gulf so far",
+      scen: { prewar: "Pre-war", aug2026: "Aug 2026", sep2026: "Sep 2026" },
+      pub: { "EIA (pre-war baseline)": "EIA '24", "EIA quarterly chokepoint data": "EIA Q1", "Vortexa (via Argus)": "Vortexa",
+        Argus: "Argus", "Windward (satellite)": "Windward", "US officials (via Argus)": "US gov" },
+      live: "no free AIS receivers cover Hormuz",
+      facts: ["Pre-war Hormuz flow: 20 mb/d, about 20% of world use (EIA, 2024 average)",
+        "Hormuz cargo is 72–75% crude, the rest products (EIA, IEA, 2025)"] },
+    mandeb: { title: "Bab el-Mandeb Flow", place: "the Bab el-Mandeb strait", start: "q2_2026", maxp: 12, vs: "vs 2023",
+      vsTitle: "Missing compared with the pre-crisis 8.7 mb/d (2023)", countTitle: "Laden tankers through the strait so far",
+      scen: { pre2023: "2023", y2024: "2024", q2_2026: "Q2 2026", sep2026: "Sep 2026" },
+      pubWhen: { "2023 average": "EIA '23", "Jan-Aug 2024": "EIA '24", "1H 2025": "EIA 1H25", "Q2 2026": "EIA Q2",
+        "Jun-Jul 2026": "Kpler J-J", "Aug 2026": "Kpler Aug", "Sep 2026": "Kpler Sep" },
+      live: "we have no free live AIS feed for the strait",
+      facts: ["Pre-crisis Bab el-Mandeb flow: 8.7 mb/d (EIA, Vortexa data, 2023 average)",
+        "Laden tankers cross both ways, so both lanes are counted",
+        "Crude share of the cargo: no published split found; we assume 45–60%"] },
+  }[KEY];
   const KM_LAT = 111.32;
-  const KX = KM_LAT * Math.cos(26.4 * Math.PI / 180);
+  const KX = KM_LAT * Math.cos((geo.lat0 || 26.4) * Math.PI / 180);
   const COL = { seen: "#5cb8f0", oil: "#f0a23b", oilSoft: "#f5bd6e", sea: "#0b2236", land: "#2a3442",
     landEdge: "#3d4b5c", lane: "rgba(143,208,245,0.13)", text: "#c4cdd8", faint: "#7d8b9b", white: "#e7ecf2", other: "#7d8b9b" };
   const ISO = { Panama: "PA", Liberia: "LR", "Marshall Islands": "MH", Malta: "MT", Greece: "GR", Bahamas: "BS",
@@ -66,7 +91,15 @@
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const [B0, B1, B2, B3] = geo.bbox;
   const home = { z: 1, cx: (B0 + B2) / 2, cy: (B1 + B3) / 2 };
-  const state = { key: "aug2026", view: "truth", t: 15, playing: !reduceMotion, speed: 1, selected: null, last: 0, ...home };
+  const start = D.scenarios[COPY.start] ? COPY.start : Object.keys(D.scenarios)[0];
+  const state = { key: start, view: "truth", t: 15, playing: !reduceMotion, speed: 1, selected: null, last: 0, ...home };
+  document.title = COPY.title;
+  document.querySelector(".brand h1").textContent = COPY.title;
+  wrap.setAttribute("aria-label", `Map of ${COPY.place}`);
+  canvas.setAttribute("aria-label", `Animated map of tankers crossing ${COPY.place}. Drag to pan, scroll or use the buttons to zoom.`);
+  $("c-all").parentElement.title = COPY.countTitle;
+  $("g-missing").parentElement.title = COPY.vsTitle;
+  $("g-missing").nextElementSibling.textContent = COPY.vs;
   let sc = null, ships = [], view = null;
 
   function load(key) {
@@ -244,7 +277,7 @@
 
   // ---------------------------------------------------------------- panels
   const fmt = (x) => x.toFixed(1);
-  const MAXP = 22;
+  const MAXP = COPY.maxp;
   function renderMetrics() {
     const e = sc.estimate;
     $("est-p50").textContent = fmt(e.total.p50);
@@ -257,10 +290,10 @@
     $("est-hidden").textContent = fmt(e.hidden.p50);
     $("truth").textContent = fmt(sc.truth_mbd);
     $("g-world").textContent = `${(e.global.share_of_world_p50 * 100).toFixed(1)}%`;
-    $("g-missing").textContent = `−${fmt(e.global.missing_vs_prewar_mbd.p50)}`;
-    const short = { "EIA (pre-war baseline)": "EIA '24", "EIA quarterly chokepoint data": "EIA Q1", "Vortexa (via Argus)": "Vortexa",
-      Argus: "Argus", "Windward (satellite)": "Windward", "US officials (via Argus)": "US gov" };
-    const rows = sc.published.map((p) => `<div class="r" title="${p.who}, ${p.when}"><span>${short[p.who] || p.who}</span>
+    const miss = e.global.missing_vs_prewar_mbd.p50;   // negative when flow is above the baseline
+    $("g-missing").textContent = miss >= 0 ? `−${fmt(miss)}` : `+${fmt(-miss)}`;
+    const short = (p) => (COPY.pub && COPY.pub[p.who]) || (COPY.pubWhen && COPY.pubWhen[p.when]) || p.who;
+    const rows = sc.published.map((p) => `<div class="r" title="${p.who}, ${p.when}"><span>${short(p)}</span>
       <span class="track"><span class="bar" style="width:${p.mbd / MAXP * 100}%"></span></span><span class="v">${fmt(p.mbd)}</span></div>`);
     rows.push(`<div class="r" title="Our estimate, 90% range"><span class="ours">Ours</span><span class="track">
       <span class="band" style="left:${e.total.p5 / MAXP * 100}%;width:${(e.total.p95 - e.total.p5) / MAXP * 100}%"></span>
@@ -271,7 +304,8 @@
   function renderCounters(t) {
     let all = 0, ais = 0, dark = 0;
     for (const v of ships) {
-      if (v.kind !== "tanker" || v.lane !== "outbound" || !v.laden || v.tGate > t || v.tGate < 0) continue;
+      // Hormuz tankers coming in are empty, so this counts the outbound lane there and both at Bab el-Mandeb.
+      if (v.kind !== "tanker" || !v.laden || v.tGate > t || v.tGate < 0) continue;
       all++;
       if (v.ais_mode === "on" || v.ais_mode === "spoof") ais++; else dark++;
     }
@@ -325,7 +359,7 @@
   function keyRow(draw, text) { return { draw, text }; }
   const INFO = {
     sim: () => ({ title: "Simulated data", html: `<p>Every ship, name, IMO number and radar pass here is <b>synthetic</b>. Each scenario is calibrated so the true flow matches a published figure, then the estimator sees only what AIS and two radar passes would show.</p>
-      <p>Why not live: no free AIS receivers cover Hormuz, free radar passes are days apart, and the free ship-data services lag 3–5 days. Real collectors are in <code>experiments/strait_sources.py</code>.</p>
+      <p>Why not live: ${COPY.live}, free radar passes are days apart, and the free ship-data services lag 3–5 days. Real collectors are in <code>experiments/strait_sources.py</code>.</p>
       <p class="mono">Generated ${sc.generated}</p>` }),
     estimate: () => {
       const a = sc.estimate.assumptions, c = sc.estimate.counts;
@@ -338,9 +372,9 @@
     },
     global: () => ({ title: "Global figures", html: `<ul>
         <li>World oil demand 2026: 103.3 mb/d (IEA Oil Market Report, Aug 2026)</li>
-        <li>Pre-war Hormuz flow: 20 mb/d, about 20% of world use (EIA, 2024 average)</li>
+        <li>${COPY.facts[0]}</li>
         <li>About 76% of oil moves by sea (EIA, 2023)</li>
-        <li>Hormuz cargo is 72–75% crude, the rest products (EIA, IEA, 2025)</li></ul>
+        ${COPY.facts.slice(1).map((f) => `<li>${f}</li>`).join("")}</ul>
         <p>Published 2026 estimates (from search results; check before quoting):</p><ul>
         ${sc.published.map((p) => `<li>${p.who}, ${p.when}: ${fmt(p.mbd)} mb/d</li>`).join("")}</ul>
         <p>Sources and caveats: <code>docs/strait-live-data.md</code> in the repo.</p>` }),
@@ -369,11 +403,21 @@
 
   // ---------------------------------------------------------------- controls
   const sel = $("scenario");
-  const shortLabel = { prewar: "Pre-war", aug2026: "Aug 2026", sep2026: "Sep 2026" };
   for (const [k, s] of Object.entries(D.scenarios)) {
-    const o = new Option(shortLabel[k] || k, k, false, k === state.key); o.title = s.label; sel.add(o);
+    const o = new Option(COPY.scen[k] || k, k, false, k === state.key); o.title = s.label; sel.add(o);
   }
   sel.addEventListener("change", () => load(sel.value));
+  // Strait picker: shown only when the Bab el-Mandeb data is on the page.
+  const pick = $("strait");
+  if (pick && window.STRAITS && window.STRAITS.mandeb) {
+    pick.value = KEY;
+    pick.hidden = false;
+    pick.addEventListener("change", () => {
+      const q = new URLSearchParams(location.search);
+      if (pick.value === "hormuz") q.delete("strait"); else q.set("strait", pick.value);
+      location.search = q.toString();
+    });
+  }
   document.querySelectorAll("[data-view]").forEach((b) => b.addEventListener("click", () => {
     state.view = b.dataset.view;
     document.querySelectorAll("[data-view]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));

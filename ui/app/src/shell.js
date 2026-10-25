@@ -1,5 +1,5 @@
 // App shell: the pipe strip under the header (its oil runs at the share of Hormuz flow getting through),
-// the home and sound keys, interface sounds, and the lost-flow slider driving the music's tension.
+// the brand as the home button, the sound keys, interface sounds, and the lost-flow slider driving the music's tension.
 window.HZShell = (() => {
   const $ = (id) => document.getElementById(id);
   const icon = (k) => window.HZPixIcon(window.HZIcons[k], { K: "currentColor", G: "#ffe08a" });
@@ -9,10 +9,14 @@ window.HZShell = (() => {
   const brand = bar.querySelector(".brand");
   const mark = document.createElement("span"); mark.className = "hz-brand"; mark.innerHTML = icon("ship");
   brand.prepend(mark);
-  // home, sound and music keys at the right of the header
+  // the brand is the home button: back to the landing page
+  brand.classList.add("hz-home"); brand.setAttribute("role", "button"); brand.tabIndex = 0; brand.title = "Home"; brand.setAttribute("aria-label", "Home");
+  const home = () => window.HZLanding && window.HZLanding.show();
+  brand.addEventListener("click", (e) => { if (!e.target.closest("button")) home(); });   // the SIMULATED pill keeps its own sheet
+  brand.addEventListener("keydown", (e) => { if (e.target === brand && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); home(); } });
+  // sound and music keys at the right of the header
   const keys = document.createElement("div"); keys.className = "hz-keys";
-  keys.innerHTML = `<button type="button" class="hz-key home" id="hz-home" title="Back to the landing page" aria-label="Back to the landing page">${icon("ship")}</button>
-    <button type="button" class="hz-key" id="hz-snd" aria-pressed="false" title="Sound" aria-label="Sound"></button>
+  keys.innerHTML = `<button type="button" class="hz-key" id="hz-snd" aria-pressed="false" title="Sound" aria-label="Sound"></button>
     <button type="button" class="hz-key" id="hz-mus" aria-pressed="false" title="Music" aria-label="Music">${icon("music")}</button>`;
   bar.querySelector(".tools").append(keys);
   // the pipe strip
@@ -32,16 +36,19 @@ window.HZShell = (() => {
     sync(); if (window.HZLanding) window.HZLanding.soundUI();
   });
   $("hz-mus").addEventListener("click", () => { window.HZSound.setMusic(!window.HZSound.music); sync(); });
-  $("hz-home").addEventListener("click", () => window.HZLanding && window.HZLanding.show());
 
   // flow readout: the lost-flow slider sets it in the World view; the scenario menu sets it in the Strait view
+  // on Bab el-Mandeb the strip reads that strait's scenario against its 2023 flow
   function flow() {
-    const lostEl = $("lost");
-    const lost = lostEl ? Number(lostEl.value) : 69, got = 20 * (1 - lost / 100);
-    $("hz-read").innerHTML = `FLOW <b>${got.toFixed(1)}</b>/20 mb/d · <span class="lost">LOST ${lost}%</span>`;
-    pipe.style.setProperty("--flow-dur", `${(0.45 / Math.max(0.04, got / 20)).toFixed(2)}s`);
+    const H = window.HZStrait, md = H && H.id === "mandeb";
+    let got, max = md ? H.prewar : 20;
+    if (md) { const sc = H.data().scenarios[$("scenario").value]; got = sc ? sc.estimate.total.p50 : max; }
+    else { const lostEl = $("lost"); got = max * (1 - (lostEl ? Number(lostEl.value) : 69) / 100); }
+    const lost = Math.max(0, Math.round((1 - got / max) * 100));
+    $("hz-read").innerHTML = `${md ? "BAB EL-MANDEB" : "FLOW"} <b>${got.toFixed(1)}</b>/${max} mb/d · <span class="lost">LOST ${lost}%</span>`;
+    pipe.style.setProperty("--flow-dur", `${(0.45 / Math.max(0.04, got / max)).toFixed(2)}s`);
     window.HZSound.setTension(lost / 100);
-    if (window.HZScene) window.HZScene.setFlow(got / 20);
+    if (window.HZScene) window.HZScene.setFlow(got / max);
   }
   const lostEl = $("lost");
   if (lostEl) lostEl.addEventListener("input", () => { flow(); window.HZSound.play("tick", Number(lostEl.value) / 100); });
