@@ -68,7 +68,7 @@ its source, code, unit, frequency and fetch date.
 ## A Hormuz closure by UK household group (`notes/household-group-scenarios.csv`)
 
 **Method:**
-- Take the item price fans of the basket-item model: `notes/cost-of-living-fans.csv` ([cost-of-living.md](cost-of-living.md)), which has converged fits from Iridis job 1972769. The fans run from 2026-02 under no closure and 25%, 50% and 100% closures, plus the outlook from 2026-09.
+- Take the item price fans of the basket-item model: `notes/cost-of-living-fans.csv` ([cost-of-living.md](cost-of-living.md)), generated 2026-10-25 from the converged fits listed in `notes/cost-of-living.md` (Iridis jobs 1973278–1973324). The fans run from 2026-02 under no closure and 25%, 50% and 100% closures, plus the outlook from 2026-09.
 - Weight them by each group's 2026 HCI spending shares:
   - food goes to the food items, split by their CPI weights;
   - electricity, gas and other fuels to electricity and gas;
@@ -80,10 +80,11 @@ its source, code, unit, frequency and fetch date.
 - The band adds the items' quantiles as if they all moved together, so it is an upper bound on its width.
 
 **Results:**
-- After 6 months, a full closure adds 0.5–0.7 points to every group's costs, most of it through motor fuel.
-- Car-owning middle-income households and owner-occupiers get the most (+0.65 to +0.70); social renters the least (+0.48).
-- Energy-heavy budgets (the lowest-income tenth; retired people) are cushioned at first, because UK household energy follows the quarterly Ofgem cap.
-- The year ahead from 2026-09: costs rise about 3.9–4.4%, slightly more for low-income and retired households.
+- After 6 months, a full closure adds 0.4–0.6 points to every group's costs, most of it through motor fuel.
+- Car-owning middle-income households and owner-occupiers get the most (+0.55 to +0.61: the fifth and eighth income tenths, outright owners and mortgagors); social renters the least (+0.38).
+- Energy-heavy budgets (the lowest-income tenth, +0.44; retired people, +0.46) are cushioned at first, because UK household energy follows the quarterly Ofgem cap.
+- The year ahead from 2026-09: costs rise about 4.0–4.4%, slightly more for low-income and retired households, outright owners and social renters, least for the highest-income tenth and mortgagors.
+- These are from the fans of 2026-10-25. The first version of this table, built on earlier fans, gave 0.5–0.7 points and 3.9–4.4%.
 
 `report` reads the fans from `notes/cost-of-living-fans.csv` and skips this table if the file is missing.
 
