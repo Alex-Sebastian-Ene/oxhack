@@ -165,8 +165,7 @@ def ask_gemini(body: dict, key: str) -> dict:
             with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
                 return json.loads(r.read())
         except urllib.error.HTTPError as e:
-            sys.stderr.write(f"Gemini answered HTTP {e.code} (attempt {attempt})
-")  # the code only, never the body
+            print(f"Gemini answered HTTP {e.code} (attempt {attempt})", file=sys.stderr)  # the code only, never the body
             if attempt == 2 or e.code not in (429, 500, 503):
                 raise
             time.sleep(RETRY_WAIT)
