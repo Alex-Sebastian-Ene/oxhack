@@ -26,6 +26,7 @@ STEPS = [
     "patch_reserves.py", # Seb's emergency stocks: a release choice on the shock card, stock cover on country cards
     "patch_industry.py", # Eileen's cost shares read from the CSV, Seb's sector-model prices per industry, exporter earnings
     "patch_disruption.py", # audit fixes: Seb's x1.49 disruption multiplier for the 0.8 premium; slider starts at 82 AIS-visible
+    "patch_iea.py",      # OXH-9: the 2026 preset is the chain's replay on the IEA's lost flow, not 82 points held
 ]
 for step in STEPS:
     r = subprocess.run([sys.executable, "-I", str(here / step)], capture_output=True, text=True)

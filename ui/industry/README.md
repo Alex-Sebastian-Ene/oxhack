@@ -75,8 +75,13 @@ Offline tests: `uv run --no-project --with pytest pytest -q tests/test_explain_s
 The page runs on Seb's recommended chain (`docs/chain.md`). **You set the lost Hormuz flow** (0 to 100 points of the
 pre-war 20 mb/d) in The shock card; the scenario menu sets its starting value. Everything else follows:
 
-- **Brent:** pre-war $70 times Seb's flow-premium curve (`notes/flow-premium.csv`), averaged over the next 252
-  trading days, with its 90% band. At 82 points (the 2026 closure) that is about $99 ($75 to $151).
+- **Brent:** pre-war $70 times Seb's flow-premium curve per point of the IEA's lost strait flow
+  (`notes/flow-premium-iea.csv`, OXH-9), averaged over the next 252 trading days, with its 90% band. At 82 points
+  held for 12 months that is about $106 ($75 to $204), harsher than 2026 was.
+- **The 2026 closure preset** (`patch_iea.py`) is not a point on the slider. It is the chain replayed on 2026 as the IEA
+  counts it (`notes/chain-scenarios-2026-3m-margins.csv`: 89 points lost in March to 47 in September, later months
+  holding the last), with Brent from the same curve over that path: about $95 ($75 to $145). The slider shows the
+  path's March–October average, 67 points, and its mark sits there.
 - **Jet fuel, nitrogen fertiliser, plastics resin, diesel at the pump, CPI and unemployment (US, UK, euro area):**
   the chain's scenario table (`notes/chain-scenarios-3m-margins.csv`: bayes_own + global_lin + global, with the
   margin member on fuels), straight lines between its 0/25/50/82/100-point rows. Shown as the extra change against
@@ -86,7 +91,9 @@ pre-war 20 mb/d) in The shock card; the scenario menu sets its starting value. E
 - **Emergency oil stocks** (`patch_reserves.py`, Seb's `experiments/reserves.py`, `notes/reserves.md`): under the slider,
   choose No release, As in 2026 (the default: every number above is unchanged) or Maximum (the IEA's maximum drawdown,
   up to 25 mb/d for two months, until the 1.8 bn barrels held for release run out). Brent follows the flow-premium
-  curve restated per barrel still missing after releases (`notes/reserve-scenarios.csv`). The chain's numbers are
+  curve restated per barrel still missing after releases (`notes/reserve-scenarios.csv`). That file is still on the
+  older PortWatch-trough curve, so until `reserves.py` is restated the page keeps each policy's premium ratio to the
+  2026 releases and applies it to the IEA curve. The chain's numbers are
   the table above plus the policy's difference in the chain's own replays under each policy
   (`notes/chain-scenarios-3m-d2000-margins*.csv`). The release line is tagged "assumed": the premium is taken to
   scale with the barrels still missing, which one closure cannot test.

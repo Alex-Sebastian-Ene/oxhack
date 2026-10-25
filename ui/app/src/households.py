@@ -62,8 +62,9 @@ def data():
     for r in _rows("household-group-weights.csv"):
         if int(r["year"]) == wyear and r["code"] in SHARES and r["group"] in groups:
             groups[r["group"]].setdefault("shares", {})[SHARES[r["code"]]] = round(float(r["parts_per_thousand"]) / 10, 1)
-    scen = [{"region": r["region"], "drop": int(r["flow_drop_points"]), "h": int(r["months_ahead"]),
-             "q05": float(r["real_pay_q05"]), "q50": float(r["real_pay_q50"]), "q95": float(r["real_pay_q95"]),
+    # lost flow held for 12 months (drop = points), or the IEA's 2026 path (drop = "iea"; the scenario column is newer)
+    scen = [{"region": r["region"], "drop": "iea" if r.get("scenario") == "iea_2026_path" else int(float(r["flow_drop_points"])),
+             "h": int(r["months_ahead"]), "q05": float(r["real_pay_q05"]), "q50": float(r["real_pay_q50"]), "q95": float(r["real_pay_q95"]),
              "actual": float(r["real_pay_actual"]) if r["real_pay_actual"] else None} for r in _rows("household-scenarios.csv")]
     gs_rows = _rows("household-group-scenarios.csv")
     gscen = [{"group": r["group"], "scen": r["scenario"], "origin": r["origin"], "h": int(r["months_ahead"]),

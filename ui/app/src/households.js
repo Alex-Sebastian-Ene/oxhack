@@ -29,15 +29,22 @@ window.HZHouseholds = (() => {
   const MODEL = '<span class="tagm" title="Model output, not observed data">MODEL OUTPUT</span>';
 
   // ------------------------------------------------------------ scenario state, tied to the lost-flow slider
-  const DROPS = [...new Set(D.scen.map((r) => r.drop))].sort((a, b) => a - b);
-  // the group scenarios scale the 2026 closure, which the app puts at 82 points of lost flow
+  const DROPS = [...new Set(D.scen.map((r) => r.drop))].filter((d) => d !== "iea").sort((a, b) => a - b);
+  const HAS_IEA = D.scen.some((r) => r.drop === "iea");
+  // the 2026 preset (ui/industry/src/patch_iea.py): the chain replayed on 2026 as the IEA counts it. The group
+  // scenarios run the 2026 closure at a quarter, half and full size, so its March-October average (67 points)
+  // sets their scale on the slider; an older page without the preset kept 2026 at 82 points
+  const pathBtn = document.querySelector("[data-path]");
+  const AVG26 = pathBtn ? Number(pathBtn.dataset.avg) : 82, PATH_TXT = pathBtn ? pathBtn.dataset.txt : "";
+  const onPath = () => !!pathBtn && pathBtn.getAttribute("aria-pressed") === "true";
   const SEV = [["none", 0], ["closure_25", 0.25], ["closure_50", 0.5], ["closure_100", 1]];
   const SEV_NAME = { none: "No closure", closure_25: "A quarter of 2026's closure", closure_50: "Half of 2026's closure", closure_100: "A 2026-sized closure" };
+  const sevName = (sev) => (sev === "closure_100" && onPath() ? "The 2026 closure" : SEV_NAME[sev]);
   const lostEl = $("lost");
   const st = { lost: lostEl ? Number(lostEl.value) : 82, h: 12, gh: 6, outlook: false, gtype: "income decile" };
   const near = (arr, v) => arr.reduce((a, b) => (Math.abs(b - v) < Math.abs(a - v) ? b : a));
-  const dropFor = (lost) => near(DROPS, lost);
-  const sevFor = (lost) => SEV.reduce((a, b) => (Math.abs(b[1] * 82 - lost) < Math.abs(a[1] * 82 - lost) ? b : a))[0];
+  const dropFor = (lost) => (onPath() && HAS_IEA ? "iea" : near(DROPS, lost));
+  const sevFor = (lost) => (onPath() ? "closure_100" : SEV.reduce((a, b) => (Math.abs(b[1] * AVG26 - lost) < Math.abs(a[1] * AVG26 - lost) ? b : a))[0]);
   function setLost(v) {
     if (!lostEl) { st.lost = v; draw(); return; }
     lostEl.value = String(v);
@@ -72,7 +79,8 @@ window.HZHouseholds = (() => {
   seg.append(btn);
   const page = document.createElement("main");
   page.className = "stage hz-hh"; page.id = "hz-households"; page.hidden = true; page.setAttribute("aria-label", "Households: pay and bills");
-  const drops = DROPS.map((d) => `<button type="button" data-hdrop="${d}" aria-pressed="false">${d === 0 ? "Normal · 0" : d === 82 ? "2026 · 82" : d === 100 ? "Shut · 100" : d}</button>`).join("");
+  const drops = DROPS.map((d) => `<button type="button" data-hdrop="${d}" aria-pressed="false">${d === 0 ? "Normal · 0" : d === 100 ? "Shut · 100" : d}</button>`).join("")
+    + (HAS_IEA && pathBtn ? `<button type="button" data-hdrop="iea" aria-pressed="false" title="${esc(pathBtn.title)}">2026 closure</button>` : "");
   const hs = (k, list) => list.map((h) => `<button type="button" data-${k}="${h}" aria-pressed="false">${h} mo</button>`).join("");
   page.innerHTML = `
   <div class="col">
@@ -223,9 +231,10 @@ window.HZHouseholds = (() => {
   }
   function scenCard() {
     const drop = dropFor(st.lost), regs = Object.keys(REG);
-    page.querySelectorAll("[data-hdrop]").forEach((b) => b.setAttribute("aria-pressed", String(+b.dataset.hdrop === drop)));
+    page.querySelectorAll("[data-hdrop]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.hdrop === String(drop))));
     page.querySelectorAll("[data-hh]").forEach((b) => b.setAttribute("aria-pressed", String(+b.dataset.hh === st.h)));
-    $("hh-scen-pick").innerHTML = st.lost === drop ? `${drop} points of flow lost, ${st.h} months on.` : `The slider is at ${st.lost} points; the nearest modelled case is <b>${drop}</b>. ${st.h} months on.`;
+    $("hh-scen-pick").innerHTML = drop === "iea" ? `2026 as the IEA counts it (${esc(PATH_TXT)}), ${st.h} months on.`
+      : st.lost === drop ? `${drop} points of flow lost for 12 months, ${st.h} months on.` : `The slider is at ${st.lost} points; the nearest modelled case is <b>${drop}</b>. ${st.h} months on.`;
     const rows = regs.map((g) => ({ g, r: scenRow(g, drop, st.h), base: scenRow(g, 0, st.h) })).filter((x) => x.r);
     const vals = D.scen.filter((r) => r.h === st.h).flatMap((r) => [r.q05, r.q95, r.actual]).filter((v) => v != null);
     const lo = Math.min(-1, Math.floor(Math.min(...vals))), hi = Math.max(1, Math.ceil(Math.max(...vals)));
@@ -244,9 +253,10 @@ window.HZHouseholds = (() => {
     page.querySelector("[data-hout]").setAttribute("aria-pressed", String(st.outlook));
     $("hh-gs-lede").innerHTML = st.outlook ? "Each group's costs over the year ahead from Sep 2026, split by what drives them."
       : "What the closure adds to each group's costs, on top of no closure, split by what drives it.";
-    const pts = SEV.find((s) => s[0] === sev)[1] * 82;
+    const pts = SEV.find((s) => s[0] === sev)[1] * AVG26;
     $("hh-gs-pick").innerHTML = st.outlook ? `The year ahead from Sep 2026, ${h} months on. Change in costs, %.`
-      : `${SEV_NAME[sev]}${sev === "none" ? "" : ` (about ${Math.round(pts)} points of flow lost)`}, from Feb 2026, ${h} months on.${st.lost > 82 ? " The largest modelled closure is 2026's." : st.lost !== Math.round(pts) ? ` Nearest to the slider's ${st.lost} points.` : ""}`;
+      : onPath() ? `The 2026 closure as it happened, from Feb 2026, ${h} months on.`
+      : `${SEV_NAME[sev]}${sev === "none" ? "" : ` (about ${Math.round(pts)} points of flow lost on average)`}, from Feb 2026, ${h} months on.${st.lost > AVG26 ? " The largest modelled closure is 2026's." : st.lost !== Math.round(pts) ? ` Nearest to the slider's ${st.lost} points.` : ""}`;
     const rows = groupsOf(st.gtype).map((g) => {
       const r = gRow(g.group, scen, h), base = gRow(g.group, "none", h);
       if (!r) return null;
@@ -278,13 +288,13 @@ window.HZHouseholds = (() => {
   function miniStep() {
     if (!mini) return;
     const drop = dropFor(st.lost), sev = sevFor(st.lost);
-    $("hh-mini").innerHTML = `<span class="hz-mh">Real pay 12 months on from Feb 2026${drop !== st.lost ? ` (nearest modelled: ${drop} points)` : ""}</span>` + Object.keys(REG).map((g) => {
+    $("hh-mini").innerHTML = `<span class="hz-mh">Real pay 12 months on from Feb 2026${drop === "iea" ? " (2026 as the IEA counts it)" : drop !== st.lost ? ` (nearest modelled: ${drop} points)` : ""}</span>` + Object.keys(REG).map((g) => {
       const r = scenRow(g, drop, 12), b = scenRow(g, 0, 12);
       return r ? `<span class="hz-mr">${flag(g)}<b>${REG[g].short}</b><span class="mono">${sgn(r.q50)}%</span><small>${drop ? `no loss ${sgn(b.q50)}%` : `${sgn(r.q05)} to ${sgn(r.q95)}`}</small></span>` : "";
     }).join("");
     const lo = gRow("Decile 1", sev, 12), hi = gRow("Decile 10", sev, 12), lo0 = gRow("Decile 1", "none", 12), hi0 = gRow("Decile 10", "none", 12);
     $("hh-mini-g").innerHTML = sev === "none" || !lo || !hi ? `${flag("uk")} No closure in the UK household model at this setting.`
-      : `${flag("uk")} ${SEV_NAME[sev]} adds <b>${sgn(lo.q50 - lo0.q50, 2)}</b> pts to the lowest-income tenth's costs over 12 months, <b>${sgn(hi.q50 - hi0.q50, 2)}</b> to the highest's.`;
+      : `${flag("uk")} ${sevName(sev)} adds <b>${sgn(lo.q50 - lo0.q50, 2)}</b> pts to the lowest-income tenth's costs over 12 months, <b>${sgn(hi.q50 - hi0.q50, 2)}</b> to the highest's.`;
     $("hh-mini-src").innerHTML = "Model output: notes/household-scenarios.csv and household-group-scenarios.csv (nearest modelled case).";
   }
 
@@ -310,8 +320,10 @@ window.HZHouseholds = (() => {
   page.addEventListener("click", (e) => {
     const b = e.target.closest("button"); if (!b) return;
     const d = b.dataset;
-    if (d.hdrop != null) setLost(+d.hdrop);
-    else if (d.hsev != null) { st.outlook = false; setLost(Math.round(SEV.find((s) => s[0] === d.hsev)[1] * 82)); }
+    if (d.hdrop === "iea") { pathBtn.click(); return; }
+    else if (d.hdrop != null) setLost(+d.hdrop);
+    else if (d.hsev === "closure_100" && pathBtn) { st.outlook = false; pathBtn.click(); return; }
+    else if (d.hsev != null) { st.outlook = false; setLost(Math.round(SEV.find((s) => s[0] === d.hsev)[1] * AVG26)); }
     else if (d.hh != null) st.h = +d.hh;
     else if (d.hgh != null) st.gh = +d.hgh;
     else if (d.hout != null) st.outlook = !st.outlook;
@@ -320,7 +332,7 @@ window.HZHouseholds = (() => {
     draw();
   });
   if (lostEl) lostEl.addEventListener("input", () => { st.lost = Number(lostEl.value); draw(); });
-  document.querySelectorAll("[data-lost]").forEach((b) => b.addEventListener("click", () => setTimeout(() => { st.lost = Number(lostEl.value); draw(); }, 0)));
+  document.querySelectorAll("[data-lost], [data-path], [data-rel]").forEach((b) => b.addEventListener("click", () => setTimeout(() => { st.lost = Number(lostEl.value); draw(); }, 0)));
   new ResizeObserver(() => { if (!page.hidden) payChart(); }).observe(page);
 
   payText(); essText();

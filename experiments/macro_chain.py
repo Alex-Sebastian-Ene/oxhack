@@ -73,7 +73,8 @@ import oil_paths as op
 RUNS, NOTES = mb.RUNS, mb.NOTES
 MEMBERS = ("bayes_own", "global_lin", "global", "global_tcn", "xattn")
 REGIME_KIND = {"bayes_regime": "all", "bayes_regime_cost": "cost"}  # which series take the disruption terms
-OPTIONAL = tuple(REGIME_KIND)  # fitted and reported only when named
+GAS_MEMBER = "bayes_gas"  # bayes_own plus the regional gas price as a second driver
+OPTIONAL = (*REGIME_KIND, GAS_MEMBER)  # fitted and reported only when named
 RECOMMENDED = ("bayes_own", "global_lin", "global")  # the ensemble the earlier runs chose (docs/chain.md)
 REGIME_REC = ("bayes_regime", "global_lin", "global")  # RECOMMENDED with bayes_regime in place of bayes_own
 COST_REC = ("bayes_regime_cost", "global_lin", "global")  # and with the cost-only member
@@ -135,17 +136,47 @@ def member_simulator(data: dict, info: dict, st: mb.Stats, last: int, t: np.ndar
                      bayes_seed: int):
     """Fit one member on months 13..last; return (simulate(future, rng, regime=None) -> [N, origins, outputs],
     extra info). regime: D in the 12 months after each origin [origins, 12], used by bayes_regime only."""
-    if member in ("bayes_own", *REGIME_KIND):  # the same seed: without a disruption in training they are one fit
-        post, st_b, info_b, diag = mb.fit(data, last, seed=bayes_seed, vol="own", regime=REGIME_KIND.get(member))
-        return (lambda fut, rng, regime=None: mb.simulate(post, st_b, info_b, data, t, fut, rng, regime=regime)), \
-            {"diagnostics": diag} | ({"kappa": quantiles(post["kappa"]), "zeta": quantiles(post["zeta"])} if "kappa" in post else {})
+    if member in ("bayes_own", *REGIME_KIND, GAS_MEMBER):  # the same seed: without their extra terms they are one fit
+        post, st_b, info_b, diag = mb.fit(data, last, seed=bayes_seed, vol="own", regime=REGIME_KIND.get(member),
+                                          gas=member == GAS_MEMBER)
+        return (lambda fut, rng, regime=None, gas=None: mb.simulate(post, st_b, info_b, data, t, fut, rng, regime=regime, gas=gas)), \
+            {"diagnostics": diag} | ({"kappa": quantiles(post["kappa"]), "zeta": quantiles(post["zeta"])} if "kappa" in post else {}) \
+            | ({"gas_sum": quantiles(post["G"].sum(-1))} if "G" in post else {})
     if member == "xattn":
         nets, training, state = mx.fit_xattn(data, info, st, last, 2 if QUICK else int(os.environ.get("CHAIN_SEEDS", mx.SEEDS)),
                                              base_seed)
-        return (lambda fut, rng, regime=None: mx.simulate(nets, state, st, info, data, t, fut, rng, n=draws())), \
+        return (lambda fut, rng, regime=None, gas=None: mx.simulate(nets, state, st, info, data, t, fut, rng, n=draws())), \
             {"training": training, "context": state["ctx"]["codes"], "context_fetched": state["ctx"]["fetched"]}
     nets, training = fit_nets(data, info, st, last, member, base_seed)
-    return (lambda fut, rng, regime=None: mg.simulate(nets, st, info, data, t, fut, rng, n=draws())), {"training": training}
+    return (lambda fut, rng, regime=None, gas=None: mg.simulate(nets, st, info, data, t, fut, rng, n=draws())), {"training": training}
+
+
+def gas_driver(data: dict, last: int) -> list[dict]:
+    """Per GAS region, on months up to `last`: the gas change's beta on Brent's, and a monthly GARCH-t
+    of the rest (cost_of_living.garch_fit), as cost_of_living.driver_model does for its gas channels."""
+    import cost_of_living as col
+
+    x, out = data["oil_m"][1:last + 1], []
+    for r in range(data["gas_m"].shape[1]):
+        y = data["gas_m"][1:last + 1, r]
+        ok = np.isfinite(x) & np.isfinite(y)
+        beta = float(np.polyfit(x[ok], y[ok], 1)[0])
+        out.append(col.garch_fit(y[ok] - beta * x[ok]) | {"beta": beta})
+    return out
+
+
+def gas_paths(dm: list[dict], oil: np.ndarray, rng, excess: np.ndarray | None = None) -> np.ndarray:
+    """Gas changes [N, O, 12, regions] along simulated oil paths [N, O, 12]: beta x oil plus each
+    region's own GARCH-t noise, plus `excess` [regions, 12] (a scenario's gas move beyond what oil explains)."""
+    import cost_of_living as col
+
+    N, O, H = oil.shape
+    g = np.empty((N, O, H, len(dm)))
+    for r, par in enumerate(dm):
+        shock = np.zeros(H) if excess is None else excess[r]
+        for o in range(O):
+            g[:, o, :, r] = par["beta"] * oil[:, o] + col.garch_paths(par, N, shock, rng)
+    return g
 
 
 def quantiles(x: np.ndarray) -> dict:
@@ -177,12 +208,21 @@ def run_member(data: dict, j: int, member: str, market: dict, prices) -> tuple[d
              for k, (mode, fut) in enumerate(oil.items())}
         extra = {"margins": cm.describe()}
     else:
+        if member == GAS_MEMBER:
+            data = mb.add_gas(data)
+            dm = gas_driver(data, last)
         sim, extra = member_simulator(data, info, st, last, t, member, 1000 * j, bayes_seed=j)  # the seeds of run_fold
         S = {}
-        for mode, fut in oil.items():
+        for k, (mode, fut) in enumerate(oil.items()):
             d = mode_regime(data, t, mode)
-            S[mode] = sim(fut, np.random.default_rng(300 + j), regime=d).astype(np.float32)
-            S[f"{mode}_cop"] = sim(fut, cp.CopulaRNG(np.random.default_rng(300 + j), cop), regime=d).astype(np.float32)
+            g = None
+            if member == GAS_MEMBER:  # what happened, or gas paths along each oil path
+                g = mb.gas_future(data, t) if mode == "whatif" else gas_paths(dm, fut, np.random.default_rng(950 + 10 * j + k))
+            S[mode] = sim(fut, np.random.default_rng(300 + j), regime=d, gas=g).astype(np.float32)
+            S[f"{mode}_cop"] = sim(fut, cp.CopulaRNG(np.random.default_rng(300 + j), cop), regime=d, gas=g).astype(np.float32)
+        if member == GAS_MEMBER:
+            extra |= {"gas_driver": [{k: v for k, v in p.items()} for p in dm],
+                      "gas_sources": {r: code for r, (code, _) in mb.GAS.items()}}
     summary = {"fold": j, "member": member, "test_dates": [f"{d:%Y-%m}" for d in data["dates"][test]],
                "names": data["names"], "groups": data["groups"], "y": Y.tolist(), "seconds": round(time.time() - t0, 1),
                "copula": {k: v for k, v in cop.items() if k not in ("R", "L")},
@@ -617,7 +657,8 @@ def effect(x: np.ndarray, base: np.ndarray) -> tuple[float, float, float, float]
 
 
 REPLAY_ORIGIN = "2026-02"  # the last month before the closure (7-day flow share below 50% from 2026-03-04)
-LOSTS = (0.0, 25.0, 50.0, 82.0, 100.0)  # points of Hormuz flow lost; 82 is what happened
+LOSTS = (0.0, 25.0, 50.0, 82.0, 100.0)  # points of Hormuz flow lost, held for the 12 months (the slider)
+IEA_2026 = "iea 2026"  # the replay's scenario run: the IEA's monthly 2026 loss (oil_paths.iea_lost_2026)
 SHOWN = ("us_cpi", "uk_cpi", "ea_cpi", "us_rate", "ind_gasdesw", "ind_djfuelusgulf", "ind_pcu324110324110",
          "ind_pcu325311325311")
 
@@ -656,23 +697,46 @@ def replay(origin: str = REPLAY_ORIGIN) -> None:
     for lost in LOSTS:
         oil[f"lost {lost:g}"] = op.monthly_paths(prices, idx[t], mb.DRAWS, np.random.default_rng(900), "cgmy",
                                                  market["drift"][t], lost=lost, release=RELEASE)
+    # the 2026 closure as the IEA counts it (the loss the premium curve was fitted with), with its
+    # stocks as released: the scenario run set against what happened
+    path26 = op.iea_lost_2026()
+    oil[IEA_2026] = op.monthly_paths(prices, idx[t], mb.DRAWS, np.random.default_rng(900), "cgmy", market["drift"][t],
+                                     lost=path26)
     cop = cp.fit(data, st, last, info)
     # D after the origin (bayes_regime only): the calendar in the what-if, the flow scenario otherwise
-    regime = {"whatif": mb.regime_future(data, t, known=True)} | {f"lost {lost:g}": mb.regime_scenario(data, t, lost) for lost in LOSTS}
+    regime = {"whatif": mb.regime_future(data, t, known=True)} | {f"lost {lost:g}": mb.regime_scenario(data, t, lost) for lost in LOSTS} \
+        | {IEA_2026: mb.regime_scenario(data, t, float(path26.mean()))}
+    # gas after the origin (bayes_gas only): what happened in the what-if; in a scenario, gas follows the
+    # oil path plus 2026's gas move beyond oil (months observed), scaled by the loss against 2026's
+    data_g = mb.add_gas(data) if GAS_MEMBER in members else None
+    gas = {mode: None for mode in oil}
+    if data_g is not None:
+        dm = gas_driver(data_g, last)
+        g26, x26 = np.nan_to_num(data_g["gas_m"][m + 1:m + 1 + mn.OIL_AHEAD]), np.nan_to_num(real)
+        excess = np.zeros((len(dm), mn.OIL_AHEAD))
+        excess[:, :len(g26)] = (g26 - np.outer(x26[:len(g26)], [p["beta"] for p in dm])).T
+        excess[:, seen:] = 0.0
+        for k, mode in enumerate(oil):
+            if mode == "whatif":
+                gas[mode] = mb.gas_future(data_g, t)
+            else:
+                sev = 1.0 if mode == IEA_2026 else float(mode.split()[1]) / float(path26.mean())
+                gas[mode] = gas_paths(dm, oil[mode], np.random.default_rng(960 + k), sev * excess)
     S = {mode: [] for mode in oil}
-    S_cop = {mode: [] for mode in ("whatif", f"lost {op.LOST_2026:g}")}
+    S_cop = {mode: [] for mode in ("whatif", IEA_2026)}
     fits = {}
     for mm in members:
-        sim, extra = member_simulator(data, info, st, last, t, mm, 90_000, bayes_seed=99)
-        fits[mm] = {k: v for k, v in extra.items() if k in ("diagnostics", "kappa", "zeta")}
+        sim, extra = member_simulator(data_g if mm == GAS_MEMBER else data, info, st, last, t, mm, 90_000, bayes_seed=99)
+        fits[mm] = {k: v for k, v in extra.items() if k in ("diagnostics", "kappa", "zeta", "gas_sum")}
         if "diagnostics" in extra:
             print(f"replay {mm}: {extra['diagnostics']}", flush=True)
         for mode, fut in oil.items():
             # the flow scenarios share every random number draw by draw, so their differences are effects
             rng = np.random.default_rng(300)
-            S[mode].append(sim(fut, rng if mode == "whatif" else PairedRNG(rng), regime=regime[mode])[:, 0])  # [N, outputs]
+            S[mode].append(sim(fut, rng if mode == "whatif" else PairedRNG(rng), regime=regime[mode], gas=gas[mode])[:, 0])  # [N, outputs]
             if mode in S_cop:
-                S_cop[mode].append(sim(fut, cp.CopulaRNG(np.random.default_rng(300), cop), regime=regime[mode])[:, 0])
+                S_cop[mode].append(sim(fut, cp.CopulaRNG(np.random.default_rng(300), cop), regime=regime[mode],
+                                       gas=gas[mode])[:, 0])
     RUNS.mkdir(parents=True, exist_ok=True)
     for i, mm in enumerate(members):  # each member's draws, so other mixtures of them can be scored later
         np.savez_compressed(RUNS / f"replay{suffix()}-{mm}.npz",
@@ -687,7 +751,7 @@ def replay(origin: str = REPLAY_ORIGIN) -> None:
         D[mode] = None
         if cm is not None:  # the margin member from the same oil paths; a scenario adds a crisis scaled lost / 82
             # one seed for every flow scenario, so the margin draws stay paired across them too
-            lost = None if mode == "whatif" else float(mode.split()[1])
+            lost = None if mode == "whatif" else op.LOST_2026 if mode == IEA_2026 else float(mode.split()[1])
             D[mode] = cm.member_draws(t, oil[mode], "whatif" if mode == "whatif" else "forecast", lost,
                                       seed=(99, 0 if mode == "whatif" else 1), n=mb.DRAWS)[:, 0]
         ens[mode] = with_margins(np.stack(parts), D[mode], equal, order, fuel_columns(names))  # [N, outputs]
@@ -708,14 +772,16 @@ def replay(origin: str = REPLAY_ORIGIN) -> None:
              "layer on an event it never saw.",
              "- **lost 0:** a genuine forecast with GARCH-CGMY oil paths and no scenario: what a forecaster without the "
              "flow link would have said.",
-             "- **lost 82:** GARCH-CGMY paths plus the flow scenario of the 82 points lost in 2026. **In sample for "
-             "the flow link:** its premium curve (`notes/flow-premium.csv`, each path drawn within the curve's 90% "
-             "band) was fitted to this same event; Bab el-Mandeb 2023-24 checks only its sign and the role of "
-             "rerouting out of sample (`notes/flow-events.md`). So it shows "
-             "how the chain composes, not that the flow link forecasts.", "",
+             f"- **IEA 2026:** GARCH-CGMY paths plus the flow scenario of 2026 as the IEA counts it: "
+             + ", ".join(f"{v:.0f}" for v in path26.to_numpy()) + " points of February's strait flow lost in "
+             f"{path26.index[0]:%Y-%m}..{path26.index[-1]:%Y-%m} (`notes/hormuz-iea-flows.csv`; later months hold the last). "
+             f"**In sample for the flow link:** its premium curve (`notes/{op.PREMIUM.name}`, per point of the IEA's lost flow, "
+             "each path drawn within the curve's 90% band) was fitted to this same event; Bab el-Mandeb 2023-24 checks only "
+             "its sign and the role of rerouting out of sample (`notes/flow-events.md`, `notes/hormuz-flow-check.md`). So it "
+             "shows how the chain composes, not that the flow link forecasts.", "",
              "Mean and central 90% interval, in each series' units (100 × log change ≈ %, pp for rates). ✓ = the "
              "actual is inside the 90% interval.", "",
-             "| Series | h | Actual | What-if | Lost 0 (forecast) | Lost 82 (scenario) |", "|---|---|---|---|---|---|"]
+             "| Series | h | Actual | What-if | Lost 0 (forecast) | IEA 2026 (scenario) |", "|---|---|---|---|---|---|"]
     for key in SHOWN:
         for h in (1, 3, 6):
             nm = f"{key}@{h}"
@@ -728,8 +794,8 @@ def replay(origin: str = REPLAY_ORIGIN) -> None:
                 mark = "" if not np.isfinite(a) else (" ✓" if lo <= a <= hi else " ✗")
                 return f"{x.mean():+.1f} ({lo:+.1f}..{hi:+.1f}){mark}"
             lines.append(f"| {key} | {h} | {'n/a' if not np.isfinite(a) else f'{a:+.1f}'} | {cell('whatif')} | "
-                         f"{cell('lost 0')} | {cell('lost 82')} |")
-    inside = {mode: [] for mode in ("whatif", "lost 0", "lost 82")}
+                         f"{cell('lost 0')} | {cell(IEA_2026)} |")
+    inside = {mode: [] for mode in ("whatif", "lost 0", IEA_2026)}
     for c, nm in enumerate(names):
         if np.isfinite(actual[nm]) and int(nm.split("@")[1]) <= 6:
             for mode in inside:
@@ -763,24 +829,34 @@ def replay(origin: str = REPLAY_ORIGIN) -> None:
     pair = [np.corrcoef(ens["lost 0"][:, c], ens["lost 25"][:, c])[0, 1] for c in range(len(names))]
     print(f"pairing: correlation of lost 0 and lost 25 draws, median {np.nanmedian(pair):.3f}, min {np.nanmin(pair):.3f}",
           flush=True)
-    rows = ["series,group,flow_drop_points,months_ahead,mean,q05,q50,q95,effect_mean,effect_q05,effect_q50,effect_q95,"
-            "actual,unit,validated,origin,source,fitted_to,generated"]
-    for c, nm in enumerate(names):
-        key, h = nm.split("@")
-        grp = groups[c]
-        unit = "pp" if grp in ("unemployment", "rate") else "100 x log change (about %)"
-        validated = "yes" if grp in ("inflation", "cost") else "no (no causal oil link; forecast only)"
-        for lost in LOSTS:
-            x = ens[f"lost {lost:g}"][:, c]
-            q05, q50, q95 = np.quantile(x, [0.05, 0.5, 0.95])
-            eff = ",".join(f"{v:.4f}" for v in effect(x, ens["lost 0"][:, c]))
-            a = actual[nm]
-            rows.append(f"{key},{grp},{lost:g},{h},{x.mean():.4f},{q05:.4f},{q50:.4f},{q95:.4f},{eff},"
-                        f"{'' if not np.isfinite(a) else f'{a:.4f}'},{unit},{validated},{origin},"
-                        "experiments/macro_chain.py replay (oil: GARCH-CGMY + notes/flow-premium.csv premium sampled in its band; "
-                        f"models: {'+'.join(members + ([MARGIN] if MARGINS else []))}),{idx[last]:%Y-%m},{gen}")
-    (NOTES / f"chain-scenarios{suffix()}.csv").write_text("\n".join(rows) + "\n", encoding="utf-8")
-    print(f"wrote {NOTES / f'chain-replay-2026{suffix()}.md'} and {NOTES / f'chain-scenarios{suffix()}.csv'}")
+    head = ("series,group,flow_drop_points,months_ahead,mean,q05,q50,q95,effect_mean,effect_q05,effect_q50,effect_q95,"
+            "actual,unit,validated,origin,source,fitted_to,generated")
+    src = (f"experiments/macro_chain.py replay (oil: GARCH-CGMY + notes/{op.PREMIUM.name} premium sampled in its band"
+           + ("; gas: Henry Hub and EU gas along each path" if data_g is not None else "")
+           + f"; models: {'+'.join(members + ([MARGIN] if MARGINS else []))})")
+
+    def table(modes):
+        """CSV rows for (flow_drop_points label, mode) pairs; effect_* against the 0-point draws."""
+        rows = [head]
+        for c, nm in enumerate(names):
+            key, h = nm.split("@")
+            grp = groups[c]
+            unit = "pp" if grp in ("unemployment", "rate") else "100 x log change (about %)"
+            validated = "yes" if grp in ("inflation", "cost") else "no (no causal oil link; forecast only)"
+            for label, mode in modes:
+                x = ens[mode][:, c]
+                q05, q50, q95 = np.quantile(x, [0.05, 0.5, 0.95])
+                eff = ",".join(f"{v:.4f}" for v in effect(x, ens["lost 0"][:, c]))
+                a = actual[nm]
+                rows.append(f"{key},{grp},{label},{h},{x.mean():.4f},{q05:.4f},{q50:.4f},{q95:.4f},{eff},"
+                            f"{'' if not np.isfinite(a) else f'{a:.4f}'},{unit},{validated},{origin},{src},{idx[last]:%Y-%m},{gen}")
+        return "\n".join(rows) + "\n"
+
+    # the slider: each loss held for 12 months; and 2026 as the IEA counts it, month by month
+    (NOTES / f"chain-scenarios{suffix()}.csv").write_text(table([(f"{lost:g}", f"lost {lost:g}") for lost in LOSTS]), encoding="utf-8")
+    (NOTES / f"chain-scenarios-2026{suffix()}.csv").write_text(table([("iea_2026_path", IEA_2026)]), encoding="utf-8")
+    print(f"wrote {NOTES / f'chain-replay-2026{suffix()}.md'}, {NOTES / f'chain-scenarios{suffix()}.csv'} and "
+          f"{NOTES / f'chain-scenarios-2026{suffix()}.csv'}")
 
 
 # --- bayes_regime against bayes_own: the keep rule ---------------------------------------------
@@ -1161,6 +1237,165 @@ def regime_report() -> None:
           + ("" if keep else f" ({'; '.join(why)})"))
 
 
+# --- bayes_gas against bayes_own --------------------------------------------------------------
+
+GAS_REC = (GAS_MEMBER, "global_lin", "global")  # RECOMMENDED with bayes_gas in place of bayes_own
+
+
+def gas_report() -> None:
+    """notes/macro-chain-gas.md: bayes_gas against bayes_own, alone and inside the recommended ensemble,
+    on the 8 folds (bayes_own and bayes_gas from CHAIN_TAG=gas, the networks from CHAIN_TAG=regime: the
+    same seeds, and bayes_own reproduces that run draw for draw) and, where run, the 2026 replay
+    (replay-3m-<member>.npz and replay-3m-gas-bayes_gas.npz). Keep rule, fixed before scoring: no
+    group worse beyond KEEP_T Newey-West errors (ensemble, what-if and levy); a lower mean scaled CRPS
+    over all outputs in the what-if; and in the replay's what-if, CRPS no higher and coverage no lower."""
+    files = {"bayes_own": "gas", GAS_MEMBER: "gas", "global_lin": "regime", "global": "regime"}
+    path = lambda j, m: RUNS / f"chain-{j}-{m}-{files[m]}"  # noqa: E731
+    missing = [f"{path(j, m).name}.npz" for j in range(mn.FOLDS) for m in files if not path(j, m).with_suffix(".npz").exists()]
+    if missing:
+        raise SystemExit(f"missing in runs/macro: {', '.join(missing)}")
+    data = mn.make_dataset(mn.V1_BLOCKS)
+    scale = np.nanmean(np.vstack([np.array(mb.load(f"fold-{j}.json")["models"]["climatology"]["crps"], float)
+                                  for j in range(mn.FOLDS)]), 0)
+    w = np.full(3, 1 / 3)
+    acc, joint, diags = {}, {}, []
+    for j in range(mn.FOLDS):
+        npz = {m: np.load(path(j, m).with_suffix(".npz")) for m in files}
+        summ = {m: json.loads(path(j, m).with_suffix(".json").read_text()) for m in files}
+        ref = summ["bayes_own"]
+        for m in files:
+            assert summ[m]["test_dates"] == ref["test_dates"], f"fold {j} {m}: origins differ"
+        y = np.array(ref["y"], float)
+        order = np.random.default_rng(1234 + j).permutation(npz["bayes_own"]["whatif"].shape[0])
+        H = np.array([int(n.split("@")[1]) for n in ref["names"]])
+        for mode in (*MODES, *(f"{x}_cop" for x in JOINT_MODES)):
+            models = {"bayes_own": npz["bayes_own"][mode], GAS_MEMBER: npz[GAS_MEMBER][mode],
+                      "rec": mixture(np.stack([npz[m][mode] for m in RECOMMENDED]), w, order),
+                      "rec_gas": mixture(np.stack([npz[m][mode] for m in GAS_REC]), w, order)}
+            for name, M in models.items():
+                if mode.endswith("_cop"):
+                    joint.setdefault((mode[:-4], name), []).append(cp.joint_scores(M.astype(float), y, scale, H, mn.HORIZONS)[0])
+                else:
+                    for k, v in regime_scores(M, y).items():
+                        acc.setdefault((mode, name), {}).setdefault(k, []).append(v)
+        diags.append(summ[GAS_MEMBER]["diagnostics"])
+        gd = summ[GAS_MEMBER].get("gas_driver")
+    rows = {k: {kk: np.vstack(vv) for kk, vv in v.items()} for k, v in acc.items()}
+    names, groups = ref["names"], np.array(ref["groups"])
+    y_all = np.vstack([np.array(json.loads(path(j, "bayes_own").with_suffix(".json").read_text())["y"], float)
+                       for j in range(mn.FOLDS)])
+
+    def cols(g):
+        return np.where(groups == g)[0]
+
+    def per_origin(A, B, c):
+        return np.nanmean((A[:, c] - B[:, c]) / scale[c], 1)
+
+    def cell(A, B, c):
+        d = per_origin(A, B, c)
+        return f"{np.nanmean(d):+.3f} (t {mb.nw_t(d):+.1f})"
+
+    def skill(M, c):
+        return 1 - np.nanmean(np.nanmean(M[:, c], 0) / scale[c])
+
+    def cover(r, c):
+        ok = np.isfinite(y_all[:, c])
+        return np.mean(((y_all[:, c] >= r["lo"][:, c]) & (y_all[:, c] <= r["hi"][:, c]))[ok])
+
+    allc = np.arange(len(names))
+    t_folds = {(mode, g): mb.nw_t(per_origin(rows[(mode, "rec_gas")]["crps"], rows[(mode, "rec")]["crps"], cols(g)))
+               for mode in ("whatif", "levy") for g in mb.GROUPS}
+    d_all = per_origin(rows[("whatif", "rec_gas")]["crps"], rows[("whatif", "rec")]["crps"], allc)
+    why = [f"{mode} {g}: worse (t {t:+.1f})" for (mode, g), t in t_folds.items() if t > KEEP_T]
+    if not np.nanmean(d_all) < 0:
+        why.append(f"folds, what-if, all outputs: {np.nanmean(d_all):+.4f}, not lower")
+
+    # the replay, if run: the what-if decides; the IEA 2026 scenario is shown
+    rep_files = {m: RUNS / f"replay-3m-{m}.npz" for m in RECOMMENDED} | {GAS_MEMBER: RUNS / f"replay-3m-gas-{GAS_MEMBER}.npz"}
+    replay_lines = []
+    if all(p.exists() for p in rep_files.values()):
+        import pandas as pd
+
+        meta = json.loads((RUNS / "replay-3m.json").read_text())
+        rep = {m: np.load(p) for m, p in rep_files.items()}
+        m0 = int(mb.month_index(data).get_loc(pd.Timestamp(meta["origin"])))
+        got = replay_actual(data, m0)
+        actual = np.array([got[nm] for nm in names], float)
+        sd, Hn = np.array(meta["train_sd"], float), np.array([int(n.split("@")[1]) for n in names])
+        pub = np.isfinite(actual) & (Hn <= 6)
+        order = np.random.default_rng(1234).permutation(rep["bayes_own"]["whatif"].shape[0])
+        res = {}
+        for mode in ("whatif", "lost_0", IEA_2026.replace(" ", "_")):
+            if mode not in rep["bayes_own"].files:
+                continue
+            for name, M in (("rec", mixture(np.stack([rep[m][mode] for m in RECOMMENDED]), w, order)),
+                            ("rec_gas", mixture(np.stack([rep[m][mode] for m in GAS_REC]), w, order))):
+                r = regime_scores(M, actual)
+                res[(mode, name)] = (float(np.mean((r["crps"] / sd)[pub])), float(np.mean(((actual >= r["lo"]) & (actual <= r["hi"]))[pub])),
+                                     {g: float(np.mean((r["crps"] / sd)[np.intersect1d(cols(g), np.flatnonzero(pub))])) for g in mb.GROUPS})
+        (c0, v0, _), (c1, v1, _) = res[("whatif", "rec")], res[("whatif", "rec_gas")]
+        if c1 > c0:
+            why.append(f"replay what-if: CRPS {c1:.3f} above {c0:.3f}")
+        if v1 < v0:
+            why.append(f"replay what-if: coverage {v1:.0%} below {v0:.0%}")
+        replay_lines = ["", f"## The 2026 replay from {meta['origin']} (fitted to {meta['fitted_to']})", "",
+                        f"Every series at horizons 1–6 with a published outcome ({int(pub.sum())}): mean CRPS scaled by the "
+                        "training spread, and coverage of the 90% band. **whatif**: the Brent and gas paths that happened (out "
+                        "of sample for the knock-on layer; decides). **iea_2026**: the flow scenario of 2026 by the IEA's count, "
+                        "with gas following the oil path plus 2026's gas move beyond oil, in sample for the flow link and the "
+                        "gas move.", "",
+                        "| Mode | rec CRPS | rec_gas CRPS | rec cover | rec_gas cover | " + " | ".join(f"{g}: rec / rec_gas" for g in mb.GROUPS) + " |",
+                        "|---|---|---|---|---|" + "---|" * len(mb.GROUPS)]
+        for mode in ("whatif", "lost_0", IEA_2026.replace(" ", "_")):
+            if (mode, "rec") in res:
+                a, b = res[(mode, "rec")], res[(mode, "rec_gas")]
+                replay_lines.append(f"| {mode} | {a[0]:.3f} | {b[0]:.3f} | {a[1]:.0%} | {b[1]:.0%} | "
+                                    + " | ".join(f"{a[2][g]:.3f} / {b[2][g]:.3f}" for g in mb.GROUPS) + " |")
+    else:
+        why.append("replay not run yet")
+    keep = not why
+
+    gen = datetime.now(UTC).date().isoformat()
+    out = ["# A gas channel in the chain: bayes_gas against bayes_own", "",
+           f"_Generated by `experiments/macro_chain.py gas` on {gen}. The 8 forward-chaining folds and seeds of "
+           "`notes/macro-chain-results.md` (outcomes real and revised, `notes/macro-panel.md`). Gas: "
+           + "; ".join(f"{r} {code} ({desc})" for r, (code, desc) in mb.GAS.items())
+           + ", monthly log changes (cached under `data/raw/macro/`). Simulated: the oil and gas paths and the model draws._", "",
+           "**The member:** `bayes_gas` is `bayes_own` plus each series' regional gas price as a second driver, lags 0–12, "
+           "pooled by target group and lag length like the oil lags: Henry Hub for the US series and the US industry costs, "
+           "the IMF EU gas price for the UK and euro-area series. The what-if is given the gas that happened; a forecast "
+           "draws gas along each oil path: beta × Brent plus each gas price's own monthly GARCH-t noise, fitted on the "
+           "training months (as `experiments/cost_of_living.py` does)"
+           + (f" (betas on Brent, last fold: {', '.join(f'{r} {p['beta']:.2f}' for r, p in zip(mb.GAS, gd))})" if gd else "") + ".", "",
+           "**Keep rule** (fixed before scoring): no group worse beyond 2 Newey–West errors on the folds (rec_gas minus rec, "
+           "what-if and levy); a lower mean scaled CRPS over all outputs in the folds' what-if; and in the 2026 replay's "
+           "what-if, CRPS no higher and coverage no lower.", "",
+           "## Verdict", "",
+           ("**Passes the keep rule.**" if keep else "**Fails the keep rule:** " + "; ".join(why) + "."), "",
+           f"Folds, what-if, all outputs: rec_gas minus rec {np.nanmean(d_all):+.4f} (t {mb.nw_t(d_all):+.1f})."]
+    for mode in MODES:
+        out += ["", f"## Folds, {mode}", "",
+                "| Target | bayes_own skill | bayes_gas skill | rec skill | rec_gas skill | bayes_gas − bayes_own | rec_gas − rec | "
+                "rec cover | rec_gas cover |", "|---|---|---|---|---|---|---|---|---|"]
+        for g in mb.GROUPS:
+            c = cols(g)
+            out.append(f"| {g} | " + " | ".join(f"{skill(rows[(mode, m)]['crps'], c):+.3f}" for m in ("bayes_own", GAS_MEMBER, "rec", "rec_gas"))
+                       + f" | {cell(rows[(mode, GAS_MEMBER)]['crps'], rows[(mode, 'bayes_own')]['crps'], c)} | "
+                       f"{cell(rows[(mode, 'rec_gas')]['crps'], rows[(mode, 'rec')]['crps'], c)} | "
+                       f"{cover(rows[(mode, 'rec')], c):.0%} | {cover(rows[(mode, 'rec_gas')], c):.0%} |")
+    out += ["", "## Folds, joint forecast (copula shocks)", "", "Energy score of all series at each horizon (lower is better).", "",
+            "| Mode | bayes_own | bayes_gas | rec | rec_gas | rec_gas − rec |", "|---|---|---|---|---|---|"]
+    for mode in JOINT_MODES:
+        es = {m: np.vstack(joint[(mode, m)]) for m in ("bayes_own", GAS_MEMBER, "rec", "rec_gas")}
+        d = np.nanmean(es["rec_gas"] - es["rec"], 1)
+        out.append(f"| {mode} | " + " | ".join(f"{np.nanmean(v):.3f}" for v in es.values()) + f" | {np.nanmean(d):+.3f} (t {mb.nw_t(d):+.1f}) |")
+    out += replay_lines
+    out += ["", "**Sampler health (bayes_gas):** " + "; ".join(
+        f"fold {j} R-hat {d['max_r_hat']} ESS {d['min_ess']} div {d['divergences']}" for j, d in enumerate(diags)) + "."]
+    (NOTES / "macro-chain-gas.md").write_text("\n".join(out) + "\n", encoding="utf-8")
+    print(f"wrote {NOTES / 'macro-chain-gas.md'}: {'passes' if keep else 'fails'} the keep rule" + ("" if keep else f" ({'; '.join(why)})"))
+
+
 # --- entry -----------------------------------------------------------------------------------
 
 def save_member(S: dict, summary: dict, j: int, member: str) -> None:
@@ -1173,7 +1408,7 @@ def save_member(S: dict, summary: dict, j: int, member: str) -> None:
 def main() -> None:
     global QUICK
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("cmd", choices=("check", "fold", "report", "replay", "regime"))
+    p.add_argument("cmd", choices=("check", "fold", "report", "replay", "regime", "gas"))
     p.add_argument("j", nargs="?", type=int, default=0)
     p.add_argument("members", nargs="*", help=f"default: every available member ({', '.join(available())}); "
                                               f"also {', '.join(OPTIONAL)} when named")
@@ -1184,6 +1419,8 @@ def main() -> None:
         return replay()
     if a.cmd == "regime":
         return regime_report()
+    if a.cmd == "gas":
+        return gas_report()
     data = mn.make_dataset(mn.V1_BLOCKS)
     market, (prices, _) = mb.market_inputs(data), op.daily_brent()
     if a.cmd == "check":
