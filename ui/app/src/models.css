@@ -11,10 +11,15 @@
 .hz-mtop .lede { font-size: 14.5px; line-height: 1.45; color: var(--text); }
 .hz-mtop .how { font-size: 13.5px; line-height: 1.45; color: var(--muted); }
 .hz-mtop .how b, .hz-mtop .lede b { color: var(--oil-soft); font-weight: 600; }
-.hz-mtop .jump { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 2px; }
-.hz-mtop .jg { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-.hz-mtop .jt { font: 600 11px var(--pix); letter-spacing: .8px; text-transform: uppercase; color: var(--faint); margin-right: 2px; }
-.hz-mtop .jump button { min-height: 30px; padding: 0 9px; font-size: 13px; }
+/* the groups as tabs: one group of cards shows at a time */
+.hz-mtop .hz-mtabs { display: flex; width: 100%; margin-top: 4px; }
+.hz-mtop .hz-mtabs button { flex: 1 1 0; min-height: 40px; padding: 0 10px; font-size: 14px; white-space: nowrap; }
+.hz-mtop .hz-mtabs .mtn { font: 400 15px var(--mono); opacity: .7; margin-left: 2px; }
+.hz-mgrp[hidden] { display: none !important; }
+@media (max-width: 720px) {
+  .hz-mtop .hz-mtabs { flex-wrap: wrap; }
+  .hz-mtop .hz-mtabs button { flex: 1 1 45%; white-space: normal; min-height: 44px; border-left-width: 2px !important; }
+}
 
 /* groups of cards, in the chain's order */
 .hz-mgrp { display: flex; flex-direction: column; gap: 8px; }

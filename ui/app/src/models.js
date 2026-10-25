@@ -66,10 +66,10 @@ window.HZModels = (() => {
     <p class="how"><b>Skill</b> = 1 − CRPS ÷ the CRPS of climatology (each series' own history): 0 is no better than the historical average,
       higher is better. <b>Given the oil path</b> means the run knew the oil price that happened; <b>forecasting oil too</b> means it knew nothing
       after the forecast date. All scores are backtests on real, revised data.</p>
-    <nav class="jump" aria-label="Models">${groups.map(([, title, cs]) => `<span class="jg"><span class="jt">${esc(title)}</span>${cs.map((c) =>
-      `<button type="button" data-mjump="${esc(c.id)}">${esc(c.title)}</button>`).join("")}</span>`).join("")}</nav>
+    <div class="seg ctabs hz-mtabs" role="tablist" aria-label="Model groups">${groups.map(([g, title, cs]) =>
+      `<button type="button" role="tab" id="mtab-${esc(g)}" data-mtab="${esc(g)}" aria-controls="mgrp-${esc(g)}">${esc(title)} <span class="mtn">${cs.length}</span></button>`).join("")}</div>
   </header>
-  ${groups.map(([g, title, cs]) => `<section class="hz-mgrp" aria-label="${esc(title)}"><h2 class="gt">${esc(title)}</h2>
+  ${groups.map(([g, title, cs]) => `<section class="hz-mgrp" id="mgrp-${esc(g)}" role="tabpanel" aria-labelledby="mtab-${esc(g)}"><h2 class="gt">${esc(title)}</h2>
     <div class="grid">${cs.map(card).join("")}</div></section>`).join("")}`;
   ($("hz-households") || straitStage).after(page);
 
@@ -95,11 +95,28 @@ window.HZModels = (() => {
   btn.addEventListener("click", () => { if (page.hidden) show(true); });
   // World, Strait and Households run their own handlers first; this one only steps aside
   seg.addEventListener("click", (e) => { const b = e.target.closest("button"); if (b && b !== btn && !page.hidden) show(false); });
-  page.addEventListener("click", (e) => {
-    const b = e.target.closest("[data-mjump]");
-    const el = b && $(`mod-${b.dataset.mjump}`);
-    if (el) { el.focus({ preventScroll: true }); el.scrollIntoView({ block: "start" }); }
+  // one group of models at a time, as tabs
+  const TKEY = "hz-models-tab";
+  const tabs = [...page.querySelectorAll("[data-mtab]")];
+  function tab(g, focus) {
+    if (!tabs.some((b) => b.dataset.mtab === g)) g = tabs[0].dataset.mtab;
+    tabs.forEach((b) => {
+      const on = b.dataset.mtab === g;
+      b.setAttribute("aria-selected", String(on)); b.tabIndex = on ? 0 : -1;
+      $(`mgrp-${b.dataset.mtab}`).hidden = !on;
+      if (on && focus) b.focus();
+    });
+    try { localStorage.setItem(TKEY, g); } catch (e) {}
+  }
+  page.addEventListener("click", (e) => { const b = e.target.closest("[data-mtab]"); if (b) tab(b.dataset.mtab); });
+  page.querySelector(".hz-mtabs").addEventListener("keydown", (e) => {
+    const i = tabs.indexOf(document.activeElement), d = { ArrowRight: 1, ArrowLeft: -1 }[e.key];
+    if (i < 0 || !d) return;
+    e.preventDefault(); tab(tabs[(i + d + tabs.length) % tabs.length].dataset.mtab, true);
   });
+  let savedTab = "";
+  try { savedTab = localStorage.getItem(TKEY) || ""; } catch (e) {}
+  tab(savedTab);
   page.querySelectorAll(".hz-mc").forEach((c) => { c.tabIndex = -1; });
 
   let saved = "";

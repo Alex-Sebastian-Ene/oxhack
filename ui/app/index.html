@@ -1015,10 +1015,15 @@ a.hz-src:hover { background: #163257; }
 .hz-mtop .lede { font-size: 14.5px; line-height: 1.45; color: var(--text); }
 .hz-mtop .how { font-size: 13.5px; line-height: 1.45; color: var(--muted); }
 .hz-mtop .how b, .hz-mtop .lede b { color: var(--oil-soft); font-weight: 600; }
-.hz-mtop .jump { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 2px; }
-.hz-mtop .jg { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-.hz-mtop .jt { font: 600 11px var(--pix); letter-spacing: .8px; text-transform: uppercase; color: var(--faint); margin-right: 2px; }
-.hz-mtop .jump button { min-height: 30px; padding: 0 9px; font-size: 13px; }
+/* the groups as tabs: one group of cards shows at a time */
+.hz-mtop .hz-mtabs { display: flex; width: 100%; margin-top: 4px; }
+.hz-mtop .hz-mtabs button { flex: 1 1 0; min-height: 40px; padding: 0 10px; font-size: 14px; white-space: nowrap; }
+.hz-mtop .hz-mtabs .mtn { font: 400 15px var(--mono); opacity: .7; margin-left: 2px; }
+.hz-mgrp[hidden] { display: none !important; }
+@media (max-width: 720px) {
+  .hz-mtop .hz-mtabs { flex-wrap: wrap; }
+  .hz-mtop .hz-mtabs button { flex: 1 1 45%; white-space: normal; min-height: 44px; border-left-width: 2px !important; }
+}
 
 /* groups of cards, in the chain's order */
 .hz-mgrp { display: flex; flex-direction: column; gap: 8px; }
@@ -7228,10 +7233,10 @@ window.HZModels = (() => {
     <p class="how"><b>Skill</b> = 1 − CRPS ÷ the CRPS of climatology (each series' own history): 0 is no better than the historical average,
       higher is better. <b>Given the oil path</b> means the run knew the oil price that happened; <b>forecasting oil too</b> means it knew nothing
       after the forecast date. All scores are backtests on real, revised data.</p>
-    <nav class="jump" aria-label="Models">${groups.map(([, title, cs]) => `<span class="jg"><span class="jt">${esc(title)}</span>${cs.map((c) =>
-      `<button type="button" data-mjump="${esc(c.id)}">${esc(c.title)}</button>`).join("")}</span>`).join("")}</nav>
+    <div class="seg ctabs hz-mtabs" role="tablist" aria-label="Model groups">${groups.map(([g, title, cs]) =>
+      `<button type="button" role="tab" id="mtab-${esc(g)}" data-mtab="${esc(g)}" aria-controls="mgrp-${esc(g)}">${esc(title)} <span class="mtn">${cs.length}</span></button>`).join("")}</div>
   </header>
-  ${groups.map(([g, title, cs]) => `<section class="hz-mgrp" aria-label="${esc(title)}"><h2 class="gt">${esc(title)}</h2>
+  ${groups.map(([g, title, cs]) => `<section class="hz-mgrp" id="mgrp-${esc(g)}" role="tabpanel" aria-labelledby="mtab-${esc(g)}"><h2 class="gt">${esc(title)}</h2>
     <div class="grid">${cs.map(card).join("")}</div></section>`).join("")}`;
   ($("hz-households") || straitStage).after(page);
 
@@ -7257,11 +7262,28 @@ window.HZModels = (() => {
   btn.addEventListener("click", () => { if (page.hidden) show(true); });
   // World, Strait and Households run their own handlers first; this one only steps aside
   seg.addEventListener("click", (e) => { const b = e.target.closest("button"); if (b && b !== btn && !page.hidden) show(false); });
-  page.addEventListener("click", (e) => {
-    const b = e.target.closest("[data-mjump]");
-    const el = b && $(`mod-${b.dataset.mjump}`);
-    if (el) { el.focus({ preventScroll: true }); el.scrollIntoView({ block: "start" }); }
+  // one group of models at a time, as tabs
+  const TKEY = "hz-models-tab";
+  const tabs = [...page.querySelectorAll("[data-mtab]")];
+  function tab(g, focus) {
+    if (!tabs.some((b) => b.dataset.mtab === g)) g = tabs[0].dataset.mtab;
+    tabs.forEach((b) => {
+      const on = b.dataset.mtab === g;
+      b.setAttribute("aria-selected", String(on)); b.tabIndex = on ? 0 : -1;
+      $(`mgrp-${b.dataset.mtab}`).hidden = !on;
+      if (on && focus) b.focus();
+    });
+    try { localStorage.setItem(TKEY, g); } catch (e) {}
+  }
+  page.addEventListener("click", (e) => { const b = e.target.closest("[data-mtab]"); if (b) tab(b.dataset.mtab); });
+  page.querySelector(".hz-mtabs").addEventListener("keydown", (e) => {
+    const i = tabs.indexOf(document.activeElement), d = { ArrowRight: 1, ArrowLeft: -1 }[e.key];
+    if (i < 0 || !d) return;
+    e.preventDefault(); tab(tabs[(i + d + tabs.length) % tabs.length].dataset.mtab, true);
   });
+  let savedTab = "";
+  try { savedTab = localStorage.getItem(TKEY) || ""; } catch (e) {}
+  tab(savedTab);
   page.querySelectorAll(".hz-mc").forEach((c) => { c.tabIndex = -1; });
 
   let saved = "";
