@@ -248,7 +248,7 @@ COL_JS = r'''  // ------------------------------------------------------------ C
       : `<li data-colkey="fuel"><span class="nm">Fuel at the pump</span><span class="lv mono ${k.fuel > 0.005 ? "hurt" : ""}">${pct(k.fuel)}</span>
         ${whyBox("fuel", k.fuel >= 0 ? "Why it rises" : "Why it falls", `Against pre-war, at Brent $${st.brent}: ${escH(nm)}'s own pass-through of ${k.d.pt.e.toFixed(2)} (${escH(k.d.pt.series)}, ${k.d.pt.from} to ${k.d.pt.to}, collected ${k.d.pt.collected})${inDisruption(k.s) ? ", times 1.49 in a supply disruption" : ""}. Pump prices follow oil within weeks.`)}</li>`;
     $("col-list").innerHTML = rows.map((r) => {
-      if (!r.q) return `<li data-colkey="${r.key}"><span class="nm">${r.name}</span><span class="lv">${r.now ? `${pctP(r.now.v)} a year` : "–"}</span>
+      if (!r.q) return `<li data-colkey="${r.key}"><span class="nm">${r.name}</span><span class="lv">${r.now ? `${pctP(r.now.v)} in ${ymLabel(r.now.month)}` : "–"}</span>
         ${whyBox(r.key, "Why no forecast", `No forecast: ${escH(r.none)}${r.now ? `. Latest: ${pctP(r.now.v)} on a year earlier in ${ymLabel(r.now.month)} (${r.src})` : ""}.${r.share ? ` ${r.share}.` : ""}`)}</li>`;
       const q = r.q[colH], cls = q[1] > 0.05 ? "hurt" : q[1] < -0.05 ? "gain" : "", w = Math.min(100, Math.abs(q[1]) / 20 * 100);
       const cost = `By ${ymAdd(r.from, colH)}, 100 spent today costs <b>${(100 + q[1]).toFixed(1)}</b> (90% range ${(100 + q[0]).toFixed(1)} to ${(100 + q[2]).toFixed(1)}).`;
