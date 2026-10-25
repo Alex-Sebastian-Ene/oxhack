@@ -212,7 +212,10 @@ def institutions_section(folds: list[dict], bench: dict) -> list[str]:
            f"_Benchmarks from `{BENCH_FILE.relative_to(col.ROOT).as_posix()}` (written by `experiments/macro_global.py "
            f"benchmarks` on {gen}; surveys fetched {bench['fetched']}, SPF to the {bench['spf_last_survey']} survey)._", "",
            "Our rows are the forecast mode with Lévy Brent paths: nothing after the origin is known. The benchmarks are the "
-           "chain's, on the same 8 folds, matched by origin month. Each is a point forecast with a Gaussian band of the "
+           "chain's, on the same 8 folds, matched by origin month. That gives us a head start: we start from the origin "
+           "month's CPI, which is published about two weeks into the next month, while the Cleveland and Michigan values "
+           "are taken at the end of the origin month, before it. It matters most at 1-3 months. Each benchmark is a "
+           "point forecast with a Gaussian band of the "
            "spread of its own errors on the fold's training origins. Cleveland and Michigan give 1-year rates, scaled by "
            "h/12 at shorter horizons; the SPF's quarterly path is interpolated to months (`docs/macro-ensemble.md`). The "
            "surveys were made with the data as first published, while we train and score on today's revised CPI "

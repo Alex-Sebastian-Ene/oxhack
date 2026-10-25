@@ -263,6 +263,9 @@ NUTS (2 chains, 500 warm-up, 1,000 draws per chain):
     - Short horizons favour us: Cleveland and Michigan are 1-year rates scaled down, and the SPF is
       quarterly. The surveys used data as first published; we score on revised CPI. Our 90% bands
       hold 82–88% of outcomes. US only: no UK or euro-area institutional forecasts are scored yet.
+    - We also start a little later than they do. Our forecast from month t starts from month t's
+      CPI, which is published about two weeks into month t+1. The Cleveland and Michigan values are
+      taken at the end of month t, before it. That matters most at 1–3 months.
     - **Read it as level with the SPF at 1 year, not as beating the Fed.**
       - None of these is the FOMC's own projection.
       - The Cleveland number is a model of expected inflation from yields, swaps and surveys, risk
