@@ -126,7 +126,9 @@ only, because its ships are simulated. Everything else follows:
   points of tanker tonnage, 63% of it reroutes round the Cape as in 2024 and still arrives, and with Hormuz shut the
   Yanbu bypass (18% of the Gulf's lost exports over the 2026 closure) is lost too, in the same share as the strait's
   flow unless measured (all of it in Sep 2026). That Hormuz-equivalent loss drives Brent, the release table and every
-  chain number. The chain's tables stop at 100 points, so a larger sum is shown at 100 and the card says so. The 2026
+  chain number. Brent's premium is per point lost, so it takes a sum above 100 too (and with it every country's fuel
+  cost and the other Brent-driven numbers); the chain's tables stop at 100, so its own numbers (US diesel, CPI, jet
+  fuel, fertiliser, plastics) are read there and the card says they understate it. The 2026
   closure preset already holds the Red Sea as it happened, so it clears the control. On the map, pink lines show the
   strait, the Red Sea route to Europe, Yanbu's crude to Asia, the East–West pipeline and, when ships reroute, the Cape
   route (paths approximate; each says on hover what is modelled and what is assumed).

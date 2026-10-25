@@ -56,7 +56,7 @@ TIP26 = (f"After the Houthis declared a blockade of Saudi shipping on {blk['decl
          f"({pct(blk['yanbu_lost'])}; PortWatch). The Cape gained nothing ({blk['cape_gain']:+.0f} points)")
 
 # ---------------------------------------------------------------- state and the rule
-sub('const st = { key: "aug2026", path26: false,', 'const st = { key: "aug2026", path26: false, bab: 0, babF: 0, eq: 82, babQ: null,')
+sub('const st = { key: "aug2026", path26: false,', 'const st = { key: "aug2026", path26: false, bab: 0, babF: 0, eq: 82, eqP: 82, babQ: null,')
 BAB_JS = (
     "  // Bab el-Mandeb in Hormuz points (patch_straits.py), notes/mandeb-link.json from experiments/flow_events.py mandeb:\n"
     "  // per: Hormuz points per Bab el-Mandeb point (tonnage); rerouted: share round the Cape in 2024; bypass: Yanbu's share\n"
@@ -70,7 +70,8 @@ BAB_JS = (
   // the loss that drives Brent and the chain; the 2026 replay already holds what happened in the Red Sea
   function syncEq() {
     st.babQ = st.path26 ? { red: 0, byp: 0, raw: st.lost, eq: st.lost, capped: false } : eqOf();
-    st.eq = st.babQ.eq;
+    st.eq = st.babQ.eq;   // the chain's tables stop at 100 points
+    st.eqP = st.babQ.raw; // Brent's premium is per point lost, so it takes the whole loss
   }
   function setBab(v, f) {
     st.bab = Math.max(0, Math.min(100, Math.round(v)));
@@ -83,7 +84,7 @@ BAB_JS = (
   function lostWords(html) {
     const b = (x) => (html ? `<b>${x}</b>` : x), q = st.babQ;
     if (!st.bab || st.path26) return `With ${b(`${st.lost}%`)} of Hormuz oil lost`;
-    const eq = `${Math.round(q.raw)} Hormuz-equivalent points${q.capped ? ", counted as 100" : ""}`;
+    const eq = `${Math.round(q.raw)} Hormuz-equivalent points${q.capped ? "; the chain's tables stop at 100" : ""}`;
     return st.lost ? `With ${b(`${st.lost}%`)} of Hormuz oil and ${b(`${st.bab}%`)} of Bab el-Mandeb's flow lost (${eq})`
       : `With ${b(`${st.bab}%`)} of Bab el-Mandeb's flow lost and Hormuz normal (${eq})`;
   }
@@ -98,7 +99,7 @@ sub("  function chainEffect(series, month = 12, lost = st.lost, pol = st.rel) {\
     "  function chainEffect(series, month = 12, lost = st.eq, pol = st.rel) {\n    const a = st.path26 && lost === st.eq &&")
 sub("  const resAt = (lost = st.lost, pol = st.rel) =>", "  const resAt = (lost = st.eq, pol = st.rel) =>")
 sub('    const iea = [PREM.low, PREM.mid, PREM.high][k] * st.lost, base = resAt(st.lost, "2026")[k];',
-    '    const iea = [PREM.low, PREM.mid, PREM.high][k] * st.eq, base = resAt(st.eq, "2026")[k];')
+    '    const iea = [PREM.low, PREM.mid, PREM.high][k] * st.eqP, base = resAt(st.eq, "2026")[k];')
 sub("    st.brent = Math.round(brentRes());\n", "    syncEq();\n    st.brent = Math.round(brentRes());\n", count=2)
 sub('    if (!st.lost) return "No lost flow, so no stocks are needed.";', '    if (!st.eq) return "No lost flow, so no stocks are needed.";')
 sub("chainEffect(sr, 3, st.lost, pol)", "chainEffect(sr, 3, st.eq, pol)")
@@ -144,14 +145,14 @@ RENDER_BAB = r'''  // the Bab el-Mandeb control: what it adds, which parts are o
       t = `<b>${st.bab}</b> points of its flow are ${f1(st.bab * BAB.per)} Hormuz points of tanker tonnage ${M}. ${Math.round(BAB.rerouted * 100)}% of that goes round the Cape and still arrives, as in 2024 ${A}, so <b>${f1(q.red)}</b> count.`;
       if (st.lost) t += ` With Hormuz down ${st.lost} points, Yanbu's bypass sails through Bab el-Mandeb too: it made up ${Math.round(BAB.bypass * 100)}% of the Gulf's lost exports in 2026 ${M}, and losing ${via} adds <b>${f1(q.byp)}</b>.`;
       t += ` Brent and every number below follow <b>${st.lost} + ${f1(q.red)}${st.lost ? ` + ${f1(q.byp)}` : ""} = ${f1(q.raw)}</b> Hormuz-equivalent points.`;
-      if (q.capped) t += ` <b>That is above 100</b>, where the chain's tables stop (Hormuz shut), so they are shown at 100 and understate it.`;
+      if (q.capped) t += ` <b>That is above 100</b>, where the chain's tables stop (Hormuz shut). Brent takes all ${f1(q.raw)} points on the flow-premium curve, which is a premium per point lost, though no loss this large has been seen (2026 peaked at ${Math.max(...P26.path)} as the IEA counts it); so do the fuel costs and everything else that follows Brent. The chain's own numbers (US diesel, inflation, jet fuel, fertiliser, plastics) are shown at 100 and understate it.`;
     }
     $("w-bab").innerHTML = t;
   }
 '''
 sub("  // What the chosen release does, in one line\n", RENDER_BAB + "  // What the chosen release does, in one line\n")
 sub('''    $("w-brent-r").textContent = st.lost ? `90% range $${Math.round(brentRes(0))} to $${Math.round(brentRes(2))}.` : "No lost flow: Brent stays at its pre-war $70.";''',
-    '''    $("w-brent-r").textContent = st.eq ? `90% range $${Math.round(brentRes(0))} to $${Math.round(brentRes(2))}.${st.bab && !st.path26 ? ` From ${Math.round(st.babQ.raw)} Hormuz-equivalent points: Hormuz and Bab el-Mandeb together${st.babQ.capped ? ", counted as 100" : ""}.` : ""}` : "No lost flow: Brent stays at its pre-war $70.";''')
+    '''    $("w-brent-r").textContent = st.eq ? `90% range $${Math.round(brentRes(0))} to $${Math.round(brentRes(2))}.${st.bab && !st.path26 ? ` From ${Math.round(st.babQ.raw)} Hormuz-equivalent points: Hormuz and Bab el-Mandeb together${st.babQ.capped ? `, past the 2026 peak of ${Math.max(...P26.path)}: the per-point curve applied beyond what was seen` : ""}.` : ""}` : "No lost flow: Brent stays at its pre-war $70.";''')
 sub('''    $("w-res").textContent = resLine();\n''', '''    $("w-res").textContent = resLine();\n    renderBab();\n''')
 sub('''    $("w-src").textContent += " Emergency stocks: IEA (the 2026 releases to 15 Oct 2026; stocks held for release as of March 2026).";''',
     '''    $("w-src").textContent += " Emergency stocks: IEA (the 2026 releases to 15 Oct 2026; stocks held for release as of March 2026)." + (st.bab && !st.path26 ? ` ${BAB_SRC}.` : "");''')
@@ -181,7 +182,7 @@ sub('''`${st.path26 ? "In the 2026 closure as the IEA counts it" : `With ${st.lo
 sub("${st.lost} points of normal Hormuz flow lost as the IEA counts it, held for 12 months (the reader's choice)`}",
     "${st.lost} points of normal Hormuz flow lost as the IEA counts it, held for 12 months (the reader's choice)"
     "${st.bab ? `, and ${st.bab} points of Bab el-Mandeb's normal flow lost, which with the rerouting round the Cape and the "
-    "Yanbu bypass makes ${st.babQ.raw.toFixed(0)} Hormuz-equivalent points${st.babQ.capped ? ' (counted as 100: the chain stops there)' : ''} "
+    "Yanbu bypass makes ${st.babQ.raw.toFixed(0)} Hormuz-equivalent points${st.babQ.capped ? ' (Brent on the per-point curve takes all of them; the chain tables stop at 100)' : ''} "
     "(flow_events.py: one Bab el-Mandeb point is ${BAB.per} Hormuz points of tanker tonnage, ${Math.round(BAB.rerouted * 100)}% rerouted in 2024)` : ''}`}")
 sub("<li><b>Lines:</b> tanker routes from the strait. Faint lines show pre-war volume, bright lines today's estimated flow.</li>",
     "<li><b>Lines:</b> tanker routes from the strait. Faint lines show pre-war volume, bright lines today's estimated flow.</li>\n"

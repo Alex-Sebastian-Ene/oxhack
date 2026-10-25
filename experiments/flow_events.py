@@ -204,7 +204,8 @@ def hormuz_equivalent(lost: float, bab: float, per: float, rerouted: float, bypa
     patch_straits.py): Hormuz `lost`, plus `bab` points of Bab el-Mandeb's normal flow in Hormuz tonnage (`per`) net
     of the share `rerouted` round the Cape, plus the share `bypass_lost` (default bab / 100) of the Red Sea bypass,
     which made up `bypass` of the Gulf's lost exports in 2026 and so is built into the per-point curve. The chain's
-    tables stop at 100 (Hormuz shut), so `eq` is capped there and `capped` says when the raw sum is beyond."""
+    tables stop at 100 (Hormuz shut), so `eq` is capped there for them and `capped` says when the raw sum is beyond;
+    Brent's premium, being per point lost, takes `raw`."""
     f = bab / 100 if bypass_lost is None else bypass_lost
     red, byp = bab * per * (1 - rerouted), lost * bypass * f
     raw = lost + red + byp
@@ -1180,8 +1181,9 @@ def mandeb_link(r: dict) -> dict:
         },
         "combined": ("Hormuz-equivalent loss = Hormuz points lost + Bab el-Mandeb points lost × hormuz_per_mandeb_point × "
                      "(1 − the 2024 diversion's rerouted share) + Hormuz points lost × yanbu_bypass.share × the share of "
-                     "the Yanbu bypass lost (by default the share of Bab el-Mandeb's flow lost); capped at 100 because the "
-                     "chain's tables stop there. Assumptions: any Red Sea loss reroutes round the Cape as in 2024; "
+                     "the Yanbu bypass lost (by default the share of Bab el-Mandeb's flow lost). Brent's premium is per point "
+                     "lost, so it takes the whole sum; the chain's scenario tables stop at 100, so their numbers are read "
+                     "there (eq) and understate a larger loss. Assumptions: any Red Sea loss reroutes round the Cape as in 2024; "
                      "Yanbu's extra exports all sail south through Bab el-Mandeb and are not rerouted; the bypass's "
                      "barrels count one for one as Hormuz points, as the Net Hormuz points column of notes/flow-events.md does."),
     }
