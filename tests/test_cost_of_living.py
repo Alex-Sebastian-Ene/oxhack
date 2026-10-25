@@ -182,3 +182,14 @@ def test_daily_levy_paths_shift_monthly_averages_by_the_shock():
     assert base.shape == (200, col.H)
     assert np.allclose(hit - base, shock[None], atol=1e-9)
     assert 0.02 < base[:, 0].std() < 0.3  # a month of Brent moves by a few to tens of percent
+
+
+def test_benchmarks_are_matched_by_origin_month():
+    rep = pytest.importorskip("cost_of_living_report")
+    names = [f"us_cpi@{h}" for h in col.HS]
+    fold = lambda dates, v: {"test_dates": dates, "names": names,  # noqa: E731
+                             "crps": {"spf": [[v + i + 0.1 * j for j in range(len(names))] for i in range(len(dates))]}}
+    bench = {"folds": [fold(["2020-01", "2020-02"], 1.0), fold(["2020-03"], 5.0)]}
+    out = rep.bench_by_origin(bench, ["2020-02", "2020-03", "2020-04"], "spf", 12)
+    assert out[:2].tolist() == pytest.approx([2.3, 5.3])  # second origin of fold 0, first of fold 1, at h=12
+    assert np.isnan(out[2])  # no survey for that month

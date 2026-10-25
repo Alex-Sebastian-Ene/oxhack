@@ -174,6 +174,7 @@ NUTS (2 chains, 500 warm-up, 1,000 draws per chain):
 | 2026 event test | Fitted to Feb 2026 with kappa learned from 2022 only: do the bands cover what happened by Sep 2026? |
 | 2022 event test | Fitted to Feb 2022 with no supply-disruption months at all |
 | Scenario fans | From Feb 2026: no closure against 25%, 50% and a full 2026-sized closure. How far the band shifts and widens |
+| Against the Fed and the SPF | US CPI in forecast mode against the Cleveland Fed, Michigan and SPF forecasts and the random walk, from `runs/macro/global-benchmarks.json` (the chain's, same folds, matched by origin month; Diebold–Mariano tests with 12 Newey–West lags) |
 | Sampler health | Fits with R-hat above 1.05 or ESS below 100 are left out of every table |
 
 ## Status (2026-10-25)
@@ -233,7 +234,7 @@ NUTS (2 chains, 500 warm-up, 1,000 draws per chain):
   - Data for 70 series (the basket, split into housing, core goods and other services, and the
     chain's other metrics), the weights, and the event analysis.
   - The model, the report and the Iridis scripts.
-  - 13 tests (all passing in all three versions).
+  - 14 tests (all passing in all three versions).
 - **Main model (adopted 2026-10-25): oil and gas for every series, plus grain prices for bread
   and cereals,** with the chain's other metrics fitted alongside. Out of sample:
   - **Against the average link:**
@@ -245,6 +246,23 @@ NUTS (2 chains, 500 warm-up, 1,000 draws per chain):
       the split it was better only up to 6 months.
     - Euro area: −0.03 ± 0.02 at 1–6 months, about 2 errors.
     - UK: no difference.
+  - **Against the Fed and the SPF (US CPI, forecast mode, nothing known after the origin):** the
+    composite's CRPS is lower than every institutional forecast up to 6 months, and level with the
+    SPF at 12.
+    - 1 month: 27% below the Cleveland Fed (t −5.0), 25% below Michigan (t −5.0) and 31% below the
+      SPF median at its release months (t −5.1).
+    - 3 months: 16% below Cleveland (t −3.7) and 16% below the SPF (t −3.6); Michigan 12% (t −1.9).
+    - 6 months: 13% below Cleveland (t −2.8) and 9% below the SPF (t −3.1); Michigan 10% (t −1.1).
+    - 12 months: level with the SPF (2% below, t −0.4); Cleveland and Michigan 11% and 15% worse,
+      both within noise (t −1.8, −1.2).
+    - **Splitting the rest of the basket moved the composite ahead.** With the old 82% rest it was
+      5% below the SPF at 6 months (t −1.4, not significant) and 2% behind at 12.
+    - The direct headline forecast does less well: 16–18% below the institutions at 1 month, 3–4%
+      behind the SPF at 12. So building the forecast up from the basket is what earns the lead. The
+      chain's best member is 2–4% behind the SPF at 12 months (`docs/macro-ensemble.md`).
+    - Short horizons favour us: Cleveland and Michigan are 1-year rates scaled down, and the SPF is
+      quarterly. The surveys used data as first published; we score on revised CPI. Our 90% bands
+      hold 82–88% of outcomes. US only: no UK or euro-area institutional forecasts are scored yet.
   - **Brent paths: Lévy is best at 3–12 months.**
     - Against daily Student-t paths: −0.80 ± 0.51 at 12 months.
     - Against a monthly GARCH-t: −1.98 ± 1.08 at 12 months.
@@ -407,6 +425,7 @@ uv run experiments/cost_of_living.py check event-2026  # tiny sampler, to smoke-
 uv run experiments/cost_of_living.py report            # notes/cost-of-living.md and the CSVs
 COL_FOOD=0 uv run experiments/cost_of_living.py fit fold-3  # the oil-and-gas-only base
 COL_FOOD=1 uv run experiments/cost_of_living.py fit fold-3  # grain and urea for every food item (rejected)
+uv run experiments/macro_global.py benchmarks          # Fed and SPF forecasts for the report (skipped if absent)
 ```
 
 Fit on Iridis rather than the laptop: a fold takes about a minute there. Copy up `experiments/`,
