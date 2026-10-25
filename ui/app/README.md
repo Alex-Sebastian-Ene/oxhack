@@ -2,9 +2,10 @@
 
 One page that holds everything: the World view (exposure map, flat or 3D globe, the five materials),
 the Strait view (simulated ships, real IMF PortWatch counts), the stats (Seb's chain, the Economy and Trends tabs)
-and the Households view (Seb's household cost-of-living data). It opens on a pixel-art landing page and keeps one
-night-shift theme throughout. Open `index.html` in a browser; it needs no server and no network. `#app`,
-`#mandeb` or `#households` at the end of the address skips the landing page.
+the Households view (Seb's household cost-of-living data) and the Models view (what each of Seb's models does and how
+it was tested). It opens on a pixel-art landing page and keeps one night-shift theme throughout. Open `index.html` in
+a browser; it needs no server and no network. `#app`, `#mandeb`, `#households` or `#models` at the end of the address
+skips the landing page.
 
 The page is built from Eileen's integrated industry view (`ui/industry/index.html`), unchanged except
 for the colours, with these layers added (`src/`):
@@ -23,6 +24,7 @@ for the colours, with these layers added (`src/`):
 | `gas.py` | Gas on the World view: LNG lanes (dashed violet, beside the oil lanes) and pipelines, from `ui/app/data/gas.json` (`uv run experiments/gas_routes.py`) |
 | `mandeb.py`, `mandeb.js` | Bab el-Mandeb in the Strait view: the Hormuz / Bab el-Mandeb switch reloads on `#mandeb`; data from `ui/strait/data/mandeb-scenarios.js` (`uv run experiments/strait_flow.py --strait mandeb`) |
 | `households.py`, `households.js` | The Households view (OXH-8): real pay against 2019 by region, essentials against pay, UK household costs by group, and two model-output cards (real pay by lost flow, each UK group's costs under a closure) that follow the lost-flow slider; also a households step in "The shock" card. Data cut at build time from `notes/household-*.csv` (`uv run experiments/household.py report`); every real series shows its source, code and fetch date |
+| `models.py`, `models.js`, `models.css` | The Models view: one card per model (oil-price distribution, lost flow → Brent, the knock-on links, the Bayesian and global network models with their Fed and SPF comparison, cost of living, industries by country, margins, metals, the first neural ensemble, HDI, the independent check), each with what it answers, two to four headline numbers, how it was tested and what it can't do. The numbers are read at build time from `notes/` and `docs/` by table cell or phrase, each shown with its note and the date that note was generated; a card whose numbers can't be found is left out with a warning (`python ui/app/src/models.py` lists them) |
 | `flags.py`, `flags_extra.py` | A flag beside every country title (Most exposed, the country card, the economy picks). `flags_extra.py` draws the flags the page leaves out for size (Spain, Sri Lanka and 20 more) into `ui/app/data/flags-extra.json`; the EU flag stands for the euro area |
 
 ```bash
