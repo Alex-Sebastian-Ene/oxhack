@@ -513,6 +513,8 @@ select { padding: 0 8px; }
 .legend2 i.tr-b { background: repeating-linear-gradient(90deg, var(--faint) 0 4px, transparent 4px 6px); height: 2px; }
 #tr-ind { width: 100%; }
 #tr-pick button { padding: 0 4px; }
+
+.west { margin: 2px 0 0; padding: 8px 10px; border-radius: 8px; background: var(--panel2); font-size: 13px; line-height: 1.5; }
 </style>
 <div class="app">
   <header class="bar">
@@ -575,12 +577,12 @@ select { padding: 0 8px; }
         <div id="t-sec" hidden><span class="label">What it makes, where inputs come from, where it ships</span><div id="t-body"></div></div>
         <div class="kpis">
           <div><b id="c-score">–</b><span>Exposure score <i class="illus" title="Illustrative: the score's weights are hand-set, not from a model (asked on OXH-3)">illustrative</i></span></div>
-          <div><b id="c-fuel">–</b><span>Fuel cost now vs pre-war <i class="illus" title="Includes a hand-set shortage premium (0.8 per unit of missing flow x Hormuz share), not fitted to data">assumed</i></span></div>
+          <div><b id="c-fuel">–</b><span>Fuel cost now vs pre-war <i class="illus" title="In a supply disruption fuel moves 1.49 times its normal link (Seb's cost-of-living model, 90% range 1.08 to 1.89; fitted on the US, UK and euro area, an assumption elsewhere)">disruption ×1.49</i></span></div>
           <div><b id="c-dep">–</b><span>Oil use sourced via Hormuz</span></div>
         </div>
         <p class="sub" id="c-res" hidden></p>
         <div>
-          <span class="label">Fuel cost path, next 12 months <span class="mono faint" style="margin:0">(pre-war = 100)</span> <i class="illus" title="Illustrative: built from the fuel cost (with its hand-set premium) and hand-set recovery speeds, not a model forecast">illustrative</i></span>
+          <span class="label">Fuel cost path, next 12 months <span class="mono faint" style="margin:0">(pre-war = 100)</span> <i class="illus" title="Illustrative: the fuel cost (with the disruption multiplier) decayed at hand-set recovery speeds, not a model forecast">illustrative</i></span>
           <div class="chartbox" id="c-chartbox"></div>
           <div class="legend2"><span><i style="background:var(--oil)"></i>Base case</span><span><i style="background:rgba(242,107,0,0.28)"></i>Fast reopening to prolonged closure</span></div>
         </div>
@@ -642,10 +644,10 @@ select { padding: 0 8px; }
         </div>
         <div class="step">
           <div class="stephead you"><span class="num">1</span> You choose: how much Hormuz oil is lost <span class="hint">drag the slider</span></div>
-          <div class="pricebig"><b id="lost-v">69</b><span>points of normal flow lost</span></div>
+          <div class="pricebig"><b id="lost-v">82</b><span>points of normal flow lost, as AIS sees it</span></div>
           <div class="slidewrap">
             <label for="lost" class="sr">Lost Hormuz flow, points of the pre-war 20 million barrels a day</label>
-            <input id="lost" type="range" min="0" max="100" step="1" value="69" aria-describedby="shock-explain">
+            <input id="lost" type="range" min="0" max="100" step="1" value="82" aria-describedby="shock-explain">
             <input id="brent" type="hidden" value="104">
             <div class="marks" aria-hidden="true">
               <span style="left:0%">0<br>normal</span>
@@ -661,9 +663,10 @@ select { padding: 0 8px; }
             <button type="button" data-lost="100" aria-pressed="false">Shut · 100</button>
           </div>
           <div class="kpis kpis2">
-            <div><b id="w-flow" class="hurt">–</b><span>million barrels a day still getting through</span></div>
+            <div><b id="w-flow" class="hurt">–</b><span>million barrels a day getting through, AIS-visible</span></div>
             <div><b id="w-miss" class="hurt">–</b><span>million barrels a day missing vs the pre-war 20</span></div>
           </div>
+          <p class="sub west" id="w-est"></p>
           <div class="resv">
             <span class="label">Emergency oil stocks <i class="illus" title="Assumption: Brent's premium scales with the barrels still missing after releases (one closure cannot test it). Stocks and the 2026 releases are sourced: notes/reserves.md">assumed</i></span>
             <div class="presets" role="group" aria-label="Emergency stock release">
@@ -1688,8 +1691,10 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
   const viaLink = (key, dlog, i = 0) => LINK[key][i] * dlog / 0.10;            // in %
   const fuelFrac = (dlog, i = 0) => viaLink("petrol", dlog, i) / 100;            // retail fuel change, as a fraction
   const rangeOf = (key, dlog) => { const a = viaLink(key, dlog, 0), b = viaLink(key, dlog, 1); return [Math.min(a, b), Math.max(a, b)]; };
-  // Shortage premium for oil that came through Hormuz: an assumption, not fitted to data.
-  const SHORT = 0.8;
+  // In a supply disruption retail fuel moves 1.49x its normal link (Seb's cost-of-living model, OXH-3: +0.49, 90% interval
+  // 0.08 to 0.89, pooled over the US, UK and euro area; an assumption for other countries). Replaces the hand-set 0.8 premium.
+  const DISRUPT = { mid: 0.49, lo: 0.08, hi: 0.89 };
+  const inDisruption = (s) => s > 0.005;
   // Fuel share of operating costs at pre-war prices (notes/industry/industry_exposure.csv) and how fast a fuel move reaches costs.
   const SHARE = {
     aviation: { s: 25.4, src: "jet fuel 25.4% of airline costs (IATA, 2025)", lag: "within weeks, less hedges (about a third of 2026 fuel was hedged)" },
@@ -1700,7 +1705,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
   };
 
   // ------------------------------------------------------------ model
-  const st = { key: "aug2026", rel: "2026", lost: 69, brent: 104, sel: null, flow: 6.2, mat: null, mode: "production", wview: "flat", q: "", qOpen: false, pop: null };
+  const st = { key: "aug2026", rel: "2026", lost: 82, brent: 99, est: null, sel: null, flow: 6.2, mat: null, mode: "production", wview: "flat", q: "", qOpen: false, pop: null };
 
   // ------------------------------------------------------------ materials layer (Edward's materials globe)
   // Data: ui/globe/data (notes/materials/*.json via experiments/globe_data.py; search-result snippets, 24 Oct 2026).
@@ -1962,7 +1967,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
     const hz = d.c ? Math.min(1, d.h / d.c) : 0;
     const dlog = Math.log(1 + dB);
     const price = fuelFrac(dlog);                     // validated: Brent -> retail fuel
-    const fuel = price + s * hz * SHORT;              // plus the assumed shortage premium
+    const fuel = price * (1 + (inDisruption(s) ? DISRUPT.mid : 0));   // the normal link, times 1.49 in a disruption
     let score, kind;
     if (d.gulf) { kind = "gulf"; score = d.gulf * s * 100; }
     else if (d.m <= 0) { kind = "exp"; score = -Math.min(1, -d.m / 3 + 0.15) * Math.max(dB, 0) * 60; }
@@ -2014,8 +2019,10 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
       const chn = sec ? null : chainMove(key), ports = key === "ports" ? { v: -st.lost } : null, power = key === "textiles" ? POWER_SHARE : null;
       if (!sh) return { key, label, why, v: null, sec, earn, chn, ports, power };
       // cost change = fuel share of costs × modelled fuel price change; range from the two link fits
-      const lo = sh.s * fuelFrac(k.dlog, 1), hi = sh.s * fuelFrac(k.dlog, 0);
-      return { key, label, why, v: hi, lo: Math.min(lo, hi), hi: Math.max(lo, hi), src: sh.src, lag: sh.lag, sec };
+      const dz = inDisruption(k.s);
+      const lo = sh.s * fuelFrac(k.dlog, 1) * (1 + (dz ? DISRUPT.lo : 0)), hi = sh.s * fuelFrac(k.dlog, 0) * (1 + (dz ? DISRUPT.hi : 0));
+      const mid = sh.s * fuelFrac(k.dlog, 0) * (1 + (dz ? DISRUPT.mid : 0));
+      return { key, label, why, v: mid, lo: Math.min(lo, hi), hi: Math.max(lo, hi), src: sh.src, lag: sh.lag, sec };
     });
   }
   // 12-month path of the fuel cost index (pre-war = 100) for three recovery speeds
@@ -2024,7 +2031,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
     const k = calc(name);
     return MONTHS.map((_, t) => {
       const dB = k.dB * mult * Math.pow(0.5, t / hlB), s = k.s * Math.min(1, mult) * Math.pow(0.5, t / hlS);
-      return 100 * (1 + fuelFrac(Math.log(1 + dB)) + s * k.hz * SHORT);
+      return 100 * (1 + fuelFrac(Math.log(1 + dB)) * (1 + DISRUPT.mid * (inDisruption(k.s) ? s / k.s : 0)));
     });
   }
 
@@ -2413,12 +2420,12 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
       out.innerHTML = ""; btn.disabled = false;
     }
   }
-  const scenFact = () => `Scenario: ${st.lost} points of normal Hormuz flow lost (the reader's choice), so ${st.flow.toFixed(1)} of about ${PREWAR} mb/d get through. Brent averages about $${st.brent} over the next 12 months vs $${BRENT0} pre-war (Seb's flow-premium curve, fitted to the 2026 closure)`;
+  const scenFact = () => `Scenario: ${st.lost} points of normal Hormuz flow lost as AIS sees it (the reader's choice; the price curve was fitted on AIS-visible flow), so ${st.flow.toFixed(1)} of about ${PREWAR} mb/d get through. Brent averages about $${st.brent} over the next 12 months vs $${BRENT0} pre-war (Seb's flow-premium curve, fitted to the 2026 closure)`;
   // what the page shows for a country, each with where it comes from
   function countryFacts(name) {
     const iso = isoOf[name], k = calc(name), out = [scenFact()];
     out.push(`${nmIso(iso)} exposure score ${fmtS(k.score)} on a -40 (gains) to +65 (hurt) scale (an illustrative index: its weights are hand-set, not from a model; inputs from the scenario)`);
-    out.push(`Fuel cost ${pct(k.fuel)} vs pre-war: Brent to retail fuel link validated on FRED (fitted 1991-2008, tested 2009-2026) plus a hand-set shortage premium (0.8, not fitted to data)`);
+    out.push(`Fuel cost ${pct(k.fuel)} vs pre-war: Brent to retail fuel link validated on FRED (fitted 1991-2008, tested 2009-2026) times 1.49 in a supply disruption (Seb's cost-of-living model: 90% range 1.08 to 1.89, fitted on the US, UK and euro area, an assumption elsewhere)`);
     if (k.d.c) out.push(`About ${(k.hz * 100).toFixed(0)}% of ${nmIso(iso)}'s oil use comes through Hormuz (this page's country table)`);
     if (VIA[name]) out.push(`${nmIso(iso)} exports oil: ${VIA[name]}`);
     for (const r of industries(name).slice(0, 4)) out.push(`${r.label}: ${r.v == null ? "no sourced cost share" : `costs ${pct(r.lo / 100, 1)} to ${pct(r.hi / 100, 1)} (${r.src || "sourced share"})`}; ${String(r.why || "").slice(0, 120)}`);
@@ -2729,6 +2736,8 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
 
   function renderShock() {
     $("w-flow").textContent = st.flow.toFixed(1);
+    const e = st.est, f1 = (x) => Number(x).toFixed(1);
+    $("w-est").innerHTML = e && st.key !== "prewar" ? `<b>Edward's estimate of the true flow, dark tankers included: ${f1(e.p50)} mb/d</b> (${f1(e.p5)}\u2013${f1(e.p95)}), on the simulated "${escH(e.label)}" scenario. Shown for comparison: the price curve was fitted on AIS-visible flow, so the slider uses that measure.` : "";
     const miss = Math.max(0, PREWAR - st.flow);
     $("w-miss").textContent = miss < 0.05 ? "0" : `−${miss.toFixed(1)}`;
     $("w-miss").className = miss > 0.05 ? "hurt" : "";
@@ -2784,17 +2793,20 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
       const k = calc(st.sel), nm = st.sel === "United States of America" ? "the United States" : st.sel;
       if (k.kind === "gulf") out.push(`${nm} is a Gulf producer: what hurts it is oil it can't ship, not the price.`);
       else if (k.kind === "exp") out.push(`${nm} sells oil abroad, so a higher price helps it.`);
-      else if (a(k.fuel) >= 0.005) out.push(`For ${nm}, fuel would cost about <b>${f0(k.fuel * 100)}% ${k.fuel > 0 ? "more" : "less"}</b> than before the war${k.hz > 0.01 ? `, with an extra shortage premium because ${f0(k.hz * 100)}% of its oil came through Hormuz` : ""}.`);
+      else if (a(k.fuel) >= 0.005) out.push(`For ${nm}, fuel would cost about <b>${f0(k.fuel * 100)}% ${k.fuel > 0 ? "more" : "less"}</b> than before the war${inDisruption(k.s) ? ", with fuel moving about 1.5 times its usual link, as in past supply disruptions" : ""}.`);
     }
     $("shock-explain").innerHTML = out.join(" ");
   }
   function shockFlash(el) { el.classList.remove("bump"); void el.offsetWidth; el.classList.add("bump"); }
   function update() { renderShock(); paint(); renderCountry(); renderRank(); renderMat(); }
 
+  const AIS_LOST = 82;   // PortWatch AIS-visible loss in the 2026 closure, the loss the flow-premium curve was fitted on
   function loadScenario(key) {
     if (!D.scenarios[key]) return;
     st.key = key;
-    setLost(lostOfFlow(Math.min(D.scenarios[key].estimate.total.p50, PREWAR)));
+    // the curve was fitted on AIS-visible flow, 82 points lost in the 2026 closure; Edward's true-flow estimate is shown beside it
+    st.est = { ...D.scenarios[key].estimate.total, label: D.scenarios[key].label };
+    setLost(key === "prewar" ? 0 : AIS_LOST);
     update();
   }
   $("scenario").addEventListener("change", (e) => loadScenario(e.target.value));
@@ -2832,7 +2844,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
         : `${escH(m.name)}: no sourced supplier split for ${escH(nmIso(iso) || name)}.`;
     } else {
       kpis = kpi(fmtS(k.score), "exposure score, illustrative", k.score > 0.5 ? "hurt" : k.score < -0.5 ? "gain" : "")
-        + kpi(pct(k.fuel), "fuel cost, with assumed premium", k.fuel > 0.005 ? "hurt" : k.fuel < -0.005 ? "gain" : "")
+        + kpi(pct(k.fuel), "fuel cost, in a disruption", k.fuel > 0.005 ? "hurt" : k.fuel < -0.005 ? "gain" : "")
         + kpi(k.kind === "imp" ? `${(k.hz * 100).toFixed(0)}%` : "–", "of its oil via Hormuz");
       line = k.kind === "gulf" ? `About ${Math.round(k.d.gulf * 100)}% of its exports must pass the strait.` : k.kind === "exp" ? "Sells oil abroad, so a higher price brings in revenue." : (coverOf(name) ? `Oil stocks: ${coverOf(name).txt}. ` : "") + "Pick a product above to see what it makes and trades.";
     }
