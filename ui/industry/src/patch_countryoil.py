@@ -5,7 +5,7 @@
 #    table (EIA, Energy Institute) fills in where Comtrade has nothing (Taiwan, Iran); a country in neither says
 #    "not in our data" and is grey on the map.
 # 2. Fuel cost from the country's own Brent -> pump-price pass-through, fitted on its monthly motor-fuel consumer
-#    prices (Eurostat, the BLS, the OECD's national CPIs, Statistics Canada, SingStat), with the series, its months
+#    prices (Eurostat, the BLS, the OECD's national CPIs, national statistics offices), with the series, its months
 #    and when it was collected. Other countries show no fuel estimate: a pooled median would be the same number for
 #    all of them. The Industries tab and the fuel-cost path use the same pass-through.
 # 3. The hand-set exposure score is gone. The map, the ranking and the cards show how much oil the shock cuts off:
@@ -40,7 +40,8 @@ def price_entry(v):
     o = v.get("outlook")
     return {"now": v["now"], "before": v["before"], "from": o["from"] if o else None, "out": o["q"] if o else None,
             "b": {h: v["link"][h]["b"] for h in H} if v.get("link") else None,
-            "own": {h: v["link"][h]["own"] for h in H} if v.get("link") else None}
+            "own": {h: v["link"][h]["own"] for h in H} if v.get("link") else None,
+            "src": v.get("src"), "why": v.get("why_none"), "unc": v.get("uncertain", False)}
 
 
 # Seb's cost-of-living model: the outlook from its latest origin, by item, for the US, the UK and the euro area
@@ -59,20 +60,20 @@ assert COL and all(len(v) == len(H) for reg in COL.values() for v in reg.values(
 COIL = {
     "generated": src["generated"],
     "fuel": {iso: {k: v[k] for k in ("e", "lo", "hi", "series", "from", "to", "collected")} for iso, v in fuel["countries"].items()},
-    "trade": {iso: {"m": v["m"], "gs": v["gulf_share"], "year": v["year"], "top": next(iter(v["by"]), None)}
+    "trade": {iso: {"m": v["m"], "gs": v["gulf_share"], "year": v["year"], "top": next(iter(v["by"]), None), "mirror": bool(v.get("mirror"))}
               for iso, v in trade["countries"].items()},
     "tradeSrc": f'{trade["source"]}, collected {trade["collected"]}' if trade.get("source") else "",
     "prices": {iso: {k: price_entry(v) for k, v in c.items()} for iso, c in prices["countries"].items()},
-    "pricesSrc": prices["source"], "prior": prices["prior"],
+    "pricesSrc": prices["source"], "weights": prices.get("weights", {}),
+    # the link each country's own is ridge-updated towards: our cost-of-living model for all prices and food, the
+    # cross-country average for housing and energy, and transport
+    "prior": {k: prices["prior"].get(k) or {h: v[h]["b"] for h in H} for k, v in prices["pooled"].items()},
+    "priorSrc": {k: "our cost-of-living model" if k in prices["prior"] else "the cross-country average" for k in prices["pooled"]},
     "col": COL, "colFrom": col_from, "colGen": fans[0]["generated"],
 }
-# who publishes the motor-fuel prices behind the pass-through, for the "no estimate" text
-FUEL_BY = {"Eurostat": "Eurostat", "BLS": "the BLS", "OECD": "the OECD", "Statistics Canada": "Statistics Canada", "SingStat": "SingStat"}
-unnamed = {v["source"] for v in fuel["countries"].values() if not any(v["source"].startswith(k) for k in FUEL_BY)}
-assert not unnamed, f"add these fuel sources to FUEL_BY: {unnamed}"
-fuel_by = [name for k, name in FUEL_BY.items() if any(v["source"].startswith(k) for v in fuel["countries"].values())]
 NOFUEL = (f"No fuel price estimate: we only estimate pump prices for the {len(fuel['countries'])} countries whose monthly "
-          f"motor-fuel consumer prices we have ({', '.join(fuel_by[:-1])} and {fuel_by[-1]}), and this is not one of them.")
+          "motor-fuel consumer prices we have (from Eurostat, the BLS, the OECD and national statistics offices), and this is "
+          "not one of them.")
 
 # 1. one profile per country: hand-entered table for routes and volumes, data for dependence, Gulf share, pass-through
 sub('''  function info(name) {
@@ -86,7 +87,8 @@ sub('''  function info(name) {
   function info(name) {
     const iso = isoOf[name], t = COIL.trade[iso], f = COIL.fuel[iso], hand = C[name];
     const d = Object.assign({ c: 0, h: 0, m: null }, hand || {});
-    if (t) Object.assign(d, { dep: t.m, gs: t.gs, top: t.top, depSrc: `UN Comtrade, ${t.year}` });
+    // partners' records (for countries that don't report) understate the Gulf share: the hand-entered table wins
+    if (t && !(t.mirror && hand)) Object.assign(d, { dep: t.m, gs: t.gs, top: t.top, depSrc: t.mirror ? `UN Comtrade, partners' records for ${t.year}; a lower bound for the Gulf share` : `UN Comtrade, ${t.year}` });
     else if (hand) Object.assign(d, { dep: hand.m, gs: hand.c && hand.m > 0 ? Math.min(1, hand.h / (hand.c * hand.m)) : null, depSrc: "this page's country table (EIA, Energy Institute)" });
     else Object.assign(d, { dep: null, gs: null, nodata: true });
     if (!hand) d.ind = d.dep != null && d.dep <= 0 ? EXP : IMP;
@@ -154,9 +156,9 @@ sub('''    t.innerHTML = `<b>${name}</b><span>Exposure <span class="mono ${k.sco
 # (the app's world.py swaps make the flat map and the globe share tipHtml, with the flag)
 sub('''    return `<b>${escH(name)}</b><span>Exposure <span class="mono">${fmtS(k.score)}</span></span><span>Fuel cost <span class="mono">${pct(k.fuel)}</span></span>`;''',
     '''    return `<b>${escH(name)}</b><span class="mono">${cutTxt(k)}</span>${k.fuel == null ? "" : `<span>Fuel <span class="mono">${pct(k.fuel)}</span></span>`}`;''')
-# red is the worst, yellow mild harm, teal gains
+# one run from cyan (gains) through pale yellow (none) and orange to red (the worst)
 sub('const STOPS = [[-40, "#00a88f"], [-15, "#4fd1b6"], [0, "#dfe5ec"], [10, "#ffb59c"], [25, "#ff7b55"], [40, "#ee3b2b"], [65, "#b8100c"]];',
-    'const STOPS = [[-40, "#00a88f"], [-15, "#4fd1b6"], [0, "#dfe5ec"], [8, "#f5d547"], [25, "#ff9a2e"], [45, "#ee3b2b"], [65, "#b8100c"]];')
+    'const STOPS = [[-40, "#00a88f"], [-15, "#4fd1b6"], [0, "#eee6a6"], [8, "#f5d547"], [25, "#ff9a2e"], [45, "#ee3b2b"], [65, "#b8100c"]];')
 
 # 3. country card: tag, line under the name, oil cut off, Gulf share
 sub('    tag.textContent = k.kind === "gulf" ? "Gulf producer" : k.kind === "exp" ? "Net exporter" : "Net importer";',
@@ -195,6 +197,7 @@ COL_JS = r'''  // ------------------------------------------------------------ C
   const COL_ITEMS = [["bread", "Bread"], ["dairy", "Dairy"], ["meat", "Meat"], ["fruit_veg", "Fruit and vegetables"], ["oils_fats", "Oils and fats"],
     ["sugar", "Sugar"], ["electricity", "Electricity"], ["gas", "Gas"], ["fuel", "Motor fuel"], ["restaurants", "Eating out"], ["composite", "Whole basket"]];
   const COL_REGION = { us: "US", uk: "UK", ea: "euro area" };
+  const COL_KINDS = [["food", "Groceries (food)"], ["energy", "Housing and energy"], ["transport", "Transport"], ["all", "All prices"]];
   let colH = "12", colPick = "food";
   const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const ymAdd = (ym, h) => { const [y, m] = ym.split("-").map(Number), t = y * 12 + m - 1 + Number(h); return `${MON[t % 12]} ${Math.floor(t / 12)}`; };
@@ -210,10 +213,11 @@ COL_JS = r'''  // ------------------------------------------------------------ C
   }
   function colRows(name) {
     const P = COIL.prices[isoOf[name]] || {}, reg = ecoOf(name), rows = [];
-    for (const [kind, label] of [["food", "Groceries (food prices)"], ["all", "All prices"]]) {
-      const v = P[kind];
-      rows.push(v && v.out ? { key: kind, kind, name: label, from: v.from, q: v.out, b: v.b, own: v.own }
-        : { key: kind, name: label, none: v && v.now ? "too unstable to forecast" : "not in our data" });
+    const W = COIL.weights[isoOf[name]] || {};
+    for (const [kind, label] of COL_KINDS) {
+      const v = P[kind], share = W[kind] != null ? `${W[kind].toFixed(0)}% of a household budget here` : "";
+      rows.push(v && v.out ? { key: kind, kind, name: label, from: v.from, q: v.out, b: v.b, own: v.own, src: v.src, share, unc: v.unc }
+        : { key: kind, name: label, none: v ? (v.why || "no forecast") : "not in our data", now: v && v.now, src: v && v.src, share });
     }
     if (reg && COIL.col[reg]) for (const [kk, nm] of COL_ITEMS) if (COIL.col[reg][kk]) rows.push({ key: `col_${kk}`, name: nm, from: COIL.colFrom, q: COIL.col[reg][kk], model: reg });
     return rows;
@@ -221,10 +225,11 @@ COL_JS = r'''  // ------------------------------------------------------------ C
   function renderCol() {
     if (!st.sel || !$("col-sec")) return;
     const name = st.sel, P = COIL.prices[isoOf[name]] || {}, k = calc(name), nm = name === "United States of America" ? "the United States" : name;
-    const f = P.food, a = P.all, yr = (v) => (v ? `<b>${pctP(v.v)}</b>` : "–");
+    const f = P.food, a = P.all, yr = (v) => (v ? `<b>${pctP(v.v)}</b>` : "–"), at = (v) => (v && v.now ? ` (${ymLabel(v.now.month)}, ${v.src})` : "");
     $("col-now").innerHTML = a && a.now
-      ? `In ${ymLabel(a.now.month)} prices in ${escH(nm)} were ${yr(a.now)} on a year earlier, food ${yr(f && f.now)}.` + (a.before ? ` Before the Hormuz closure, in Feb 2026: ${yr(a.before)}, food ${yr(f && f.before)}.` : "")
-      : `FAOSTAT has no consumer prices for ${escH(nm)}: not in our data.`;
+      ? `Prices in ${escH(nm)} were ${yr(a.now)} on a year earlier${at(a)}, food ${yr(f && f.now)}${f && f.now && f.now.month !== a.now.month ? at(f) : ""}.`
+        + (a.before ? ` Before the Hormuz closure, in Feb 2026: ${yr(a.before)}, food ${yr(f && f.before)}.` : "")
+      : `Neither the IMF nor FAOSTAT has consumer prices for ${escH(nm)}: not in our data.`;
     $("col-h").innerHTML = ["1", "2", "3", "6", "12"].map((h) => `<button type="button" data-colh="${h}" aria-pressed="${h === colH}">${h} mo</button>`).join("");
     const rows = colRows(name), shock = 100 * Math.log(st.brent / BRENT0);
     if (!rows.some((r) => r.key === colPick && r.q)) colPick = (rows.find((r) => r.q) || {}).key;
@@ -232,21 +237,23 @@ COL_JS = r'''  // ------------------------------------------------------------ C
       : `<li><span class="nm">Fuel at the pump</span><span class="lv mono ${k.fuel > 0.005 ? "hurt" : ""}">${pct(k.fuel)}</span>
         <span class="why">Against pre-war, at Brent $${st.brent}: ${escH(nm)}'s own pass-through of ${k.d.pt.e.toFixed(2)} (${escH(k.d.pt.series)}, ${k.d.pt.from} to ${k.d.pt.to}, collected ${k.d.pt.collected})${inDisruption(k.s) ? ", times 1.49 in a supply disruption" : ""}. Pump prices follow oil within weeks.</span></li>`;
     $("col-list").innerHTML = rows.map((r) => {
-      if (!r.q) return `<li><span class="nm">${r.name}</span><span class="lv">${r.none}</span></li>`;
+      if (!r.q) return `<li><span class="nm">${r.name}</span><span class="lv">${r.now ? `${pctP(r.now.v)} a year` : "–"}</span>
+        <span class="why">No forecast: ${escH(r.none)}${r.now ? `. Latest: ${pctP(r.now.v)} on a year earlier in ${ymLabel(r.now.month)} (${r.src})` : ""}.${r.share ? ` ${r.share}.` : ""}</span></li>`;
       const q = r.q[colH], cls = q[1] > 0.05 ? "hurt" : q[1] < -0.05 ? "gain" : "", w = Math.min(100, Math.abs(q[1]) / 20 * 100);
       const cost = `By ${ymAdd(r.from, colH)}, 100 spent today costs <b>${(100 + q[1]).toFixed(1)}</b> (90% range ${(100 + q[0]).toFixed(1)} to ${(100 + q[2]).toFixed(1)}).`;
       const why = r.model ? `${cost} Seb's cost-of-living model (${COL_REGION[r.model]}), with the disruption continuing.`
-        : `${cost}${q[3] ? ` Oil's moves since ${ymLabel(r.from)} add ${pctP(q[3], 2)}.` : ""}${r.b && st.brent > BRENT0
-          ? ` Brent at $${st.brent} instead of the pre-war $${BRENT0}, over ${colH} months by itself: our cost-of-living model ${pctP(COIL.prior[r.kind][colH] * shock, 2)}, `
-            + `${escH(nm)}'s own data ${pctP(r.own[colH] * shock, 2)}, combined <b>${pctP(r.b[colH] * shock, 2)}</b> (a ridge update of our model on ${escH(nm)}'s prices).` : ""}`;
+        : `${cost}${r.unc ? " <b>Very uncertain</b>: this country's prices have swung far from the rule before." : ""}${r.share ? ` ${r.share}.` : ""}${q[3] ? ` Oil's moves since ${ymLabel(r.from)} add ${pctP(q[3], 2)}.` : ""}${r.b && r.own && st.brent > BRENT0
+          ? ` Brent at $${st.brent} instead of the pre-war $${BRENT0}, over ${colH} months by itself: ${COIL.priorSrc[r.kind]} ${pctP(COIL.prior[r.kind][colH] * shock, 2)}, `
+            + `${escH(nm)}'s own data ${pctP(r.own[colH] * shock, 2)}, combined <b>${pctP(r.b[colH] * shock, 2)}</b> (a ridge update on ${escH(nm)}'s prices).` : ""} Prices to ${ymLabel(r.from)} (${r.src}).`;
       return `<li class="colrow" data-colitem="${r.key}" aria-current="${r.key === colPick}"><span class="nm">${r.name}${r.model ? ` <span class="faint">${COL_REGION[r.model]} model</span>` : ""}</span><span class="lv mono ${cls}">${pctP(q[1])}</span>
         <span class="tr"><div style="width:${Math.max(w, 2)}%;background:${q[1] < 0 ? "var(--gain)" : color(Math.min(65, Math.max(6, q[1] * 4)))}"></div></span><span class="why">${why}</span></li>`;
     }).join("") + fuelRow;
     const sel = rows.find((r) => r.key === colPick && r.q);
     $("col-chart-h").innerHTML = sel ? `<b>${sel.name}</b>: % change from ${ymLabel(sel.from)}, with its 90% range. Click a row to chart it.` : "";
     if (sel) ecoChart($("col-chart"), colPath(sel.q), { unit: "%" }); else $("col-chart").innerHTML = "";
-    $("col-src").textContent = `Prices: ${COIL.pricesSrc}. Groceries and all prices: the latest 12 months' rate continues, plus Brent's known moves through the country's oil link, `
-      + `our cost-of-living model's link ridge-updated on the country's own prices (2009-2025). The range is how far that rule missed for this country, 2015-2024. A fitted time-series model lost to this rule in backtests, so it isn't used. `
+    $("col-src").textContent = `Prices: ${COIL.pricesSrc}. Each row: the latest 12 months' rate continues, plus Brent's known moves through the country's oil link, `
+      + `ridge-updated on the country's own prices (2009-2025) from our cost-of-living model (all prices, food) or the cross-country average (housing and energy, transport). `
+      + `The range is how far that rule missed for this country, 2015-2024. A fitted time-series model lost to this rule in backtests, so it isn't used. Budget shares: IMF CPI weights. `
       + (ecoOf(name) ? `Item rows: Seb's cost-of-living model, outlook from ${ymLabel(COIL.colFrom)} (notes/cost-of-living-fans.csv, ${COIL.colGen}); how it compares with the Fed and the SPF is in the Models tab.` : "");
   }
   $("col-h") && $("col-h").addEventListener("click", (e) => { const b = e.target.closest("[data-colh]"); if (b) { colH = b.dataset.colh; renderCol(); } });
@@ -271,13 +278,13 @@ sub('''      kpis = kpi(fmtS(k.score), "exposure score, illustrative", k.score >
         + kpi(pct(k.fuel), "fuel cost, in a disruption", k.fuel > 0.005 ? "hurt" : k.fuel < -0.005 ? "gain" : "")
         + kpi(k.kind === "imp" ? `${(k.hz * 100).toFixed(0)}%` : "–", "of its oil via Hormuz");''',
     '''      const P = COIL.prices[iso] || {}, fd = P.food, al = P.all, g = fd && fd.out && fd.out["12"], ga = al && al.out && al.out["12"];
-      kpis = kpi(g ? pctP(g[1]) : "–", g ? `groceries by ${ymAdd(fd.from, 12)}` : "groceries: not in our data", g && g[1] > 0.05 ? "hurt" : "")
-        + kpi(ga ? pctP(ga[1]) : "–", ga ? `all prices by ${ymAdd(al.from, 12)}` : "all prices: not in our data", ga && ga[1] > 0.05 ? "hurt" : "")
+      kpis = kpi(g ? pctP(g[1]) : "–", g ? `groceries by ${ymAdd(fd.from, 12)}${fd.unc ? ", very uncertain" : ""}` : "groceries: not in our data", g && g[1] > 0.05 ? "hurt" : "")
+        + kpi(ga ? pctP(ga[1]) : "–", ga ? `all prices by ${ymAdd(al.from, 12)}${al.unc ? ", very uncertain" : ""}` : "all prices: not in our data", ga && ga[1] > 0.05 ? "hurt" : "")
         + kpi(k.cut ? k.cut.txt : "–", k.cut ? k.cut.lab : "oil cut off: not in our data", k.score > 0.5 ? "hurt" : k.score < -0.5 ? "gain" : "");''')
 sub('''"Pick a product above to see what it makes and trades.";
     }
     $("cp-kpis").innerHTML = kpis;''', '''"Pick a product above to see what it makes and trades.";
-      line = (al && al.now ? `Prices now <b>${pctP(al.now.v)}</b>, food <b>${fd && fd.now ? pctP(fd.now.v) : "–"}</b> on a year earlier (${ymLabel(al.now.month)}, FAOSTAT). ` : "")
+      line = (al && al.now ? `Prices now <b>${pctP(al.now.v)}</b>, food <b>${fd && fd.now ? pctP(fd.now.v) : "–"}</b> on a year earlier (${ymLabel(al.now.month)}, ${al.src}). ` : "")
         + (k.kind === "imp" && k.hz != null ? `${Math.round(k.hz * 100)}% of its oil imports came from the Gulf. ` : "")
         + (k.fuel == null ? "" : `Fuel at the pump ${pct(k.fuel)}. `) + line + predHtml(name);
     }
@@ -303,7 +310,7 @@ sub('''    out.push(`Fuel cost ${pct(k.fuel)} vs pre-war: Brent to retail fuel l
       : `Fuel cost ${pct(k.fuel)} vs pre-war: ${nmIso(iso)}'s own Brent to pump-price pass-through of ${k.d.pt.e.toFixed(2)} (${k.d.pt.series}, ${k.d.pt.from} to ${k.d.pt.to}, collected ${k.d.pt.collected}; country_oil.py) times 1.49 in a supply disruption (Seb's cost-of-living model: 90% range 1.08 to 1.89, fitted on the US, UK and euro area, an assumption elsewhere)`);
     if (k.hz != null) out.push(`About ${(k.hz * 100).toFixed(0)}% of ${nmIso(iso)}'s oil imports came from the Gulf producers before the war (${k.d.depSrc}; an upper bound for oil through the strait)`);
     { const pr = COIL.prices[iso], al = pr && pr.all, fd = pr && pr.food;
-      if (al && al.now) out.push(`Consumer prices in ${nmIso(iso)} ${pctP(al.now.v)} on a year earlier, food ${fd && fd.now ? pctP(fd.now.v) : "n/a"}, in ${ymLabel(al.now.month)} (FAOSTAT)`);
+      if (al && al.now) out.push(`Consumer prices in ${nmIso(iso)} ${pctP(al.now.v)} on a year earlier, food ${fd && fd.now ? pctP(fd.now.v) : "n/a"}, in ${ymLabel(al.now.month)} (${al.src})`);
       if (fd && fd.out) out.push(`Groceries forecast ${pctP(fd.out["12"][1])} by ${ymAdd(fd.from, 12)} (90% range ${pctP(fd.out["12"][0])} to ${pctP(fd.out["12"][2])}): the latest 12 months' rate continues plus oil's known moves (country_oil.py)`); }''')
 sub('''    score: { title: "Exposure score", html: `<p>One number per country for how hard the shock hits it. Above zero means hurt; below zero means it gains.</p>
       <ul><li><b>Importers:</b> how much more fuel costs × how much of their oil they import.</li>

@@ -97,12 +97,22 @@ SWAPS = [
      '<span class="mono ${k.score > 0.5 ? "hurt" : k.score < -0.5 ? "gain" : ""}">${cutTxt(k)}</span>${k.fuel == null ? "" : `<span>Fuel <span class="mono">${pct(k.fuel)}</span></span>`}'
      '${al ? `<span>Prices <span class="mono">${pctP(al.v)}</span>, food <span class="mono">${fd ? pctP(fd.v) : "–"}</span> (${ymLabel(al.month)})</span>` : ""}`;', 1),
     # Antarctica (and the French Southern lands) on the flat map too, and the flat map's "Macedonia" under the
-    # globe's name, so it can be selected and found in our tables
+    # globe's name, so it can be selected and found in our tables; the Arctic Ocean labelled on both
     ('const countries = topojson.feature(topo, topo.objects.countries).features.filter((f) => f.properties.name !== "Antarctica" && f.properties.name !== "Fr. S. Antarctic Lands");',
      'const countries = topojson.feature(topo, topo.objects.countries).features;\n'
      '  for (const f of countries) if (f.properties.name === "Macedonia") f.properties.name = "North Macedonia";', 1),
     ('{ name: "Arctic Ocean", lng: 20, lat: 80, tier: 1, globeOnly: true }', '{ name: "Arctic Ocean", lng: 20, lat: 80, tier: 1 }', 1),
-    ('{ name: "Antarctica", lng: 0, lat: -80, globeOnly: true }', '{ name: "Antarctica", lng: 0, lat: -80 }', 1),
+    # The globe's lighting makes the bright harm scale glare: its countries are drawn a little darker than the
+    # flat map's (no-data land keeps its colour, so it stays apart from the sea)
+    ('    G3.polygonCapColor((f) => fillFor(f.properties.name))',
+     '    G3.polygonCapColor((f) => { const c = fillFor(f.properties.name); return c === NODATA ? c : d3.color(c).darker(0.9).formatHex(); })', 1),
+    # no continent labels on either map: the oceans and seas stay labelled, the land reads for itself
+    ('  const CONTS = [\n'
+     '    { name: "North America", lng: -100, lat: 47 }, { name: "South America", lng: -60, lat: -14 },\n'
+     '    { name: "Europe", lng: 15, lat: 52 }, { name: "Africa", lng: 19, lat: 6 }, { name: "Asia", lng: 92, lat: 50 },\n'
+     '    { name: "Oceania", lng: 134, lat: -25 }, { name: "Antarctica", lng: 0, lat: -80, globeOnly: true },\n'
+     '  ];',
+     '  const CONTS = [];', 1),
     # the globe gets the flat map's HORMUZ label, in amber, just up and left of the strait
     ('G3.labelsData([...SEAS.filter((x) => !x.flatOnly), ...CONTS.map((x) => ({ ...x, cont: true }))])',
      'G3.labelsData([...SEAS.filter((x) => !x.flatOnly), ...CONTS.map((x) => ({ ...x, cont: true })), { name: "HORMUZ", lng: 54.2, lat: 25.9, hz: true }])', 1),

@@ -52,10 +52,10 @@ SWAPS = [
     ('f.properties.name === st.sel ? "rgba(20,32,46,0.6)"', 'f.properties.name === st.sel ? "rgba(255,196,64,0.7)"', 1),
     ('color: "#14202e", max: 5', 'color: "#ffd27a", max: 5', 1),
 ]
-# The harm scale, re-lit: cyan for gains, a dark slate for no change, then yellow for mild harm, orange, and red
-# for the worst.
+# The harm scale, re-lit: one run from cyan for gains, through pale yellow for no change and orange, to red for
+# the worst.
 STOPS_RE = re.compile(r"const STOPS = \[\[-40, [^;]*\]\];")
-STOPS_NEW = ('const STOPS = [[-40, "#3ff0c8"], [-15, "#1e9e88"], [0, "#2b3653"], [8, "#e8c547"], [25, "#ff9a2e"], '
+STOPS_NEW = ('const STOPS = [[-40, "#3ff0c8"], [-15, "#8ee6c4"], [0, "#e9e2a0"], [8, "#f2c94c"], [25, "#ff9a2e"], '
              '[45, "#ff4a2e"], [65, "#d6141a"]];')
 
 HEAD = """<!doctype html>
@@ -123,10 +123,11 @@ def main() -> None:
         body += f"<script>\n{read('households.js')}\n</script>\n"
     if models_data:   # the Models page: each model's results, tests and limits, read from notes/ and docs/
         body += f"<script>\n{read('models.js')}\n</script>\n"
+    body += f"<script>\n{read('infokey.js')}\n</script>\n"   # last: one behaviour for every info key
     fragment = '<title>Hormuz Flow</title>\n<meta name="claude:viewport-fit-sides" content="cover">\n' + body
 
     if shutil.which("node"):
-        for f in ("pixel.js", "sound.js", "landing.js", "shell.js", "ai.js", "strait.js", "mandeb.js", "households.js", "models.js"):
+        for f in ("pixel.js", "sound.js", "landing.js", "shell.js", "ai.js", "strait.js", "mandeb.js", "households.js", "models.js", "infokey.js"):
             r = subprocess.run(["node", "--check", str(HERE / f)], capture_output=True, text=True)
             if r.returncode:
                 sys.exit(f"{f}: {r.stderr.strip()}")
