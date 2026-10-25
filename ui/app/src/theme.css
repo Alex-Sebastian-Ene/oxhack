@@ -177,6 +177,9 @@ svg.pxi { stroke: none !important; fill: none; overflow: visible; }
 .legendbar .ticks .viarow .colkey { box-sizing: border-box; width: 7px; margin-inline: 9.5px; }
 .legendbar .ticks .viarow .viakey { box-sizing: border-box; width: 10px; height: 10px; margin-inline: 8px; }
 .legendbar .flowkey i { width: 26px; }
+/* the country card's six tabs: three to a row, so "Cost of living" and "Industries" fit their buttons */
+#ctabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+#ctabs button { min-width: 0; padding: 0 6px; border-left-width: 2px !important; white-space: normal; line-height: 1.15; }
 .wtip .faint { color: var(--faint); }
 
 /* The "Illustrative" note in the Exposure score sheet keeps the industry page's cream background unless the night
