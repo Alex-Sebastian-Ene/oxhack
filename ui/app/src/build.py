@@ -112,7 +112,7 @@ def main() -> None:
     read = lambda f: (HERE / f).read_text(encoding="utf-8")
     models_data = models.script()   # the Models page, from Seb's notes; empty if no card could be read
     early = (
-        f"\n<style>\n{font_css()}\n{read('theme.css')}\n{gas.CSS}\n{mandeb.CSS}\n{strait.CSS}\n{households.CSS}\n{flags.CSS}\n{read('landing.css')}\n{read('ai.css')}\n{read('steps.css')}\n{read('models.css')}\n{read('info.css')}</style>\n"
+        f"\n<style>\n{font_css()}\n{read('theme.css')}\n{gas.CSS}\n{mandeb.CSS}\n{strait.CSS}\n{households.CSS}\n{flags.CSS}\n{read('landing.css')}\n{read('ai.css')}\n{read('steps.css')}\n{read('models.css')}\n{read('info.css')}\n{read('focus.css')}</style>\n"
         f"{gas_data()}{mandeb_data()}{flags.script()}{households.script()}{models_data}<script>\n{read('mandeb.js')}\n</script>\n"
         f"{read('landing.html')}"
         f"<script>\n{read('pixel.js')}\n</script>\n<script>\n{read('sound.js')}\n</script>\n<script>\n{read('landing.js')}\n</script>\n"
@@ -123,11 +123,12 @@ def main() -> None:
         body += f"<script>\n{read('households.js')}\n</script>\n"
     if models_data:   # the Models page: each model's results, tests and limits, read from notes/ and docs/
         body += f"<script>\n{read('models.js')}\n</script>\n"
+    body += f"<script>\n{read('focus.js')}\n</script>\n"   # a picked country: the map zooms to it and moves up, detail below
     body += f"<script>\n{read('infokey.js')}\n</script>\n"   # last: one behaviour for every info key
     fragment = '<title>Hormuz Flow</title>\n<meta name="claude:viewport-fit-sides" content="cover">\n' + body
 
     if shutil.which("node"):
-        for f in ("pixel.js", "sound.js", "landing.js", "shell.js", "ai.js", "strait.js", "mandeb.js", "households.js", "models.js", "infokey.js"):
+        for f in ("pixel.js", "sound.js", "landing.js", "shell.js", "ai.js", "strait.js", "mandeb.js", "households.js", "models.js", "focus.js", "infokey.js"):
             r = subprocess.run(["node", "--check", str(HERE / f)], capture_output=True, text=True)
             if r.returncode:
                 sys.exit(f"{f}: {r.stderr.strip()}")
