@@ -153,12 +153,27 @@ function shipLogo(x, y, px, col = P.oil, shadow = Math.round(px / 2)) {
   ctx.restore();
   return { w: SHIP[0].length * px, h: SHIP.length * px };
 }
+// a pixel Z with straight bars and a stepped diagonal, sized to the font's Z, written into a text mask
+function zGlyph(M, l) {
+  const c = buf(8, 8).x; c.font = FONT({ size: l.size });
+  const x0 = Math.round(l.x + c.measureText(l.s.slice(0, l.s.indexOf("Z"))).width), wZ = Math.round(c.measureText("Z").width * 0.92);
+  const mH = c.measureText("H"), cap = Math.round(mH.actualBoundingBoxAscent), y1 = Math.round(l.y), y0 = y1 - cap;
+  const t = Math.max(3, Math.round(l.size * 0.16)), inset = Math.round(wZ * 0.06);
+  const set = (x, y) => { if (x >= 0 && y >= 0 && x < LW && y < LH) M[y * LW + x] = 1; };
+  for (let y = y0; y < y1; y++) {
+    if (y < y0 + t || y >= y1 - t) { for (let x = x0 + inset; x < x0 + wZ - inset; x++) set(x, y); continue; }
+    const f = (y - y0 - t) / Math.max(1, (y1 - t) - (y0 + t)), xr = Math.round(x0 + wZ - inset - t * 1.15 - f * (wZ - 2 * inset - t * 1.15));
+    for (let x = xr; x < xr + Math.round(t * 1.15); x++) set(x, y);
+  }
+}
 // the "pour" lettering: the title as chunky low-res letters with a cream rim, black outline and drop shadow.
 // fill: "cream" (solid, shaded) or "oil" (liquid oil with a lit surface and a few bubbles)
 function pixelTitle(lines) {
   const b = buf(LW, LH), img = b.x.createImageData(LW, LH), d = img.data;
   for (const l of lines) {
-    const M = textMask(LW, LH, [{ s: l.s, x: l.x, y: l.y, size: l.size, align: "left", ls: l.ls }]);
+    const zi = l.s.indexOf("Z"), head = zi < 0 ? l.s : l.s.slice(0, zi);
+    const M = textMask(LW, LH, [{ s: head, x: l.x, y: l.y, size: l.size, align: "left", ls: l.ls }]);
+    if (zi >= 0) zGlyph(M, l);
     const at = (x, y) => (x < 0 || y < 0 || x >= LW || y >= LH) ? 0 : M[y * LW + x];
     let top = LH, bot = 0;
     for (let y = 0; y < LH; y++) for (let x = 0; x < LW; x++) if (M[y * LW + x]) { top = Math.min(top, y); bot = Math.max(bot, y); }
@@ -239,4 +254,32 @@ function shipSilhouette(x, y, px, body = "#0a0d18", rim = "#ffe7a8") {
   ctx.fillStyle = rim; const t = Math.max(3, Math.round(px / 5));
   SHIP.forEach((row, j) => [...row].forEach((ch, i) => { if (ch !== "K") return; if (!on(i, j - 1)) ctx.fillRect(x + i * px, y + j * px, px, t); if (!on(i + 1, j)) ctx.fillRect(x + (i + 1) * px - t, y + j * px, t, px); }));
   ctx.restore();
+}
+// the logo with a strip of water on the same pixel grid: rows 5-7 under and around the hull, two cells wider
+// than the ship each side. kind: "blue" or "gold"
+const LOGO_SEA = {
+  blue: { c: "#a9d2f5", w: "#2460a8", d: "#163a6c", f: "#e4f1ff" },
+  gold: { c: "#fff6d6", w: "#f2bd2c", d: "#c88a16", f: "#fff1c9" },
+};
+const SEA_ROWS = [
+  ["cw.ffw..........wfc.w", 5],
+  [".wcwwwdwwcwwwwdwcwww.", 6],
+  ["..dwwdwwcwwdwwwdwwd..", 7],
+];
+function logoSea(x, y, px, kind = "blue", o = {}) {
+  const pal = LOGO_SEA[kind], ship = o.ship || P.oil;
+  const cells = [];
+  SHIP.forEach((row, j) => [...row].forEach((ch, i) => { if (ch === "K") cells.push([i, j, ship]); }));
+  for (const [row, j] of SEA_ROWS) [...row].forEach((ch, k) => { const i = k - 3; if (pal[ch] && !(SHIP[j] && SHIP[j][i] === "K")) cells.push([i, j, pal[ch]]); });
+  const draw = (c2) => {
+    if (o.outline) { c2.fillStyle = P.ink; for (const [i, j] of cells) c2.fillRect(x + i * px - o.outline, y + j * px - o.outline, px + 2 * o.outline, px + 2 * o.outline); }
+    c2.fillStyle = P.ink; for (const [i, j] of cells) c2.fillRect(x + i * px + (o.shadow ?? 10), y + j * px + (o.shadow ?? 10), px, px);
+    const shipCells = cells.filter((c3) => c3[2] === ship), waterCells = cells.filter((c3) => c3[2] !== ship);
+    for (const [i, j, col] of waterCells) { c2.fillStyle = col; c2.fillRect(x + i * px, y + j * px, px, px); }
+    if (o.shipLine) { c2.fillStyle = P.ink; for (const [i, j] of shipCells) c2.fillRect(x + i * px - o.shipLine, y + j * px - o.shipLine, px + 2 * o.shipLine, px + 2 * o.shipLine); }
+    for (const [i, j, col] of shipCells) { c2.fillStyle = col; c2.fillRect(x + i * px, y + j * px, px, px); }
+  };
+  if (o.glow) { const off = document.createElement("canvas"); off.width = W; off.height = H; const ox = off.getContext("2d"); draw(ox);
+    ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.globalAlpha = o.glow; ctx.filter = "blur(22px)"; ctx.drawImage(off, 0, 0); ctx.restore(); ctx.drawImage(off, 0, 0); }
+  else draw(ctx);
 }
