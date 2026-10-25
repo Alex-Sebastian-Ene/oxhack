@@ -9,6 +9,8 @@
 #    path use the same pass-through, so the panel agrees with the pop-up.
 # 3. The pop-up adds our models' 12-month what-ifs where they reach the country: consumer prices (Seb's Bayesian
 #    model: US, UK, euro area) and factory prices (the sector model: Europe, Türkiye, the US).
+# 4. An importer's exposure score also rises with its Gulf share × the share of Hormuz flow lost, so a country
+#    supplied from the Gulf scores above one that only pays the higher price (the score stays illustrative).
 # The hand-entered table keeps routes, volumes, industries and the Gulf producers' trapped export share.
 import json, pathlib, subprocess
 
@@ -63,7 +65,7 @@ sub('''    else if (d.m <= 0) { kind = "exp"; score = -Math.min(1, -d.m / 3 + 0.
     else { kind = "imp"; score = fuel * (0.4 + 0.6 * d.m) * 100; }''',
     '''    else if (d.dep == null) { kind = "none"; score = null; }
     else if (d.dep <= 0) { kind = "exp"; score = -Math.min(1, -d.dep / 3 + 0.15) * Math.max(dB, 0) * 60; }
-    else { kind = "imp"; score = fuel * (0.4 + 0.6 * Math.min(1, d.dep)) * 100; }''')
+    else { kind = "imp"; score = fuel * (0.4 + 0.6 * Math.min(1, d.dep)) * (1 + (hz || 0) * s) * 100; }   // Gulf-supplied importers are hit by shortage too''')
 sub("    if (!k.d || k.d.m > 0) return null;", "    if (!k.d || !(k.d.dep <= 0)) return null;")
 # the same pass-through in the Industries tab and the fuel-cost path
 sub("      const lo = sh.s * fuelFrac(k.dlog, 1) * (1 + (dz ? DISRUPT.lo : 0)), hi = sh.s * fuelFrac(k.dlog, 0) * (1 + (dz ? DISRUPT.hi : 0));\n"
@@ -132,6 +134,9 @@ sub('''    out.push(`Fuel cost ${pct(k.fuel)} vs pre-war: Brent to retail fuel l
     '''    out.push(`Fuel cost ${pct(k.fuel)} vs pre-war: ${k.d.pt.own ? `${nmIso(iso)}'s own` : "a pooled"} Brent to pump-price pass-through of ${k.d.pt.e.toFixed(2)} (${k.d.pt.series}; country_oil.py) times 1.49 in a supply disruption (Seb's cost-of-living model: 90% range 1.08 to 1.89, fitted on the US, UK and euro area, an assumption elsewhere)`);
     if (k.hz != null) out.push(`About ${(k.hz * 100).toFixed(0)}% of ${nmIso(iso)}'s oil imports came from the Gulf producers before the war (${k.d.depSrc}; an upper bound for oil through the strait)`);
     else if (k.d.nodata) out.push(`${nmIso(iso)} has no oil trade in our data, so its exposure score is not shown`);''')
+sub("<ul><li><b>Importers:</b> how much more fuel costs × how much of their oil they import.</li>",
+    "<ul><li><b>Importers:</b> how much more fuel costs × how much of their oil they import, raised by the share of their oil imports "
+    "that came from the Gulf × the share of Hormuz flow lost (a country supplied from the Gulf faces shortage as well as price).</li>")
 sub('''Inputs: EIA 2024 Hormuz volumes and Energy Institute consumption. Countries without their own data use a typical importer.</p>` },''',
     '''Inputs: each country's oil imports, exports and imports from the Gulf (UN Comtrade), and its own Brent to pump-price pass-through where we have its fuel prices (else the median, marked pooled). Countries in neither are grey: not in our data.</p>` },''')
 

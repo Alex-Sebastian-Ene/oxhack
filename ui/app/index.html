@@ -5073,7 +5073,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
     if (d.gulf) { kind = "gulf"; score = d.gulf * s * 100; }
     else if (d.dep == null) { kind = "none"; score = null; }
     else if (d.dep <= 0) { kind = "exp"; score = -Math.min(1, -d.dep / 3 + 0.15) * Math.max(dB, 0) * 60; }
-    else { kind = "imp"; score = fuel * (0.4 + 0.6 * Math.min(1, d.dep)) * 100; }
+    else { kind = "imp"; score = fuel * (0.4 + 0.6 * Math.min(1, d.dep)) * (1 + (hz || 0) * s) * 100; }   // Gulf-supplied importers are hit by shortage too
     return { d, hz, fuel, price, dlog, score, kind, s, dB };
   }
   // Cost shares from notes/industry/industry_exposure.csv (read at build time); sector codes for Seb's sector model
@@ -6255,7 +6255,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
       <li><b>Forecast chart:</b> the base case closes the gap over the year; the band runs from a quick reopening to a year-long closure.</li></ul>
       <p>Country volumes: EIA 2024 and Energy Institute. A teaching model: check figures before quoting.</p>` },
     score: { title: "Exposure score", html: `<p>One number per country for how hard the shock hits it. Above zero means hurt; below zero means it gains.</p>
-      <ul><li><b>Importers:</b> how much more fuel costs × how much of their oil they import.</li>
+      <ul><li><b>Importers:</b> how much more fuel costs × how much of their oil they import, raised by the share of their oil imports that came from the Gulf × the share of Hormuz flow lost (a country supplied from the Gulf faces shortage as well as price).</li>
       <li><b>Exporters outside the Gulf</b> (Norway, Canada, Nigeria and others) gain from the higher price.</li>
       <li><b>Gulf producers</b> are hurt by the oil they can't ship out.</li></ul>
       <p class="illus-note"><b>Illustrative:</b> the weights are set by hand, not fitted to data. Inputs: each country's oil imports, exports and imports from the Gulf (UN Comtrade), and its own Brent to pump-price pass-through where we have its fuel prices (else the median, marked pooled). Countries in neither are grey: not in our data.</p>` },
