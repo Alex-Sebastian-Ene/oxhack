@@ -852,6 +852,8 @@ body.hz-mandeb #link-card, body.hz-mandeb #pw-card, body.hz-mandeb #cap-card { d
 .hz-hh .hz-bar .ctrl { gap: 8px 18px; }
 .hz-hh .hz-bar .bg { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
 .hz-hh .hz-bar .bl { font: 600 11px var(--pix); letter-spacing: .8px; text-transform: uppercase; color: var(--oil-soft); }
+.hz-hh .hz-bar .hz-lostbg input[type="range"] { width: min(320px, 60vw); }
+.hz-hh .hz-bar #hh-lost-v { min-width: 56px; color: var(--text); }
 .hz-hh .hz-t { display: flex; flex-direction: column; gap: 3px; padding: 10px 12px; background: var(--panel2); border: 2px solid var(--ink); }
 .hz-hh .hz-t b { font: 400 30px/1 var(--mono); color: var(--text); }
 .hz-hh .hz-t.hurt b { color: var(--harm); }
@@ -7228,6 +7230,27 @@ window.HZHouseholds = (() => {
   }
   const scenRow = (g, drop, h) => D.scen.find((r) => r.region === g && r.drop === drop && r.h === h);
   const gRow = (group, scen, h) => D.gscen.find((r) => r.group === group && r.scen === scen && r.h === h);
+  // any amount of flow lost, not just the modelled runs: straight lines between the two runs either side of it
+  const lerpRow = (a, b, w) => {
+    if (!a || !b) return a || b;
+    const o = { ...a };
+    for (const k of ["q05", "q50", "q95", "energy", "fuel", "food"]) if (a[k] != null && b[k] != null) o[k] = a[k] + (b[k] - a[k]) * w;
+    return o;
+  };
+  const between = (xs, x) => { const v = Math.max(xs[0], Math.min(xs[xs.length - 1], x)), j = Math.max(1, xs.findIndex((d) => d >= v)), a = xs[j - 1], b = xs[j]; return [a, b, b === a ? 0 : (v - a) / (b - a)]; };
+  function scenAt(g, lost, h) {
+    if (onPath() && HAS_IEA) return scenRow(g, "iea", h);
+    const [a, b, w] = between(DROPS, lost);
+    return lerpRow(scenRow(g, a, h), scenRow(g, b, h), w);
+  }
+  // the group runs are none, a quarter, a half and a full 2026-sized closure, placed on the slider by 2026's average
+  function gAt(group, lost, h) {
+    if (onPath()) return gRow(group, "closure_100", h);
+    const [a, b, w] = between(SEV.map((s) => s[1]), lost / AVG26), name = (f) => SEV.find((s) => s[1] === f)[0];
+    return lerpRow(gRow(group, name(a), h), gRow(group, name(b), h), w);
+  }
+  const lostTxt = () => (onPath() ? `2026 as the IEA counts it (${esc(PATH_TXT)})` : `${st.lost} points of Hormuz flow lost`);
+  const runsTxt = () => { if (onPath() || DROPS.includes(st.lost)) return ""; const [a, b] = between(DROPS, st.lost); return ` Between the model's runs at ${a} and ${b} points, on a straight line.`; };
 
   // ------------------------------------------------------------ UK household groups
   const NAME = {
@@ -7255,8 +7278,9 @@ window.HZHouseholds = (() => {
   seg.append(btn);
   const page = document.createElement("main");
   page.className = "stage hz-hh"; page.id = "hz-households"; page.hidden = true; page.setAttribute("aria-label", "Households: pay and bills");
-  const drops = DROPS.map((d) => `<button type="button" data-hdrop="${d}" aria-pressed="false">${d === 0 ? "Normal · 0" : d === 100 ? "Shut · 100" : d}</button>`).join("")
-    + (HAS_IEA && pathBtn ? `<button type="button" data-hdrop="iea" aria-pressed="false" title="${esc(pathBtn.title)}">2026 closure</button>` : "");
+  // one control, the same setting as the World view's shock card: a slider for any amount of flow lost, and 2026
+  const drops = `<input type="range" id="hh-lost" min="0" max="100" step="1" aria-label="Points of Hormuz flow lost"><b class="mono" id="hh-lost-v"></b>`
+    + (HAS_IEA && pathBtn ? `<div class="seg presets"><button type="button" data-hdrop="iea" aria-pressed="false" title="${esc(pathBtn.title)}">2026 closure</button></div>` : "");
   const hs = (k, list) => list.map((h) => `<button type="button" data-${k}="${h}" aria-pressed="false">${h} mo</button>`).join("");
   // each card: a number, a plain question, a REAL DATA or MODEL OUTPUT tag, and an info button with its sources
   const INFO = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><path d="M12 7.5v.5"/></svg>';
@@ -7268,9 +7292,9 @@ window.HZHouseholds = (() => {
       <div class="hz-hlnums" id="hh-hlnums"></div>
     </section>
     <section class="card hz-bar" id="hh-bar" aria-label="Closure and months for the short version and cards 2 and 3">
-      <div class="ctrl"><span class="bg"><span class="bl">Flow lost</span><div class="seg presets" role="group" aria-label="Points of flow lost">${drops}</div></span>
+      <div class="ctrl"><span class="bg hz-lostbg"><span class="bl">Flow lost</span>${drops}</span>
         <span class="bg"><span class="bl">Months on</span><div class="seg" role="group" aria-label="Months on">${hs("hh", [3, 6, 12])}</div></span></div>
-      <p class="src">Sets the short version and cards 2 and 3.</p>
+      <p class="src">The same setting as the World view's shock card. Sets the short version and cards 2 and 3.</p>
     </section>
     <section class="card" id="hh-pay">
       ${head(1, "Where did households start?", REAL, "hh-pay-src")}
@@ -7391,12 +7415,14 @@ window.HZHouseholds = (() => {
       + sec("Sources", srcs([...regs.flatMap((g) => [...ESS.map(([l, by]) => [`${REG[g].short} ${l.toLowerCase()}`, `${g}_${by[g]}`]), [`${REG[g].short} pay`, `${g}_pay`]]), ["US petrol", "us_p_petrol"]]));
   }
   function whoTable() {
-    const rows = groupsOf(st.gtype), maxShare = 25;
+    const rows = groupsOf(st.gtype), maxShare = 25, all = rows.find((g) => g.type === "all");
+    // each group against all households, so the real differences stand out
+    const vsAll = (g, k) => (g.type === "all" || !all || g[k] == null || all[k] == null ? "" : ` <small class="${g[k] - all[k] > 0.05 ? "hurt" : g[k] - all[k] < -0.05 ? "gain" : ""}">${sgn(g[k] - all[k])} vs all</small>`);
     const bar = (s) => `<span class="mini" aria-hidden="true">${PARTS.slice(0, 3).map(([k, , c]) => `<i style="width:${(100 * (s[k] || 0) / maxShare).toFixed(1)}%;background:${c}"></i>`).join("")}</span>`;
     $("hh-who-t").innerHTML = `<thead><tr><th>Group</th><th>Fuel · energy · food</th><th title="All items, Dec 2019 to the latest month">Since 2019</th><th title="Official 12-month rate">Last 12 mo</th></tr></thead>
       <tbody>${rows.map((g) => { const s = g.shares || {};
         return `<tr${g.type === "all" ? ' class="all"' : ""}><td>${esc(gname(g.group))}</td><td title="${esc(`Of spending (${D.weights_year} weights): food ${s.food}%, home energy ${s.energy}%, motor fuel ${s.fuel}%`)}">${bar(s)} <small>${((s.food || 0) + (s.energy || 0) + (s.fuel || 0)).toFixed(0)}%</small></td>
-          <td>${g.since2019 != null ? `+${g.since2019.toFixed(1)}%` : "–"}</td><td>${g.rate != null ? `${g.rate.toFixed(1)}%` : "–"}</td></tr>`; }).join("")}</tbody>`;
+          <td>${g.since2019 != null ? `+${g.since2019.toFixed(1)}%${vsAll(g, "since2019")}` : "–"}</td><td>${g.rate != null ? `${g.rate.toFixed(1)}%${vsAll(g, "rate")}` : "–"}</td></tr>`; }).join("")}</tbody>`;
     const m = D.groups[0] && D.groups[0].month;
     $("hh-who-src").innerHTML = sec("What it shows", `<p>Household Costs Indices, all items, to ${m ? mon(m) : "the latest month"}. Spending shares are the ${D.weights_year} weights.</p><p>Official statistics in development.</p>`)
       + sec("Source", `<ul class="hz-srcl">${srcRow("UK groups", esc(D.groups_source), `fetched ${esc(D.groups_fetched || "–")}`)}</ul>`);
@@ -7412,12 +7438,12 @@ window.HZHouseholds = (() => {
       ${r.actual != null ? `<span class="mid act" style="left:${pos(r.actual)};background:#7ee0b0" title="What happened: ${sgn(r.actual)}%"></span>` : ""}</div>`;
   }
   function scenCard() {
-    const drop = dropFor(st.lost), regs = Object.keys(REG);
-    page.querySelectorAll("[data-hdrop]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.hdrop === String(drop))));
+    const drop = onPath() && HAS_IEA ? "iea" : st.lost, regs = Object.keys(REG);
+    page.querySelectorAll("[data-hdrop]").forEach((b) => b.setAttribute("aria-pressed", String(onPath())));
     page.querySelectorAll("[data-hh]").forEach((b) => b.setAttribute("aria-pressed", String(+b.dataset.hh === st.h)));
-    $("hh-scen-pick").innerHTML = drop === "iea" ? `2026 as the IEA counts it (${esc(PATH_TXT)}), ${st.h} months on.`
-      : st.lost === drop ? `${drop} points of flow lost for 12 months, ${st.h} months on.` : `The slider is at ${st.lost} points; the nearest modelled case is <b>${drop}</b>. ${st.h} months on.`;
-    const rows = regs.map((g) => ({ g, r: scenRow(g, drop, st.h), base: scenRow(g, 0, st.h) })).filter((x) => x.r);
+    if ($("hh-lost")) { $("hh-lost").value = String(st.lost); $("hh-lost-v").textContent = onPath() ? "2026" : `${st.lost} pts`; }
+    $("hh-scen-pick").innerHTML = `${lostTxt()}, ${st.h} months on.${runsTxt()}`;
+    const rows = regs.map((g) => ({ g, r: scenAt(g, st.lost, st.h), base: scenRow(g, 0, st.h) })).filter((x) => x.r);
     const vals = D.scen.filter((r) => r.h === st.h).flatMap((r) => [r.q05, r.q95, r.actual]).filter((v) => v != null);
     const lo = Math.min(-1, Math.floor(Math.min(...vals))), hi = Math.max(1, Math.ceil(Math.max(...vals)));
     const t = track(lo, hi);
@@ -7428,28 +7454,37 @@ window.HZHouseholds = (() => {
     $("hh-scen-src").innerHTML = sec("How the model works", "<p>The team's household model. Consumer prices follow the knock-on chain's paths for each scenario.</p><p>Nominal pay keeps its pace of the 12 months before Feb 2026, so the range is the price range.</p>")
       + sec("What happened", `<p>${acts.length ? `The green marks (${acts.map((x) => REG[x.g].short).join(", ")}) use the same pay and price series as card 1.` : `Nothing to compare with yet at ${st.h} months.`}</p>`);
   }
+  // how far apart the groups are, against the model's own range: a "hardest hit" group only when the gap is real
+  function groupSpread(rows) {
+    const all = rows.find((x) => x.g.type === "all"), rest = rows.filter((x) => x.g.type !== "all").sort((a, b) => b.total - a.total);
+    if (!all || rest.length < 2) return null;
+    const gap = rest[0].total - rest[rest.length - 1].total, band = (all.r.q95 - all.r.q05) / 2;
+    return { all, top: rest[0], low: rest[rest.length - 1], gap, band, clear: gap > 0.25 * band };
+  }
   function gsCard() {
-    const sev = sevFor(st.lost), scen = st.outlook ? "outlook" : sev, h = st.h;
+    const scen = st.outlook ? "outlook" : null, h = st.h, none = !st.outlook && !onPath() && st.lost <= 0;
     page.querySelector("[data-hout]").setAttribute("aria-pressed", String(st.outlook));
     $("hh-gs-lede").innerHTML = st.outlook ? "Each group's costs over the year ahead from Sep 2026, split by what drives them."
-      : "What the closure adds to each group's costs, on top of no closure, split by what drives it.";
-    const pts = SEV.find((s) => s[0] === sev)[1] * AVG26;
+      : "What the closure adds to each group's costs, on top of no closure, split by what drives it. Largest first.";
     $("hh-gs-pick").innerHTML = st.outlook ? `The year ahead from Sep 2026, ${h} months on. Change in costs, %.`
-      : onPath() ? `The 2026 closure as it happened, from Feb 2026, ${h} months on.`
-      : `${SEV_NAME[sev]}${sev === "none" ? "" : ` (about ${Math.round(pts)} points of flow lost on average)`}, from Feb 2026, ${h} months on.${st.lost > AVG26 ? " The largest modelled closure is 2026's." : st.lost !== Math.round(pts) ? ` The nearest modelled closure to ${st.lost} points of flow lost.` : ""}`;
+      : `${onPath() ? "The 2026 closure as it happened" : lostTxt()}, from Feb 2026, ${h} months on.${!onPath() && st.lost > AVG26 ? ` Above ${AVG26} points this uses the model's largest run, a 2026-sized closure.` : ""}`;
     const rows = groupsOf(st.gtype).map((g) => {
-      const r = gRow(g.group, scen, h), base = gRow(g.group, "none", h);
+      const r = scen ? gRow(g.group, scen, h) : gAt(g.group, st.lost, h), base = gRow(g.group, "none", h);
       if (!r) return null;
       const part = (k) => (k === "rest" ? r.q50 - r.energy - r.fuel - r.food : r[k]) - (st.outlook || !base ? 0 : k === "rest" ? base.q50 - base.energy - base.fuel - base.food : base[k]);
       return { g, r, base, parts: PARTS.map(([k, l, c]) => ({ k, l, c, v: part(k) })), total: st.outlook || !base ? r.q50 : r.q50 - base.q50 };
-    }).filter(Boolean);
+    }).filter(Boolean).sort((a, b) => (a.g.type === "all" ? -1 : b.g.type === "all" ? 1 : b.total - a.total));
     const maxv = Math.max(0.1, ...rows.map((x) => x.parts.reduce((a, p) => a + Math.max(0, p.v), 0)));
-    $("hh-gs-rows").innerHTML = (st.outlook || sev !== "none" ? rows.map(({ g, r, base, parts, total }) => {
+    const allTot = (rows.find((x) => x.g.type === "all") || {}).total, sp = st.outlook || none ? null : groupSpread(rows);
+    const note = !sp ? "" : sp.clear
+      ? `<p class="src">Hit hardest: <b>${esc(phrase(sp.top.g.group))}</b>, <b>${sgn(sp.top.total - sp.all.total, 2)} pts</b> more added to costs than all households, and ${sgn(sp.top.total - sp.low.total, 2)} more than ${esc(phrase(sp.low.g.group))}.</p>`
+      : `<p class="src">These groups differ by at most <b>${sp.gap.toFixed(2)} pts</b>, small next to the model's own range (±${sp.band.toFixed(1)} pts for all households): the closure hits them about equally. What differs is what they spend it on (card 4).</p>`;
+    $("hh-gs-rows").innerHTML = note + (st.outlook || !none ? rows.map(({ g, r, base, parts, total }) => {
       let left = 0;
       const segs = parts.filter((p) => p.v > 0).map((p) => { const w = 100 * p.v / maxv, s = `<span class="seg2" style="left:${left.toFixed(2)}%;width:${w.toFixed(2)}%;background:${p.c}" title="${esc(`${p.l}: ${sgn(p.v, 2)} pts`)}"></span>`; left += w; return s; }).join("");
       const tip = st.outlook ? `Costs ${sgn(r.q50, 2)}% (range up to ${sgn(r.q05)} to ${sgn(r.q95)}%)` : `Costs ${sgn(r.q50, 2)}% against ${sgn(base.q50, 2)}% with no closure`;
       return `<div class="rrow${g.type === "all" ? " all" : ""}"><span class="nm">${esc(gname(g.group))}</span><div class="track">${segs}</div>
-        <span class="v" title="${esc(`${tip}. ${parts.map((p) => `${p.l} ${sgn(p.v, 2)}`).join(", ")} pts`)}">${sgn(total, 2)}${st.outlook ? "%" : " pts"} <small>${st.outlook ? `${sgn(r.q05)} to ${sgn(r.q95)}` : `· costs ${sgn(r.q50)}%`}</small></span></div>`;
+        <span class="v" title="${esc(`${tip}. ${parts.map((p) => `${p.l} ${sgn(p.v, 2)}`).join(", ")} pts`)}">${sgn(total, 2)}${st.outlook ? "%" : " pts"} <small>${st.outlook ? `${sgn(r.q05)} to ${sgn(r.q95)}` : g.type === "all" ? "the average" : `${sgn(total - allTot, 2)} vs all`}</small></span></div>`;
     }).join("") : `<p class="src">No closure, so nothing added. Pick an amount of flow lost above.</p>`);
     $("hh-gs-src").innerHTML = sec("How the model works", `<p>The team's household model. Item price ranges from the basket-item model, weighted by each group's ${D.weights_year} spending shares. Mortgage interest is held flat.</p><p>First-order sums, so the range is an upper bound on its width.</p>`)
       + sec("Inputs", `<ul class="hz-srcl">${srcRow("Prices", "Basket-item model", `run ${esc(D.fans_generated || "–")}`)}${srcRow("Shares", esc(D.groups_source), `${D.weights_year} weights`)}</ul>`);
@@ -7468,15 +7503,15 @@ window.HZHouseholds = (() => {
   }
   function miniStep() {
     if (!mini) return;
-    const drop = dropFor(st.lost), sev = sevFor(st.lost);
-    $("hh-mini").innerHTML = `<span class="hz-mh">Real pay 12 months on from Feb 2026${drop === "iea" ? " (2026 as the IEA counts it)" : drop !== st.lost ? ` (nearest modelled: ${drop} points)` : ""}</span>` + Object.keys(REG).map((g) => {
-      const r = scenRow(g, drop, 12), b = scenRow(g, 0, 12);
-      return r ? `<span class="hz-mr">${flag(g)}<b>${REG[g].short}</b><span class="mono">${sgn(r.q50)}%</span><small>${drop ? `no loss ${sgn(b.q50)}%` : `${sgn(r.q05)} to ${sgn(r.q95)}`}</small></span>` : "";
+    const any = onPath() || st.lost > 0;
+    $("hh-mini").innerHTML = `<span class="hz-mh">Real pay 12 months on from Feb 2026${onPath() ? " (2026 as the IEA counts it)" : ""}</span>` + Object.keys(REG).map((g) => {
+      const r = scenAt(g, st.lost, 12), b = scenRow(g, 0, 12);
+      return r ? `<span class="hz-mr">${flag(g)}<b>${REG[g].short}</b><span class="mono">${sgn(r.q50)}%</span><small>${any ? `no loss ${sgn(b.q50)}%` : `${sgn(r.q05)} to ${sgn(r.q95)}`}</small></span>` : "";
     }).join("");
-    const lo = gRow("Decile 1", sev, 12), hi = gRow("Decile 10", sev, 12), lo0 = gRow("Decile 1", "none", 12), hi0 = gRow("Decile 10", "none", 12);
-    $("hh-mini-g").innerHTML = sev === "none" || !lo || !hi ? `${flag("uk")} No closure in the UK household model at this setting.`
-      : `${flag("uk")} ${sevName(sev)} adds <b>${sgn(lo.q50 - lo0.q50, 2)}</b> pts to the lowest-income tenth's costs over 12 months, <b>${sgn(hi.q50 - hi0.q50, 2)}</b> to the highest's.`;
-    $("hh-mini-src").innerHTML = "Model output: the team's household model, nearest modelled case.";
+    const lo = gAt("Decile 1", st.lost, 12), hi = gAt("Decile 10", st.lost, 12), lo0 = gRow("Decile 1", "none", 12), hi0 = gRow("Decile 10", "none", 12);
+    $("hh-mini-g").innerHTML = !any || !lo || !hi ? `${flag("uk")} No closure in the UK household model at this setting.`
+      : `${flag("uk")} ${onPath() ? "The 2026 closure" : `${st.lost} points of flow lost`} adds <b>${sgn(lo.q50 - lo0.q50, 2)}</b> pts to the lowest-income tenth's costs over 12 months, <b>${sgn(hi.q50 - hi0.q50, 2)}</b> to the highest's.`;
+    $("hh-mini-src").innerHTML = `Model output: the team's household model${onPath() || DROPS.includes(st.lost) ? "" : ", on a straight line between its runs"}.`;
   }
 
   // ------------------------------------------------------------ show / hide, and drawing
@@ -7501,27 +7536,29 @@ window.HZHouseholds = (() => {
     "Mortgagor and other owner occupier": "mortgage holders", "Outright owner occupier": "outright owners" };
   const phrase = (g) => PHRASE[g] || (g.startsWith("Decile ") ? `the ${ord(+g.slice(7)).replace(" tenth", "")} income tenth` : g);
   function headline() {
-    const drop = dropFor(st.lost), sev = sevFor(st.lost), h = st.h, when = h === 12 ? "after a year" : `after ${h} months`;
-    const diff = (g) => { const r = scenRow(g, drop, h), b = scenRow(g, 0, h); return r && b ? r.q50 - b.q50 : null; };
-    const what = drop === "iea" ? "The 2026 closure, as the IEA counts it," : drop === 0 ? "" : `Losing ${drop} of every 100 barrels of Hormuz flow`;
-    const groups = sev === "none" ? [] : D.groups.filter((g) => g.type !== "all").map((g) => {
-      const r = gRow(g.group, sev, h), b = gRow(g.group, "none", h); return r && b ? { g, v: r.q50 - b.q50 } : null; }).filter(Boolean).sort((a, b) => b.v - a.v);
+    const h = st.h, when = h === 12 ? "after a year" : `after ${h} months`;
+    const diff = (g) => { const r = scenAt(g, st.lost, h), b = scenRow(g, 0, h); return r && b ? r.q50 - b.q50 : null; };
+    const what = onPath() ? "The 2026 closure, as the IEA counts it," : `Losing ${st.lost} of every 100 barrels of Hormuz flow`;
     const us = diff("us"), uk = diff("uk"), ea = diff("ea");
     const word = (v) => (v < 0 ? "cuts" : "raises");
-    if (!drop) {
-      $("hh-hl").innerHTML = "With Hormuz flowing normally, the model adds nothing: real pay follows its usual path. Pick an amount of flow lost below.";
+    if (!onPath() && st.lost <= 0) {
+      $("hh-hl").innerHTML = "With Hormuz flowing normally, the model adds nothing: real pay follows its usual path. Move the flow-lost slider below.";
       $("hh-hlnums").innerHTML = "";
       return;
     }
-    const top = groups[0], low = groups[groups.length - 1];
+    // every UK group (income, home, retired, children), what the closure adds to its costs
+    const rows = D.groups.map((g) => { const r = gAt(g.group, st.lost, h), b = gRow(g.group, "none", h); return r && b ? { g, r, total: r.q50 - b.q50 } : null; }).filter(Boolean);
+    const sp = groupSpread(rows);
     $("hh-hl").innerHTML = `${what} ${word(us)} real pay by about <b>${Math.abs(us).toFixed(1)} points</b> in the US and <b>${Math.abs(uk).toFixed(1)}</b> in the UK ${when}, compared with no closure.` +
-      (top ? ` In the UK, the hardest hit are <b>${esc(phrase(top.g.group))}</b>; the least, <b>${esc(phrase(low.g.group))}</b>.` : "");
+      (!sp ? "" : sp.clear ? ` In the UK, the hardest hit are <b>${esc(phrase(sp.top.g.group))}</b>; the least, <b>${esc(phrase(sp.low.g.group))}</b>.`
+        : ` In the UK it hits every household group about equally: they differ by at most ${sp.gap.toFixed(2)} pts.`);
     const tile = (lab, v, unit, sub, cls) => `<div class="hz-t ${cls || ""}"><b>${sgn(v)}${unit}</b><span>${lab}</span><small>${sub}</small></div>`;
     $("hh-hlnums").innerHTML =
       tile(`${flag("us")} US real pay`, us, " pts", `vs no closure, ${h} months`, us < 0 ? "hurt" : "") +
       tile(`${flag("uk")} UK real pay`, uk, " pts", `vs no closure, ${h} months`, uk < 0 ? "hurt" : "") +
       tile(`${flag("ea")} Euro-area real pay`, ea, " pts", `vs no closure, ${h} months`, ea < 0 ? "hurt" : "") +
-      (top ? tile(`${flag("uk")} Hardest hit: ${esc(phrase(top.g.group))}`, top.v, " pts", `added to costs, ${h} months`, "hurt") : "");
+      (!sp ? "" : sp.clear ? tile(`${flag("uk")} Hardest hit: ${esc(phrase(sp.top.g.group))}`, sp.top.total, " pts", `added to costs, ${h} months`, "hurt")
+        : tile(`${flag("uk")} UK costs, every group`, sp.all.total, " pts", `added in ${h} months; groups within ${sp.gap.toFixed(2)}`, "hurt"));
   }
   function draw() { headline(); scenCard(); gsCard(); miniStep(); }
   btn.addEventListener("click", () => { if (page.hidden) show(true); });
@@ -7548,6 +7585,8 @@ window.HZHouseholds = (() => {
     draw();
   });
   if (lostEl) lostEl.addEventListener("input", () => { st.lost = Number(lostEl.value); draw(); });
+  // this page's slider drives the shared one, so the World view and this page always show the same setting
+  if ($("hh-lost")) $("hh-lost").addEventListener("input", (e) => { st.outlook = false; setLost(Number(e.target.value)); });
   document.querySelectorAll("[data-lost], [data-path], [data-rel]").forEach((b) => b.addEventListener("click", () => setTimeout(() => { st.lost = Number(lostEl.value); draw(); }, 0)));
   new ResizeObserver(() => { if (!page.hidden) payChart(); }).observe(page);
 
