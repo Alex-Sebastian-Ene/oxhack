@@ -38,6 +38,7 @@ SWAPS = [
 
 CSS = """/* Bab el-Mandeb mode (mandeb.py, mandeb.js): Hormuz-only cards hidden, a strait switch in the header */
 body.hz-mandeb #link-card, body.hz-mandeb #pw-card, body.hz-mandeb #cap-card { display: none !important; }
+.hz-straitseg[hidden] { display: none !important; }
 .hz-straitseg button { white-space: nowrap; }
 @media (max-width: 720px) { .hz-straitseg button { padding: 0 8px; font-size: 12px; } }
 """
