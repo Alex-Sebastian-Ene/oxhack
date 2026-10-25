@@ -84,6 +84,22 @@ def test_real_pay_scenarios(tmp_path):
     assert r["real_pay_actual"] == pytest.approx(1.5 - 2.5, abs=1e-3)
 
 
+def test_group_scenarios_weight_items_by_spending_shares():
+    # one group spending 20% on food, 10% on energy, 5% on motor fuel, 5% on mortgage interest (held flat), 65% on the rest
+    w = pd.DataFrame([(2026, "G", c, "", v) for c, v in (("01", 200), ("04", 150), ("04.5", 100), ("07", 100), ("07.2.2", 50),
+                                                         ("04.2a", 50), ("12", 650 - 50))],
+                     columns=["period", "group", "code", "category", "value"])
+    items = {"uk_bread": 0.02, "uk_meat": 0.02, "uk_dairy": 0.01, "uk_oils_fats": 0.0, "uk_fruit": 0.01, "uk_vegetables": 0.01,
+             "uk_sugar": 0.01, "uk_electricity": 0.02, "uk_gas": 0.02, "uk_fuel": 0.03, "uk_restaurants": 0.1, "uk_rest": 0.7}
+    change = {k: 10.0 if k in ("uk_electricity", "uk_gas") else 20.0 if k == "uk_fuel" else 0.0 for k in items}
+    fans = pd.DataFrame([{"origin": "2026-02", "scenario": "s", "series": k, "region": "uk", "months_ahead": 6, "weight": v,
+                          "q05": change[k], "q50": change[k], "q95": change[k]} for k, v in items.items()])
+    g = hh.group_scenarios(w, fans).iloc[0]
+    assert g["energy_part"] == pytest.approx(0.10 * 10.0)  # energy share x its change, over a whole basket of 1
+    assert g["motor_fuel_part"] == pytest.approx(0.05 * 20.0)
+    assert g["cost_q50"] == pytest.approx(1.0 + 1.0)  # food and rest unchanged; mortgage interest held flat
+
+
 @pytest.mark.skipif(not (hh.RAW / hh.HCI_FILE).exists(), reason="ONS HCI workbook not downloaded")
 def test_hci_workbook_reproduces_the_bulletin():
     idx, wts, _ = hh.hci()

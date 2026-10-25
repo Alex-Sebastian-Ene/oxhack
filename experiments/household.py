@@ -38,6 +38,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import time
 import urllib.error
 import urllib.request
@@ -493,6 +494,51 @@ def scenarios(panel: pd.DataFrame, path: Path = NOTES / "chain-scenarios-3m.csv"
     return pd.DataFrame(rows)
 
 
+# --- Hormuz scenarios by UK household group ------------------------------------------------------
+
+# HCI spending categories -> basket items of the cost-of-living model (branch seb/cost-of-living,
+# notes/cost-of-living-fans.csv). A category split over several items is split in proportion to their
+# CPI weights there. Mortgage interest is not in that model and is held flat; everything else is its
+# 'rest of the basket'.
+GROUP_MAP = {"01": ("uk_bread", "uk_meat", "uk_dairy", "uk_oils_fats", "uk_fruit", "uk_vegetables", "uk_sugar"),
+             "04.5": ("uk_electricity", "uk_gas"), "07.2.2": ("uk_fuel",), "11": ("uk_restaurants",)}
+FLAT = ("04.2a",)  # mortgage interest payments
+
+
+def group_scenarios(wts: pd.DataFrame, fans: pd.DataFrame, year: int | None = None) -> pd.DataFrame:
+    """Each UK household group's cost change under each scenario of the item fans: sum over items of the
+    group's spending share x the item's change since the origin (first-order: a weighted sum of item changes).
+    Median from the items' medians. The band adds the items' 5% and 95% quantiles (as if all items moved
+    together), so it is an upper bound on the band's width. Also the energy, motor fuel and food parts."""
+    fans = fans[fans["region"] == "uk"]
+    year = year or int(wts["period"].max())
+    w_all = wts[wts["period"] == year]
+    item_w = fans.drop_duplicates("series").set_index("series")["weight"]
+    rows = []
+    for group, w in w_all.groupby("group"):
+        share = w.set_index("code")["value"] / 1000
+        top = share[share.index.str.fullmatch(r"\d\d")].sum()  # the divisions add up to the whole basket
+        alloc = {}
+        for code, items in GROUP_MAP.items():
+            s = share.get(code, 0.0)
+            iw = item_w.reindex(list(items)).fillna(0)
+            for it in items:
+                alloc[it] = alloc.get(it, 0.0) + s * (iw[it] / iw.sum() if iw.sum() else 1 / len(items))
+        flat = sum(share.get(c, 0.0) for c in FLAT)
+        alloc["uk_rest"] = top - sum(alloc.values()) - flat
+        for (scen, origin, h), g in fans.groupby(["scenario", "origin", "months_ahead"]):
+            g = g.set_index("series")
+            if not all(it in g.index for it in alloc):
+                continue
+            q = {c: sum(a * g.loc[it, c] for it, a in alloc.items()) / top for c in ("q05", "q50", "q95")}
+            part = lambda items: sum(alloc.get(it, 0) * g.loc[it, "q50"] for it in items) / top  # noqa: E731
+            rows.append({"group": group, "scenario": scen, "origin": origin, "months_ahead": h,
+                         "cost_q50": round(q["q50"], 3), "cost_q05_bound": round(q["q05"], 3), "cost_q95_bound": round(q["q95"], 3),
+                         "energy_part": round(part(GROUP_MAP["04.5"]), 3), "motor_fuel_part": round(part(GROUP_MAP["07.2.2"]), 3),
+                         "food_part": round(part(GROUP_MAP["01"]), 3), "weights_year": year})
+    return pd.DataFrame(rows)
+
+
 # --- outputs ----------------------------------------------------------------------------------
 
 def write_csvs(panel: pd.DataFrame, prov: dict, m: dict[str, pd.Series]) -> None:
@@ -690,6 +736,49 @@ def report() -> None:
             f = w.get("07.2.2", np.nan) * pct_change(hci_series(h_idx, g, "07.2.2"), a, latest)
             out.append(f"| {g} | {fmt(e, 2, True)} | {fmt(f, 2, True)} | {fmt(e + f, 2, True)} | "
                        f"{fmt(pct_change(hci_series(h_idx, g), a, latest), 1, True)} |")
+
+    # 4b. the Hormuz scenarios and the outlook, by UK household group
+    fans_path = Path(os.environ.get("HOUSEHOLD_COL_FANS", NOTES / "cost-of-living-fans.csv"))
+    if h_idx is not None and fans_path.exists():
+        fans = pd.read_csv(fans_path)
+        gs = group_scenarios(h_wts, fans)
+        src = os.environ.get("HOUSEHOLD_COL_FANS_SOURCE", str(fans_path))
+        gs.assign(source=f"item fans: {src}; spending shares: {HCI_RELEASE}").to_csv(NOTES / "household-group-scenarios.csv", index=False)
+        show = ["Decile 1", "Decile 2", "Decile 5", "Decile 9", "Decile 10", "Private renter", "Mortgagor and other owner occupier",
+                "Outright owner occupier", "Social and other renter", "Retired", "With Children"]
+        out += ["", "## A Hormuz closure by UK household group", "",
+                f"Item price fans of the cost-of-living model (`{src}`: the Bayesian basket-item model, Lévy Brent paths, "
+                "closures scaled to the 2026 one) weighted by each group's spending shares (HCI weights, "
+                f"{int(h_wts['period'].max())}). Change in each group's costs since 2026-02, % (median; first-order "
+                "weighted sum of item changes). Mortgage interest is held flat, as the price model has no rates. 'Extra' "
+                "is the closure's cost above no closure.", "",
+                "| Group | Energy share | Motor fuel share | 6 months, no closure | 6 months, 50% closure | 6 months, full closure | "
+                "Extra from a full closure (6 m) | of which motor fuel | 12 months, full closure |",
+                "|---|---|---|---|---|---|---|---|---|"]
+        wy = int(h_wts["period"].max())
+        for g in show:
+            x = gs[(gs["group"] == g) & (gs["origin"] == "2026-02")].set_index(["scenario", "months_ahead"])
+            if x.empty:
+                continue
+            w = h_wts[(h_wts["group"] == g) & (h_wts["period"] == wy)].set_index("code")["value"]
+            c = lambda s, h: x.loc[(s, h), "cost_q50"] if (s, h) in x.index else np.nan  # noqa: E731
+            extra = c("closure_100", 6) - c("none", 6)
+            fuel = x.loc[("closure_100", 6), "motor_fuel_part"] - x.loc[("none", 6), "motor_fuel_part"] if ("none", 6) in x.index else np.nan
+            out.append(f"| {g} | {fmt(w.get('04.5', np.nan) / 10)}% | {fmt(w.get('07.2.2', np.nan) / 10)}% | {fmt(c('none', 6), 2, True)} | "
+                       f"{fmt(c('closure_50', 6), 2, True)} | {fmt(c('closure_100', 6), 2, True)} | {fmt(extra, 2, True)} | "
+                       f"{fmt(fuel, 2, True)} | {fmt(c('closure_100', 12), 2, True)} |")
+        ol = gs[gs["scenario"] == "outlook"]
+        if len(ol):
+            o0 = ol["origin"].iloc[0]
+            out += ["", f"**The year ahead from {o0}** (a forecast: the item model's Brent paths from {o0}, no scenario; "
+                    "median and the comonotone bound):", "", "| Group | 3 months | 6 months | 12 months |", "|---|---|---|---|"]
+            for g in show:
+                x = ol[ol["group"] == g].set_index("months_ahead")
+                if x.empty:
+                    continue
+                cells = [f"{x.loc[h, 'cost_q50']:+.1f} ({x.loc[h, 'cost_q05_bound']:+.1f}..{x.loc[h, 'cost_q95_bound']:+.1f})" if h in x.index else "–"
+                         for h in (3, 6, 12)]
+                out.append(f"| {g} | " + " | ".join(cells) + " |")
 
     # 5. minutes of work
     minutes = [k for k in m if k.startswith("us_minutes_")]

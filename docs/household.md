@@ -64,6 +64,35 @@ its source, code, unit, frequency and fetch date.
   - From February 2026, motor fuel rose 25–31% in all three regions. Real pay fell 0.9% in the US (to September), 1.0% in the UK (to August) and 0.3% in the euro area (first to second quarter).
   - Given the chain's CPI paths, real pay in the 82-points-lost scenario was forecast at −0.6% (US) and −0.4% (UK) after 3 months. The actuals were −1.1% and −1.0%, inside the bands.
 
+## A Hormuz closure by UK household group (`notes/household-group-scenarios.csv`)
+
+**Method:**
+- Take the item price fans of the basket-item model: `notes/cost-of-living-fans.csv` on branch `seb/cost-of-living`, commit 849e11f, which has converged fits from Iridis job 1972769. The fans run from 2026-02 under no closure and 25%, 50% and 100% closures, plus the outlook from 2026-09.
+- Weight them by each group's 2026 HCI spending shares:
+  - food goes to the food items, split by their CPI weights;
+  - electricity, gas and other fuels to electricity and gas;
+  - motor fuels to fuel;
+  - restaurants and hotels to restaurants;
+  - mortgage interest is held flat, because the price model has no rates;
+  - the rest goes to its "rest of the basket".
+- The change in each group's costs is the share-weighted sum of item changes (first order).
+- The band adds the items' quantiles as if they all moved together, so it is an upper bound on its width.
+
+**Results:**
+- After 6 months, a full closure adds 0.5–0.7 points to every group's costs, most of it through motor fuel.
+- Car-owning middle-income households and owner-occupiers get the most (+0.65 to +0.70); social renters the least (+0.48).
+- Energy-heavy budgets (the lowest-income tenth; retired people) are cushioned at first, because UK household energy follows the quarterly Ofgem cap.
+- The year ahead from 2026-09: costs rise about 3.9–4.4%, slightly more for low-income and retired households.
+
+**Reproduce:** the fans come from the other branch, so `report` takes their path as an input:
+
+```bash
+git show origin/seb/cost-of-living:notes/cost-of-living-fans.csv > runs/col-fans.csv
+HOUSEHOLD_COL_FANS=runs/col-fans.csv HOUSEHOLD_COL_FANS_SOURCE="notes/cost-of-living-fans.csv on branch seb/cost-of-living, commit 849e11f" uv run experiments/household.py report
+```
+
+Once `seb/cost-of-living` is merged, `notes/cost-of-living-fans.csv` is found without the variables.
+
 ## Limits
 
 - **Average pay, not each household's income.** It misses benefits, taxes, hours and job loss. US average hourly pay rose in 2020 because low-paid jobs were lost first, a composition effect.

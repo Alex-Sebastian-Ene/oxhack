@@ -152,6 +152,40 @@ ONS, Household Costs Indices for UK household groups: April to June 2026 (releas
 | With Children | -0.17 | +0.60 | +0.42 | +1.8 |
 | Without Children | -0.20 | +0.53 | +0.34 | +1.9 |
 
+## A Hormuz closure by UK household group
+
+Item price fans of the cost-of-living model (`notes/cost-of-living-fans.csv on branch seb/cost-of-living, commit 849e11f`: the Bayesian basket-item model, Lévy Brent paths, closures scaled to the 2026 one) weighted by each group's spending shares (HCI weights, 2026). Change in each group's costs since 2026-02, % (median; first-order weighted sum of item changes). Mortgage interest is held flat, as the price model has no rates. 'Extra' is the closure's cost above no closure.
+
+| Group | Energy share | Motor fuel share | 6 months, no closure | 6 months, 50% closure | 6 months, full closure | Extra from a full closure (6 m) | of which motor fuel | 12 months, full closure |
+|---|---|---|---|---|---|---|---|---|
+| Decile 1 | 6.0% | 2.3% | +1.03 | +1.31 | +1.59 | +0.55 | +0.38 | +4.14 |
+| Decile 2 | 5.7% | 2.9% | +1.04 | +1.35 | +1.68 | +0.65 | +0.48 | +4.36 |
+| Decile 5 | 4.1% | 3.0% | +1.06 | +1.40 | +1.75 | +0.68 | +0.50 | +4.33 |
+| Decile 9 | 2.8% | 2.4% | +1.09 | +1.40 | +1.70 | +0.61 | +0.40 | +4.04 |
+| Decile 10 | 3.0% | 2.3% | +1.06 | +1.36 | +1.65 | +0.59 | +0.38 | +3.92 |
+| Private renter | 3.1% | 2.1% | +1.07 | +1.35 | +1.61 | +0.54 | +0.35 | +3.97 |
+| Mortgagor and other owner occupier | 3.3% | 3.1% | +1.02 | +1.37 | +1.72 | +0.70 | +0.52 | +4.15 |
+| Outright owner occupier | 4.8% | 3.0% | +1.10 | +1.44 | +1.79 | +0.69 | +0.50 | +4.43 |
+| Social and other renter | 5.7% | 1.9% | +1.03 | +1.27 | +1.51 | +0.48 | +0.32 | +4.02 |
+| Retired | 5.5% | 2.4% | +1.06 | +1.35 | +1.64 | +0.58 | +0.40 | +4.22 |
+| With Children | 3.9% | 2.9% | +1.03 | +1.36 | +1.69 | +0.66 | +0.48 | +4.20 |
+
+**The year ahead from 2026-09** (a forecast: the item model's Brent paths from 2026-09, no scenario; median and the comonotone bound):
+
+| Group | 3 months | 6 months | 12 months |
+|---|---|---|---|
+| Decile 1 | +1.2 (-1.1..+4.1) | +2.4 (-1.1..+6.9) | +4.3 (-1.3..+11.2) |
+| Decile 2 | +1.3 (-1.1..+4.2) | +2.5 (-1.2..+7.1) | +4.4 (-1.4..+11.4) |
+| Decile 5 | +1.2 (-1.0..+3.9) | +2.4 (-0.9..+6.6) | +4.2 (-1.0..+10.6) |
+| Decile 9 | +1.1 (-0.8..+3.5) | +2.2 (-0.7..+5.9) | +4.0 (-0.5..+9.6) |
+| Decile 10 | +1.1 (-0.8..+3.4) | +2.1 (-0.7..+5.8) | +3.9 (-0.6..+9.4) |
+| Private renter | +1.1 (-0.8..+3.5) | +2.3 (-0.6..+6.0) | +4.1 (-0.5..+9.7) |
+| Mortgagor and other owner occupier | +1.1 (-0.9..+3.6) | +2.2 (-0.8..+6.1) | +3.9 (-0.8..+9.8) |
+| Outright owner occupier | +1.2 (-1.0..+4.1) | +2.4 (-1.0..+6.9) | +4.3 (-1.2..+11.1) |
+| Social and other renter | +1.2 (-1.0..+4.0) | +2.4 (-1.0..+6.8) | +4.3 (-1.2..+11.0) |
+| Retired | +1.2 (-1.0..+4.1) | +2.4 (-1.1..+6.9) | +4.3 (-1.2..+11.2) |
+| With Children | +1.2 (-0.9..+3.8) | +2.3 (-0.9..+6.4) | +4.1 (-0.9..+10.3) |
+
 ## Minutes of work for everyday goods (US)
 
 At average hourly pay of production and nonsupervisory employees (FRED AHETPI), BLS US city average prices. The weekly shop is a fixed basket of our own choosing (see the measures CSV).
