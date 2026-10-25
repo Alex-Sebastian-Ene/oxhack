@@ -83,6 +83,17 @@ pre-war 20 mb/d) in The shock card; the scenario menu sets its starting value. E
   no disruption, with the table's 90% range of outcomes. Unemployment is shown grey: Seb marks it forecast only.
 - **Steel and aluminium, energy bills, country fuel costs:** Seb's linear Brent links (OXH-5, `notes/oil-chain-links.md`),
   at the Brent price above.
+- **Emergency oil stocks** (`patch_reserves.py`, Seb's `experiments/reserves.py`, `notes/reserves.md`): under the slider,
+  choose No release, As in 2026 (the default: every number above is unchanged) or Maximum (the IEA's maximum drawdown,
+  up to 25 mb/d for two months, until the 1.8 bn barrels held for release run out). Brent follows the flow-premium
+  curve restated per barrel still missing after releases (`notes/reserve-scenarios.csv`). The chain's numbers are
+  the table above plus the policy's difference in the chain's own replays under each policy
+  (`notes/chain-scenarios-3m-d2000-margins*.csv`). The release line is tagged "assumed": the premium is taken to
+  scale with the barrels still missing, which one closure cannot test.
+- **Oil stocks by country:** the country card and pop-up show each country's stocks in its source's unit (IEA days
+  of net imports for members, our JODI calculation of days of demand for Taiwan, Thailand, India and the
+  Philippines, the EIA estimate for China, an official claim for Pakistan; `notes/reserves/country-cover.csv`), and
+  for importers how long they would replace the lost Hormuz oil at the slider's setting.
 
 **Not from a model, labelled "illustrative" on the page** (asked on OXH-3, 25 Oct 2026):
 

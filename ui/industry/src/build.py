@@ -23,6 +23,7 @@ STEPS = [
     "patch_straitui.py", # Strait panel: result first, labelled numbers, real vs simulated tags, link to the World view
     "patch_tidy.py",     # plain source lines and shorter info sheets for viewers (build notes stay in README and docs)
     "patch_trends.py",   # Trends tab: a country's prices over time, forecast skill, and the industry model's oil effect
+    "patch_reserves.py", # Seb's emergency stocks: a release choice on the shock card, stock cover on country cards
 ]
 for step in STEPS:
     r = subprocess.run([sys.executable, "-I", str(here / step)], capture_output=True, text=True)
