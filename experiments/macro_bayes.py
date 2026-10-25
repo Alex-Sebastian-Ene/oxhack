@@ -25,6 +25,12 @@ training months only:
     (every step hits the tree-depth limit, ~8 min a fold on 2 cores); run it on Iridis.
   - `--vol own`: psi[k] times each series' own recent volatility (log EWMA of its past |changes|,
     standardised). Observation-driven, like GARCH, so there is nothing latent to sample.
+- Supply-disruption regime (`fit(..., regime=True)`, the chain's `bayes_regime` member): in months
+  with D[s] = 1 (REGIME: 2022-03..2022-12 and 2026-03..2026-12, the months of cost_of_living.py's
+  SUPPLY) the oil term is multiplied by (1 + kappa[k]), kappa pooled by target group, and the scale
+  by exp(zeta[k]). A fit whose training months hold no disruption leaves both out, so it is the
+  model without them. After the origin D is the calendar (what-if), D at the origin carried on
+  (forecast), or set by the flow scenario (regime_scenario).
 
 Forecasts are simulated month by month from each series' last published month, over posterior
 draws, so they carry parameter uncertainty, fat tails and the volatility state. Two oil modes are
@@ -86,6 +92,12 @@ OWN_LAMBDA, OWN_FLOOR = 0.9, 0.05  # `--vol own`: EWMA weight on the series' own
 OWN_MAX = 0.9  # `--vol own`: bound on the feedback of log volatility on itself (stationarity)
 LOG_SCALE_CLIP = (-6.0, 4.0)  # volatility terms of the log scale, clipped in fitting and simulation alike
 SCENARIO = 36  # months of oil-shock responses written for the what-if; 13..36 are untested scenarios
+# Physical oil supply disruptions (D = 1), the months of experiments/cost_of_living.py's SUPPLY
+REGIME = (("2022-03-01", "2022-12-01", "Russia's invasion of Ukraine and the embargoes"),
+          ("2026-03-01", "2026-12-01", "Hormuz closure"))
+# A flow scenario switches the regime on from this many points of Hormuz flow lost (of a normal 100,
+# about 20 mb/d): 25 points is about 5 mb/d, more supply than Russia lost in 2022
+REGIME_LOST = 25.0
 QUICK = False
 
 
@@ -145,13 +157,42 @@ def design(data: dict, st: Stats, last_month: int) -> dict:
     u = (np.log(own_ewma(y) + OWN_FLOOR) - st.um) / st.us
     rows = np.arange(13, last_month + 1)  # full oil lags behind every training month
     return {"Xp": np.maximum(lag, 0)[rows], "Xn": np.minimum(lag, 0)[rows], "v": v[rows],
-            "y": y[rows], "yprev": y[rows - 1], "u": u[rows]}
+            "y": y[rows], "yprev": y[rows - 1], "u": u[rows], "D": regime_all(data)[rows]}
 
 
 def month_index(data: dict) -> pd.DatetimeIndex:
     """Calendar month of every monthly array position (data['oil_m'], data['dM'])."""
     start = data["dates"][0] - pd.DateOffset(months=int(data["t"][0]))
     return pd.date_range(start, periods=len(data["oil_m"]), freq="MS")
+
+
+def regime_months(idx: pd.DatetimeIndex) -> np.ndarray:
+    """D (1 in supply-disruption months, else 0) for each month of idx."""
+    D = np.zeros(len(idx))
+    for a, b, _ in REGIME:
+        D[(idx >= a) & (idx <= b)] = 1.0
+    return D
+
+
+def regime_all(data: dict) -> np.ndarray:
+    """D for every monthly array position (data['D'] where given, as in the tests)."""
+    return data["D"] if "D" in data else regime_months(month_index(data))
+
+
+def regime_future(data: dict, t: np.ndarray, known: bool) -> np.ndarray:
+    """D in the 12 months after each origin [len(t), 12]: the calendar if known (the what-if, which is
+    told what happened), else D at the origin carried on (a forecast: a disruption under way goes on)."""
+    if not known:
+        return np.repeat(regime_all(data)[t][:, None], mn.OIL_AHEAD, 1)
+    idx = month_index(data)
+    return np.stack([regime_months(pd.date_range(idx[i] + pd.DateOffset(months=1), periods=mn.OIL_AHEAD, freq="MS"))
+                     for i in t])
+
+
+def regime_scenario(data: dict, t: np.ndarray, lost: float) -> np.ndarray:
+    """D after each origin under a flow scenario: on for all 12 months when at least REGIME_LOST points
+    of Hormuz flow are lost, and on wherever a disruption is already under way at the origin."""
+    return np.maximum(regime_future(data, t, known=False), float(lost >= REGIME_LOST))
 
 
 def market_inputs(data: dict) -> dict:
@@ -181,7 +222,7 @@ def market_inputs(data: dict) -> dict:
 
 # --- model -----------------------------------------------------------------------------------
 
-def model(Xp, Xn, v, yprev, y, u, lagmask, cluster, n_clusters, floor, vgroup, n_vgroups, own, own_us):
+def model(Xp, Xn, v, yprev, y, u, D, lagmask, cluster, n_clusters, floor, vgroup, n_vgroups, own, own_us, regime=False):
     S, K = y.shape
     mu = numpyro.sample("mu", dist.Normal(0, 0.5).expand([n_clusters, LAGS]).to_event(2))
     tau = numpyro.sample("tau", dist.HalfNormal(0.2).expand([n_clusters, 1]).to_event(2))
@@ -205,9 +246,19 @@ def model(Xp, Xn, v, yprev, y, u, lagmask, cluster, n_clusters, floor, vgroup, n
         # stationary, otherwise a big simulated change raises the scale, which raises the next change...
         psi = numpyro.deterministic("psi", OWN_MAX * own_us * jnp.tanh(numpyro.sample("psi_raw", dist.Normal(0, 1).expand([K]).to_event(1))))
         logs = logs + psi * u
+    if regime:  # supply disruption (D = 1): extra pass-through pooled by target group, and a wider band
+        mu_k = numpyro.sample("mu_kappa", dist.Normal(0, 1).expand([len(GROUPS)]).to_event(1))
+        tau_k = numpyro.sample("tau_kappa", dist.HalfNormal(0.5))
+        kz = numpyro.sample("kz", dist.Normal(0, 1).expand([K]).to_event(1))
+        kappa = numpyro.deterministic("kappa", mu_k[vgroup] + tau_k * kz)  # non-centred pooling
+        zeta = numpyro.sample("zeta", dist.Normal(0, 0.5).expand([K]).to_event(1))
+        logs = logs + zeta * D[:, None]
     logs = jnp.clip(logs, *LOG_SCALE_CLIP)
     ok = jnp.isfinite(y) & jnp.isfinite(yprev)
-    m = a + rho * jnp.nan_to_num(yprev) + (Xp @ B.T) * (1 + alpha) + (Xn @ B.T) * (1 - alpha)
+    if regime:
+        m = a + rho * jnp.nan_to_num(yprev) + ((Xp @ B.T) * (1 + alpha) + (Xn @ B.T) * (1 - alpha)) * (1 + kappa * D[:, None])
+    else:  # written as before the regime terms, so earlier runs reproduce exactly
+        m = a + rho * jnp.nan_to_num(yprev) + (Xp @ B.T) * (1 + alpha) + (Xn @ B.T) * (1 - alpha)
     # The floor keeps a series that sits still for years (policy rates at zero: most monthly changes
     # are exactly 0) from collapsing its scale towards 0, which strands chains in that spike.
     scale = floor + sigma_raw * jnp.exp(logs)
@@ -215,15 +266,19 @@ def model(Xp, Xn, v, yprev, y, u, lagmask, cluster, n_clusters, floor, vgroup, n
         numpyro.sample("y", dist.StudentT(nu, m, scale), obs=jnp.nan_to_num(y))
 
 
-KEEP = ("B", "a", "rho", "alpha", "sigma", "sigma_raw", "phi", "nu", "omega", "psi")
-SITES = ("mu", "tau", "bz", "a", "rho_raw", "alpha_raw", "sigma_raw", "phi", "nu_m", "omega", "h_eps", "psi_raw")
+KEEP = ("B", "a", "rho", "alpha", "sigma", "sigma_raw", "phi", "nu", "omega", "psi", "kappa", "zeta")
+SITES = ("mu", "tau", "bz", "a", "rho_raw", "alpha_raw", "sigma_raw", "phi", "nu_m", "omega", "h_eps", "psi_raw",
+         "mu_kappa", "tau_kappa", "kz", "zeta")
 
 
-def fit(data: dict, last_month: int, seed: int = 0, vol: str = "oil") -> tuple[dict, Stats, dict, dict]:
-    """NUTS on months 13..last_month. Returns posterior draws (KEEP), stats, series info, diagnostics."""
+def fit(data: dict, last_month: int, seed: int = 0, vol: str = "oil", regime: bool = False) -> tuple[dict, Stats, dict, dict]:
+    """NUTS on months 13..last_month. Returns posterior draws (KEEP), stats, series info, diagnostics.
+    regime: add the supply-disruption terms, if the training months hold a disruption (else the fit is
+    the same as without them: nothing would identify kappa and zeta but their priors)."""
     info = series_info(data)
     st = Stats(data, last_month)
     d = design(data, st, last_month)
+    regime = regime and bool(d["D"].any())
     lagmask = (np.arange(LAGS)[None, :] <= info["lags"][:, None]).astype(float)
     warm, samp = (40, 40) if QUICK else (WARMUP, SAMPLES)
     mcmc = MCMC(NUTS(model, target_accept_prob=0.9, max_tree_depth=TREE_DEPTH), num_warmup=warm,
@@ -233,7 +288,7 @@ def fit(data: dict, last_month: int, seed: int = 0, vol: str = "oil") -> tuple[d
              **{k: jnp.asarray(v) for k, v in d.items()}, lagmask=jnp.asarray(lagmask),
              cluster=jnp.asarray(info["cluster"]), n_clusters=len(info["clusters"]),
              floor=jnp.asarray(info["floor"]), vgroup=jnp.asarray(info["vgroup"]),
-             n_vgroups=len(GROUPS) if vol == "cdv" else 0, own=vol == "own", own_us=jnp.asarray(st.us))
+             n_vgroups=len(GROUPS) if vol == "cdv" else 0, own=vol == "own", own_us=jnp.asarray(st.us), regime=regime)
     grouped = mcmc.get_samples(group_by_chain=True)
     # every sampled site, hyperparameters included (they mix slowest in a non-centred hierarchy)
     summ = numpyro.diagnostics.summary({k: np.asarray(grouped[k]) for k in SITES if k in grouped})
@@ -243,7 +298,7 @@ def fit(data: dict, last_month: int, seed: int = 0, vol: str = "oil") -> tuple[d
     diag = {"seconds": round(time.time() - t0, 1), "chains": CHAINS, "warmup": warm, "samples": samp, "vol": vol,
             "divergences": int(np.sum(extra["diverging"])), "max_r_hat": round(rhat, 3), "min_ess": round(ess, 1),
             "tree_depth_hits": int(np.sum(np.asarray(extra["num_steps"]) >= 2 ** TREE_DEPTH - 1)),
-            "months": int(np.isfinite(d["y"]).any(1).sum())}
+            "months": int(np.isfinite(d["y"]).any(1).sum()), "regime": regime, "regime_months": int(d["D"].sum())}
     samples = mcmc.get_samples()
     post = {k: np.asarray(v) for k, v in samples.items() if k in KEEP}
     if "h" in samples:
@@ -281,14 +336,17 @@ def oil_paths(data: dict, st: Stats, last_month: int, t: np.ndarray, n: int, rng
 
 
 def simulate(post: dict, st: Stats, info: dict, data: dict, t: np.ndarray, future: np.ndarray, rng,
-             noise: bool = True) -> np.ndarray:
+             noise: bool = True, regime: np.ndarray | None = None) -> np.ndarray:
     """Draws of every output (target-major, horizon-minor, as data['names']) at origins t (month
     indices): [N, len(t), outputs]. future: oil log changes after each origin, [N or 1, len(t), 12].
 
     Each series is simulated from its last published month (t - publication lag), so months that
     have happened but are not yet published are nowcast, as a forecaster at the end of month t would.
     With drifting volatility, the group volatilities carry on as random walks from the last training
-    month, so a later origin in a test block is less sure of the current volatility."""
+    month, so a later origin in a test block is less sure of the current volatility.
+
+    With the supply-disruption terms (kappa in post), D is the calendar up to the origin and `regime`
+    [len(t), 12] after it (default: D at the origin carried on; see regime_future, regime_scenario)."""
     N, K = len(post["a"]), len(info["keys"])
     O, pmax, H = len(t), int(info["pub_lag"].max()), mn.OIL_AHEAD
     z_all = np.nan_to_num(data["oil_m"]) / st.xs
@@ -309,15 +367,23 @@ def simulate(post: dict, st: Stats, info: dict, data: dict, t: np.ndarray, futur
     own = "psi" in post and noise
     if own:  # each series' own volatility, from published months, then updated with the simulated ones
         e = own_ewma(y_all)[s0][None].repeat(N, 0)  # [N, O, K]
+    reg = "kappa" in post
+    if reg:
+        D_all = regime_all(data)
+        D_ahead = np.repeat(D_all[t][:, None], H, 1) if regime is None else np.asarray(regime, float)  # [O, H]
     cum = np.zeros((N, O, K))
     out = np.zeros((N, O, K, len(mn.HORIZONS)))
     for j in range(-pmax + 1, H + 1):  # month s = t + j
         znew = zf[:, :, j - 1] if j >= 1 else np.broadcast_to(z_all[t + j], (N, O))
         buf = np.concatenate([znew[..., None], buf[..., :-1]], -1)
         v = (np.log(np.abs(buf[..., :3]).mean(-1) + VOL_FLOOR) - st.vm) / st.vs  # [N, O]
-        m = (a[:, None] + rho[:, None] * yprev
-             + np.einsum("nol,nkl->nok", np.maximum(buf, 0), B) * (1 + alpha[:, None])
-             + np.einsum("nol,nkl->nok", np.minimum(buf, 0), B) * (1 - alpha[:, None]))
+        up = np.einsum("nol,nkl->nok", np.maximum(buf, 0), B) * (1 + alpha[:, None])
+        down = np.einsum("nol,nkl->nok", np.minimum(buf, 0), B) * (1 - alpha[:, None])
+        if reg:
+            d = (D_ahead[:, j - 1] if j >= 1 else D_all[t + j])[None, :, None]  # [1, O, 1]
+            m = a[:, None] + rho[:, None] * yprev + (up + down) * (1 + post["kappa"][:, None, :] * d)
+        else:  # written as before the regime terms, so earlier runs reproduce exactly
+            m = a[:, None] + rho[:, None] * yprev + up + down
         if noise:
             logs = phi[:, None] * v[..., None]
             if cdv:
@@ -325,6 +391,8 @@ def simulate(post: dict, st: Stats, info: dict, data: dict, t: np.ndarray, futur
                 logs = logs + hcur[..., info["vgroup"]]
             if own:
                 logs = logs + post["psi"][:, None, :] * (np.log(e + OWN_FLOOR) - st.um) / st.us
+            if reg:
+                logs = logs + post["zeta"][:, None, :] * d
             logs = np.clip(logs, *LOG_SCALE_CLIP)
             m = m + rng.standard_t(nu[:, None, :], size=(N, O, K)) * (floor + sig[:, None] * np.exp(logs))
         known = j <= -info["pub_lag"]  # [K]: this month is already published for these series
