@@ -8,7 +8,8 @@ STILLS = [(1, "classic", 1920, 1080), (2, "horizon", 1920, 1080), (3, "knockon",
           (6, "logo-plain", 1920, 1280), (7, "logo-sea", 1920, 1280), (8, "logo-plate", 1920, 1280), (9, "logo-wake", 1920, 1280),
           (10, "sea-blue", 1920, 1280), (11, "sea-gold", 1920, 1280), (12, "set-blue", 1920, 1280), (13, "set-gold", 1920, 1280),
           (14, "logo-blue", 1920, 1280), (15, "logo-gold", 1920, 1280), (16, "logo-blue-glow", 1920, 1280), (17, "logo-gold-glow", 1920, 1280),
-          (18, "logo-blue-centred", 1920, 1280), (19, "logo-blue-lit", 1920, 1280), (20, "logo-blue-lit-bright", 1920, 1280)]
+          (18, "logo-blue-centred", 1920, 1280), (19, "logo-blue-lit", 1920, 1280), (20, "logo-blue-lit-bright", 1920, 1280),
+          (21, "colours-subtle", 1920, 1280), (22, "colours-bright", 1920, 1280), (23, "matched-subtle", 1920, 1280), (24, "matched-bright", 1920, 1280), (25, "exposure-subtle", 1920, 1280), (26, "exposure-bright", 1920, 1280)]
 def face(fam, f, w):
     return f'@font-face{{font-family:"{fam}";src:url(data:font/woff2;base64,{base64.b64encode((F / f).read_bytes()).decode()}) format("woff2");font-weight:{w};font-display:block}}'
 fonts = "\n".join([face("Pixelify Sans", "pixelify-sans-latin-400-normal.woff2", 400), face("Pixelify Sans", "pixelify-sans-latin-700-normal.woff2", 700), face("VT323", "vt323-latin-400-normal.woff2", 400)])

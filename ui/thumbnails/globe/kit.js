@@ -43,7 +43,7 @@ function globe(cfg) {
   const grat = mask((x, p) => { x.beginPath(); p(d3.geoGraticule().step([15, 15])()); x.strokeStyle = "#fff"; x.lineWidth = 0.5; x.stroke(); });
   // highlighted countries (cfg.hi: Map iso3 -> "oil" | "gas"), one mask per kind
   const hiM = {};
-  for (const kind of ["oil", "gas"]) { const fs = cfg.hi ? window.COUNTRIES.features.filter((f) => cfg.hi.get(f.properties.iso3) === kind) : [];
+  for (const kind of new Set(cfg.hi ? cfg.hi.values() : [])) { const fs = window.COUNTRIES.features.filter((f) => cfg.hi.get(f.properties.iso3) === kind);
     if (fs.length) hiM[kind] = mask((x, p) => { x.beginPath(); p({ type: "FeatureCollection", features: fs }); x.fillStyle = "#fff"; x.fill(); }); }
   const HI = cfg.hiRamps || { oil: ["#2c1706", "#5c300c", "#8c4c12", "#c06c18", "#e98c22", "#ffb547"], gas: ["#1d1338", "#362562", "#50388e", "#7050ba", "#9070e2", "#b69cf2"] };
   const hiLift = cfg.hiLift ?? 1, hiEdge = cfg.hiEdge ?? 1;
@@ -56,7 +56,7 @@ function globe(cfg) {
     const sh = shade(x, y); if (!sh) continue;
     const i = (y * LW + x) * 4, isL = land[i + 3] > 110;
     const v = clamp((sh.s + 0.18) / 1.05, 0, 1) * 5; let lv = Math.floor(v); if (dith(x, y, v - lv)) lv++; lv = clamp(lv, 0, 5);
-    const hk = isL && (hiM.oil && hiM.oil[i + 3] > 110 ? "oil" : hiM.gas && hiM.gas[i + 3] > 110 ? "gas" : null);
+    let hk = null; if (isL) for (const kk in hiM) if (hiM[kk][i + 3] > 110) { hk = kk; break; }
     const lvH = clamp(lv + hiLift, 1, 5);   // lit a step brighter than plain land, so they read on the night side too
     let col = hk ? HI[hk][lvH] : (isL ? LAND : SEA)[lv];
     if (isL && bord[i + 3] > 80) col = hk ? HI[hk][clamp(lvH + 1 + hiEdge, 2, 5)] : LAND[clamp(lv + 1, 1, 5)];
@@ -105,7 +105,7 @@ function arcs(G, list, o = {}) {
   for (const A of list) {
     if (G.at(A.b)[2] < (o.minZ ?? 0.05)) continue;
     const ip = d3.geoInterpolate(A.a, A.b), dist = d3.geoDistance(A.a, A.b), n = Math.max(60, Math.round(dist * G.r * 2.2));
-    const C = ARC[A.kind], th = A.w > 0.55 ? 2 : 1, head = A.head ?? 0.75, tail = A.tail ?? 0.4, lift = (o.lift ?? 0.2) * (A.liftK ?? 1);
+    const C = A.pal || ARC[A.kind], th = A.w > 0.55 ? 2 : 1, head = A.head ?? 0.75, tail = A.tail ?? 0.4, lift = (o.lift ?? 0.2) * (A.liftK ?? 1);
     for (let k = 0; k <= n; k++) {
       const s = k / n, q = G.at(ip(s), lift * Math.sin(Math.PI * s) * Math.min(1, dist * 1.15));
       if (!G.seen(q)) continue;
@@ -309,3 +309,15 @@ function destCountries(list, rot, minZ = 0.05) {
   }
   return out;
 }
+// colour helpers for highlighted buyers: a 6-step ramp from the night land up to a hue, subtle or bright,
+// and a 4-tone ramp for an arc in that hue
+function hueRamp(hex, bright) {
+  const ts = bright ? [0.34, 0.48, 0.62, 0.76, 0.9, 1] : [0.12, 0.19, 0.27, 0.36, 0.46, 0.58];
+  return ts.map((t) => d3.color(d3.interpolateLab("#0b0f1c", hex)(t)).formatHex());
+}
+function arcRamp(hex) { const c = d3.color(hex); return [d3.interpolateLab("#0b0f1c", hex)(0.45), c.formatHex(), d3.interpolateLab(hex, "#ffffff")(0.35), d3.interpolateLab(hex, "#ffffff")(0.8)].map((v) => d3.color(v).formatHex()); }
+// the buyer's ISO3 for an arc (name for oil, ISO3 for LNG), or null if it has no polygon here
+function destIso(A) { const f = window.COUNTRIES.features.find((g) => g.properties.name === A.name || g.properties.iso3 === A.name); return f ? f.properties.iso3 : null; }
+// one colour per buyer, picked to sit apart from each other and from the amber title
+const BUYER = { CHN: "#ff5a5f", IND: "#ffb547", JPN: "#ff7ab8", KOR: "#8fd0f5", TWN: "#7ee0b0", THA: "#c49bff", VNM: "#5ad1c9", PHL: "#ffd166",
+  IDN: "#9be15d", PAK: "#5aa9ff", NLD: "#ff9f5a", ITA: "#e07bff", BGD: "#4fe3a0", USA: "#8fb3ff", SGP: "#f1e8d2" };
