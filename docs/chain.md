@@ -130,7 +130,7 @@ Run on Iridis: job 1972767 for the folds, 1972803 for the report, 1972768 for th
 - **So the copula makes the joint answers more coherent at no cost to any single series.** That matters for anything that adds series together, such as a household bill or a basket of costs.
 - **In the single 2026 replay** the joint scores are mixed: slightly worse at 1 and 3 months, better at 6. One event can't settle it; the folds do.
 
-**Recommended model now:** the 3-member equal ensemble (`bayes_own`, `global_lin`, `global`) with copula shocks.
+**Recommended model now:** the 3-member equal ensemble (`bayes_own`, `global_lin`, `global`) with copula shocks, plus the margin member on the three fuel targets (`CHAIN_MARGINS=1`; see "Refined-product margins" below).
 
 ## Independent verification
 
