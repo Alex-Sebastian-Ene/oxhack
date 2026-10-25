@@ -1,0 +1,14 @@
+/* "The shock" as an accordion (steps.js): a header per step, one step open at a time. */
+#world-stage .step.acc-step { gap: 0; }
+#world-stage .step .acc-head { cursor: pointer; user-select: none; min-height: 40px; padding: 4px 0; }
+#world-stage .step .acc-head:hover { color: var(--text); }
+#world-stage .step .acc-head:focus-visible { outline: 2px solid var(--oil); outline-offset: 2px; }
+#world-stage .step .acc-sum { margin-left: auto; font: 400 16px var(--mono); color: var(--oil-soft); white-space: nowrap; }
+#world-stage .step .acc-chev { margin-left: 8px; color: var(--muted); transition: transform .15s; display: inline-block; }
+#world-stage .step.acc-open .acc-chev { transform: rotate(90deg); color: var(--oil); }
+#world-stage .step .acc-body { display: flex; flex-direction: column; gap: 10px; padding-top: 8px; }
+#world-stage .step .acc-body[hidden] { display: none; }
+/* the hints ("drag the slider", "follows from the lost flow") and the long estimate note are left out of the card;
+   the flow estimate is in the Strait view */
+#world-stage .step .stephead .hint, #world-stage #w-est { display: none !important; }
+@media (prefers-reduced-motion: reduce) { #world-stage .step .acc-chev { transition: none; } }

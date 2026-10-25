@@ -109,7 +109,7 @@ def main() -> None:
     first_style_end = body.index("</style>") + len("</style>")
     read = lambda f: (HERE / f).read_text(encoding="utf-8")
     early = (
-        f"\n<style>\n{font_css()}\n{read('theme.css')}\n{gas.CSS}\n{mandeb.CSS}\n{households.CSS}\n{flags.CSS}\n{read('landing.css')}\n{read('ai.css')}</style>\n"
+        f"\n<style>\n{font_css()}\n{read('theme.css')}\n{gas.CSS}\n{mandeb.CSS}\n{households.CSS}\n{flags.CSS}\n{read('landing.css')}\n{read('ai.css')}\n{read('steps.css')}</style>\n"
         f"{gas_data()}{mandeb_data()}{flags.script()}{households.script()}<script>\n{read('mandeb.js')}\n</script>\n"
         f"{read('landing.html')}"
         f"<script>\n{read('pixel.js')}\n</script>\n<script>\n{read('sound.js')}\n</script>\n<script>\n{read('landing.js')}\n</script>\n"
@@ -118,10 +118,11 @@ def main() -> None:
     body += f"\n<script>\n{read('shell.js')}\n</script>\n<script>\n{read('ai.js')}\n</script>\n"
     if households.data() is not None:   # the Households page, from Seb's notes (OXH-8)
         body += f"<script>\n{read('households.js')}\n</script>\n"
+    body += f"<script>\n{read('steps.js')}\n</script>\n"   # "The shock" steps open and close like an accordion
     fragment = '<title>Hormuz Flow</title>\n<meta name="claude:viewport-fit-sides" content="cover">\n' + body
 
     if shutil.which("node"):
-        for f in ("pixel.js", "sound.js", "landing.js", "shell.js", "ai.js", "mandeb.js", "households.js"):
+        for f in ("pixel.js", "sound.js", "landing.js", "shell.js", "ai.js", "mandeb.js", "households.js", "steps.js"):
             r = subprocess.run(["node", "--check", str(HERE / f)], capture_output=True, text=True)
             if r.returncode:
                 sys.exit(f"{f}: {r.stderr.strip()}")
