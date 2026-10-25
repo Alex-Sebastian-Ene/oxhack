@@ -30,6 +30,7 @@ STEPS = [
     "patch_pickind.py",  # Industries tab: add any industry, including the sector model's 20, with its own prices and Trends chart
     "patch_tradestats.py", # Trade tab: every country's exports and imports (World Bank WDI) and main goods partners (UN Comtrade)
     "patch_countryoil.py", # every country's own numbers: Comtrade dependence and Gulf share, own fuel pass-through, model what-ifs
+    "patch_straits.py",  # both straits: a Bab el-Mandeb control in Hormuz points (flow_events.py mandeb) and its lanes on the map
 ]
 for step in STEPS:
     r = subprocess.run([sys.executable, "-I", str(here / step)], capture_output=True, text=True)

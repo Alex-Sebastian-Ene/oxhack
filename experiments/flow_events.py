@@ -41,8 +41,14 @@ counts AIS-visible tankers only; the IEA's monthly estimates of oil through the 
 Gulf of Oman ship-to-ship transfers. `iea` refits the curve per point of the IEA's lost flow, day
 by day, and leaves notes/flow-premium.csv alone.
 
+`mandeb` writes what the app needs to add Bab el-Mandeb to a Hormuz scenario (notes/mandeb-link.json): one
+Bab el-Mandeb point in Hormuz points, the 2024 diversion's loss and the share rerouted round the Cape, the Sep
+2026 blockade's loss measured the same way, and the share of the Gulf's lost exports that Yanbu (the East-West
+pipeline's Red Sea end, whose crude sails through Bab el-Mandeb to Asia) made up during the 2026 closure.
+
     uv run experiments/flow_events.py   # writes notes/flow-events.md and notes/flow-premium.csv
     uv run experiments/flow_events.py iea [--out DIR]   # notes/hormuz-flow-check.md, notes/flow-premium-iea.csv
+    uv run experiments/flow_events.py mandeb [--out DIR]   # notes/mandeb-link.json
 """
 
 from __future__ import annotations
@@ -64,7 +70,12 @@ IEA_OUT, IEA_CURVE = "hormuz-flow-check.md", "flow-premium-iea.csv"  # written t
 HORMUZ, BABEL, CAPE = "chokepoint6", "chokepoint4", "chokepoint7"
 PORTS = {HORMUZ: "Strait of Hormuz", BABEL: "Bab el-Mandeb", CAPE: "Cape of Good Hope"}
 BYPASS = "port570,port362"  # Yanbu (East-West pipeline), Fujairah (Habshan-Fujairah pipeline)
+YANBU = "port570"  # the bypass port on the Red Sea: its crude reaches Asia through Bab el-Mandeb
 GULF = "port526,port1091,port2479,port24,port512,port2237,port1341"  # macro_data's gulf_exports
+MANDEB_OUT = "mandeb-link.json"  # written to notes/ (or --out)
+# The Houthis' blockade of Saudi shipping: the date as reported (docs/strait-live-data.md, news reports, not read
+# from the flow) and the month its loss is measured over, the month of the Kpler figure there (2.56 mb/d)
+BLOCKADE = ("2026-07-20", "Houthis declare a blockade of Saudi shipping", "2026-09")
 
 # The event rule (fixed from the flow data before looking at Brent around any event).
 SMOOTH = 7  # days in the rolling mean of the daily flow share
@@ -123,13 +134,15 @@ def load_flow(port: str) -> tuple[pd.Series, float]:
     return s / base, float(base)
 
 
-def port_exports(code: str) -> pd.Series:
-    """Daily tanker exports (tonnes) summed over a group of PortWatch ports."""
+def port_exports(code: str, only: str | None = None) -> pd.Series:
+    """Daily tanker exports (tonnes) summed over a group of PortWatch ports, or one port of the group."""
     md.fetch_ports(code)  # make sure the cache exists
     path = md.RAW / f"portwatch_ports_{code.replace(',', '_')}.json"
     df = pd.DataFrame(json.loads(path.read_text(encoding="utf-8")))
     df["date"] = pd.to_datetime(df["date"], unit="ms") if pd.api.types.is_numeric_dtype(df["date"]) \
         else pd.to_datetime(df["date"])
+    if only is not None:
+        df = df[df["portid"] == only]
     return df.groupby("date")["export_tanker"].sum().astype(float).asfreq("D")
 
 
@@ -162,10 +175,10 @@ def closure_start(s: pd.Series) -> pd.Timestamp:
     return sustained.loc["2025-06-01":][lambda x: x].index.min()
 
 
-def shortfall(s: pd.Series, t0, t1, pre: float | None = None) -> float:
-    """Points of normal flow lost from t0 to t1: the pre-level at t0 minus the mean share."""
+def shortfall(s: pd.Series, t0, t1, pre: float | None = None, a=None) -> float:
+    """Points of normal flow lost from a (default t0) to t1: the pre-level at t0 minus the mean share."""
     pre = pre_level(s).loc[t0] if pre is None else pre
-    return 100 * (pre - s.loc[t0:t1].mean())
+    return 100 * (pre - s.loc[t0 if a is None else a:t1].mean())
 
 
 def bypass_offset(byp: pd.Series, gulf: pd.Series, t0, t1, a=None) -> float:
@@ -175,6 +188,27 @@ def bypass_offset(byp: pd.Series, gulf: pd.Series, t0, t1, a=None) -> float:
     gain = byp.loc[a:t1].mean() - pre_level(byp).loc[t0]
     loss = pre_level(gulf).loc[t0] - gulf.loc[a:t1].mean()
     return float(gain / loss)
+
+
+def bypass_lost(byp: pd.Series, t0, t1, a, b) -> float:
+    """Share of a bypass port's extra exports that is gone from a to b: what it gained between the closure's start
+    t0 and a later disruption t1 (pre-levels at each, smoothed series), against what is left of that gain, 0 to 1."""
+    gain = pre_level(byp).loc[t1] - pre_level(byp).loc[t0]
+    left = byp.loc[a:b].mean() - pre_level(byp).loc[t0]
+    return float(np.clip(1 - left / gain, 0, 1)) if gain > 0 else float("nan")
+
+
+def hormuz_equivalent(lost: float, bab: float, per: float, rerouted: float, bypass: float,
+                      bypass_lost: float | None = None) -> dict:
+    """Points of Hormuz flow that a scenario with both straits disrupted amounts to (the app's rule, ui/industry/src/
+    patch_straits.py): Hormuz `lost`, plus `bab` points of Bab el-Mandeb's normal flow in Hormuz tonnage (`per`) net
+    of the share `rerouted` round the Cape, plus the share `bypass_lost` (default bab / 100) of the Red Sea bypass,
+    which made up `bypass` of the Gulf's lost exports in 2026 and so is built into the per-point curve. The chain's
+    tables stop at 100 (Hormuz shut), so `eq` is capped there and `capped` says when the raw sum is beyond."""
+    f = bab / 100 if bypass_lost is None else bypass_lost
+    red, byp = bab * per * (1 - rerouted), lost * bypass * f
+    raw = lost + red + byp
+    return {"red": red, "bypass": byp, "raw": raw, "eq": min(100.0, raw), "capped": raw > 100}
 
 
 # --- Brent -----------------------------------------------------------------------------------
@@ -1083,6 +1117,93 @@ def iea_report(r: dict, x: dict) -> list[str]:
     return out
 
 
+def mandeb_link(r: dict) -> dict:
+    """What the app needs to add Bab el-Mandeb to a Hormuz scenario, from the same flows, events and bypass ports as
+    report(): the Hormuz-equivalent of one Bab el-Mandeb point, the 2023-24 diversion at +120 trading days, the Sep
+    2026 blockade measured by the same rule (pre-level before the declared date, the month's mean share), and
+    Yanbu's part of the 2026 bypass."""
+    brent, sm, ratio, cl = r["brent"], r["sm"], r["ratio"], r["closure"]
+    k = HORIZONS.index(120)
+    real = [e for e in r["events"] if e["port"] == BABEL and e["clean"] and e["news"]]
+    assert len(real) == 1, [e["t0"] for e in real]
+    e = real[0]
+    t120 = brent.index[e["i0"] + 120]
+    per = float(ratio[BABEL])
+
+    t0, end = cl["start"], brent.index[cl["i0"] + cl["obs"]]
+    tb = pd.Timestamp(BLOCKADE[0])
+    m = pd.Period(BLOCKADE[2], "M")
+    ma, mb = m.start_time, m.end_time.normalize()
+    if sm[BABEL].loc[ma:mb].notna().sum() < m.days_in_month:
+        raise ValueError(f"PortWatch does not cover all of {m}")
+    gulf, yanbu = smooth(port_exports(GULF)), smooth(port_exports(BYPASS, only=YANBU))
+    lost_b = shortfall(sm[BABEL], tb, mb, a=ma)
+    cape_b = -shortfall(sm[CAPE], tb, mb, a=ma) * ratio[CAPE] / ratio[BABEL]
+
+    out = {
+        "generated": datetime.now(UTC).date().isoformat(),
+        "source": (f"experiments/flow_events.py mandeb: IMF PortWatch daily tanker capacity through Bab el-Mandeb, the "
+                   f"Strait of Hormuz and the Cape of Good Hope (AIS-derived, fetched {fetched('portwatch_chokepoint4.json')}) "
+                   f"to {sm[BABEL].dropna().index[-1]:%Y-%m-%d}, as a share of each chokepoint's 2019-2024 mean; PortWatch "
+                   f"daily tanker exports at Yanbu (port570) and seven Gulf ports (fetched "
+                   f"{fetched('portwatch_ports_port570_port362.json')}). The events and the bypass are those of "
+                   "notes/flow-events.md. Nothing here is synthetic."),
+        "hormuz_per_mandeb_point": round(per, 4),
+        "per_src": (f"one point of Bab el-Mandeb's normal tanker tonnage in points of Hormuz's: the 2019-2024 means, "
+                    f"{r['flows'][BABEL][1] / 1e6:.3f} and {r['flows'][HORMUZ][1] / 1e6:.3f} million deadweight tonnes a day"),
+        "diversion_2024": {
+            "label": "2024 Houthi diversion", "day0": f"{e['t0']:%Y-%m-%d}", "news": e["news"],
+            "horizon": "+120 trading days", "to": f"{t120:%Y-%m-%d}",
+            "lost": round(float(e["lost"][k]), 1), "rerouted": round(float(e["rerouted"][k]), 1),
+            "net": round(float(e["net"][k]), 1), "rerouted_share": round(float(e["rerouted"][k] / e["lost"][k]), 3),
+            "rule": "lost: the pre-level (days -29..-7) minus the mean share from day 0 to +120 trading days; rerouted: the "
+                    "Cape of Good Hope's gain over the same window, in Bab el-Mandeb tonnage",
+        },
+        "blockade_2026": {
+            "label": "Sep 2026 Houthi blockade of Saudi shipping", "declared": BLOCKADE[0], "what": BLOCKADE[1],
+            "date_src": "docs/strait-live-data.md (news reports)", "month": BLOCKADE[2],
+            "pre_level": round(float(pre_level(sm[BABEL]).loc[tb]), 3), "share": round(float(sm[BABEL].loc[ma:mb].mean()), 3),
+            "lost": round(float(lost_b), 1), "cape_gain": round(float(cape_b), 1),
+            "yanbu_lost": round(bypass_lost(yanbu, t0, tb, ma, mb), 3),
+            "rule": f"lost: the pre-level before {BLOCKADE[0]} (days -29..-7) minus the mean share over {BLOCKADE[2]}; "
+                    "cape_gain: the Cape's gain over the same, in Bab el-Mandeb tonnage; yanbu_lost: the share of Yanbu's "
+                    f"extra exports since the closure began that was gone in {BLOCKADE[2]}",
+        },
+        "yanbu_bypass": {
+            "closure_start": f"{t0:%Y-%m-%d}", "to": f"{end:%Y-%m-%d}",
+            "share": round(bypass_offset(yanbu, gulf, t0, end), 3),
+            "share_before_blockade": round(bypass_offset(yanbu, gulf, t0, tb - pd.Timedelta(days=1)), 3),
+            "both_ports_share": round(float(cl["offset_all"]), 3),
+            "rule": "Yanbu's tanker exports above their pre-closure level, as a share of the seven Gulf ports' lost exports, "
+                    "over every observed day of the closure (the bypass the flow-premium curve, fitted to those days, has "
+                    "built in); share_before_blockade stops the day before the declared blockade",
+        },
+        "combined": ("Hormuz-equivalent loss = Hormuz points lost + Bab el-Mandeb points lost × hormuz_per_mandeb_point × "
+                     "(1 − the 2024 diversion's rerouted share) + Hormuz points lost × yanbu_bypass.share × the share of "
+                     "the Yanbu bypass lost (by default the share of Bab el-Mandeb's flow lost); capped at 100 because the "
+                     "chain's tables stop there. Assumptions: any Red Sea loss reroutes round the Cape as in 2024; "
+                     "Yanbu's extra exports all sail south through Bab el-Mandeb and are not rerouted; the bypass's "
+                     "barrels count one for one as Hormuz points, as the Net Hormuz points column of notes/flow-events.md does."),
+    }
+    rer = out["diversion_2024"]["rerouted_share"]
+    out["examples"] = [dict(lost=h, bab=b, bypass_lost=f_,
+                            **{key: (round(v, 4) if isinstance(v, float) else v)
+                               for key, v in hormuz_equivalent(h, b, out["hormuz_per_mandeb_point"], rer,
+                                                               out["yanbu_bypass"]["share"], f_).items()})
+                       for h in (0, 50, 82, 100)
+                       for b, f_ in ((0, None), (out["diversion_2024"]["lost"], None),
+                                     (out["blockade_2026"]["lost"], out["blockade_2026"]["yanbu_lost"]))]
+    return out
+
+
+def main_mandeb(out_dir) -> None:
+    out_dir.mkdir(parents=True, exist_ok=True)
+    link = mandeb_link(study())
+    (out_dir / MANDEB_OUT).write_text(json.dumps(link, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    print((out_dir / MANDEB_OUT).read_text(encoding="utf-8"))
+
+
 def write_curve(r: dict, curve: pd.DataFrame | None = None, path=CURVE, obs_src: str | None = None) -> None:
     c, cl = r["curve"] if curve is None else curve, r["closure"]
     today = datetime.now(UTC).date().isoformat()
@@ -1112,8 +1233,11 @@ def main_iea(out_dir) -> None:
 
 
 def main() -> None:
+    out_dir = md.ROOT / (sys.argv[sys.argv.index("--out") + 1] if "--out" in sys.argv else "notes")
     if sys.argv[1:2] == ["iea"]:
-        return main_iea(md.ROOT / (sys.argv[sys.argv.index("--out") + 1] if "--out" in sys.argv else "notes"))
+        return main_iea(out_dir)
+    if sys.argv[1:2] == ["mandeb"]:
+        return main_mandeb(out_dir)
     r = study()
     write_curve(r)
     OUT.write_text("\n".join(report(r)), encoding="utf-8")
