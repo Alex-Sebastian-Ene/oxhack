@@ -31,7 +31,7 @@ only if it beats simpler benchmarks out of sample.
 
 ## Basket
 
-Twelve kinds of item in each region, plus the rest of the basket and headline (41 series). The
+Fifteen kinds of item in each region, plus the rest of the basket and headline (51 series). The
 items don't overlap, so their weights add up.
 
 | Kind | US (BLS, seasonally adjusted, via FRED) | UK (ONS, CPI index) | Euro area (Eurostat HICP via FRED) |
@@ -47,17 +47,42 @@ items don't overlap, so their weights add up.
 | Motor fuel | `CUSR0000SETB01` (gasoline) | D7EC (fuels and lubricants) | CP0722 |
 | Air fares | `CUSR0000SETG01` | D7EH | CP0733 |
 | Restaurants | `CUSR0000SEFV` (food away from home) | D7EW (restaurants and cafes) | CP1111 |
+| **Housing** | `CUSR0000SEHA` rent and `CUSR0000SEHC` owners' equivalent rent | D7CE actual rents | CP041 actual rentals (`CP0410EZ19M086NEST`) |
+| **Core goods** | `CUSR0000SACL1E` (commodities less food and energy commodities) | DK9J (non-energy industrial goods) | `IGD_NNRG` (non-energy industrial goods, `prc_hicp_minr`, EA19) |
+| **Other services** | services less energy services (`CUSR0000SASLE`) less rent, OER and air fares | services (D7F5) less rents, air fares and restaurants | services (`SERV`, `prc_hicp_minr`, EA19) less rentals, air fares and restaurants |
 | Headline | `CPIAUCSL` | D7BT | CP0000 |
 
+- **Housing** is rent plus, in the US, owners' equivalent rent. UK CPI and the euro-area HICP leave
+  out owner-occupiers' housing costs: the UK counts them in CPIH, and the HICP not at all. So their
+  housing is actual rents only, and the UK and euro-area series aren't comparable with the US one.
+- **Other services** are derived like the rest of the basket: (services weight × services −
+  Σ weight × service item) / (services weight − Σ item weights). Nothing is counted twice. They
+  include medical care, transport services, recreation, education, communication, insurance,
+  personal services and, in the US, lodging away from home.
+- **Euro-area services and core goods** come from Eurostat's COICOP 2018 dataset `prc_hicp_minr`
+  (EA19, 2015 = 100), the only source with them through 2026: the older `prc_hicp_midx` and the
+  ECB's copies stop at 2025-12, and FRED doesn't carry them.
 - **Weights:**
   - US: BLS relative importance, CPI-U, December 2025. BLS blocks scripted downloads, so these
-    were read from the published table on 2026-10-24 and are in the code with that source.
-  - UK: ONS CPI weights (CJWB … CJYL), 2026.
+    were read from the published table (2026-10-24, and 2026-10-25 for rent 7.840, OER 26.204,
+    core goods 19.176 and services less energy services 60.744) and are in the code with that source.
+  - UK: ONS CPI weights (CJWB … CJYL; CJVC rents, A9ER non-energy industrial goods, ICVI services), 2026.
   - Euro area: Eurostat `prc_hicp_inw`, 2025.
-  - The 11 or 12 items are 18% of the US basket, 26% of the UK's and 30% of the euro area's.
-- **Rest of the basket** = (headline − Σ weight × item) / rest weight, each month. The composite
-  (weighted items + rest) therefore equals headline exactly in the data. It can only differ from
-  a direct headline model in its forecasts, which is what the tests check.
+
+  | Share of the basket | US | UK | Euro area |
+  |---|---|---|---|
+  | The original 11 or 12 items | 18% | 26% | 30% |
+  | Housing | 34.0% | 8.4% | 5.9% |
+  | Core goods | 19.2% | 27.7% | 25.6% |
+  | Other services | 25.8% | 32.2% | 30.5% |
+  | Rest of the basket | 2.9% | 5.9% | 7.6% |
+- **Rest of the basket** = (headline − Σ weight × item − weight × other services) / rest weight,
+  each month. The composite (weighted items + other services + rest) therefore equals headline
+  exactly in the data. It can only differ from a direct headline model in its forecasts, which is
+  what the tests check. With the split it is small: other food (beverages, other food at home),
+  alcohol and tobacco outside the US, and other fuels. It also absorbs the aggregation residual,
+  because seasonally adjusted indices and fixed latest weights don't add up exactly over 25 years.
+  So the US rest swings about 3.5% a month on a 2.9% weight: read it as a remainder, not a price.
 - **Drivers:**
   - Brent: monthly average of the daily FRED `DCOILBRENTEU` series.
   - Gas: Henry Hub, monthly (`MHHNGSP`), for the US; the IMF EU gas price (`PNGASEUUSDM`) for the
@@ -139,10 +164,54 @@ NUTS (2 chains, 500 warm-up, 1,000 draws per chain):
 
 ## Status (2026-10-25)
 
+- **Basket split (2026-10-25, Iridis job 1973200, all 33 fits): housing, core goods and other
+  services now have their own series,** so 92–97% of each basket is modelled item by item, against
+  18–30% before. The numbers below are from the main model, given the oil and gas that happened,
+  over the 8 folds (2008–2025).
+  - **Convergence:** every fit of the main model and of the oil-and-gas base converged (R-hat
+    ≤ 1.045, ESS ≥ 128, no divergences). Fold 0 of the grain-and-urea variant, the one that was
+    already rejected, did not, even rerun with 1,500 warm-up and 2,000 draws (job 1973275: R-hat
+    1.065, ESS 18). It has 83 training months for many more food coefficients, so the report
+    leaves it out of that comparison.
+  - **Skill against climatology:**
+
+    | | Main model | Average link (OLS) | Forecast, Lévy Brent paths | 90% coverage |
+    |---|---|---|---|---|
+    | Housing | +0.084 | −0.169 | +0.125 | 74% |
+    | Core goods | +0.143 | +0.098 | +0.154 | 80% |
+    | Other services | +0.097 | +0.049 | +0.101 | 70% |
+
+    Their bands are too narrow, most for other services and housing. Those prices drift slowly, and
+    one month's momentum doesn't see shifts like the 2021–23 rent surge.
+  - **The composites improve or hold.** Composite skill before → after the split: US +0.355 →
+    **+0.395**, UK +0.211 → +0.214, euro area +0.329 → +0.335. Coverage: US 83% → 85%, UK
+    78% → 77%, euro area 74% → 76%.
+  - **2026 test (fitted to Feb 2026, 7 months on): 53 of 54 outcomes inside the bands.** The one
+    miss is euro-area rents: +1.5% against a band of +0.8 to +1.4.
+  - **2022 test: still mostly missed,** with 21 of 54 outcomes inside the bands (13 for the average link).
+  - **Scenario from Feb 2026, 12 months on:**
+    - A 2026-sized closure barely moves rents or other services; US rent is +2.8% either way.
+    - It widens the core-goods band, from 5.7 to 8.9 pp in the US.
+    - The composites barely change from before the split: US +2.3% → +5.0%, UK +2.5% → +4.6%,
+      euro area +2.0% → +5.0%.
+  - **Outlook from 2026-09, 12 months, disruption continuing:**
+
+    | | US | UK | Euro area |
+    |---|---|---|---|
+    | Rent | +3.5% (0.9 to 6.3) | +2.7% (0.4 to 5.5) | +1.8% (1.1 to 2.6) |
+    | Owners' equivalent rent | +3.4% (0.7 to 5.9) | | |
+    | Core goods | +0.9% (−2.0 to 4.8) | +0.9% (−1.6 to 3.3) | +1.1% (−2.6 to 4.7) |
+    | Other services | +2.9% (1.5 to 4.4) | +3.6% (1.6 to 5.9) | +2.1% (0.1 to 4.1) |
+    | Composite | +3.4% (0.6 to 6.9) | +3.9% (1.6 to 6.8) | +3.1% (0.3 to 6.4) |
+  - **The remainder is a residual, not a price.** The rest of the basket (3–8%) carries the
+    aggregation residual: the latest weights are fixed, while fuel's share of the basket was larger
+    in earlier years. So it moves with oil out of proportion to its weight: +37% under a 2026-sized
+    closure in the US. Its weighted part is the same residual the old 82% rest held, now visible
+    rather than diluted. Read the composites, not the remainder.
 - **Done:**
-  - Data for 41 series, the weights, and the event analysis.
+  - Data for 51 series, the weights, and the event analysis.
   - The model, the report and the Iridis scripts.
-  - 12 tests (all passing in all three versions).
+  - 13 tests (all passing in all three versions).
 - **Main model (adopted 2026-10-25): oil and gas for every series, plus grain prices for bread
   and cereals.**
   - Iridis job 1972769; R-hat 1.007–1.028, ESS 166–513, no divergences.

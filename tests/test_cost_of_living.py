@@ -22,7 +22,11 @@ def toy_data(y=None, x=None):
     months = pd.date_range("2000-01-01", periods=T, freq="MS")
     w = {k: 0.01 for k in [it.key for it in col.ITEMS]}
     for r in col.REGIONS:
-        w[f"{r}_rest"] = 1 - sum(v for k, v in w.items() if k.startswith(f"{r}_"))
+        agg, parts = col.SERVICES[r]
+        w[agg.key] = 0.3
+        w[f"{r}_services"] = w[agg.key] - sum(w[k] for k in parts)
+        comp = [it.key for it in col.ITEMS if it.region == r] + [f"{r}_services"]
+        w[f"{r}_rest"] = 1 - sum(w[k] for k in comp)
     return {"months": months, "x": np.zeros(T) if x is None else x, "g_us": np.zeros(T), "g_eu": np.zeros(T),
             "g_grain": np.zeros(T), "g_urea": np.zeros(T), "y": np.zeros((T, K)) if y is None else y,
             "D": np.zeros(T), "weights": {"w": w}}
@@ -60,14 +64,27 @@ def test_lagmat_shifts_down():
 
 def test_rest_makes_the_composite_equal_headline():
     rng = np.random.default_rng(1)
-    keys = [it.key for it in col.ITEMS] + [f"{r}_all" for r in col.REGIONS]
+    keys = ([it.key for it in col.ITEMS] + [col.SERVICES[r][0].key for r in col.REGIONS]
+            + [f"{r}_all" for r in col.REGIONS])
     ch = pd.DataFrame(rng.normal(0, 1, (T, len(keys))), columns=keys)
     data = toy_data()
-    ch = col.derive_rest(ch, data["weights"]["w"])
+    w = data["weights"]["w"]
+    ch = col.derive_rest(ch, w)
     S = ch[[s.key for s in col.SERIES]].values[None]  # one "draw"
     out = col.with_composites(S, data)[0]
     for i, r in enumerate(col.REGIONS):
         assert np.allclose(out[:, K + i], ch[f"{r}_all"].values)
+        # other services and the service items modelled on their own add back to the services total
+        agg, parts = col.SERVICES[r]
+        rebuilt = w[f"{r}_services"] * ch[f"{r}_services"] + sum(w[k] * ch[k] for k in parts)
+        assert np.allclose(rebuilt, w[agg.key] * ch[agg.key])
+
+
+def test_basket_split_has_housing_core_goods_and_services_everywhere():
+    for r in col.REGIONS:
+        kinds = {s.kind for s in col.SERIES if s.region == r}
+        assert {"housing", "core_goods", "services", "rest"} <= kinds
+        assert set(col.SERVICES[r][1]) <= {it.key for it in col.ITEMS}  # the service items it nets out exist
 
 
 def test_average_link_recovers_the_pass_through():

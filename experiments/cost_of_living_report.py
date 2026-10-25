@@ -24,6 +24,10 @@ REGION = {k: k.split("_")[0] for k in KEYS}
 NAME = {s.key: s.name for s in col.SERIES} | {f"{r}_composite": f"{col.REGIONS[r]} composite (weighted items + rest)"
                                               for r in col.REGIONS}
 ITEM_KINDS = [k for k in col.KINDS if k not in ("rest", "all")]
+# Housing, core goods, other services and what is left of the rest, region by region, for the scenario
+# and outlook tables.
+CORE_BASKET = [s.key for r in col.REGIONS for s in col.SERIES
+               if s.region == r and s.kind in ("housing", "core_goods", "services", "rest")]
 H_IDX = {h: i for i, h in enumerate(col.HS)}
 MODES = [("whatif", "Bayesian, given oil and gas"), ("whatif_no_regime", "same, no supply-shock terms"),
          ("avg_link", "average link (OLS)"), ("forecast_GARCH-CGMY", "forecast, Lévy Brent paths"),
@@ -78,7 +82,7 @@ def diff(a: np.ndarray, b: np.ndarray, clim: np.ndarray, c: np.ndarray, hi: int)
 
 def groups() -> list[tuple[str, list[str]]]:
     g = [(col.KIND_NAMES[k], [s.key for s in col.SERIES if s.kind == k]) for k in ITEM_KINDS]
-    g += [("Rest of the basket", [f"{r}_rest" for r in col.REGIONS])]
+    g += [("Rest of the basket (remainder)", [f"{r}_rest" for r in col.REGIONS])]
     g += [(f"{col.REGIONS[r]} headline: composite", [f"{r}_composite"]) for r in col.REGIONS]
     g += [(f"{col.REGIONS[r]} headline: direct", [f"{r}_all"]) for r in col.REGIONS]
     return g
@@ -206,7 +210,7 @@ def event_test(ev: dict, label: str) -> list[str]:
 
 def scenario_section(ev: dict, weights: dict) -> list[str]:
     show = [f"{r}_composite" for r in col.REGIONS] + [f"{r}_{i}" for r in col.REGIONS for i in ("fuel", "electricity", "gas")]
-    show += [f"{r}_bread" for r in col.REGIONS] + [f"{r}_restaurants" for r in col.REGIONS]
+    show += [f"{r}_bread" for r in col.REGIONS] + [f"{r}_restaurants" for r in col.REGIONS] + CORE_BASKET
     out = ["## Scenario fans from February 2026: how much a closure moves and widens the band", "",
            "Brent paths from the daily GARCH-CGMY (Lévy) model, plus the 2026 closure's monthly Brent and gas moves scaled "
            "by severity (0 = no closure). The supply-shock terms are on in the closure scenarios. Median and 90% interval of the "
@@ -257,7 +261,8 @@ def final_section(fin: dict, weights: dict) -> list[str]:
     out += ["", f"**Outlook from {fin['latest']}**, Lévy Brent paths, "
             f"{'the disruption assumed to continue' if fin['in_supply_regime'] else 'no disruption'}: change over the next 12 months.", "",
             "| Series | Median | 90% interval |", "|---|---|---|"]
-    for key in [f"{r}_composite" for r in col.REGIONS] + [f"{r}_{i}" for r in col.REGIONS for i in ("fuel", "electricity", "gas", "bread")]:
+    for key in ([f"{r}_composite" for r in col.REGIONS] + [f"{r}_{i}" for r in col.REGIONS for i in ("fuel", "electricity", "gas", "bread")]
+                + CORE_BASKET):
         k = KEYS.index(key)
         out.append(f"| {NAME[key]} | {o['q50'][11][k]:+.1f} | {o['q05'][11][k]:+.1f} to {o['q95'][11][k]:+.1f} |")
     return out + [""]
@@ -309,12 +314,22 @@ def data_section(data: dict) -> list[str]:
         wt = w.get(s.key)
         out.append(f"| {s.name} | {col.REGIONS[s.region]} | `{code}` | {'' if wt is None else f'{100 * wt:.2f}%'} | "
                    f"{yr.get(s.key, '')} | {first} | {last} | {fetched} |")
+    for r in col.REGIONS:  # the services totals that other services are derived from (inputs, not modelled)
+        s = col.SERVICES[r][0]
+        first, last = data["prov"].get(s.key, ("-", "-"))
+        code = s.code.strip("/").split("/")[-2].upper() if s.source == "ons" else s.code
+        out.append(f"| {s.name}, input to other services | {col.REGIONS[r]} | `{code}` | {100 * w[s.key]:.2f}% | "
+                   f"{yr.get(s.key, '')} | {first} | {last} | {col.fetched(s)} |")
     for k, (src, code, name) in col.DRIVERS.items():
         first, last = data["prov"][k]
         out.append(f"| {name} | driver | `{code}` | | | {first} | {last} | {col.fetched(col.Item(k, 'us', 'all', src, code, name, None, False, 0))} |")
-    out += ["", f"Weights: US {col.US_WEIGHTS_SOURCE}; UK ONS CPI weights (series CJWB … CJYL); euro area Eurostat "
-            "`prc_hicp_inw`, geo EA. The rest of the basket is headline minus the weighted items, so the composite equals "
-            "headline in every month by construction; it differs from a direct headline model only in its forecasts.", ""]
+    out += ["", f"Weights: US {col.US_WEIGHTS_SOURCE}; UK ONS CPI weights (series CJWB … CJYL, CJVC for rents, A9ER for "
+            "non-energy industrial goods, ICVI for services); euro area Eurostat `prc_hicp_inw`, geo EA. Euro-area "
+            "services and non-energy industrial goods come from Eurostat's COICOP 2018 dataset `prc_hicp_minr` (EA19), "
+            "because the older dataset stops at 2025-12 and FRED doesn't carry them. Other services are each region's "
+            "services total less the service items modelled on their own; the rest of the basket is headline minus every "
+            "weighted item and other services, so the composite equals headline in every month by construction; it "
+            "differs from a direct headline model only in its forecasts.", ""]
     return out
 
 
@@ -549,9 +564,12 @@ def write() -> None:
     today = datetime.now(UTC).date().isoformat()
     jobs = sorted({str(r["meta"].get("job")) for r in (runs | failed).values() if r["meta"].get("job")})
     fits = f"{len(runs)} converged fits" if runs else "no converged model fits yet (the event analysis needs none)"
+    days = sorted({col.fetched(s) for s in col.SERIES + [col.SERVICES[r][0] for r in col.REGIONS]
+                   if s.source != "derived"} - {"-"})
+    fetched_on = days[0] if len(days) == 1 else f"{days[0]} to {days[-1]}" if days else "-"
     out = ["# Cost of living in an oil supply shock: the basket, item by item", "",
            f"_Generated by `experiments/cost_of_living.py report` on {today} from {fits} of the main model"
-           f"{' (Iridis job ' + ', '.join(jobs) + ')' if jobs else ''}. Data fetched 2026-10-24 (table below). The data are real; "
+           f"{' (Iridis job ' + ', '.join(jobs) + ')' if jobs else ''}. Data fetched {fetched_on} (table below). The data are real; "
            "the only simulated inputs are Brent and gas paths in forecast and scenario rows._", "",
            "The main model gives every series oil and gas pass-through, and bread and cereals grain prices as well. It "
            "replaced the oil-and-gas-only base after beating it on the same folds; that comparison, and the grain-and-urea "

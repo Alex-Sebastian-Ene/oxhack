@@ -4,8 +4,11 @@
 #                 "jax>=0.4.30", "numpyro>=0.15"]
 # ///
 """Cost of living in an oil supply shock, built up from the basket: bread, meat, dairy, oils and
-fats, fruit and vegetables, sugar, electricity, gas, motor fuel, air fares and restaurants in the
-US, UK and euro area, each with its own oil and gas pass-through, weighted into a composite.
+fats, fruit and vegetables, sugar, electricity, gas, motor fuel, air fares, restaurants, housing
+(rent, and owners' equivalent rent in the US), core goods (non-energy industrial goods) and other
+services in the US, UK and euro area, each with its own oil and gas pass-through, weighted into a
+composite. Other services are each region's services index less the service items modelled on their
+own, so nothing is counted twice.
 
 The average historical pass-through fell far short in the 2022 and 2026 supply shocks. This script
 measures that miss item by item, then fits one Bayesian model (NUTS) for every item, the rest of
@@ -22,8 +25,9 @@ the basket and headline inflation, on their monthly log changes (% of the price 
   widens the band. A fit that ends before 2026 learns kappa from 2022 alone.
 - v: recent oil volatility (log mean |x| over 3 months), so bands widen in oil turmoil.
 - season: month-of-year terms for series that are not seasonally adjusted (UK, euro area).
-- The rest of the basket is headline minus the weighted items, with each region's latest basket
-  weights, so the composite (weighted items + rest) adds up to headline inflation exactly.
+- The rest of the basket is headline minus the weighted items and other services, with each region's
+  latest basket weights, so the composite (weighted items + other services + rest) adds up to headline
+  inflation exactly. With housing, core goods and other services modelled it is a 3-8% remainder.
 - Bread and cereals also take grain prices (the monthly log change of the mean of IMF wheat and
   maize), lags 0..12: + sum_l F[k,l] grain[s-l]. This is the main model (COL_FOOD=bread, the default,
   runs/col-food-bread). It was adopted after beating the oil-and-gas-only base (COL_FOOD=0,
@@ -108,10 +112,12 @@ class Item:
 
 
 KINDS = ("bread", "meat", "dairy", "oils_fats", "fruit_veg", "sugar", "electricity", "gas", "fuel", "air",
-         "restaurants", "rest", "all")
+         "restaurants", "housing", "core_goods", "services", "rest", "all")
 KIND_NAMES = {"bread": "Bread and cereals", "meat": "Meat", "dairy": "Dairy", "oils_fats": "Oils and fats",
               "fruit_veg": "Fruit and vegetables", "sugar": "Sugar and sweets", "electricity": "Electricity",
               "gas": "Household gas", "fuel": "Motor fuel", "air": "Air fares", "restaurants": "Restaurants",
+              "housing": "Housing (rent, and owners' equivalent rent in the US)",
+              "core_goods": "Core goods (non-energy industrial goods)", "services": "Other services",
               "rest": "Rest of the basket", "all": "Headline (direct)"}
 ONS_URI = "/economy/inflationandpriceindices/timeseries/{}/mm23"
 
@@ -166,21 +172,49 @@ ITEMS = [
     _ea("fuel", "fuel", "CP0722", "fuels and lubricants for personal transport", lags=2),
     _ea("air", "air", "CP0733", "passenger transport by air", lags=2),
     _ea("restaurants", "restaurants", "CP1111", "restaurants, cafés and the like"),
+    # Housing and core goods. UK CPI and the HICP leave out owner-occupiers' housing costs (the UK
+    # puts them in CPIH), so their housing is actual rents only; the US adds owners' equivalent rent.
+    _us("rent", "housing", "CUSR0000SEHA", "rent of primary residence"),
+    _us("oer", "housing", "CUSR0000SEHC", "owners' equivalent rent of residences"),
+    _us("core_goods", "core_goods", "CUSR0000SACL1E", "commodities less food and energy commodities"),
+    _uk("rent", "housing", "d7ce", "cjvc", "04.1 actual rents for housing"),
+    _uk("core_goods", "core_goods", "dk9j", "a9er", "non-energy industrial goods"),
+    Item("ea_rent", "ea", "housing", "fred", "CP0410EZ19M086NEST", "Euro-area HICP actual rentals for housing "
+         "(Eurostat via FRED)", "CP041", True, 12),
+    Item("ea_core_goods", "ea", "core_goods", "eurostat18", "EA19:IGD_NNRG", "Euro-area HICP non-energy industrial "
+         "goods (Eurostat prc_hicp_minr, EA19)", "IGD_NNRG", True, 12),
 ]
+# Other services: each region's services index less the service items modelled on their own,
+# derived like the rest of the basket, so nothing is counted twice. US "services less energy
+# services" holds rent, OER and air fares (food away from home is food); UK CPI and HICP services
+# hold rents, air fares and restaurants.
+SERVICES = {"us": (Item("us_services_all", "us", "agg", "fred", "CUSR0000SASLE", "US CPI services less energy "
+                        "services (BLS)", None, False, 12), ("us_rent", "us_oer", "us_air")),
+            "uk": (Item("uk_services_all", "uk", "agg", "ons", ONS_URI.format("d7f5"), "UK CPI services (ONS D7F5)",
+                        "icvi", True, 12), ("uk_rent", "uk_air", "uk_restaurants")),
+            "ea": (Item("ea_services_all", "ea", "agg", "eurostat18", "EA19:SERV", "Euro-area HICP services (Eurostat "
+                        "prc_hicp_minr, EA19)", "SERV", True, 12), ("ea_rent", "ea_air", "ea_restaurants"))}
 HEADLINE = {"us": Item("us_all", "us", "all", "fred", "CPIAUCSL", "US CPI, all items (BLS)", None, False, 12),
             "uk": Item("uk_all", "uk", "all", "ons", ONS_URI.format("d7bt"), "UK CPI, all items (ONS D7BT)", None, True, 12),
             "ea": Item("ea_all", "ea", "all", "fred", "CP0000EZ19M086NEST", "Euro-area HICP, all items (Eurostat via FRED)",
                        None, True, 12)}
 REGIONS = {"us": "US", "uk": "UK", "ea": "Euro area"}
-SERIES = (ITEMS + [Item(f"{r}_rest", r, "rest", "derived", f"{r}_all minus weighted items", f"{REGIONS[r]} rest of basket",
-                        None, HEADLINE[r].nsa, 12) for r in REGIONS] + list(HEADLINE.values()))
+SERVICE_ITEMS = [Item(f"{r}_services", r, "services", "derived", f"{SERVICES[r][0].key} minus "
+                      + ", ".join(SERVICES[r][1]), f"{REGIONS[r]} other services ({SERVICES[r][0].name.split(' (')[0]} "
+                      "less the service items above)", None, SERVICES[r][0].nsa, 12) for r in REGIONS]
+SERIES = (ITEMS + SERVICE_ITEMS + [Item(f"{r}_rest", r, "rest", "derived", f"{r}_all minus weighted items",
+                                         f"{REGIONS[r]} rest of basket (remainder: other food, other fuels, "
+                                         "aggregation residual)", None, HEADLINE[r].nsa, 12) for r in REGIONS]
+          + list(HEADLINE.values()))
 # US basket weights: BLS relative importance, CPI-U, December 2025 (% of all items), read from
-# https://www.bls.gov/cpi/tables/relative-importance/2025.htm on 2026-10-24 (BLS refuses scripted
-# downloads). UK: ONS CPI weights (parts per 1000). Euro area: Eurostat prc_hicp_inw (per 1000).
+# https://www.bls.gov/cpi/tables/relative-importance/2025.htm (BLS refuses scripted downloads): the
+# food, energy, fares and restaurant items on 2026-10-24, housing, core goods and services on
+# 2026-10-25. UK: ONS CPI weights (parts per 1000). Euro area: Eurostat prc_hicp_inw (per 1000).
 US_WEIGHTS = {"us_bread": 1.035, "us_meat": 1.995, "us_dairy": 0.758, "us_oils_fats": 0.231, "us_fruit_veg": 1.269,
               "us_sugar": 0.328, "us_electricity": 2.489, "us_gas": 0.773, "us_fuel": 2.895, "us_air": 0.881,
-              "us_restaurants": 5.373}
-US_WEIGHTS_SOURCE = "BLS relative importance, CPI-U, December 2025 (collected 2026-10-24)"
+              "us_restaurants": 5.373, "us_rent": 7.840, "us_oer": 26.204, "us_core_goods": 19.176,
+              "us_services_all": 60.744}
+US_WEIGHTS_SOURCE = "BLS relative importance, CPI-U, December 2025 (collected 2026-10-24 and 2026-10-25)"
 # Driver keys must not clash with series keys (load() puts both in one table).
 DRIVERS = {"brent": ("fred", "DCOILBRENTEU", "Brent spot, $/bbl (EIA via FRED)"),
            "henry_hub": ("fred", "MHHNGSP", "Henry Hub natural gas spot, monthly (EIA via FRED)"),
@@ -208,6 +242,8 @@ def fetched(it: Item) -> str:
         name = f"fred_{it.code}.csv"
     elif it.source == "pinksheet":
         name = PINK_FILE
+    elif it.source == "eurostat18":
+        name = "eurostat_prc_hicp_minr_{}_{}.json".format(*it.code.split(":"))
     else:
         name = f"ons_{it.code.strip('/').split('/')[-2]}.csv"
     p = md.RAW / name
@@ -225,7 +261,19 @@ def fetch_pinksheet(column: str) -> pd.Series:
     return s[s.index.notna()].dropna()
 
 
-FETCH = md.FETCH | {"pinksheet": fetch_pinksheet}
+def fetch_eurostat18(code: str) -> pd.Series:
+    """A monthly HICP index (2015 = 100) from Eurostat's COICOP 2018 dataset prc_hicp_minr, "GEO:COICOP".
+    The older prc_hicp_midx stops at 2025-12; the special aggregates (services, non-energy industrial
+    goods) are not on FRED."""
+    geo, coicop = code.split(":")
+    path = md._get(md.EUROSTAT.format("prc_hicp_minr", f"geo={geo}&coicop18={coicop}&unit=I15&sinceTimePeriod=1996-01"),
+                   md.RAW / f"eurostat_prc_hicp_minr_{geo}_{coicop}.json")
+    j = json.loads(path.read_text(encoding="utf-8"))
+    times = list(j["dimension"]["time"]["category"]["index"])
+    return pd.Series({pd.Timestamp(times[int(k)] + "-01"): v for k, v in j["value"].items()}).sort_index()
+
+
+FETCH = md.FETCH | {"pinksheet": fetch_pinksheet, "eurostat18": fetch_eurostat18}
 
 
 def ons_annual(cdid: str) -> pd.Series:
@@ -241,8 +289,10 @@ def ons_annual(cdid: str) -> pd.Series:
 
 def eurostat_weights(coicops: list[str]) -> dict[str, tuple[int, float]]:
     q = "&".join(f"coicop={c}" for c in coicops)
+    # The cache file is named after the code list, so adding items fetches a fresh copy.
+    tag = "items" if len(coicops) == 12 else f"items{len(coicops)}"
     path = md._get(md.EUROSTAT.format("prc_hicp_inw", f"geo=EA&{q}&sinceTimePeriod=2018"),
-                   md.RAW / "eurostat_prc_hicp_inw_EA_items.json")
+                   md.RAW / f"eurostat_prc_hicp_inw_EA_{tag}.json")
     j = json.loads(path.read_text(encoding="utf-8"))
     cats = list(j["dimension"]["coicop"]["category"]["index"])
     times = list(j["dimension"]["time"]["category"]["index"])
@@ -260,24 +310,32 @@ def weights() -> dict:
     w, year = {}, {}
     for k, v in US_WEIGHTS.items():
         w[k], year[k] = v / 100, 2025
-    for it in ITEMS:
+    aggs = [SERVICES[r][0] for r in REGIONS]
+    for it in ITEMS + aggs:
         if it.region == "uk":
             s = ons_annual(it.weight)
             w[it.key], year[it.key] = float(s.iloc[-1]) / 1000, int(s.index[-1])
-    ea = eurostat_weights([it.weight for it in ITEMS if it.region == "ea"])
-    for it in ITEMS:
+    ea = eurostat_weights([it.weight for it in ITEMS + aggs if it.region == "ea"])
+    for it in ITEMS + aggs:
         if it.region == "ea":
             year[it.key], w[it.key] = ea[it.weight][0], ea[it.weight][1] / 1000
+    for r in REGIONS:  # other services: the services total less the service items modelled on their own
+        agg, parts = SERVICES[r]
+        w[f"{r}_services"], year[f"{r}_services"] = w[agg.key] - sum(w[k] for k in parts), year[agg.key]
+    comp = {it.key for it in ITEMS} | {it.key for it in SERVICE_ITEMS}
     for r in REGIONS:
-        w[f"{r}_rest"] = 1 - sum(v for k, v in w.items() if k.startswith(f"{r}_") and not k.endswith("_rest"))
+        w[f"{r}_rest"] = 1 - sum(v for k, v in w.items() if k in comp and k.startswith(f"{r}_"))
     return {"w": w, "year": year}
 
 
 def derive_rest(ch: pd.DataFrame, w: dict) -> pd.DataFrame:
-    """Add each region's rest of the basket: headline minus the weighted items, over the rest's weight,
-    so that the weighted items plus the rest give headline exactly."""
+    """Add each region's other services (the services total less the service items modelled on their
+    own) and rest of the basket (headline minus every weighted item and other services), each over its
+    own weight, so that the weighted items, other services and the rest give headline exactly."""
     for r in REGIONS:
-        items = [it.key for it in ITEMS if it.region == r]
+        agg, parts = SERVICES[r]
+        ch[f"{r}_services"] = (w[agg.key] * ch[agg.key] - sum(w[k] * ch[k] for k in parts)) / w[f"{r}_services"]
+        items = [it.key for it in ITEMS if it.region == r] + [f"{r}_services"]
         ch[f"{r}_rest"] = (ch[f"{r}_all"] - sum(w[k] * ch[k] for k in items)) / w[f"{r}_rest"]
     return ch
 
@@ -285,8 +343,9 @@ def derive_rest(ch: pd.DataFrame, w: dict) -> pd.DataFrame:
 def load() -> dict:
     """Monthly log changes (x100) of every series from START to the last month all items share."""
     raw = {k: FETCH[src](code) for k, (src, code, _) in DRIVERS.items()}
-    raw |= {it.key: md.FETCH[it.source](it.code) for it in ITEMS + list(HEADLINE.values())}
-    end = min(raw[it.key].dropna().index.max() for it in ITEMS + list(HEADLINE.values()))
+    fetched_items = ITEMS + [SERVICES[r][0] for r in REGIONS] + list(HEADLINE.values())
+    raw |= {it.key: FETCH[it.source](it.code) for it in fetched_items}
+    end = min(raw[it.key].dropna().index.max() for it in fetched_items)
     idx = pd.date_range(START, end, freq="MS")
     lv = pd.DataFrame({k: np.log(v.reindex(idx)) for k, v in raw.items()})
     wt = weights()
