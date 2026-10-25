@@ -786,7 +786,7 @@ body.hz-mandeb #link-card, body.hz-mandeb #pw-card, body.hz-mandeb #cap-card { d
 .hz-hh .hz-head, .hz-hh .hz-saved { grid-column: 1 / -1; }
 .hz-hh .hz-head { gap: 10px; border-color: var(--oil) !important; }
 .hz-hh .hz-kick { font: 600 11px var(--pix); letter-spacing: .8px; text-transform: uppercase; color: var(--oil-soft); }
-.hz-hh .hz-hl { margin: 0; font-size: 16px; line-height: 1.55; color: var(--text); max-width: 72ch; }
+.hz-hh .hz-hl { margin: 0; font-size: 16px; line-height: 1.6; color: var(--text); text-wrap: pretty; }
 .hz-hh .hz-hl b { color: var(--oil-soft); }
 .hz-hh .hz-hlnums { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 8px; }
 .hz-hh .hz-t { display: flex; flex-direction: column; gap: 3px; padding: 10px 12px; background: var(--panel2); border: 2px solid var(--ink); }
@@ -794,12 +794,19 @@ body.hz-mandeb #link-card, body.hz-mandeb #pw-card, body.hz-mandeb #cap-card { d
 .hz-hh .hz-t.hurt b { color: var(--harm); }
 .hz-hh .hz-t span { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text); }
 .hz-hh .hz-t small { font-size: 11.5px; color: var(--faint); }
-.hz-hh .hz-ch { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.hz-hh .hz-ch { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; position: relative; padding-right: 40px; min-height: 32px; }
 .hz-hh .hz-ch h3 { flex: 0 1 auto; }
 .hz-hh .hz-n { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; flex: none; background: var(--oil); color: var(--ink, #070b16); font: 700 14px var(--pix); }
-.hz-hh .hz-ch .hz-i { margin-left: auto; width: 32px; min-height: 32px; }
+/* the info button sits in the header's top-right corner, so a long title can't push it onto a line of its own */
+.hz-hh .hz-ch .hz-i { position: absolute; top: 0; right: 0; width: 32px; min-height: 32px; }
 .hz-hh .tagr { font: 400 15px var(--mono); padding: 0 6px; border: 2px dashed #3f9a6e; color: #7ee0b0; letter-spacing: 1px; }
 .hz-hh .hz-keys-c { justify-content: center; margin-top: -4px; }
+/* step 3: each value on one line, so its rows sit at the same spacing as the table beside it */
+.hz-hh #hh-gs-rows { gap: 0; }
+.hz-hh #hh-gs-rows .rrow { grid-template-columns: 130px minmax(0, 1fr) 200px; min-height: 30px; border-top: 1px solid var(--line); }
+.hz-hh #hh-gs-rows .rrow:first-child { border-top: 0; }
+.hz-hh #hh-gs-rows .rrow .v small { font-size: 13px; }
+@media (max-width: 560px) { .hz-hh #hh-gs-rows .rrow { grid-template-columns: 90px minmax(0, 1fr) 150px; } }
 @media (max-width: 980px) { .hz-hh { grid-template-columns: 1fr; } }
 @media (max-width: 720px) { .hz-hh { overflow: visible; } }
 @media (max-width: 560px) { .hz-hh .rrow { grid-template-columns: 96px minmax(0, 1fr) 104px; font-size: 12px; } .hz-hh .mini { width: 70px; } }
@@ -6715,7 +6722,7 @@ window.HZHouseholds = (() => {
       <p class="src" id="hh-gs-src" hidden></p>
     </section>
     <section class="card" id="hh-who">
-      ${head(4, "Why them? What each group spends on", REAL, "hh-who-src")}
+      ${head(4, "Why them? What they spend on", REAL, "hh-who-src")}
       <p class="lede">UK household costs by group, with the share of spending on food, home energy and motor fuel.</p>
       <div class="ctrl"><div class="seg" role="group" aria-label="Which groups">${GTYPES.map(([k, l]) => `<button type="button" data-hgt="${k}" aria-pressed="false">${l}</button>`).join("")}</div></div>
       <div class="keys">${PARTS.slice(0, 3).map(([, l, c]) => `<span><i style="background:${c}"></i>${l}</span>`).join("")}</div>
@@ -6867,7 +6874,7 @@ window.HZHouseholds = (() => {
       const segs = parts.filter((p) => p.v > 0).map((p) => { const w = 100 * p.v / maxv, s = `<span class="seg2" style="left:${left.toFixed(2)}%;width:${w.toFixed(2)}%;background:${p.c}" title="${esc(`${p.l}: ${sgn(p.v, 2)} pts`)}"></span>`; left += w; return s; }).join("");
       const tip = st.outlook ? `Costs ${sgn(r.q50, 2)}% (range up to ${sgn(r.q05)} to ${sgn(r.q95)}%)` : `Costs ${sgn(r.q50, 2)}% against ${sgn(base.q50, 2)}% with no closure`;
       return `<div class="rrow${g.type === "all" ? " all" : ""}"><span class="nm">${esc(gname(g.group))}</span><div class="track">${segs}</div>
-        <span class="v" title="${esc(`${tip}. ${parts.map((p) => `${p.l} ${sgn(p.v, 2)}`).join(", ")} pts`)}">${sgn(total, 2)}${st.outlook ? "%" : " pts"}<br><small>${st.outlook ? `${sgn(r.q05)} to ${sgn(r.q95)}` : `costs ${sgn(r.q50)}%`}</small></span></div>`;
+        <span class="v" title="${esc(`${tip}. ${parts.map((p) => `${p.l} ${sgn(p.v, 2)}`).join(", ")} pts`)}">${sgn(total, 2)}${st.outlook ? "%" : " pts"} <small>${st.outlook ? `${sgn(r.q05)} to ${sgn(r.q95)}` : `· costs ${sgn(r.q50)}%`}</small></span></div>`;
     }).join("") : `<p class="src">No closure, so nothing added. Choose a closure size, or move the slider.</p>`);
     $("hh-gs-src").innerHTML = `Model output: the team's household model. Item price ranges from the basket-item model (run ${esc(D.fans_generated || "–")}) weighted by each group's ${D.weights_year} spending shares (${esc(D.groups_source)}). Mortgage interest is held flat. First-order sums; the range is an upper bound on its width.`;
   }
