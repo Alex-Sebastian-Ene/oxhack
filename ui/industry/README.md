@@ -23,6 +23,14 @@ Open `index.html` in a browser; it needs no server. It is the same page as the s
   - **Click a country:** it floats with a flag tag, a short pop-up gives the main numbers, and the right
     panel has the full analysis in three tabs: Overview (key numbers and the fuel-cost chart), Industries
     (cost impact by industry) and Trade (what it makes, where its inputs come from and where it ships).
+  - **Industries tab:** five hand-picked industries per country (illustrative), then **Add an industry**:
+    - any of the page's 16 oil-exposed industries, drawn the same way as the hand-picked ones;
+    - any of the 20 industries in Seb's sector model (`notes/country-trends.json`): its producer prices after
+      12 months at the shock card's Brent, its latest index and year-on-year change, and its forecast skill.
+      Cement, chemicals, plastics and manufacturing also show their energy or materials share from
+      `notes/industry/industry_exposure.csv`. Outside Europe, Türkiye and the US these say "no data".
+    - Added industries stay as you click between countries. Rows with a sector series link to its chart in
+      the Trends tab (`src/patch_pickind.py`).
   - **Economy tab:** how consumer prices and unemployment respond over 36 months at the slider's Brent price,
     for the US, the UK or the euro area (a euro-area country shows euro-area figures; other countries can compare
     the three). Unemployment is drawn in grey and labelled "No reliable effect": its historical link with oil has

@@ -204,6 +204,10 @@ select { padding: 0 8px; }
 .inds .tr { grid-column: 1 / -1; height: 6px; border-radius: 3px; background: var(--panel2); overflow: hidden; }
 .inds .tr div { height: 100%; border-radius: 3px; }
 .inds .why { grid-column: 1 / -1; font-size: 11.5px; color: var(--faint); }
+.inds .ind-act { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; }
+.inds .ind-act button { font-size: 12px; min-height: 28px; padding: 0 10px; }
+.ind-add { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+#c-ind-pick { width: 100%; }
 .rank { display: flex; flex-direction: column; gap: 2px; }
 .rank button { display: grid; grid-template-columns: 18px minmax(0, 1fr) 70px 34px; align-items: center; gap: 8px; min-height: 30px; padding: 0 6px; background: transparent; border: 0; border-radius: 6px; text-align: left; font-size: 12.5px; }
 .rank button:hover, .rank button[aria-current="true"] { background: var(--panel2); }
@@ -590,6 +594,12 @@ select { padding: 0 8px; }
           <span class="label" style="margin-bottom:8px">Fuel cost impact by industry, share of operating costs</span>
           <ul class="inds" id="c-inds"></ul>
           <p class="faint">Which industries are listed for a country is a hand-picked choice from the original page <i class="illus" title="Not from data: the list per country was chosen by hand">illustrative</i>. Cost shares: notes/industry/industry_exposure.csv.</p>
+          <div class="ind-add" id="c-ind-add">
+            <label class="label" for="c-ind-pick">Add an industry</label>
+            <select id="c-ind-pick"></select>
+            <ul class="inds" id="c-inds-add"></ul>
+            <p class="faint" id="c-ind-note" hidden>Industries you add stay as you click other countries.</p>
+          </div>
         </div>
         <div id="e-sec">
           <div class="eco-who"><span class="sub" id="e-who"></span>
@@ -2028,9 +2038,9 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
     return { v: e.mean, lo: e.lo, hi: e.hi, label: c[1], where: "the US" };
   }
   const POWER_SHARE = {"s": 26.0, "src": "power as share of primary textile manufacturing cost (sample average; 30-40% in India; Pakistan; China; Indonesia; Brazil; 9% in the US) (ITMF International Production Cost Comparison 2018, 2018)"};
-  function industries(name) {
+  function industries(name, keys) {
     const k = calc(name);
-    return k.d.ind.map((key) => {
+    return (keys || k.d.ind).map((key) => {
       const [label, , why] = IND[key];
       const sh = SHARE[key];
       const sec = sectorMove(name, key), earn = (key === "exports" || key === "budget" || (key === "upstream" && !sec)) ? exportEarnings(name) : null;
@@ -2635,6 +2645,73 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
   }
   $("tr-pick") && $("tr-pick").addEventListener("click", (e) => { const b = e.target.closest("[data-trpick]"); if (b) { trPick = b.dataset.trpick; renderTrends(); } });
   $("tr-ind") && $("tr-ind").addEventListener("change", (e) => { trInd = e.target.value; renderTrends(); });
+  // Add an industry: any of the page's industries or Seb's sector-model industries, kept across countries
+  // Energy or materials shares for sector-model industries, from notes/industry/industry_exposure.csv (build time)
+  const SEC_SHARE = {"C23": "all energy inputs 13.6%: energy inputs as share of revenue (input-output table) (CaixaBank Research, Spain, 2018)", "C235": "all energy inputs 13.6%: energy inputs as share of revenue (input-output table) (CaixaBank Research, Spain, 2018)", "C20": "all energy inputs 7.2%: energy inputs as share of revenue (input-output table) (CaixaBank Research, Spain, 2018)", "C22": "polymer resin and other raw materials 70%: raw materials as share of selling price for European plastics converters (resin is most of it; an upper bound for resin alone; old figure) (EuPC (European Plastics Converters) via Macplas, EU, 2012)", "C": "all energy inputs 4.1%: energy inputs as share of revenue (input-output table) (CaixaBank Research, Spain, 2018)"};
+  const indAdd = [];
+  let indAddAt = null;
+  const trHas = (name, code) => { const c = TRENDS.countries[TR_GEO[name]]; return !!(c && ((c.price && c.price[code]) || (c.output && c.output[code]))); };
+  const indActs = (name, code, rm) => {
+    const tr = code && trHas(name, code) ? `<button type="button" data-indtr="${code}">Its chart in Trends</button>` : "";
+    const x = rm ? `<button type="button" data-indrm="${rm}" aria-label="Remove ${escH(rm in IND ? IND[rm][0] : TR_IND[rm])}">Remove</button>` : "";
+    return tr || x ? `<span class="ind-act">${tr}${x}</span>` : "";
+  };
+  const withActs = (html, acts) => (acts ? html.replace(/<\/li>\s*$/, `${acts}</li>`) : html);
+  function sectorItem(name, code) {
+    const geo = TR_GEO[name], c = geo && TRENDS.countries[geo], label = TR_IND[code];
+    const where = geo === "US" ? "the US" : geo === "UK" ? "the UK" : c ? c.name : name;
+    const share = SEC_SHARE[code] ? ` Cost share: ${escH(SEC_SHARE[code])}.` : "";
+    const pr = c && c.price && c.price[code], out = c && c.output && c.output[code];
+    if (!pr || !pr.resp || pr.resp[pr.resp.length - 1] == null) {
+      const why = !c ? `Seb's sector model covers Europe, Türkiye and the US, not ${escH(name)}`
+        : `No producer price series for ${escH(label.toLowerCase())} in ${escH(where)}${out ? "; its output is in the Trends tab" : ""}`;
+      return `<li><span class="nm">${escH(label)}</span><span class="lv">no data</span><span class="why">${why}.${share}</span></li>`;
+    }
+    const x = st.brent / BRENT0 - 1, v = x > 0.005 ? pr.resp[pr.resp.length - 1] * Math.log(1 + x) / Math.log(1.1) : 0;
+    const cls = v > 0.05 ? "hurt" : v < -0.05 ? "gain" : "";
+    const [km, lv, i] = trLast(pr), yr = i >= 12 && pr.v[i - 12] != null ? (lv / pr.v[i - 12] - 1) * 100 : null;
+    const now = `Latest: ${lv.toFixed(1)} in ${trMonth(km)} (2021 = 100)${yr == null ? "" : `, ${trNum(yr)}% on a year earlier`}.`;
+    const fx = x > 0.005 ? `Its producer prices in ${escH(where)} end up about ${Math.abs(v).toFixed(1)}% ${v >= 0 ? "higher" : "lower"} after 12 months at $${st.brent} a barrel than with no oil move`
+      : `At $${st.brent} a barrel oil is at its pre-war price, so there is no knock-on to its prices`;
+    return `<li><span class="nm">${escH(label)}</span><span class="lv mono ${cls}">${pct(v / 100, 1)} its prices</span>
+        <span class="why">${fx} (Seb's sector model, average effect; ${trSkill(pr.skill)} than a naive forecast). ${now}${share}</span></li>`;
+  }
+  function renderIndAdd(name, indItem) {
+    indAddAt = { name, indItem };
+    const box = $("c-ind-add");
+    if (!box) return;
+    const own = calc(name).d.ind;
+    const keys = indAdd.filter((k) => k in IND && !own.includes(k));
+    const rowsOf = Object.fromEntries(industries(name, keys).map((i) => [i.key, i]));
+    $("c-inds-add").innerHTML = indAdd.filter((k) => !(k in IND && own.includes(k))).map((k) => (k in IND
+      ? withActs(indItem(rowsOf[k]), indActs(name, SECTOR[k], k))
+      : withActs(sectorItem(name, k), indActs(name, k, k)))).join("");
+    const opt = (k, t) => `<option value="${k}">${escH(t)}</option>`;
+    const page = Object.keys(IND).filter((k) => !own.includes(k) && !indAdd.includes(k));
+    const secs = TRENDS.industries.filter(([k]) => !indAdd.includes(k));
+    $("c-ind-pick").innerHTML = `<option value="">Pick an industry…</option>` +
+      (page.length ? `<optgroup label="Oil-exposed industries">${page.map((k) => opt(k, IND[k][0])).join("")}</optgroup>` : "") +
+      (secs.length ? `<optgroup label="Producer prices (Europe and the US)">${secs.map(([k, t]) => opt(k, trHas(name, k) ? t : `${t} (no data here)`)).join("")}</optgroup>` : "");
+    $("c-ind-note").hidden = !indAdd.length;
+  }
+  $("c-ind-pick") && $("c-ind-pick").addEventListener("change", (e) => {
+    const k = e.target.value;
+    if (!k || !indAddAt) return;
+    if (!indAdd.includes(k)) indAdd.push(k);
+    renderIndAdd(indAddAt.name, indAddAt.indItem);
+    $("c-ind-pick").focus();
+  });
+  $("cpane-inds") && $("cpane-inds").addEventListener("click", (e) => {
+    const rm = e.target.closest("[data-indrm]"), tr = e.target.closest("[data-indtr]");
+    if (rm && indAddAt) {
+      indAdd.splice(indAdd.indexOf(rm.dataset.indrm), 1);
+      renderIndAdd(indAddAt.name, indAddAt.indItem);
+      $("c-ind-pick").focus();
+    } else if (tr) {
+      trInd = tr.dataset.indtr; setCTab("trends"); renderTrends();
+      $("tr-ind-block").scrollIntoView({ block: "nearest" });
+    }
+  });
   function renderCountry() {
     renderShockExplain();
     $("country-card").hidden = !st.sel;
@@ -2664,7 +2741,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
     renderChart(name);
     const inds = industries(name);
     const mx = 12;   // % of operating costs at full bar
-    $("c-inds").innerHTML = inds.map((i) => {
+    const indItem = (i) => {
       const secLine = (sec) => `${escH(sec.label)} prices in ${escH(sec.where)} ${pct(sec.v / 100, 1)} after 12 months at this Brent (Seb's sector model, average effect; ${trSkill(sec.skill)} than a naive forecast).`;
       if (i.v == null && i.earn) {
         const e = i.earn, cls = e.v > 0.05 ? "gain" : e.v < -0.05 ? "hurt" : "";
@@ -2693,7 +2770,9 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
       return `<li><span class="nm">${i.label}</span><span class="lv mono ${cls}">${pct(i.v / 100, 1)} costs</span>
         <span class="tr"><div style="width:${Math.max(w, 2)}%;background:${col}"></div></span>
         <span class="why">Range ${pct(i.lo / 100, 1)} to ${pct(i.hi / 100, 1)}.${i.lag ? ` Reaches costs ${i.lag}.` : ""} Share: ${i.src}.${i.sec ? ` Its own prices: ${secLine(i.sec)}` : ""}</span></li>`;
-    }).join("");
+    };
+    $("c-inds").innerHTML = inds.map((i) => withActs(indItem(i), indActs(name, SECTOR[i.key]))).join("");
+    renderIndAdd(name, indItem);
     renderTrade();
     renderEcon();
     renderTrends();

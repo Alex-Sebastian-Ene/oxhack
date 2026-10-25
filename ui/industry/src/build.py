@@ -27,6 +27,7 @@ STEPS = [
     "patch_industry.py", # Eileen's cost shares read from the CSV, Seb's sector-model prices per industry, exporter earnings
     "patch_disruption.py", # audit fixes: Seb's x1.49 disruption multiplier for the 0.8 premium; slider starts at 82 AIS-visible
     "patch_iea.py",      # OXH-9: the 2026 preset (and the 2026 scenarios' start) is the chain's replay on the IEA's lost flow, not 82 points
+    "patch_pickind.py",  # Industries tab: add any industry, including the sector model's 20, with its own prices and Trends chart
 ]
 for step in STEPS:
     r = subprocess.run([sys.executable, "-I", str(here / step)], capture_output=True, text=True)
