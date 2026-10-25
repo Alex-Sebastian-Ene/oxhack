@@ -39,7 +39,7 @@ def price_entry(v):
     return {"now": v["now"], "before": v["before"], "from": o["from"] if o else None, "out": o["q"] if o else None,
             "b": {h: v["link"][h]["b"] for h in H} if v.get("link") else None,
             "own": {h: v["link"][h]["own"] for h in H} if v.get("link") else None,
-            "src": v.get("src"), "why": v.get("why_none")}
+            "src": v.get("src"), "why": v.get("why_none"), "unc": v.get("uncertain", False)}
 
 
 # Seb's cost-of-living model: the outlook from its latest origin, by item, for the US, the UK and the euro area
@@ -196,7 +196,7 @@ COL_JS = r'''  // ------------------------------------------------------------ C
     const W = COIL.weights[isoOf[name]] || {};
     for (const [kind, label] of COL_KINDS) {
       const v = P[kind], share = W[kind] != null ? `${W[kind].toFixed(0)}% of a household budget here` : "";
-      rows.push(v && v.out ? { key: kind, kind, name: label, from: v.from, q: v.out, b: v.b, own: v.own, src: v.src, share }
+      rows.push(v && v.out ? { key: kind, kind, name: label, from: v.from, q: v.out, b: v.b, own: v.own, src: v.src, share, unc: v.unc }
         : { key: kind, name: label, none: v ? (v.why || "no forecast") : "not in our data", now: v && v.now, src: v && v.src, share });
     }
     if (reg && COIL.col[reg]) for (const [kk, nm] of COL_ITEMS) if (COIL.col[reg][kk]) rows.push({ key: `col_${kk}`, name: nm, from: COIL.colFrom, q: COIL.col[reg][kk], model: reg });
@@ -221,7 +221,7 @@ COL_JS = r'''  // ------------------------------------------------------------ C
       const q = r.q[colH], cls = q[1] > 0.05 ? "hurt" : q[1] < -0.05 ? "gain" : "", w = Math.min(100, Math.abs(q[1]) / 20 * 100);
       const cost = `By ${ymAdd(r.from, colH)}, 100 spent today costs <b>${(100 + q[1]).toFixed(1)}</b> (90% range ${(100 + q[0]).toFixed(1)} to ${(100 + q[2]).toFixed(1)}).`;
       const why = r.model ? `${cost} Seb's cost-of-living model (${COL_REGION[r.model]}), with the disruption continuing.`
-        : `${cost}${r.share ? ` ${r.share}.` : ""}${q[3] ? ` Oil's moves since ${ymLabel(r.from)} add ${pctP(q[3], 2)}.` : ""}${r.b && r.own && st.brent > BRENT0
+        : `${cost}${r.unc ? " <b>Very uncertain</b>: this country's prices have swung far from the rule before." : ""}${r.share ? ` ${r.share}.` : ""}${q[3] ? ` Oil's moves since ${ymLabel(r.from)} add ${pctP(q[3], 2)}.` : ""}${r.b && r.own && st.brent > BRENT0
           ? ` Brent at $${st.brent} instead of the pre-war $${BRENT0}, over ${colH} months by itself: ${COIL.priorSrc[r.kind]} ${pctP(COIL.prior[r.kind][colH] * shock, 2)}, `
             + `${escH(nm)}'s own data ${pctP(r.own[colH] * shock, 2)}, combined <b>${pctP(r.b[colH] * shock, 2)}</b> (a ridge update on ${escH(nm)}'s prices).` : ""} Prices to ${ymLabel(r.from)} (${r.src}).`;
       return `<li class="colrow" data-colitem="${r.key}" aria-current="${r.key === colPick}"><span class="nm">${r.name}${r.model ? ` <span class="faint">${COL_REGION[r.model]} model</span>` : ""}</span><span class="lv mono ${cls}">${pctP(q[1])}</span>
@@ -257,8 +257,8 @@ sub('''      kpis = kpi(fmtS(k.score), "exposure score, illustrative", k.score >
         + kpi(pct(k.fuel), "fuel cost, in a disruption", k.fuel > 0.005 ? "hurt" : k.fuel < -0.005 ? "gain" : "")
         + kpi(k.kind === "imp" ? `${(k.hz * 100).toFixed(0)}%` : "–", "of its oil via Hormuz");''',
     '''      const P = COIL.prices[iso] || {}, fd = P.food, al = P.all, g = fd && fd.out && fd.out["12"], ga = al && al.out && al.out["12"];
-      kpis = kpi(g ? pctP(g[1]) : "–", g ? `groceries by ${ymAdd(fd.from, 12)}` : "groceries: not in our data", g && g[1] > 0.05 ? "hurt" : "")
-        + kpi(ga ? pctP(ga[1]) : "–", ga ? `all prices by ${ymAdd(al.from, 12)}` : "all prices: not in our data", ga && ga[1] > 0.05 ? "hurt" : "")
+      kpis = kpi(g ? pctP(g[1]) : "–", g ? `groceries by ${ymAdd(fd.from, 12)}${fd.unc ? ", very uncertain" : ""}` : "groceries: not in our data", g && g[1] > 0.05 ? "hurt" : "")
+        + kpi(ga ? pctP(ga[1]) : "–", ga ? `all prices by ${ymAdd(al.from, 12)}${al.unc ? ", very uncertain" : ""}` : "all prices: not in our data", ga && ga[1] > 0.05 ? "hurt" : "")
         + kpi(k.cut ? k.cut.txt : "–", k.cut ? k.cut.lab : "oil cut off: not in our data", k.score > 0.5 ? "hurt" : k.score < -0.5 ? "gain" : "");''')
 sub('''"Pick a product above to see what it makes and trades.";
     }

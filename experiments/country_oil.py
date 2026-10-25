@@ -75,7 +75,9 @@ FAO_ITEMS = {"Consumer Prices, General Indices (2015 = 100)": "all", "Consumer P
 HORIZONS = (1, 2, 3, 6, 12)
 NOISY_SE = 0.15  # a 12-month slope with a larger standard error than this is too noisy to show
 OUTLOOK_FROM = "2025-10-01"  # a series whose latest month is older than this gets no outlook (it shows its date)
-MAX_BAND = 100.0  # points: a 12-month 90% band wider than this is not a forecast
+WIDE = np.log(4)  # a 12-month 90% band wider than a factor of 4 (in log terms) is shown as very uncertain
+MAX_WIDTH = np.log(16)  # and one wider than a factor of 16 is not a forecast
+MIN_MISSES = 8  # past naive forecasts needed to set a band
 # FAOSTAT's M49 codes where the Comtrade reporter list (our ISO3 source) uses another code or has none
 M49_FIX = {250: "FRA", 578: "NOR", 756: "CHE", 840: "USA", 158: "TWN", 630: "PRI", 316: "GUM"}
 MONTH_NO = {m: i + 1 for i, m in enumerate(["January", "February", "March", "April", "May", "June", "July",
@@ -377,23 +379,24 @@ def backtest(level: pd.Series, brent: pd.Series, h: int = 12) -> list[tuple[floa
 def naive_outlook(level: pd.Series, brent: pd.Series, link: dict | None, misses: list[float], horizons=HORIZONS) -> dict | None:
     """What the backtests support: the latest 12 months' inflation continues, plus the country's oil link
     applied to Brent's known move since the latest price month. The 90% band is the spread of this
-    country's past 12-month misses of the naive rule (actual minus naive), scaled by sqrt(h/12)."""
+    country's past 12-month misses of the naive rule, in log terms (so it scales with high inflation and
+    never goes below -100%), scaled by sqrt(h/12). Returns % changes [q05, q50, q95, oil part] by horizon."""
     s = level[level > 0]
     t0 = s.index[-1]
     back = t0 - pd.DateOffset(months=12)
-    if back not in s.index or len(misses) < 8:
+    if back not in s.index or len(misses) < MIN_MISSES:
         return None
-    pi = s[t0] / s[back] - 1
+    g = np.log(s[t0] / s[back])  # the latest 12 months, as a log change
     lo, hi = np.percentile(misses, [5, 95])
     lb = np.log(brent.dropna())
     out = {}
     for h in horizons:
-        base = 100 * ((1 + pi) ** (h / 12) - 1)
         t = min(t0 + pd.DateOffset(months=h), lb.index[-1])
-        oil = (link[str(h)]["b"] * 100 * (lb[t] - lb[t0])) if link and t0 in lb.index and t > t0 else 0.0
-        k = np.sqrt(h / 12)
-        out[str(h)] = [round(base + oil + lo * k, 2), round(base + oil, 2), round(base + oil + hi * k, 2), round(oil, 2)]
-    return {"from": t0.strftime("%Y-%m"), "q": out}
+        oil = (link[str(h)]["b"] * (lb[t] - lb[t0])) if link and t0 in lb.index and t > t0 else 0.0  # log points
+        mid, k = g * h / 12 + oil, np.sqrt(h / 12)
+        pc = lambda x: round(float(100 * (np.exp(x) - 1)), 2)  # noqa: E731
+        out[str(h)] = [pc(mid + lo * k), pc(mid), pc(mid + hi * k), round(float(100 * oil), 2)]
+    return {"from": t0.strftime("%Y-%m"), "q": out, "width12": round(float(hi - lo), 3)}
 
 
 IMF_URL = ("https://api.imf.org/external/sdmx/3.0/data/dataflow/IMF.STA/CPI/+/*.CPI.{coicop}.{measure}.{freq}"
@@ -424,14 +427,14 @@ def imf_cpi(coicop: str, measure: str = "IX", freq: str = "M") -> dict[str, pd.S
 
 
 def naive_misses(level: pd.Series, h: int = 12) -> list[float]:
-    """What happened minus the naive rule ('the last 12 months' rate continues'), h months ahead, from origins
-    every 6 months 2015-2024: the spread of these sets the outlook's band."""
+    """What happened minus the naive rule ('the last 12 months' rate continues'), h months ahead, in log terms,
+    from origins every 6 months 2015-2024: the spread of these sets the outlook's band."""
     s = level[level > 0]
     out = []
     for origin in pd.date_range("2015-06-01", "2024-06-01", freq="6MS"):
         end, back = origin + pd.DateOffset(months=h), origin - pd.DateOffset(months=12)
         if all(t in s.index for t in (origin, end, back)):
-            out.append(100 * (s[end] / s[origin] - 1) - 100 * ((s[origin] / s[back]) ** (h / 12) - 1))
+            out.append(float(np.log(s[end] / s[origin]) - h / 12 * np.log(s[origin] / s[back])))
     return out
 
 
@@ -447,20 +450,21 @@ def prices_section() -> dict:
             for iso, w in imf_cpi(code, "WGT_PT", "*").items():
                 weights.setdefault(iso, {})[kind] = round(float(w.iloc[-1]), 1)
     brent = md.fetch_fred("MCOILBRENTEU")
-    # the IMF first (four divisions, months to Sep 2026); FAOSTAT where the IMF has no series or an older one
-    levels: dict[str, dict[str, tuple[pd.Series, str]]] = {}
+    # candidates for each country and division: the IMF first (months to Sep 2026), then FAOSTAT; the first one that
+    # is recent and long enough to test the forecast on is used, else the first one is shown with the reason
+    cands: dict[str, dict[str, list[tuple[pd.Series, str]]]] = {}
     for kind, by in imf.items():
         for iso, s in by.items():
-            levels.setdefault(iso, {})[kind] = (s, "IMF")
+            cands.setdefault(iso, {}).setdefault(kind, []).append((s, "IMF"))
     for iso, d in fao.items():
         for kind, s in d.items():
-            cur = levels.get(iso, {}).get(kind)
-            if cur is None or cur[0].index[-1] < s.index[-1] - pd.DateOffset(months=6):
-                levels.setdefault(iso, {})[kind] = (s, "FAOSTAT")
+            cands.setdefault(iso, {}).setdefault(kind, []).append((s, "FAOSTAT"))
+    usable = lambda s: s.index[-1] >= pd.Timestamp(OUTLOOK_FROM) and len(naive_misses(s)) >= MIN_MISSES  # noqa: E731
     out, noisy, raw, errs = {}, [], {}, {}
-    for iso, d in sorted(levels.items()):
+    for iso, d in sorted(cands.items()):
         c = {}
-        for kind, (level, src) in d.items():
+        for kind, options in d.items():
+            level, src = next((o for o in options if usable(o[0])), options[0])
             links = {h: horizon_link(level, brent, h) for h in HORIZONS}
             ok = all(links.values()) and links[12]["se"] <= NOISY_SE
             if not ok and links[12] is not None:
@@ -497,10 +501,13 @@ def prices_section() -> dict:
             link = v["link"] or ({str(h): {"b": pooled[kind][str(h)]["b"]} for h in HORIZONS} if kind in pooled else None)
             fresh = level is not None and level.index[-1] >= pd.Timestamp(OUTLOOK_FROM)
             o = naive_outlook(level, brent, link, misses) if fresh else None
-            # a band wider than MAX_BAND over a year is no forecast: very high inflation, or a broken series
-            v["outlook"] = o if o and o["q"]["12"][2] - o["q"]["12"][0] <= MAX_BAND else None
+            # a band wider than a factor of 16 over a year is no forecast; wider than 4 is shown, marked very uncertain
+            v["outlook"] = o if o and o["width12"] <= MAX_WIDTH else None
+            v["uncertain"] = bool(v["outlook"] and o["width12"] > WIDE)
             v["why_none"] = (None if v["outlook"] else "annual rates only" if level is None
-                             else "its latest month is too old to forecast from" if not fresh else "prices too unstable to forecast")
+                             else "its latest month is too old to forecast from" if not fresh
+                             else "too few past months to test a forecast on" if len(misses) < MIN_MISSES
+                             else "prices too erratic to forecast")
     fetched = datetime.fromtimestamp(FAO_ZIP.stat().st_mtime, UTC).strftime("%Y-%m-%d")
     imf_fetched = datetime.fromtimestamp(min(p.stat().st_mtime for p in IMF_RAW.glob("cpi_*.json")), UTC).strftime("%Y-%m-%d")
     return {"source": (f"IMF consumer price indices by COICOP division (all items, food, housing and energy, transport; "

@@ -63,12 +63,22 @@ def test_latest_yoy_now_and_at_a_month():
 def test_naive_outlook_continues_the_latest_rate_with_a_band():
     level = pd.Series(100 * 1.005 ** np.arange(len(MONTHS)), index=MONTHS)  # about 6.2% a year
     brent = pd.Series(70.0, index=pd.date_range("2005-01-01", "2026-09-01", freq="MS"))  # flat: no oil move
-    o = co.naive_outlook(level, brent, link=None, misses=list(np.linspace(-2, 2, 20)))
+    o = co.naive_outlook(level, brent, link=None, misses=list(np.linspace(-0.02, 0.02, 20)))  # log terms
     lo, mid, hi, oil = o["q"]["12"]
     assert mid == pytest.approx(100 * (1.005 ** 12 - 1), abs=0.01) and oil == 0
     assert lo < mid < hi
     assert o["q"]["3"][2] - o["q"]["3"][0] < hi - lo                # the band widens with the horizon
     assert co.naive_outlook(level, brent, None, misses=[0.1] * 3) is None  # too few past misses
+
+
+def test_naive_outlook_scales_with_high_inflation_and_stays_above_minus_100():
+    level = pd.Series(100 * 1.04 ** np.arange(len(MONTHS)), index=MONTHS)  # about 60% a year
+    brent = pd.Series(70.0, index=pd.date_range("2005-01-01", "2026-09-01", freq="MS"))
+    o = co.naive_outlook(level, brent, link=None, misses=list(np.linspace(-0.3, 0.3, 20)))
+    lo, mid, hi, _ = o["q"]["12"]
+    assert mid == pytest.approx(100 * (1.04 ** 12 - 1), abs=0.05)
+    assert lo > -100 and hi - mid > mid - lo                       # a log band is skewed upwards
+    assert o["width12"] == pytest.approx(0.6 * 0.9, abs=0.01)      # 5th to 95th percentile of the misses
 
 
 def test_trade_profile_net_exporter_and_caps():
