@@ -28,6 +28,9 @@ for the colours, with these layers added (`src/`):
 | `mandeb.py`, `mandeb.js` | Bab el-Mandeb in the Strait view: the Hormuz / Bab el-Mandeb switch reloads on `#mandeb`; data from `ui/strait/data/mandeb-scenarios.js` (`uv run experiments/strait_flow.py --strait mandeb`) |
 | `households.py`, `households.js` | The Households view (OXH-8): real pay against 2019 by region, essentials against pay, UK household costs by group, and two model-output cards (real pay by lost flow, each UK group's costs under a closure) that follow the lost-flow slider; also a households step in "The shock" card. Data cut at build time from `notes/household-*.csv` (`uv run experiments/household.py report`); every real series shows its source, code and fetch date |
 | `models.py`, `models.js`, `models.css` | The Models view: one card per model (oil-price distribution, lost flow → Brent, the knock-on links, the Bayesian and global network models with their Fed and SPF comparison, cost of living, industries by country, margins, metals, the first neural ensemble, HDI, the independent check), each with what it answers and two to four headline numbers on the card; how it was tested, what it can't do and each number's context sit behind the card's blue info key. The numbers are read at build time from `notes/` and `docs/` by table cell or phrase, each shown with its note and the date that note was generated; a card whose numbers can't be found is left out with a warning (`python ui/app/src/models.py` lists them) |
+| `kpis.py` | The headline figures: a pixel-art oil barrel (drawn in code) beside each "million barrels a day" figure; "The shock" step 3 tiles with their name in bold, their range below and an info key saying what the range is and where the number comes from; the shock card's source note behind an info key; More under "Most oil cut off" |
+| `product.py` | The Product card: its sources behind a Sources button, and "What it costs buyers" drawn as a share bar, the sum as chips (share × price move = cost move), a range bar for a model forecast and a pace chip |
+| `country_src.py` | The country card's source notes (Cost of living, Trade, Economy, Trends) behind a Sources button at the foot of each tab |
 | `flags.py`, `flags_extra.py` | A flag beside every country title (Most exposed, the country card, the economy picks). `flags_extra.py` draws the flags the page leaves out for size (Spain, Sri Lanka and 20 more) into `ui/app/data/flags-extra.json`; the EU flag stands for the euro area |
 
 ```bash
@@ -57,6 +60,11 @@ python ui/app/src/build.py --fragment out.html  # also writes the body for a cla
 
   "Summarise with Gemini" writes a few lines from those facts only. Each number in the summary cites the
   fact it came from, and a reference to a fact that doesn't exist is flagged.
+- **How an answer shows.** What the page already knows comes first, as an "at a glance" strip: for a resource, its
+  picture (or its own pixel icon, large) with its top maker and shipper, how many makers we list and what it goes
+  into; for a country, how many of our tables it is in, its best rank and how many of the facts Gemini cited.
+  Gemini's lines follow as cards, each with a pixel icon for its topic (Hormuz, exports, inputs, ranks, prices), its
+  figures picked out, and each citation a chip that shows its fact on hover or focus.
 - **Labelling.** Both answers are labelled AI-written, with the model and time. They never feed the maps
   or the numbers.
 - **Written ahead (baked).** Answers written ahead of time are built into the page from
@@ -72,8 +80,9 @@ python ui/app/src/build.py --fragment out.html  # also writes the body for a cla
 
   `bake` keeps any answer whose facts haven't changed, and asks about the countries we hold most facts on
   first. It stops cleanly when the key's daily quota runs out (20 requests per model on the free tier) and
-  lists what is still missing, so run it again the next day, or with another `GEMINI_MODEL`. Pictures are
-  not baked, since they would add megabytes to the page.
+  lists what is still missing, so run it again the next day, or with another `GEMINI_MODEL`. `bake --images`
+  also asks the image model for each resource's picture (a 1K JPEG, about 16 in all); the free tier has no image
+  quota (every image model's limit is 0), so it stops at once and says so, and pictures need a key with billing.
 - **The service.** Anything not baked calls the local service in `experiments/country_brief.py`, at
   `http://127.0.0.1:8787` (or `?ai=<url>`). It needs `GEMINI_API_KEY` in the environment or in the repo's
   `.env` (git-ignored). `BRIEF_FAKE=1` serves labelled test answers for UI work. Details:

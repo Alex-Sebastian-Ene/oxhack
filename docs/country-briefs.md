@@ -60,6 +60,10 @@ Interactions API (`POST /v1beta/interactions`).
     failed to match until it compared the facts as cut). The 9 countries whose fuel cost changed in #71 were
     asked again after it merged. To replace any answer with a stronger model's, delete its entry from
     `ai-panels.json` and run `bake` with that `GEMINI_MODEL` on a day its quota is free.
+  - Pictures: `bake --images` asks `IMAGE_MODEL` for each resource's picture. On 25 Oct 2026 every image model
+    this key lists (`gemini-nano-banana-2.1`, `gemini-3-pro-image`, `gemini-3.1-flash-image`,
+    `gemini-3.1-flash-lite-image` and their previews) answered HTTP 429 with a free-tier limit of 0, so no picture is
+    baked; `bake` stops at the first such answer instead of waiting. A key with billing fills them in on a rerun.
   - Checked: every `[n]` points to a fact that exists; spot checks of the US, Netherlands and Iran summaries against
     their facts found no wrong numbers. Not checked line by line by the team, and each panel says so.
 

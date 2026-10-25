@@ -284,3 +284,61 @@ def test_bake_keeps_an_answer_whose_long_facts_were_cut(tmp_path, monkeypatch):
     for f in tmp_path.glob("cty-*.json"):
         f.unlink()   # not from the cache: a rerun keeps the baked answer without asking
     assert cb.bake("k", facts, out, workers=1) == 0 and len(asked) == 1
+
+
+def test_bake_images_adds_a_picture_to_each_resource(tmp_path, monkeypatch):
+    monkeypatch.setattr(cb, "CACHE", tmp_path)
+    monkeypatch.setattr(cb, "FAKE", False)
+    facts = tmp_path / "facts.json"
+    facts.write_text(json.dumps({"setting": "2026-closure", "resources": [{"id": "urea", "name": "Urea", "facts": ["a"]}], "countries": []}))
+    out = tmp_path / "ai-panels.json"
+    calls = []
+
+    def interact(model, text, key, response_format=None):
+        calls.append((model, response_format))
+        return {**(INTERACTION_IMAGE if model == cb.IMAGE_MODEL else INTERACTION_TEXT), "model": model}
+    monkeypatch.setattr(cb, "interact", interact)
+    assert cb.bake("k", facts, out, workers=1, images=True) == 0
+    b = json.loads(out.read_text())["resources"]["urea"]
+    assert b["image"].startswith("data:image/png;base64,") and b["image_model"] == cb.IMAGE_MODEL and b["text"]
+    assert calls[-1] == (cb.IMAGE_MODEL, cb.PICTURE)
+    calls.clear()   # a rerun keeps text and picture without asking
+    assert cb.bake("k", facts, out, workers=1, images=True) == 0 and calls == []
+    assert json.loads(out.read_text())["resources"]["urea"]["image"] == b["image"]
+
+
+def test_bake_images_stops_when_the_key_has_no_image_quota(tmp_path, monkeypatch, capsys):
+    import io, urllib.error
+    monkeypatch.setattr(cb, "CACHE", tmp_path)
+    monkeypatch.setattr(cb, "FAKE", False)
+    monkeypatch.setattr("time.sleep", lambda s: pytest.fail("a limit of 0 is not waited out"))
+    facts = tmp_path / "facts.json"
+    facts.write_text(json.dumps({"setting": "2026-closure", "countries": [],
+                                 "resources": [{"id": i, "name": i.title(), "facts": ["a"]} for i in ("urea", "steel", "naphtha")]}))
+    out = tmp_path / "ai-panels.json"
+    pics = []
+
+    def interact(model, text, key, response_format=None):
+        if model == cb.IMAGE_MODEL:
+            pics.append(text)
+            raise urllib.error.HTTPError("https://example.invalid", 429, "Too Many Requests", {},
+                                         io.BytesIO(b'{"error": {"message": "Rate limit exceeded (limit: 0 requests per day on Free Tier)"}}'))
+        return INTERACTION_TEXT
+    monkeypatch.setattr(cb, "interact", interact)
+    assert cb.bake("k", facts, out, workers=1, images=True) == 0   # pictures are extra: the text panels are all there
+    d = json.loads(out.read_text())
+    assert len(pics) == 1 and all("image" not in b for b in d["resources"].values())
+    assert "pictures need a key with billing" in capsys.readouterr().err
+
+
+def test_interact_sends_a_response_format_only_when_asked(monkeypatch):
+    sent = []
+
+    class Resp:
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+        def read(self): return b"{}"
+    monkeypatch.setattr(urllib.request, "urlopen", lambda req, timeout: sent.append(json.loads(req.data)) or Resp())
+    cb.interact("m", "hi", "k")
+    cb.interact("m", "draw", "k", cb.PICTURE)
+    assert "response_format" not in sent[0] and sent[1]["response_format"]["type"] == "image"
