@@ -5472,11 +5472,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
     { name: "Persian Gulf", lng: 51.2, lat: 27.3, tier: 4 }, { name: "Gulf of Oman", lng: 58.8, lat: 24.3, tier: 4 },
   ];
   // Continents: upright spaced capitals in ink, so they never read as water (seas are italic blue-grey)
-  const CONTS = [
-    { name: "North America", lng: -100, lat: 47 }, { name: "South America", lng: -60, lat: -14 },
-    { name: "Europe", lng: 15, lat: 52 }, { name: "Africa", lng: 19, lat: 6 }, { name: "Asia", lng: 92, lat: 50 },
-    { name: "Oceania", lng: 134, lat: -25 }, { name: "Antarctica", lng: 0, lat: -80 },
-  ];
+  const CONTS = [];
   const gLift = root.append("g").attr("aria-hidden", "true");
   const gSea = root.append("g").attr("aria-hidden", "true"), gCont = root.append("g").attr("aria-hidden", "true");
   const gRB = root.append("g"), gR = root.append("g"), gGas = root.append("g").attr("class", "gasl"), gArc = root.append("g"), gP = root.append("g"), gH = root.append("g");
