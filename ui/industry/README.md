@@ -3,7 +3,7 @@
 Edward's strait page with his materials globe built in, aimed at industry users: which products an
 oil shock reaches, which countries make and ship them, and what it does to their price.
 Open `index.html` in a browser; it needs no server. It is the same page as the shared artifact
-<https://claude.ai/artifact/84rJe1aD8Vpe7KvAnq8a39> (version 23).
+<https://claude.ai/artifact/84rJe1aD8Vpe7KvAnq8a39> (version 26).
 
 ## What it shows
 
@@ -26,42 +26,59 @@ Open `index.html` in a browser; it needs no server. It is the same page as the s
 - **The shock card** sits under the country card and reads as three steps: what the scenario sets, the Brent price
   you choose (with $70 / $109 / $140 quick prices), and what follows, with a plain-English sentence.
 
-## Your suppliers (Gemini reads the list, our numbers rate it)
+## Why these numbers? (Gemini explains, off by default)
 
-A card in the World view lets a company check its own purchases.
+The country card's Overview tab and the product card can ask Gemini to explain their numbers in plain words.
 
-1. **Read the list:** upload a supplier list or bill of materials (PDF, PNG, JPG, WEBP, CSV or text, up to 8 MB).
-   `extract_server.py` asks Gemini to list each item, which of our products it is (steel, jet fuel, aluminium,
-   fertiliser, plastics, crude oil and fuels, or other), the supplier country, the supplier and the quantity.
-   Gemini is told to copy only what the file says and not to guess.
-2. **Rate each item with our numbers only:** the product's 12-month price link (Seb's models), whether the supplier
-   country ships via Hormuz, its rank as a producer or exporter, and its exposure score.
-   - **High:** the supplier ships via Hormuz, or the price link gives +20% or more.
-   - **Medium:** +5% or more, or the supplier country's exposure score is 25 or more.
-   - **Low:** anything else.
-3. **Click an item** to show that product and supplier country on the map.
+- **What Gemini gets:** only the numbers that box shows, each with its source, numbered. That's the scenario and
+  Brent setting, then exposure, fuel cost, the Hormuz share, industry costs, the price link and its band, the top
+  producers and the cost to buyers.
+- **What it returns:** 3 to 5 bullets that follow the chain from Hormuz flow to Brent to price to who pays, and say
+  what is uncertain. Each bullet lists the facts it used, as `[1][3]`.
+- **The check:** `explain_server.py` compares every number in every bullet with the facts that bullet cites. Any
+  number not in them is shown in red as "Not in our data". The facts sent are listed under the answer.
+- **The label:** "AI-written by {model}", with its time, "cached" when it is, and "not checked by the team". Gemini
+  never changes a number, a colour or a table.
+- **Quota:** it uses no Google Search tool, so it runs on the plain free-tier quota. The same question is cached in
+  `data/raw/explain/` (git-ignored).
 
-The page labels the rows as read by Gemini (model, time, cached or not) and asks the reader to check them against the
-file. Gemini never supplies a number. **Try a sample list** uses a made-up list and no AI, so the card also works in the
-published page.
-
-Uploading is off by default. To run it locally, put the key in the repo's `.env` (git-ignored, the same file
-Edward's brief proxy reads) as a line `GEMINI_API_KEY=your-key`, or set it in the shell, then:
+To run it, put `GEMINI_API_KEY=your-key` in the repo's `.env` (git-ignored, the same file Edward's brief proxy
+reads), or set it in the shell. Then:
 
 ```powershell
-uv run ui/industry/extract_server.py
+uv run ui/industry/explain_server.py
 ```
 
-Then open `ui/industry/index.html?suppliers=1`, or `?suppliers=<url>` for a service elsewhere.
+Then open `ui/industry/index.html?explain=1`, or `?explain=<url>` for a service elsewhere.
 
-- **Key:** stays in the environment of the machine running the service, never in the page, git or Linear.
-- **Origins:** the service answers only pages from disk or localhost. A deployment adds its own address in
-  `EXTRACT_ORIGINS`.
+- **Origins:** the service answers only pages from disk or localhost. A deployment adds its address in
+  `EXPLAIN_ORIGINS`.
 - **Model:** `GEMINI_MODEL`, default `gemini-3.8-flash`.
-- **Quota:** it uses no Google Search tool, so it runs on the plain free-tier quota. Each file is cached in
-  `data/raw/extract/` (git-ignored), so the same file costs one request.
+- **Port:** the service refuses to start if its port (8789, or `EXPLAIN_PORT`) is taken.
 
-Offline tests: `uv run --no-project --with pytest pytest -q tests/test_supplier_extract.py`.
+Offline tests: `uv run --no-project --with pytest pytest -q tests/test_explain_server.py`.
+
+## The model behind the numbers
+
+The page runs on Seb's recommended chain (`docs/chain.md`). **You set the lost Hormuz flow** (0 to 100 points of the
+pre-war 20 mb/d) in The shock card; the scenario menu sets its starting value. Everything else follows:
+
+- **Brent:** pre-war $70 times Seb's flow-premium curve (`notes/flow-premium.csv`), averaged over the next 252
+  trading days, with its 90% band. At 82 points (the 2026 closure) that is about $99 ($75 to $151).
+- **Jet fuel, nitrogen fertiliser, plastics resin, diesel at the pump, CPI and unemployment (US, UK, euro area):**
+  the chain's scenario table (`notes/chain-scenarios-3m-margins.csv`: bayes_own + global_lin + global, with the
+  margin member on fuels), straight lines between its 0/25/50/82/100-point rows. Shown as the extra change against
+  no disruption, with the table's 90% range of outcomes. Unemployment is shown grey: Seb marks it forecast only.
+- **Steel and aluminium, energy bills, country fuel costs:** Seb's linear Brent links (OXH-5, `notes/oil-chain-links.md`),
+  at the Brent price above.
+
+**Not from a model, labelled "illustrative" on the page** (asked on OXH-3, 25 Oct 2026):
+
+- **The exposure score** (map colours, "Most exposed"): a hand-written formula from the original Hormuz Flow page.
+  Its inputs are cited; its weights (0.4 / 0.6 for importers, ÷3, +0.15 and ×60 for exporters) are not.
+- **The shortage premium** inside each country's fuel cost: `0.8 × share of flow missing × share of oil via Hormuz`,
+  hand-set and not fitted to data.
+- **The 12-month fuel-cost path:** that fuel cost, decayed at hand-set recovery speeds.
 
 ## Where the numbers come from
 
@@ -72,7 +89,7 @@ Everything is a cached snapshot bundled into the page. Nothing is fetched live.
 | Ship transits and tanker capacity | IMF PortWatch `Daily_Chokepoints_Data`, `chokepoint6` | 2026-10-24 (data to 2026-10-18) |
 | Producers, exporters, inputs, trade flows | Edward's `ui/globe/data/materials.js` (from `notes/materials/`) | 2026-10-24 |
 | Jet fuel, fertiliser, plastic price moves | Seb's Bayesian pass-through, `notes/macro-bayes-responses.csv` (commit `b6886cf`) | FRED, 2026-10-24 |
-| Steel, aluminium price moves | Seb's linear links, `notes/steel-aluminium-responses.csv` (branch `claude/upbeat-jones-ba5f1a`, commit `e0d122f`, not on main yet), posted on OXH-5 | FRED, 2026-10-24 |
+| Steel, aluminium price moves | Seb's linear links, `notes/steel-aluminium-responses.csv` (on main via PR #19; first posted on OXH-5) | FRED, 2026-10-24 |
 | Petrol, energy CPI, headline CPI steps | `notes/oil-chain-links.md` | FRED, see that note |
 | Economy tab: CPI and unemployment paths, US / UK / euro area | Seb's Bayesian responses, `notes/macro-bayes-responses.csv` (`experiments/macro_bayes.py`), read by `src/patch_economy.py` at build time | FRED/ONS/Eurostat to 2026-10, generated 2026-10-24 |
 | Cost to buyers | `notes/industry/`: airlines 31.4% fuel share (IATA), farming 40% fertiliser share (CIBC) | see that folder |

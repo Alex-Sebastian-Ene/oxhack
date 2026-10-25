@@ -17,7 +17,9 @@ STEPS = [
     "patch_panel.py",    # roomier right panel, country card in tabs (Overview, Industries, Trade)
     "patch_shock.py",    # country card first; "The shock" card in three steps with quick prices and a plain-English line
     "patch_economy.py",  # Economy tab: prices and unemployment for the US, UK or euro area (Seb's Bayesian responses)
-    "patch_suppliers.py",  # Your suppliers: rate a company's own list (Gemini reads it, our numbers rate it)
+    "patch_chain.py",    # Seb's recommended chain: lost Hormuz flow drives Brent, products, diesel, CPI
+    "patch_explain.py",  # optional "Why these numbers?": Gemini explains the shown numbers, checked against them
+    "patch_labels.py",   # mark the exposure score and the shortage premium as illustrative (hand-set; asked on OXH-3)
 ]
 for step in STEPS:
     r = subprocess.run([sys.executable, "-I", str(here / step)], capture_output=True, text=True)

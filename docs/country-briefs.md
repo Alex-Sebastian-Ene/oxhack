@@ -20,6 +20,25 @@ Click a country on the materials globe, then **More**. A sheet opens with:
    facts to start from, and uses Google Search grounding for anything else. The cited pages are shown
    under the text.
 
+## In the app (ui/app)
+
+The same service also answers two more requests from `ui/app/index.html`. They use Gemini's newer
+Interactions API (`POST /v1beta/interactions`).
+- **`/resource`: "What is it?"**, from the Sources key in the app's header.
+  - A short description of a material or ingredient (steel, naphtha, urea and so on). It explains what
+    the thing is, what it is used for and why oil matters to it. Any number must come from our facts,
+    cited as [n].
+  - A pixel-art picture in the app's night-shift style, from the image model (`GEMINI_IMAGE_MODEL`,
+    default `gemini-nano-banana-2.1`, per Google's gemini-api-dev skill).
+  - The picture is captioned "AI-made picture", and the text carries the model name and time.
+- **`/country`: Profile.**
+  - The page builds the facts itself: main export and production role, its rank in every table we hold,
+    exposure score, fuel cost, Hormuz share, and key input origins.
+  - Gemini only turns them into a few lines. Every number must cite its fact. A citation to a fact that
+    doesn't exist shows as `[n?]`.
+- **Test mode.** `BRIEF_FAKE=1` answers both with clearly labelled test text and a striped test picture,
+  so the panels can be tried without a key.
+
 ## Why an LLM, and why Gemini
 
 - **Coverage.** Our tables cover about 40 countries and five materials. A judge will click a country
@@ -61,6 +80,9 @@ page at another proxy.
 
 ## Not done yet / open questions
 
+- **The Interactions request shape is from the skill, not tested live.** The service sends
+  `{"model", "input"}` and reads `model_output` steps, plus a `generateContent`-style answer in case one
+  comes back. The first live run should confirm both models and the image output.
 - **Untested against the live API.** Our sandbox can't reach `generativelanguage.googleapis.com`,
   and no one has shared a key yet. The tests cover the prompt, the response parsing, the cache and
   the origin check offline. The first live run should confirm that `generateContent` with the
