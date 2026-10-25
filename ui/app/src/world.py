@@ -85,20 +85,11 @@ SWAPS = [
      '      const m = mats[st.mat], iso = isoOf[name];\n'
      '      const row = (md, lab) => { const r = tableOf(m, md).find((x) => x.iso3 === iso); return `<span${md === st.mode ? "" : \' class="faint"\'}>${lab}: <span class="mono">${r ? shareTxt(r) : "not listed"}</span></span>`; };\n'
      '      return `<b>${iso ? flagImg(iso) + " " : ""}${escH(name === "United States of America" ? "United States" : name)}</b>${row("production", "Made")}${row("exports", "Shipped")}', 1),
-<<<<<<< HEAD
-    ('return `<b>${escH(name)}</b><span class="mono">${cutTxt(k)}',
-     'return `<b>${isoOf[name] ? flagImg(isoOf[name]) + " " : ""}${escH(name === "United States of America" ? "United States" : name)}</b><span class="mono">${cutTxt(k)}', 1),
-=======
-    ('return `<b>${escH(name)}</b><span>Exposure',
-     'return `<b>${isoOf[name] ? flagImg(isoOf[name]) + " " : ""}${escH(name === "United States of America" ? "United States" : name)}</b><span>Exposure', 1),
-
-    # Flat map and globe show the same things. The tooltip is one function for both: the globe's had no "Via Hormuz"
-    # row or harm/gain colour, and the flat one built its own title without the flag.
-    ('<span class="mono">${fmtS(k.score)}</span></span><span>Fuel cost <span class="mono">${pct(k.fuel)}</span></span>`;',
-     '<span class="mono ${k.score > 0.5 ? "hurt" : k.score < -0.5 ? "gain" : ""}">${fmtS(k.score)}</span></span><span>Fuel cost <span class="mono">${pct(k.fuel)}</span></span>'
-     '${k.d.h ? `<span>Via Hormuz <span class="mono">${(k.hz * 100).toFixed(0)}% of use</span></span>` : ""}`;', 1),
-    ('    t.innerHTML = `<b>${name}</b><span>Exposure <span class="mono ${k.score > 0.5 ? "hurt" : k.score < -0.5 ? "gain" : ""}">${fmtS(k.score)}</span></span>\n'
-     '      <span>Fuel cost <span class="mono">${pct(k.fuel)}</span></span>${k.d.h ? `<span>Via Hormuz <span class="mono">${(k.hz * 100).toFixed(0)}% of use</span></span>` : ""}`;\n',
+    # Flat map and globe show the same things (Ed, 843f92c), on the oil-cut-off tooltip (Alex, 2407051): one tooltip for
+    # both maps. The globe's gains the flat map's harm/gain colour and its prices row, the flat map's gains the flag.
+    ('    return `<b>${escH(name)}</b><span class="mono">${cutTxt(k)}</span><span>Fuel <span class="mono">${pct(k.fuel)}${k.d.pt.own ? "" : " (pooled)"}</span></span>`;',
+     '    const pr = COIL.prices[isoOf[name]], al = pr && pr.all && pr.all.now, fd = pr && pr.food && pr.food.now;\n    return `<b>${isoOf[name] ? flagImg(isoOf[name]) + " " : ""}${escH(name === "United States of America" ? "United States" : name)}</b><span class="mono ${k.score > 0.5 ? "hurt" : k.score < -0.5 ? "gain" : ""}">${cutTxt(k)}</span><span>Fuel <span class="mono">${pct(k.fuel)}${k.d.pt.own ? "" : " (pooled)"}</span></span>${al ? `<span>Prices <span class="mono">${pctP(al.v)}</span>, food <span class="mono">${fd ? pctP(fd.v) : "–"}</span> (${ymLabel(al.month)})</span>` : ""}`;', 1),
+    ('    const pr = COIL.prices[isoOf[name]], al = pr && pr.all && pr.all.now, fd = pr && pr.food && pr.food.now;\n    t.innerHTML = `<b>${name}</b><span class="mono ${k.score > 0.5 ? "hurt" : k.score < -0.5 ? "gain" : ""}">${cutTxt(k)}</span>\n      <span>Fuel <span class="mono">${pct(k.fuel)}${k.d.pt.own ? "" : " (pooled)"}</span></span>${al ? `<span>Prices <span class="mono">${pctP(al.v)}</span>, food <span class="mono">${fd ? pctP(fd.v) : "–"}</span> (${ymLabel(al.month)})</span>` : ""}`;\n',
      '    t.innerHTML = tipHtml(name);\n', 1),
     # Antarctica (and the French Southern lands) on the flat map too, and the flat map's "Macedonia" under the
     # globe's name, so it can be selected and found in our tables
@@ -112,9 +103,9 @@ SWAPS = [
      'G3.labelsData([...SEAS.filter((x) => !x.flatOnly), ...CONTS.map((x) => ({ ...x, cont: true })), { name: "HORMUZ", lng: 54.2, lat: 25.9, hz: true }])', 1),
     # Antarctica and the French Southern lands have no people and no score: no-data grey on both maps, and a
     # tooltip that says so (the exposure model would otherwise score them as a generic importer)
-    ('  function fillFor(name) { return st.mat ?',
+    ('  function fillFor(name) { if (st.mat) return matShade(name);',
      '  const NOSCORE = new Set(["Antarctica", "Fr. S. Antarctic Lands"]);\n'
-     '  function fillFor(name) { return NOSCORE.has(name) ? "#243049" : st.mat ?', 1),
+     '  function fillFor(name) { if (NOSCORE.has(name)) return "#243049"; if (st.mat) return matShade(name);', 1),
     ('function tipHtml(name) {\n    if (st.mat) {',
      'function tipHtml(name) {\n    if (NOSCORE.has(name)) return `<b>${escH(name)}</b><span>No population: not scored</span>`;\n    if (st.mat) {', 1),
     ('  function select(name, anchor) {\n    st.sel = name && name === st.sel ? null : name;',
@@ -122,5 +113,4 @@ SWAPS = [
     ('.labelSize((x) => (x.cont ? 2.6 :', '.labelSize((x) => (x.hz ? 1.05 : x.cont ? 2.6 :', 1),
     ('.labelAltitude((x) => (x.cont ? 0.03 : 0.003))', '.labelAltitude((x) => (x.hz ? 0.02 : x.cont ? 0.03 : 0.003))', 1),
     ('.labelColor((x) => (x.cont ? "rgba(241,232,210,0.85)"', '.labelColor((x) => (x.hz ? "#ffbf5c" : x.cont ? "rgba(241,232,210,0.85)"', 1),
->>>>>>> origin/main
 ]

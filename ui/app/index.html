@@ -5050,12 +5050,8 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
     const max = Math.max(...Object.values(w), 0.01), f = 0.25 + 0.75 * Math.sqrt(v / max);
     return rampOf(st.mat)(f);
   }
-<<<<<<< HEAD
-  function fillFor(name) { if (st.mat) return matShade(name); const v = calc(name).score; return v == null ? NODATA : color(v); }
-=======
   const NOSCORE = new Set(["Antarctica", "Fr. S. Antarctic Lands"]);
-  function fillFor(name) { return NOSCORE.has(name) ? "#243049" : st.mat ? matShade(name) : color(calc(name).score); }
->>>>>>> origin/main
+  function fillFor(name) { if (NOSCORE.has(name)) return "#243049"; if (st.mat) return matShade(name); const v = calc(name).score; return v == null ? NODATA : color(v); }
   // 12-month price change (%) for the current Brent vs pre-war, with the 90% interval of the average effect
   // Seb's recommended chain (docs/chain.md): scenario table, notes/chain-scenarios-3m-margins.csv, as
   // series -> lost-flow points -> months ahead -> [mean, q05, q95], in 100 x log change (pp for unemployment)
@@ -5178,11 +5174,8 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
       return `<b>${iso ? flagImg(iso) + " " : ""}${escH(name === "United States of America" ? "United States" : name)}</b>${row("production", "Made")}${row("exports", "Shipped")}${VIA[name] ? `<span>${VIA[name]}</span>` : ""}`;
     }
     const k = calc(name);
-<<<<<<< HEAD
-    return `<b>${isoOf[name] ? flagImg(isoOf[name]) + " " : ""}${escH(name === "United States of America" ? "United States" : name)}</b><span class="mono">${cutTxt(k)}</span><span>Fuel <span class="mono">${pct(k.fuel)}${k.d.pt.own ? "" : " (pooled)"}</span></span>`;
-=======
-    return `<b>${isoOf[name] ? flagImg(isoOf[name]) + " " : ""}${escH(name === "United States of America" ? "United States" : name)}</b><span>Exposure <span class="mono ${k.score > 0.5 ? "hurt" : k.score < -0.5 ? "gain" : ""}">${fmtS(k.score)}</span></span><span>Fuel cost <span class="mono">${pct(k.fuel)}</span></span>${k.d.h ? `<span>Via Hormuz <span class="mono">${(k.hz * 100).toFixed(0)}% of use</span></span>` : ""}`;
->>>>>>> origin/main
+    const pr = COIL.prices[isoOf[name]], al = pr && pr.all && pr.all.now, fd = pr && pr.food && pr.food.now;
+    return `<b>${isoOf[name] ? flagImg(isoOf[name]) + " " : ""}${escH(name === "United States of America" ? "United States" : name)}</b><span class="mono ${k.score > 0.5 ? "hurt" : k.score < -0.5 ? "gain" : ""}">${cutTxt(k)}</span><span>Fuel <span class="mono">${pct(k.fuel)}${k.d.pt.own ? "" : " (pooled)"}</span></span>${al ? `<span>Prices <span class="mono">${pctP(al.v)}</span>, food <span class="mono">${fd ? pctP(fd.v) : "–"}</span> (${ymLabel(al.month)})</span>` : ""}`;
   }
 
   // ------------------------------------------------------------ 3D globe (built the first time 3D is chosen)
@@ -5639,13 +5632,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
       return;
     }
     const r = svgEl.node().getBoundingClientRect();
-<<<<<<< HEAD
-    const pr = COIL.prices[isoOf[name]], al = pr && pr.all && pr.all.now, fd = pr && pr.food && pr.food.now;
-    t.innerHTML = `<b>${name}</b><span class="mono ${k.score > 0.5 ? "hurt" : k.score < -0.5 ? "gain" : ""}">${cutTxt(k)}</span>
-      <span>Fuel <span class="mono">${pct(k.fuel)}${k.d.pt.own ? "" : " (pooled)"}</span></span>${al ? `<span>Prices <span class="mono">${pctP(al.v)}</span>, food <span class="mono">${fd ? pctP(fd.v) : "–"}</span> (${ymLabel(al.month)})</span>` : ""}`;
-=======
     t.innerHTML = tipHtml(name);
->>>>>>> origin/main
     t.hidden = false;
     let x = e.clientX - r.left + 14, y = e.clientY - r.top + 14;
     if (x + t.offsetWidth > r.width - 8) x = e.clientX - r.left - t.offsetWidth - 14;
