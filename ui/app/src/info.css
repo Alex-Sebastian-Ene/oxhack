@@ -1,17 +1,17 @@
 /* Info keys and panels for the Households and Strait cards (households.js, strait.js). The notes that used to sit
    under each card (sources, fetch dates, method, caveats) live behind a blue "i" key and open in the sheet, laid out
    as short sections with one line per source. Blue is the app's colour for information; amber stays for oil. */
-#hz-households .hz-ch .hz-i, #hz-models .hz-i, #strait-stage .hud .ib[data-info], #strait-stage .info-map {
+#hz-households .hz-ch .hz-i, #hz-models .hz-i, #strait-stage .hud .ib[data-info], #strait-stage .info-map, .ib[data-winfo] {
   background: #1d5fbf !important; color: #ffffff !important; border: 2px solid var(--ink) !important; border-radius: 0 !important;
   box-shadow: inset -2px -2px 0 #123f80, inset 2px 2px 0 #5aa9ff, 2px 2px 0 rgba(0, 0, 0, .55) !important;
 }
-#hz-households .hz-ch .hz-i, #hz-models .hz-i, #strait-stage .hud .ib[data-info] { width: 30px; min-height: 30px; padding: 0; }
+#hz-households .hz-ch .hz-i, #hz-models .hz-i, #strait-stage .hud .ib[data-info], .ib[data-winfo] { width: 30px; min-height: 30px; padding: 0; }
 #hz-households .hz-ch .hz-i:hover, #hz-models .hz-i:hover, #strait-stage .hud .ib[data-info]:hover, #strait-stage .info-map:hover { background: #2b74dd !important; color: #ffffff !important; }
 #hz-households .hz-ch .hz-i:active, #hz-models .hz-i:active, #strait-stage .hud .ib[data-info]:active, #strait-stage .info-map:active {
   transform: translate(1px, 1px); box-shadow: inset 2px 2px 0 #123f80 !important;
 }
 #hz-households .hz-ch .hz-i svg, #hz-models .hz-i svg, #strait-stage .hud .ib[data-info] svg, #strait-stage .info-map svg { width: 18px; height: 18px; stroke: #ffffff; stroke-width: 2.6; }
-#hz-households .hz-ch .hz-i:focus-visible, #hz-models .hz-i:focus-visible, #strait-stage .hud .ib[data-info]:focus-visible { outline: 2px solid var(--seen-soft); outline-offset: 2px; }
+#hz-households .hz-ch .hz-i:focus-visible, #hz-models .hz-i:focus-visible, #strait-stage .hud .ib[data-info]:focus-visible, .ib[data-winfo]:focus-visible { outline: 2px solid var(--seen-soft); outline-offset: 2px; }
 .hz-tucked { display: none !important; }
 #strait-stage .tagc.hz-cached { margin-left: 4px; }
 
@@ -37,3 +37,10 @@
 .sheet .hz-srcl .meta { grid-column: 2; font: 16px/1.2 var(--mono); color: var(--faint); overflow-wrap: anywhere; }
 .sheet .hz-notes p .tagc { margin-right: 6px; }
 @media (max-width: 480px) { .sheet .hz-srcl li { grid-template-columns: minmax(0, 1fr); } .sheet .hz-srcl .who { grid-row: auto; } }
+
+/* Every info key looks the same (World included) and opens the sheet beside itself (infokey.js). */
+.ib[data-winfo] { width: 30px !important; min-height: 30px !important; flex: none; }
+.ib[data-winfo] svg { width: 18px; height: 18px; stroke: #ffffff; stroke-width: 2.6; }
+[aria-expanded="true"]:is(.hz-i, .ib[data-info], .ib[data-winfo], .info-map) { background: #2b74dd !important; outline: 2px solid var(--seen-soft); outline-offset: 2px; }
+.sheet.hz-placed { position: fixed; box-shadow: var(--frame), 6px 6px 0 rgba(0, 0, 0, .55) !important; animation: hz-pop .14s steps(3) both; }
+@media (max-width: 480px) { .sheet .hz-srcl li { display: flex; flex-direction: column; align-items: stretch; gap: 2px; } }

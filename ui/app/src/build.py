@@ -123,10 +123,11 @@ def main() -> None:
         body += f"<script>\n{read('households.js')}\n</script>\n"
     if models_data:   # the Models page: each model's results, tests and limits, read from notes/ and docs/
         body += f"<script>\n{read('models.js')}\n</script>\n"
+    body += f"<script>\n{read('infokey.js')}\n</script>\n"   # last: one behaviour for every info key
     fragment = '<title>Hormuz Flow</title>\n<meta name="claude:viewport-fit-sides" content="cover">\n' + body
 
     if shutil.which("node"):
-        for f in ("pixel.js", "sound.js", "landing.js", "shell.js", "ai.js", "strait.js", "mandeb.js", "households.js", "models.js"):
+        for f in ("pixel.js", "sound.js", "landing.js", "shell.js", "ai.js", "strait.js", "mandeb.js", "households.js", "models.js", "infokey.js"):
             r = subprocess.run(["node", "--check", str(HERE / f)], capture_output=True, text=True)
             if r.returncode:
                 sys.exit(f"{f}: {r.stderr.strip()}")
