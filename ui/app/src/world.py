@@ -87,4 +87,7 @@ SWAPS = [
      '      return `<b>${iso ? flagImg(iso) + " " : ""}${escH(name === "United States of America" ? "United States" : name)}</b>${row("production", "Made")}${row("exports", "Shipped")}', 1),
     ('return `<b>${escH(name)}</b><span>Exposure',
      'return `<b>${isoOf[name] ? flagImg(isoOf[name]) + " " : ""}${escH(name === "United States of America" ? "United States" : name)}</b><span>Exposure', 1),
+    # the flat map's exposure tooltip builds its own title rather than calling tipHtml: the same flag there
+    ('t.innerHTML = `<b>${name}</b><span>Exposure',
+     't.innerHTML = `<b>${isoOf[name] ? flagImg(isoOf[name]) + " " : ""}${escH(name === "United States of America" ? "United States" : name)}</b><span>Exposure', 1),
 ]
