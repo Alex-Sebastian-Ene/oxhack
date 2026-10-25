@@ -154,7 +154,7 @@ ONS, Household Costs Indices for UK household groups: April to June 2026 (releas
 
 ## A Hormuz closure by UK household group
 
-Item price fans of the cost-of-living model (`notes/cost-of-living-fans.csv on branch seb/cost-of-living, commit 849e11f`: the Bayesian basket-item model, Lévy Brent paths, closures scaled to the 2026 one) weighted by each group's spending shares (HCI weights, 2026). Change in each group's costs since 2026-02, % (median; first-order weighted sum of item changes). Mortgage interest is held flat, as the price model has no rates. 'Extra' is the closure's cost above no closure.
+Item price fans of the cost-of-living model (`notes/cost-of-living-fans.csv`: the Bayesian basket-item model, Lévy Brent paths, closures scaled to the 2026 one) weighted by each group's spending shares (HCI weights, 2026). Change in each group's costs since 2026-02, % (median; first-order weighted sum of item changes). Mortgage interest is held flat, as the price model has no rates. 'Extra' is the closure's cost above no closure.
 
 | Group | Energy share | Motor fuel share | 6 months, no closure | 6 months, 50% closure | 6 months, full closure | Extra from a full closure (6 m) | of which motor fuel | 12 months, full closure |
 |---|---|---|---|---|---|---|---|---|

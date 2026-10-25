@@ -2,14 +2,14 @@
 
 The people side of the chain in [chain.md](chain.md): what households pay, what they earn, and the
 gap between them, for the US, UK and euro area, monthly from 2000. It sits next to the basket-item
-price model on branch `seb/cost-of-living` (`docs/cost-of-living.md` there). That model forecasts
+price model ([cost-of-living.md](cost-of-living.md)). That model forecasts
 item prices; this page measures how households have actually fared, and what the Hormuz scenarios
 would do to their pay.
 
 | Code | What it does | Output |
 |---|---|---|
 | `experiments/household.py fetch` | Downloads and caches every series (`data/raw/macro/`, git-ignored) | |
-| `experiments/household.py report` | Builds the panel, the measures, the UK household-group tables and the scenario table | `notes/household-costs.md`, `notes/household-panel.csv`, `notes/household-measures.csv`, `notes/household-groups.csv`, `notes/household-group-weights.csv`, `notes/household-scenarios.csv` |
+| `experiments/household.py report` | Builds the panel, the measures, the UK household-group tables and the scenario table | `notes/household-costs.md`, `notes/household-panel.csv`, `notes/household-measures.csv`, `notes/household-groups.csv`, `notes/household-group-weights.csv`, `notes/household-scenarios.csv`, `notes/household-group-scenarios.csv` |
 | `experiments/household_dash.py` | Cuts the notes above into the dashboard's ten files, with a table of every series' source, code, period and fetch date, and wraps the page `experiments/household_dash.html` | `runs/dash/*.csv`, `runs/dash/page.json` (git-ignored) |
 | `tests/test_household.py` | Mortgage arithmetic, real pay and work-minutes, squeezes, the HCI parser, the scenarios, and a check of the cached ONS file against its bulletin | |
 
@@ -68,7 +68,7 @@ its source, code, unit, frequency and fetch date.
 ## A Hormuz closure by UK household group (`notes/household-group-scenarios.csv`)
 
 **Method:**
-- Take the item price fans of the basket-item model: `notes/cost-of-living-fans.csv` on branch `seb/cost-of-living`, commit 849e11f, which has converged fits from Iridis job 1972769. The fans run from 2026-02 under no closure and 25%, 50% and 100% closures, plus the outlook from 2026-09.
+- Take the item price fans of the basket-item model: `notes/cost-of-living-fans.csv` ([cost-of-living.md](cost-of-living.md)), which has converged fits from Iridis job 1972769. The fans run from 2026-02 under no closure and 25%, 50% and 100% closures, plus the outlook from 2026-09.
 - Weight them by each group's 2026 HCI spending shares:
   - food goes to the food items, split by their CPI weights;
   - electricity, gas and other fuels to electricity and gas;
@@ -85,14 +85,7 @@ its source, code, unit, frequency and fetch date.
 - Energy-heavy budgets (the lowest-income tenth; retired people) are cushioned at first, because UK household energy follows the quarterly Ofgem cap.
 - The year ahead from 2026-09: costs rise about 3.9–4.4%, slightly more for low-income and retired households.
 
-**Reproduce:** the fans come from the other branch, so `report` takes their path as an input:
-
-```bash
-git show origin/seb/cost-of-living:notes/cost-of-living-fans.csv > runs/col-fans.csv
-HOUSEHOLD_COL_FANS=runs/col-fans.csv HOUSEHOLD_COL_FANS_SOURCE="notes/cost-of-living-fans.csv on branch seb/cost-of-living, commit 849e11f" uv run experiments/household.py report
-```
-
-Once `seb/cost-of-living` is merged, `notes/cost-of-living-fans.csv` is found without the variables.
+`report` reads the fans from `notes/cost-of-living-fans.csv` and skips this table if the file is missing.
 
 ## Limits
 

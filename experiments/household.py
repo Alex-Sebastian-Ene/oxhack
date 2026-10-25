@@ -38,7 +38,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import os
 import time
 import urllib.error
 import urllib.request
@@ -496,7 +495,7 @@ def scenarios(panel: pd.DataFrame, path: Path = NOTES / "chain-scenarios-3m.csv"
 
 # --- Hormuz scenarios by UK household group ------------------------------------------------------
 
-# HCI spending categories -> basket items of the cost-of-living model (branch seb/cost-of-living,
+# HCI spending categories -> basket items of the cost-of-living model (docs/cost-of-living.md,
 # notes/cost-of-living-fans.csv). A category split over several items is split in proportion to their
 # CPI weights there. Mortgage interest is not in that model and is held flat; everything else is its
 # 'rest of the basket'.
@@ -738,11 +737,11 @@ def report() -> None:
                        f"{fmt(pct_change(hci_series(h_idx, g), a, latest), 1, True)} |")
 
     # 4b. the Hormuz scenarios and the outlook, by UK household group
-    fans_path = Path(os.environ.get("HOUSEHOLD_COL_FANS", NOTES / "cost-of-living-fans.csv"))
+    fans_path = NOTES / "cost-of-living-fans.csv"
     if h_idx is not None and fans_path.exists():
         fans = pd.read_csv(fans_path)
         gs = group_scenarios(h_wts, fans)
-        src = os.environ.get("HOUSEHOLD_COL_FANS_SOURCE", str(fans_path))
+        src = fans_path.relative_to(ROOT).as_posix()
         gs.assign(source=f"item fans: {src}; spending shares: {HCI_RELEASE}").to_csv(NOTES / "household-group-scenarios.csv", index=False)
         show = ["Decile 1", "Decile 2", "Decile 5", "Decile 9", "Decile 10", "Private renter", "Mortgagor and other owner occupier",
                 "Outright owner occupier", "Social and other renter", "Retired", "With Children"]

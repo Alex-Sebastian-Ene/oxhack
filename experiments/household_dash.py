@@ -138,9 +138,9 @@ extra = [{"series": "uk_hci", "region": "UK", "label": "Household Costs Indices 
           "code": "chain-scenarios-3m.csv", "frequency": "M", "first": "2026-03", "last": "2027-02",
           "fetched": chain["generated"].max(), "kind": "model"},
          {"series": "basket_item_fans", "region": "UK", "label": "Item price fans under closures from 2026-02 and the outlook "
-          "from 2026-09 (basket-item model, notes/cost-of-living-fans.csv on seb/cost-of-living, commit 849e11f)",
+          "from 2026-09 (basket-item model, notes/cost-of-living-fans.csv; see docs/cost-of-living.md)",
           "publisher": "Model output (ours)", "code": "cost-of-living-fans.csv", "frequency": "M", "first": "2026-03",
-          "last": "2027-09", "fetched": "2026-10-25", "kind": "model"}]  # the date of commit 849e11f
+          "last": "2027-09", "fetched": "2026-10-25", "kind": "model"}]  # the date the fans were committed
 src = pd.concat([src, pd.DataFrame(extra)], ignore_index=True)
 src[["series", "region", "label", "publisher", "code", "frequency", "first", "last", "fetched", "kind"]].to_csv(
     OUT + "sources.csv", index=False)
