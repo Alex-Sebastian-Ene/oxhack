@@ -76,6 +76,18 @@ def load_runs(folder=None) -> tuple[dict, dict]:
     return ok, failed
 
 
+def load_lagged(folder) -> list[dict]:
+    """The converged fold-j-lagged runs (the timing-matched forecasts for the Fed/SPF comparison)."""
+    out = []
+    for j in range(8):
+        p = folder / f"fold-{j}-lagged.json"
+        if p.exists():
+            r = json.loads(p.read_text())
+            if converged(r["diagnostics"]) and not r["meta"].get("quick"):
+                out.append(r)
+    return out
+
+
 def stack(folds: list[dict], mode: str, field: str = "crps") -> np.ndarray:
     """[origins over all folds, len(HS), len(KEYS)] for a mode or a benchmark."""
     parts = []
@@ -214,60 +226,98 @@ def bench_by_origin(bench: dict, origins: list[str], key: str, h: int) -> np.nda
     return np.array([np.nan if by.get(d) is None else by[d] for d in origins], float)
 
 
-def institutions_section(folds: list[dict], bench: dict) -> list[str]:
-    mode = "forecast_GARCH-CGMY"
-    origins = [o for f in folds for o in f["origins"]]
-    clim, S, I = stack(folds, "climatology"), stack(folds, mode), stack(folds, mode, "inside90")
+def institutions_section(folds: list[dict], bench: dict, lagged: list[dict] | None = None) -> list[str]:
+    """US CPI against the Fed and SPF forecasts. With `lagged` (the fold-j-lagged runs) the main tables
+    are timing-matched: our forecast starts a month earlier, with the CPI the surveys had. The tables
+    from the folds' own forecast mode follow, with the head start it gives us."""
     ours = (("us_composite", "Our US composite (items + rest)"), ("us_all", "Our US headline, forecast directly"))
-    B = {(k, h): bench_by_origin(bench, origins, k, h) for k, _ in INSTITUTIONS for h in col.HS}
     head = KEYS.index("us_all")  # one scale for every row: the climatology of US headline CPI
     gen = bench["meta"]["generated"][:10]
+
+    def tables(fl: list[dict], mode: str) -> list[str]:
+        origins = [o for f in fl for o in f["origins"]]
+        clim, S, I = stack(fl, "climatology"), stack(fl, mode), stack(fl, mode, "inside90")
+        B = {(k, h): bench_by_origin(bench, origins, k, h) for k, _ in INSTITUTIONS for h in col.HS}
+        out = ["**Skill against the climatology of US headline CPI**, each on the origins it has (the release-month "
+               "SPF has one a quarter)", "",
+               "| Forecast | " + " | ".join(f"h={h}" for h in col.HS) + " |", "|---|" + "---|" * len(col.HS)]
+        for k, lab in ours:
+            c = KEYS.index(k)
+            out.append(f"| {lab} | " + " | ".join(
+                f3(1 - np.nanmean(S[:, H_IDX[h], c]) / np.nanmean(clim[:, H_IDX[h], head])) for h in col.HS) + " |")
+        for k, lab in INSTITUTIONS:
+            cells = []
+            for h in col.HS:
+                b, cl = B[(k, h)], clim[:, H_IDX[h], head]
+                ok = np.isfinite(b) & np.isfinite(cl)
+                cells.append(f3(1 - b[ok].mean() / cl[ok].mean()))
+            out.append(f"| {lab} | " + " | ".join(cells) + " |")
+        out += ["| 90% coverage of our US composite | " + " | ".join(
+            pct(np.nanmean(I[:, H_IDX[h], KEYS.index("us_composite")])) for h in col.HS) + " |", ""]
+        for k, lab in ours:
+            c = KEYS.index(k)
+            out += [f"**{lab} against each benchmark**: how much lower our CRPS is, on the origins both have; t is the "
+                    f"Diebold-Mariano statistic of ours minus theirs (Newey-West, {BENCH_LAG} lags; negative = ours better)",
+                    "", "| Benchmark | " + " | ".join(f"h={h}" for h in col.HS) + " |", "|---|" + "---|" * len(col.HS)]
+            for bk, blab in INSTITUTIONS:
+                cells = []
+                for h in col.HS:
+                    a, b, cl = S[:, H_IDX[h], c], B[(bk, h)], clim[:, H_IDX[h], head]
+                    ok = np.isfinite(a) & np.isfinite(b) & np.isfinite(cl)
+                    d = (a[ok] - b[ok]) / cl[ok].mean()
+                    m_, cov = oc.ols_hac(d, np.ones((len(d), 1)), BENCH_LAG)
+                    lower = 1 - a[ok].mean() / b[ok].mean()
+                    cells.append(f"{abs(100 * lower):.0f}% {'lower' if lower >= 0 else 'higher'} "
+                                 f"(t {m_[0] / np.sqrt(cov[0, 0]):+.1f}, n {ok.sum()})")
+                out.append(f"| {blab} | " + " | ".join(cells) + " |")
+            out.append("")
+        return out
+
     out = ["## Against the Fed and the SPF: US CPI", "",
            f"_Benchmarks from `{BENCH_FILE.relative_to(col.ROOT).as_posix()}` (written by `experiments/macro_global.py "
            f"benchmarks` on {gen}; surveys fetched {bench['fetched']}, SPF to the {bench['spf_last_survey']} survey)._", "",
            "Our rows are the forecast mode with Lévy Brent paths: nothing after the origin is known. The benchmarks are the "
-           "chain's, on the same 8 folds, matched by origin month. That gives us a head start: we start from the origin "
-           "month's CPI, which is published about two weeks into the next month, while the Cleveland and Michigan values "
-           "are taken at the end of the origin month, before it. It matters most at 1-3 months. Each benchmark is a "
-           "point forecast with a Gaussian band of the "
-           "spread of its own errors on the fold's training origins. Cleveland and Michigan give 1-year rates, scaled by "
-           "h/12 at shorter horizons; the SPF's quarterly path is interpolated to months (`docs/macro-ensemble.md`). The "
-           "surveys were made with the data as first published, while we train and score on today's revised CPI "
-           "(`CPIAUCSL`, revised only through its seasonal factors), which flatters us slightly.", "",
-           "**Skill against the climatology of US headline CPI**, each on the origins it has (the release-month SPF has "
-           "one a quarter)", "",
-           "| Forecast | " + " | ".join(f"h={h}" for h in col.HS) + " |", "|---|" + "---|" * len(col.HS)]
-    for k, lab in ours:
-        c = KEYS.index(k)
-        out.append(f"| {lab} | " + " | ".join(f3(1 - np.nanmean(S[:, H_IDX[h], c]) / np.nanmean(clim[:, H_IDX[h], head]))
-                                              for h in col.HS) + " |")
-    for k, lab in INSTITUTIONS:
-        cells = []
-        for h in col.HS:
-            b, cl = B[(k, h)], clim[:, H_IDX[h], head]
-            ok = np.isfinite(b) & np.isfinite(cl)
-            cells.append(f3(1 - b[ok].mean() / cl[ok].mean()))
-        out.append(f"| {lab} | " + " | ".join(cells) + " |")
-    out += ["| 90% coverage of our US composite | " + " | ".join(
-        pct(np.nanmean(I[:, H_IDX[h], KEYS.index("us_composite")])) for h in col.HS) + " |", ""]
-    for k, lab in ours:
-        c = KEYS.index(k)
-        out += [f"**{lab} against each benchmark**: how much lower our CRPS is, on the origins both have; t is the "
-                f"Diebold-Mariano statistic of ours minus theirs (Newey-West, {BENCH_LAG} lags; negative = ours better)", "",
-                "| Benchmark | " + " | ".join(f"h={h}" for h in col.HS) + " |", "|---|" + "---|" * len(col.HS)]
-        for bk, blab in INSTITUTIONS:
+           "chain's, on the same 8 folds, matched by origin month: each forecasts the change in CPI over the h months "
+           "after the origin month t. Each benchmark is a point forecast with a Gaussian band of the spread of its own "
+           "errors on the fold's training origins. Cleveland and Michigan give 1-year rates, scaled by h/12 at shorter "
+           "horizons; the SPF's quarterly path is interpolated to months (`docs/macro-ensemble.md`). The surveys were "
+           "made with the data as first published, while we train and score on today's revised CPI (`CPIAUCSL`, revised "
+           "only through its seasonal factors), which flatters us slightly.", ""]
+    if lagged:
+        gl = [f["diagnostics"] for f in lagged]
+        jobs = sorted({str(f["meta"].get("job")) for f in lagged if f["meta"].get("job")})
+        out += ["### Timing matched: our forecast uses only the CPI the surveys had", "",
+                "A survey taken at the end of month t knows CPI to month t-1: month t's is published about two weeks "
+                "into t+1. So here our forecast starts at the end of month t-1, runs h+1 months, and is scored on the "
+                "change over months t+1..t+h, the window the surveys forecast. It also starts from a month less of Brent "
+                "and gas than the surveys saw. Each fold is refitted as in the fold tables (same seed and settings; "
+                f"Iridis job {', '.join(jobs) or '-'}; R-hat at most {max(d['max_r_hat'] for d in gl)}, ESS at least "
+                f"{min(d['min_ess'] for d in gl)}).", ""]
+        out += tables(lagged, "forecast_lagged_GARCH-CGMY")
+        clim = stack(lagged, "climatology")
+        S0, S1 = stack(lagged, "forecast_GARCH-CGMY"), stack(lagged, "forecast_lagged_GARCH-CGMY")
+        out += ["**What the head start is worth**: the same fits, forecasting the same window from the end of month t "
+                "(knowing month t's CPI) instead of t-1. How much lower the CRPS is with month t known, and its "
+                f"Diebold-Mariano t (Newey-West, {BENCH_LAG} lags)", "",
+                "| Series | " + " | ".join(f"h={h}" for h in col.HS) + " |", "|---|" + "---|" * len(col.HS)]
+        for k, lab in ours:
+            c = KEYS.index(k)
             cells = []
             for h in col.HS:
-                a, b, cl = S[:, H_IDX[h], c], B[(bk, h)], clim[:, H_IDX[h], head]
+                a, b, cl = S0[:, H_IDX[h], c], S1[:, H_IDX[h], c], clim[:, H_IDX[h], head]
                 ok = np.isfinite(a) & np.isfinite(b) & np.isfinite(cl)
                 d = (a[ok] - b[ok]) / cl[ok].mean()
                 m_, cov = oc.ols_hac(d, np.ones((len(d), 1)), BENCH_LAG)
-                lower = 1 - a[ok].mean() / b[ok].mean()
-                cells.append(f"{abs(100 * lower):.0f}% {'lower' if lower >= 0 else 'higher'} "
-                             f"(t {m_[0] / np.sqrt(cov[0, 0]):+.1f}, n {ok.sum()})")
-            out.append(f"| {blab} | " + " | ".join(cells) + " |")
-        out.append("")
-    return out
+                cells.append(f"{100 * (1 - a[ok].mean() / b[ok].mean()):.0f}% (t {m_[0] / np.sqrt(cov[0, 0]):+.1f})")
+            out.append(f"| {lab} | " + " | ".join(cells) + " |")
+        out += ["", "### Starting from month t's CPI (a two-week head start)", "",
+                "The folds' own forecast mode starts at the end of month t, with month t's CPI, which the surveys did not "
+                "have yet. Kept for comparison; the timing-matched tables above are the fair test.", ""]
+    else:
+        out += ["That gives us a head start: we start from the origin month's CPI, which is published about two weeks "
+                "into the next month, while the Cleveland and Michigan values are taken at the end of the origin month, "
+                "before it. It matters most at 1-3 months.", ""]
+    return out + tables(folds, "forecast_GARCH-CGMY")
 
 
 def nowcasts(freq: str) -> pd.DataFrame:
@@ -924,7 +974,8 @@ def write() -> None:
     if folds:
         out += fold_section(folds)
         if BENCH_FILE.exists():
-            out += institutions_section(folds, json.loads(BENCH_FILE.read_text()))
+            lagged = load_lagged(col.RUNS_MAIN)
+            out += institutions_section(folds, json.loads(BENCH_FILE.read_text()), lagged if len(lagged) == 8 else None)
         out += nowcast_section(data)
     for name, label in (("event-2026", "The 2026 Hormuz closure as a test"), ("event-2022", "The 2022 shock as a test")):
         if name in runs:

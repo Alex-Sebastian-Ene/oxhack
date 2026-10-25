@@ -648,26 +648,26 @@ def fit(data: dict, last: int, seed: int = 0) -> tuple[dict, Stats, dict, np.nda
 
 def simulate(post: dict, st: Stats, data: dict, t0: np.ndarray, fut: dict, Dfut: np.ndarray, zres: np.ndarray, rng,
              regime: bool = True) -> np.ndarray:
-    """Draws of the cumulative change (% of the price level) of every series 1..H months after each
-    origin t0 [O]: [N, O, H, K]. fut: future monthly log changes of each driver channel,
-    [N or 1, O, H] (a missing channel is held flat); Dfut [O, H].
+    """Draws of the cumulative change (% of the price level) of every series 1..hz months after each
+    origin t0 [O]: [N, O, hz, K], hz = Dfut.shape[1] (H unless a run needs a longer path). fut: future
+    monthly log changes of each driver channel, [N or 1, O, hz] (a missing channel is held flat); Dfut [O, hz].
     Noise: whole standardised residual vectors drawn from the training months (zres), so the series
     keep their cross-correlation; a missing entry falls back to a Student-t draw.
     regime=False switches the supply-disruption terms off (kappa = psi = 0) for the ablation."""
-    N, K, O = len(post["a"]), len(SERIES), len(t0)
+    N, K, O, hz = len(post["a"]), len(SERIES), len(t0), Dfut.shape[1]
     z = standardised(data, st)
     arr = series_arrays()
-    f = {c: np.broadcast_to(np.nan_to_num(fut.get(c, np.zeros((1, O, H)))) / st.sd[c], (N, O, H)) for c in CHANNELS}
+    f = {c: np.broadcast_to(np.nan_to_num(fut.get(c, np.zeros((1, O, hz)))) / st.sd[c], (N, O, hz)) for c in CHANNELS}
     buf = {c: np.stack([z[c][t0 - l] for l in range(LAGS)], -1)[None].repeat(N, 0) for c in CHANNELS}  # [N, O, LAGS]
     yprev = np.nan_to_num(z["y"][t0])[None].repeat(N, 0)  # [N, O, K]
     B, G, a, S, rho = post["Bm"], post["Gm"], post["a"], post["S"], post["rho"]
     kappa, psi = (post["kappa"], post["psi"]) if regime else (np.zeros_like(post["kappa"]), np.zeros_like(post["psi"]))
     phi, sig, nu = post["phi"], post["sigma"], post["nu"]
     food = [(c, post[p]) for c, p in (("g_grain", "Fg"), ("g_urea", "Fu")) if p in post and c in CHANNELS]
-    cum, out = np.zeros((N, O, K)), np.zeros((N, O, H, K))
+    cum, out = np.zeros((N, O, K)), np.zeros((N, O, hz, K))
     first = data["months"][0]
     lag = lambda b, M: np.einsum("nol,nkl->nok", b, M)  # noqa: E731
-    for j in range(H):
+    for j in range(hz):
         for c in CHANNELS:
             buf[c] = np.concatenate([f[c][..., j:j + 1], buf[c][..., :-1]], -1)
         v = (np.log(np.abs(buf["x"][..., :3]).mean(-1) + VOL_FLOOR) - st.vm) / st.vs  # [N, O]
@@ -742,9 +742,9 @@ def innovation_table(model: str, p: dict) -> tuple[np.ndarray, np.ndarray]:
 
 
 def daily_paths(model: str, daily: pd.Series, month: pd.Timestamp, n: int, shock: np.ndarray, rng) -> np.ndarray:
-    """Monthly-average Brent log changes [n, H] after month `month`, from daily GARCH paths with
-    the stored innovations. shock[j] shifts the whole of month j+1 (a scenario level step; it does
-    not feed the GARCH variance)."""
+    """Monthly-average Brent log changes [n, len(shock)] after month `month`, from daily GARCH paths
+    with the stored innovations. shock[j] shifts the whole of month j+1 (a scenario level step; it
+    does not feed the GARCH variance)."""
     p = levy_fit(month.year, model)
     mu, w, al, be = p["mu"], p["omega"], p["alpha"], p["beta"]
     upto = daily[daily.index < month + pd.DateOffset(months=1)]
@@ -756,8 +756,8 @@ def daily_paths(model: str, daily: pd.Series, month: pd.Timestamp, n: int, shock
     prev_avg = np.full(n, np.log(this_month.mean()))
     lp0 = np.log(upto.values[-1])
     lp, level = np.full(n, lp0), np.zeros(n)
-    out = np.zeros((n, H))
-    for j in range(H):
+    out = np.zeros((n, len(shock)))
+    for j in range(len(shock)):
         level = level + shock[j]
         acc = np.zeros(n)
         for _ in range(DAYS):
@@ -804,11 +804,12 @@ def garch_fit(r: np.ndarray) -> dict:
 
 
 def garch_paths(par: dict, n: int, shock: np.ndarray, rng) -> np.ndarray:
-    """[n, H] monthly changes: mu + shock[j] + sigma_j eps_j; the scenario shock does not feed the variance."""
+    """[n, len(shock)] monthly changes: mu + shock[j] + sigma_j eps_j; the scenario shock does not feed
+    the variance."""
     s2 = np.full(n, par["s2_next"])
     c = np.sqrt((par["nu"] - 2) / par["nu"])
-    out = np.zeros((n, H))
-    for j in range(H):
+    out = np.zeros((n, len(shock)))
+    for j in range(len(shock)):
         e = np.sqrt(s2) * rng.standard_t(par["nu"], n) * c
         out[:, j] = par["mu"] + shock[j] + e
         s2 = par["omega"] + par["alpha"] * e ** 2 + par["beta"] * s2
@@ -840,13 +841,14 @@ def closure_template(data: dict) -> dict:
 
 
 def driver_paths(data: dict, last: int, n: int, rng, driver: str = "GARCH-CGMY", severity: float = 0.0,
-                 dm: dict | None = None, daily: pd.Series | None = None) -> dict:
-    """Paths [n, H] of every driver channel after month `last`. severity scales the 2026 closure
+                 dm: dict | None = None, daily: pd.Series | None = None, hz: int = H) -> dict:
+    """Paths [n, hz] of every driver channel after month `last`. severity scales the 2026 closure
     template (0 = no closure). driver: GARCH-CGMY or GARCH-Student-t (daily, stored fits) or monthly-t.
     The other channels follow Brent (beta) plus their own GARCH-t noise and, in a closure, their own
     2026 moves beyond what Brent explains."""
     dm = dm or driver_model(data, last)
-    tpl = closure_template(data) if severity else {c: np.zeros(H) for c in CHANNELS}
+    tpl = ({c: np.r_[v, np.zeros(hz)][:hz] for c, v in closure_template(data).items()} if severity
+           else {c: np.zeros(hz) for c in CHANNELS})
     shock = severity * tpl["x"]
     if driver == "monthly-t":
         x = garch_paths(garch_fit(data["x"][1:last + 1]), n, shock, rng)
@@ -980,6 +982,32 @@ def run_fold(data: dict, j: int) -> dict:
     return res
 
 
+def run_fold_lagged(data: dict, j: int) -> dict:
+    """Forecast mode with the information the surveys had, for the comparison with the Fed and the SPF.
+    A survey taken at the end of month t knows CPI to month t-1 (month t's is published two weeks into
+    t+1), so for each origin t of block j the forecast starts at t-1, runs H+1 months and is scored on
+    the change over months t+1..t+h, the window the surveys forecast. The same fit (seed) as the fold,
+    and, from the same draws, the usual forecast from t, so the head start's worth is measured on one fit."""
+    block = fold_blocks(data["months"])[j]
+    last = int(block[0] - 1)
+    post, st, diag, zres = fit(data, last, seed=j)
+    rng = np.random.default_rng(300 + j)
+    t0 = block
+    N = len(post["a"])
+    actual = actual_paths(data, t0)
+    dm, daily = driver_model(data, last), daily_brent()
+    res = {"fold": j, "diagnostics": diag, "origins": [f"{data['months'][t]:%Y-%m}" for t in t0], "modes": {}}
+    for label, start, hz in (("forecast_GARCH-CGMY", t0, H), ("forecast_lagged_GARCH-CGMY", t0 - 1, H + 1)):
+        paths = [driver_paths(data, int(t), N, rng, "GARCH-CGMY", 0.0, dm, daily, hz) for t in start]
+        fc = {c: np.stack([p[c] for p in paths], 1) for c in CHANNELS}  # [N, O, hz]
+        S = simulate(post, st, data, start, fc, np.repeat(data["D"][start][:, None], hz, 1), zres, rng)
+        if hz > H:
+            S = S[:, :, 1:] - S[:, :, :1]  # the change after month t, forecast from the end of t-1
+        res["modes"][label] = pack(score(with_composites(S, data), actual), actual)
+    res["benchmarks"] = {k: pack(v, actual) for k, v in benchmarks(data, last, t0, actual, rng).items()}
+    return res
+
+
 def run_event(data: dict, base_month: str, seed: int, scenarios: bool) -> dict:
     """Fit up to `base_month`; fan charts given the drivers that happened (what-if), what each
     driver group contributed, and, if `scenarios`, no closure against a 2026-sized closure at three
@@ -1054,7 +1082,9 @@ def run_final(data: dict) -> dict:
 def run(data: dict, name: str) -> dict:
     meta = {"generated": datetime.now(UTC).isoformat(timespec="seconds"), "job": os.environ.get("SLURM_JOB_ID"),
             "quick": QUICK, "food_drivers": FOOD_MODE, "samples": SAMPLES}
-    if name.startswith("fold-"):
+    if name.startswith("fold-") and name.endswith("-lagged"):
+        out = run_fold_lagged(data, int(name.split("-")[1]))
+    elif name.startswith("fold-"):
         out = run_fold(data, int(name.split("-")[1]))
     elif name == "event-2022":
         out = run_event(data, "2022-02-01", seed=22, scenarios=False)

@@ -230,3 +230,16 @@ def test_quarter_rate_annualises_the_quarterly_average():
     rep = pytest.importorskip("cost_of_living_report")
     g = 0.25  # the same log change (x100) every month
     assert rep.quarter_rate(g * np.arange(6.0)) == pytest.approx(100 * (np.exp(12 * g / 100) - 1))
+
+
+def test_a_forecast_started_a_month_early_scores_the_same_window():
+    # simulate takes its horizon from Dfut, so the timing-matched mode can run H + 1 months and drop the first
+    post = toy_post(a=0.3)
+    x = np.zeros((1, 1, col.H + 1))
+    S = col.simulate(post, UNIT, toy_data(), np.array([29]), {"x": x}, np.zeros((1, col.H + 1)), np.zeros((5, K)),
+                     np.random.default_rng(0))
+    assert S.shape == (2, 1, col.H + 1, K)
+    window = (S[:, :, 1:] - S[:, :, :1])[0, 0, :, 0]
+    assert window == pytest.approx(0.3 * np.arange(1, col.H + 1))
+    par = {"mu": 0.001, "omega": 0.0004, "alpha": 0.1, "beta": 0.8, "nu": 5.0, "s2_next": 0.005}
+    assert col.garch_paths(par, 10, np.zeros(col.H + 1), np.random.default_rng(1)).shape == (10, col.H + 1)

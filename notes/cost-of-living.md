@@ -274,7 +274,58 @@ CRPS of Brent in percentage points of log change. Negative in the last column me
 
 _Benchmarks from `runs/macro/global-benchmarks.json` (written by `experiments/macro_global.py benchmarks` on 2026-10-25; surveys fetched 2026-10-24, SPF to the 2026Q3 survey)._
 
-Our rows are the forecast mode with Lévy Brent paths: nothing after the origin is known. The benchmarks are the chain's, on the same 8 folds, matched by origin month. That gives us a head start: we start from the origin month's CPI, which is published about two weeks into the next month, while the Cleveland and Michigan values are taken at the end of the origin month, before it. It matters most at 1-3 months. Each benchmark is a point forecast with a Gaussian band of the spread of its own errors on the fold's training origins. Cleveland and Michigan give 1-year rates, scaled by h/12 at shorter horizons; the SPF's quarterly path is interpolated to months (`docs/macro-ensemble.md`). The surveys were made with the data as first published, while we train and score on today's revised CPI (`CPIAUCSL`, revised only through its seasonal factors), which flatters us slightly.
+Our rows are the forecast mode with Lévy Brent paths: nothing after the origin is known. The benchmarks are the chain's, on the same 8 folds, matched by origin month: each forecasts the change in CPI over the h months after the origin month t. Each benchmark is a point forecast with a Gaussian band of the spread of its own errors on the fold's training origins. Cleveland and Michigan give 1-year rates, scaled by h/12 at shorter horizons; the SPF's quarterly path is interpolated to months (`docs/macro-ensemble.md`). The surveys were made with the data as first published, while we train and score on today's revised CPI (`CPIAUCSL`, revised only through its seasonal factors), which flatters us slightly.
+
+### Timing matched: our forecast uses only the CPI the surveys had
+
+A survey taken at the end of month t knows CPI to month t-1: month t's is published about two weeks into t+1. So here our forecast starts at the end of month t-1, runs h+1 months, and is scored on the change over months t+1..t+h, the window the surveys forecast. It also starts from a month less of Brent and gas than the surveys saw. Each fold is refitted as in the fold tables (same seed and settings; Iridis job 1974133, 1974134, 1974135, 1974136, 1974137, 1974138, 1974145, 1974146; R-hat at most 1.023, ESS at least 102.7).
+
+**Skill against the climatology of US headline CPI**, each on the origins it has (the release-month SPF has one a quarter)
+
+| Forecast | h=1 | h=3 | h=6 | h=12 |
+|---|---|---|---|---|
+| Our US composite (items + rest) | +0.051 | +0.050 | +0.055 | +0.084 |
+| Our US headline, forecast directly | -0.022 | -0.032 | -0.004 | +0.048 |
+| Cleveland Fed 1-year expected inflation (FRED EXPINF1YR) | -0.005 | -0.017 | -0.030 | +0.005 |
+| Michigan 1-year expectations (FRED MICH) | +0.012 | +0.030 | +0.005 | -0.049 |
+| SPF median, at the end of each release month | +0.049 | +0.079 | +0.072 | +0.111 |
+| SPF mean, at the end of each release month | +0.058 | +0.091 | +0.087 | +0.122 |
+| SPF median, latest survey at every month-end | +0.016 | +0.035 | +0.041 | +0.097 |
+| Random walk: last 12-month pace carries on | -0.059 | -0.075 | -0.125 | -0.216 |
+| 90% coverage of our US composite | 87% | 86% | 84% | 81% |
+
+**Our US composite (items + rest) against each benchmark**: how much lower our CRPS is, on the origins both have; t is the Diebold-Mariano statistic of ours minus theirs (Newey-West, 12 lags; negative = ours better)
+
+| Benchmark | h=1 | h=3 | h=6 | h=12 |
+|---|---|---|---|---|
+| Cleveland Fed 1-year expected inflation (FRED EXPINF1YR) | 5% lower (t -2.1, n 212) | 7% lower (t -2.8, n 210) | 8% lower (t -2.6, n 207) | 8% lower (t -1.4, n 201) |
+| Michigan 1-year expectations (FRED MICH) | 4% lower (t -0.8, n 212) | 2% lower (t -0.3, n 210) | 5% lower (t -0.5, n 207) | 13% lower (t -1.0, n 201) |
+| SPF median, at the end of each release month | 4% lower (t -1.9, n 71) | 0% lower (t -0.1, n 70) | 0% higher (t +0.2, n 69) | 1% higher (t +0.3, n 67) |
+| SPF mean, at the end of each release month | 3% lower (t -1.4, n 71) | 1% higher (t +0.4, n 70) | 2% higher (t +0.8, n 69) | 2% higher (t +0.7, n 67) |
+| SPF median, latest survey at every month-end | 3% lower (t -1.3, n 212) | 2% lower (t -0.7, n 210) | 2% lower (t -0.6, n 207) | 1% higher (t +0.5, n 201) |
+| Random walk: last 12-month pace carries on | 10% lower (t -2.2, n 212) | 12% lower (t -1.4, n 210) | 16% lower (t -1.5, n 207) | 25% lower (t -1.9, n 201) |
+
+**Our US headline, forecast directly against each benchmark**: how much lower our CRPS is, on the origins both have; t is the Diebold-Mariano statistic of ours minus theirs (Newey-West, 12 lags; negative = ours better)
+
+| Benchmark | h=1 | h=3 | h=6 | h=12 |
+|---|---|---|---|---|
+| Cleveland Fed 1-year expected inflation (FRED EXPINF1YR) | 2% higher (t +0.5, n 212) | 1% higher (t +0.4, n 210) | 3% lower (t -0.7, n 207) | 4% lower (t -0.7, n 201) |
+| Michigan 1-year expectations (FRED MICH) | 4% higher (t +0.6, n 212) | 6% higher (t +0.7, n 210) | 1% higher (t +0.1, n 207) | 9% lower (t -0.7, n 201) |
+| SPF median, at the end of each release month | 7% higher (t +1.4, n 71) | 11% higher (t +1.8, n 70) | 8% higher (t +1.8, n 69) | 5% higher (t +1.2, n 67) |
+| SPF mean, at the end of each release month | 8% higher (t +1.6, n 71) | 13% higher (t +1.9, n 70) | 10% higher (t +1.9, n 69) | 6% higher (t +1.4, n 67) |
+| SPF median, latest survey at every month-end | 4% higher (t +1.0, n 212) | 7% higher (t +1.6, n 210) | 5% higher (t +1.2, n 207) | 5% higher (t +1.4, n 201) |
+| Random walk: last 12-month pace carries on | 3% lower (t -0.6, n 212) | 4% lower (t -0.5, n 210) | 11% lower (t -1.0, n 207) | 22% lower (t -1.8, n 201) |
+
+**What the head start is worth**: the same fits, forecasting the same window from the end of month t (knowing month t's CPI) instead of t-1. How much lower the CRPS is with month t known, and its Diebold-Mariano t (Newey-West, 12 lags)
+
+| Series | h=1 | h=3 | h=6 | h=12 |
+|---|---|---|---|---|
+| Our US composite (items + rest) | 22% (t -4.3) | 9% (t -2.7) | 4% (t -1.8) | 2% (t -1.5) |
+| Our US headline, forecast directly | 20% (t -4.1) | 9% (t -2.9) | 3% (t -1.7) | 2% (t -1.3) |
+
+### Starting from month t's CPI (a two-week head start)
+
+The folds' own forecast mode starts at the end of month t, with month t's CPI, which the surveys did not have yet. Kept for comparison; the timing-matched tables above are the fair test.
 
 **Skill against the climatology of US headline CPI**, each on the origins it has (the release-month SPF has one a quarter)
 

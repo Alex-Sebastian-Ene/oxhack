@@ -174,7 +174,7 @@ NUTS (2 chains, 500 warm-up, 1,000 draws per chain):
 | 2026 event test | Fitted to Feb 2026 with kappa learned from 2022 only: do the bands cover what happened by Sep 2026? |
 | 2022 event test | Fitted to Feb 2022 with no supply-disruption months at all |
 | Scenario fans | From Feb 2026: no closure against 25%, 50% and a full 2026-sized closure. How far the band shifts and widens |
-| Against the Fed and the SPF | US CPI in forecast mode against the Cleveland Fed, Michigan and SPF forecasts and the random walk, from `runs/macro/global-benchmarks.json` (the chain's, same folds, matched by origin month; Diebold–Mariano tests with 12 Newey–West lags) |
+| Against the Fed and the SPF | US CPI in forecast mode against the Cleveland Fed, Michigan and SPF forecasts and the random walk, from `runs/macro/global-benchmarks.json` (the chain's, same folds, matched by origin month; Diebold–Mariano tests with 12 Newey–West lags). Timing matched: our forecast starts a month earlier, with only the CPI the surveys had (`fold-<j>-lagged`) |
 | Against the Cleveland Fed's nowcast | US CPI next month and this quarter, on CPI as first published, with the nowcast taken just after our origin month's CPI is published; the nowcast gets fixed, EWMA and oil-volatility bands from its own earlier errors (Diebold–Mariano tests with 3 Newey–West lags for months, 1 for quarters) |
 | Sampler health | Fits with R-hat above 1.05 or ESS below 100 are left out of every table |
 
@@ -235,7 +235,7 @@ NUTS (2 chains, 500 warm-up, 1,000 draws per chain):
   - Data for 70 series (the basket, split into housing, core goods and other services, and the
     chain's other metrics), the weights, and the event analysis.
   - The model, the report and the Iridis scripts.
-  - 17 tests (all passing in all three versions).
+  - 18 tests (all passing in all three versions).
 - **Main model (adopted 2026-10-25): oil and gas for every series, plus grain prices for bread
   and cereals,** with the chain's other metrics fitted alongside. Out of sample:
   - **Against the average link:**
@@ -247,34 +247,43 @@ NUTS (2 chains, 500 warm-up, 1,000 draws per chain):
       the split it was better only up to 6 months.
     - Euro area: −0.03 ± 0.02 at 1–6 months, about 2 errors.
     - UK: no difference.
-  - **Against the Fed and the SPF (US CPI, forecast mode, nothing known after the origin):** the
-    composite's CRPS is lower than every institutional forecast up to 6 months, and level with the
-    SPF at 12.
-    - 1 month: 27% below the Cleveland Fed (t −5.0), 25% below Michigan (t −5.0) and 31% below the
-      SPF median at its release months (t −5.1).
-    - 3 months: 16% below Cleveland (t −3.7) and 16% below the SPF (t −3.6); Michigan 12% (t −1.9).
-    - 6 months: 13% below Cleveland (t −2.8) and 9% below the SPF (t −3.1); Michigan 10% (t −1.1).
-    - 12 months: level with the SPF (2% below, t −0.4); Cleveland and Michigan 11% and 15% worse,
-      both within noise (t −1.8, −1.2).
-    - **Splitting the rest of the basket moved the composite ahead.** With the old 82% rest it was
-      5% below the SPF at 6 months (t −1.4, not significant) and 2% behind at 12.
-    - The direct headline forecast does less well: 16–18% below the institutions at 1 month, 3–4%
-      behind the SPF at 12. So building the forecast up from the basket is what earns the lead. The
-      chain's best member is 2–4% behind the SPF at 12 months (`docs/macro-ensemble.md`).
-    - Short horizons favour us: Cleveland and Michigan are 1-year rates scaled down, and the SPF is
-      quarterly. The surveys used data as first published; we score on revised CPI. Our 90% bands
-      hold 82–88% of outcomes. US only: no UK or euro-area institutional forecasts are scored yet.
-    - We also start a little later than they do. Our forecast from month t starts from month t's
-      CPI, which is published about two weeks into month t+1. The Cleveland and Michigan values are
-      taken at the end of month t, before it. That matters most at 1–3 months.
-    - **Read it as level with the SPF at 1 year, not as beating the Fed.**
+  - **Against the Fed and the SPF (US CPI, forecast mode, timing matched): level with the SPF at
+    every horizon.**
+    - **The timing is matched.** A survey taken at the end of month t knows CPI to month t−1, since
+      month t's is published about two weeks into t+1. So our forecast starts at the end of t−1 and
+      is scored on the window the surveys forecast, months t+1 to t+h. It also has a month less of
+      Brent and gas than they had. The 8 folds were refitted for this with the same seeds (Iridis
+      job 1974133, `fold-<j>-lagged`), and their sampler diagnostics match the published folds
+      exactly.
+
+      | Composite's CRPS against | 1 month | 3 months | 6 months | 12 months |
+      |---|---|---|---|---|
+      | Cleveland Fed 1-year expectations | 5% lower (t −2.1) | 7% lower (t −2.8) | 8% lower (t −2.6) | 8% lower (t −1.4) |
+      | Michigan 1-year expectations | 4% lower (t −0.8) | 2% lower (t −0.3) | 5% lower (t −0.5) | 13% lower (t −1.0) |
+      | SPF median, release months | 4% lower (t −1.9) | level (t −0.1) | level (t +0.2) | 1% higher (t +0.3) |
+      | Random walk | 10% lower (t −2.2) | 12% lower (t −1.4) | 16% lower (t −1.5) | 25% lower (t −1.9) |
+
+    - **The head start was most of the earlier short-horizon lead.** Given month t's CPI, the same
+      fits score 22% better at 1 month (t −4.3), 9% at 3 (t −2.7), 4% at 6 and 2% at 12. Without
+      the timing match the composite looked 27–31% ahead of every benchmark at 1 month. Those
+      tables stay in `notes/cost-of-living.md` for comparison.
+    - The direct headline forecast is behind the SPF at every horizon (5–11% higher CRPS, t up to
+      +1.8) and level with Cleveland. So building up from the basket is what brings the forecast
+      level with the SPF. The chain's best member is 2–4% behind the SPF at 12 months
+      (`docs/macro-ensemble.md`; not timing matched).
+    - Our 90% bands hold 81–87% of outcomes. The surveys used data as first published; we score
+      on revised CPI, which flatters us slightly. US only: no UK or euro-area institutional
+      forecasts are scored yet.
+    - **Read it as level with the SPF, not as beating the Fed.**
       - None of these is the FOMC's own projection.
       - The Cleveland number is a model of expected inflation from yields, swaps and surveys, risk
-        premia included. Michigan is households' expectations.
+        premia included, scaled down from a 1-year rate at short horizons. So the 5–8% lead over it
+        is against a measure that isn't built as a short-horizon forecast. Michigan is households'
+        expectations.
       - The benchmarks get a fixed-width band from their own past errors, while ours widens with
         oil volatility, which helps us in 2008 and 2020–22.
-      - At 1–3 months the fair competitor is the Cleveland Fed's monthly nowcast, and against it
-        the lead doesn't survive (next bullet).
+      - At 1–3 months the fair competitor is the Cleveland Fed's monthly nowcast, and it beats us
+        (next bullet).
   - **Against the Cleveland Fed's nowcast (US CPI at 1–3 months, as first published): the lead
     doesn't survive.**
     - **The test lines up the information.**
@@ -507,6 +516,15 @@ COL_DRAWS=us_composite,us_all sbatch --array=25-32 cluster/iridis/cost_of_living
 
 Then copy `runs/col-food-bread/fold-*-draws.npz` back and run the report. It fetches the Cleveland
 nowcasts into `data/raw/macro/` and skips the section if the draws are missing.
+
+The timing-matched Fed and SPF tables need the main model's folds forecast from a month earlier
+(`fit fold-<j>-lagged`, written to `runs/col-food-bread/fold-<j>-lagged.json`):
+
+```bash
+sbatch --array=0-7 --export=ALL,COL_LAGGED=1 cluster/iridis/cost_of_living.slurm
+```
+
+Copy those back and run the report. Without all 8 it shows only the untimed tables.
 
 ## Outputs for the UI
 
