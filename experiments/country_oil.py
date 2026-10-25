@@ -202,7 +202,7 @@ def mirror_trade(year: int = MIRROR_YEAR) -> dict:
                 if iso:
                     exp[iso] = exp.get(iso, 0.0) + float(r["primaryValue"])
     return {iso: trade_profile(imp.get(iso, 0.0), exp.get(iso, 0.0), gulf.get(iso, {})) | {"year": year, "mirror": True}
-            for iso in code_iso if imp.get(iso) or exp.get(iso)}
+            for iso in code_iso.values() if imp.get(iso) or exp.get(iso)}
 
 
 def trade_section() -> dict:

@@ -50,9 +50,9 @@ Pooled (for countries without a series): 0.27, middle half 0.25 to 0.31 over 37 
 
 ## Oil trade
 
-UN Comtrade, public preview API (HS 2709 crude and HS 2710 refined products, imports CIF and exports FOB as each country reports them, US$), collected 2026-10-25. gulf_share: imports from the seven Gulf producers / all oil imports, an upper bound for oil through the strait (Yanbu and Fujairah bypass it); m: net oil imports / oil imports.
+UN Comtrade, public preview API (HS 2709 crude and HS 2710 refined products, imports CIF and exports FOB as each country reports them, US$), collected 2026-10-25. gulf_share: imports from the seven Gulf producers / all oil imports, an upper bound for oil through the strait (Yanbu and Fujairah bypass it); m: net oil imports / oil imports; countries marked mirror don't report, so their figures are their partners' 2023 records.
 
-167 countries report oil trade; 147 for 2024, the rest for 2023. 27 are net exporters by value.
+193 countries report oil trade; 147 for 2024, the rest for 2023. 36 are net exporters by value.
 
 Most Gulf-dependent importers:
 
@@ -64,13 +64,17 @@ Most Gulf-dependent importers:
 | ETH | 2023 | 97% | 1.00 |
 | BDI | 2023 | 93% | 0.99 |
 | JOR | 2024 | 90% | 1.00 |
+| SOM | 2023 | 85% | 1.00 |
 | JPN | 2024 | 85% | 0.91 |
 | DJI | 2023 | 82% | 0.95 |
 | PAK | 2024 | 80% | 0.95 |
+| AFG | 2023 | 80% | 0.99 |
+| ERI | 2023 | 73% | 1.00 |
 | EGY | 2024 | 72% | 0.51 |
 | KEN | 2024 | 68% | 0.74 |
 | BHR | 2024 | 66% | 0.89 |
 | KOR | 2024 | 65% | 0.55 |
+| TWN | 2023 | 62% | 0.75 |
 | UGA | 2024 | 62% | 0.93 |
 | COD | 2024 | 60% | 0.72 |
 | THA | 2024 | 59% | 0.76 |
@@ -79,10 +83,6 @@ Most Gulf-dependent importers:
 | RWA | 2024 | 47% | 0.73 |
 | IND | 2024 | 46% | 0.54 |
 | ZMB | 2024 | 45% | 1.00 |
-| MDV | 2024 | 43% | 1.00 |
-| MRT | 2024 | 43% | 0.99 |
-| LTU | 2024 | 38% | 0.31 |
-| NAM | 2024 | 38% | 0.77 |
 
 ## Cost of living
 

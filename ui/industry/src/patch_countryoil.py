@@ -59,7 +59,7 @@ COIL = {
     "generated": src["generated"],
     "pooled": {k: fuel["pooled"][k] for k in ("e", "lo", "hi", "n")},
     "fuel": {iso: {k: v[k] for k in ("e", "lo", "hi", "series", "from", "to")} for iso, v in fuel["countries"].items()},
-    "trade": {iso: {"m": v["m"], "gs": v["gulf_share"], "year": v["year"], "top": next(iter(v["by"]), None)}
+    "trade": {iso: {"m": v["m"], "gs": v["gulf_share"], "year": v["year"], "top": next(iter(v["by"]), None), "mirror": bool(v.get("mirror"))}
               for iso, v in trade["countries"].items()},
     "tradeSrc": f'{trade["source"]}, collected {trade["collected"]}' if trade.get("source") else "",
     "prices": {iso: {k: price_entry(v) for k, v in c.items()} for iso, c in prices["countries"].items()},
@@ -82,7 +82,8 @@ sub('''  function info(name) {
   function info(name) {
     const iso = isoOf[name], t = COIL.trade[iso], f = COIL.fuel[iso], hand = C[name];
     const d = Object.assign({ c: 0, h: 0, m: null }, hand || {});
-    if (t) Object.assign(d, { dep: t.m, gs: t.gs, top: t.top, depSrc: `UN Comtrade, ${t.year}` });
+    // partners' records (for countries that don't report) understate the Gulf share: the hand-entered table wins
+    if (t && !(t.mirror && hand)) Object.assign(d, { dep: t.m, gs: t.gs, top: t.top, depSrc: t.mirror ? `UN Comtrade, partners' records for ${t.year}; a lower bound for the Gulf share` : `UN Comtrade, ${t.year}` });
     else if (hand) Object.assign(d, { dep: hand.m, gs: hand.c && hand.m > 0 ? Math.min(1, hand.h / (hand.c * hand.m)) : null, depSrc: "this page's country table (EIA, Energy Institute)" });
     else Object.assign(d, { dep: null, gs: null, nodata: true });
     if (!hand) d.ind = d.dep != null && d.dep <= 0 ? EXP : IMP;
