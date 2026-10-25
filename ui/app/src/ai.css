@@ -55,6 +55,8 @@ a.hz-src:hover { background: #163257; }
 .hz-ai-go { align-self: flex-start; min-height: 36px; padding: 0 14px; background: #2b2152 !important; color: #efe7ff; font-weight: 700; }
 .hz-ai-go:hover:not(:disabled) { background: #3a2c6e !important; }
 .hz-ai-res { display: grid; grid-template-columns: minmax(0, 220px) minmax(0, 1fr); gap: 14px; align-items: start; }
+.hz-ai-res.nopic { grid-template-columns: minmax(0, 1fr); }
+.hz-ai-stamp b { color: #c9b8ff; font-weight: 700; }
 .hz-pic { margin: 0; display: flex; flex-direction: column; gap: 4px; }
 .hz-pic img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; image-rendering: pixelated; border: 2px solid var(--ink); box-shadow: inset 0 0 0 2px var(--line2), 4px 4px 0 rgba(0, 0, 0, .55); background: var(--ink); }
 .hz-pic figcaption { font: 600 11px var(--pix); color: #b9a7f0; letter-spacing: .5px; text-transform: uppercase; }
