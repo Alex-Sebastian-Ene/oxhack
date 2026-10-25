@@ -139,7 +139,7 @@ window.HZIcons = {
   L.addEventListener("touchmove", (e) => { if (ty != null && ty - e.touches[0].clientY > 60) { ty = null; openApp(); } }, { passive: true });
 
   window.HZLanding = { show: showLanding, open: openApp, soundUI };
-  if (location.hash === "#app") { L.hidden = true; }
+  if (location.hash === "#app" || location.hash === "#mandeb") { L.hidden = true; }
   else { document.body.classList.add("hz-landing-open"); window.HZScene.start(scene); setTimeout(() => $("hz-l-go").focus({ preventScroll: true }), 50); }
   if (L.hidden) window.HZScene.start(scene), window.HZScene.stop();
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", stats); else stats();

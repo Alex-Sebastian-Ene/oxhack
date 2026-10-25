@@ -38,13 +38,17 @@ window.HZShell = (() => {
   $("hz-mus").addEventListener("click", () => { window.HZSound.setMusic(!window.HZSound.music); sync(); });
 
   // flow readout: the lost-flow slider sets it in the World view; the scenario menu sets it in the Strait view
+  // on Bab el-Mandeb the strip reads that strait's scenario against its 2023 flow
   function flow() {
-    const lostEl = $("lost");
-    const lost = lostEl ? Number(lostEl.value) : 69, got = 20 * (1 - lost / 100);
-    $("hz-read").innerHTML = `FLOW <b>${got.toFixed(1)}</b>/20 mb/d · <span class="lost">LOST ${lost}%</span>`;
-    pipe.style.setProperty("--flow-dur", `${(0.45 / Math.max(0.04, got / 20)).toFixed(2)}s`);
+    const H = window.HZStrait, md = H && H.id === "mandeb";
+    let got, max = md ? H.prewar : 20;
+    if (md) { const sc = H.data().scenarios[$("scenario").value]; got = sc ? sc.estimate.total.p50 : max; }
+    else { const lostEl = $("lost"); got = max * (1 - (lostEl ? Number(lostEl.value) : 69) / 100); }
+    const lost = Math.max(0, Math.round((1 - got / max) * 100));
+    $("hz-read").innerHTML = `${md ? "BAB EL-MANDEB" : "FLOW"} <b>${got.toFixed(1)}</b>/${max} mb/d · <span class="lost">LOST ${lost}%</span>`;
+    pipe.style.setProperty("--flow-dur", `${(0.45 / Math.max(0.04, got / max)).toFixed(2)}s`);
     window.HZSound.setTension(lost / 100);
-    if (window.HZScene) window.HZScene.setFlow(got / 20);
+    if (window.HZScene) window.HZScene.setFlow(got / max);
   }
   const lostEl = $("lost");
   if (lostEl) lostEl.addEventListener("input", () => { flow(); window.HZSound.play("tick", Number(lostEl.value) / 100); });

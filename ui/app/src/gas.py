@@ -22,20 +22,25 @@ SWAPS = [
      '  // ---- gas: window.GAS (ui/app/data/gas.json). LNG via the named sea-lane segments in R, pipelines by path\n'
      '  // function declarations only: layout can run before this point is reached\n'
      '  function gasD() { return window.GAS || null; }\n'
-     '  function lngPts(f) { const term = { QAT: [51.6, 25.9], ARE: [52.87, 25.15] }; return [f.start || term[f.from], ...((f.route && f.route.segments) || []).flatMap((s) => R[s] || []), ...((f.route && f.route.end) || [])].filter(Boolean); }\n'
+     '  function lngPts(f) { if (f.route && f.route.path) return f.route.path; const term = { QAT: [51.6, 25.9], ARE: [52.87, 25.15] }; return [(f.route && f.route.start) || term[f.from], ...((f.route && f.route.segments) || []).flatMap((s) => R[s] || []), ...((f.route && f.route.end) || [])].filter(Boolean); }\n'
      '  function lngMax() { return Math.max(...((gasD() || {}).lng || []).map((f) => f.value || 0), 1); }\n'
      '  // move a projected line a few pixels to its right, so a gas lane sits beside the oil lane it shares\n'
      '  function beside(pts, px) {\n'
      '    return pts.map((p, i) => { const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)], dx = b[0] - a[0], dy = b[1] - a[1], n = Math.hypot(dx, dy) || 1;\n'
      '      return [p[0] - (dy / n) * px, p[1] + (dx / n) * px]; });\n'
      '  }\n'
-     '  function gasTip(f) { return `Gas: ${nmIso(f.from)} → ${nmIso(f.to)} · ${f.value} ${f.unit || "Mt"} LNG (${f.year}; ${f.source})`; }\n'
-     '  function pipeTip(p) { return `Gas pipeline: ${p.name}${p.capacity != null ? ` · ${p.capacity} ${p.unit || ""}` : ""}${p.bypasses_hormuz ? " · avoids Hormuz" : ""} (${p.year || ""}; ${p.source || ""})`; }\n'
+     '  const unver = (x) => (x.verify ? ", unverified" : "");\n'
+     '  function gasTip(f) { return `LNG: ${nmIso(f.from)} → ${nmIso(f.to)} · ${f.approx ? "≈" : ""}${f.value} ${f.unit || "Mt"}/yr (${f.year}; ${f.source}${unver(f)})`; }\n'
+     '  function pipeTip(p) { return `Gas pipeline: ${p.name}${p.capacity != null ? ` · ${p.capacity} ${p.unit || ""}` : ""}${p.bypasses_hormuz ? " · avoids Hormuz" : ""} · ${p.status || ""} (${p.year || ""}; ${p.source || ""}${unver(p)})`; }\n'
+     '  const idle = (p) => /no gas has flowed|not confirmed/i.test(p.status || "");\n'
+     '  const pipeW = (p) => 1 + 3 * Math.sqrt(Math.min(p.capacity_bcm_y || 5, 40) / 33);\n'
      '  function layoutGas() {\n'
      '    const GASD = gasD(); if (!GASD) return;\n'
      '    const lanes = (GASD.lng || []).filter((f) => lngPts(f).length > 1), pipes = (GASD.pipelines || []).filter((p) => (p.path || []).length > 1);\n'
-     '    gGas.selectAll("path.gpipe-c").data(pipes).join("path").attr("class", "gpipe-c").attr("d", (p) => line(p.path.map((q) => proj(q))));\n'
-     '    gGas.selectAll("path.gpipe").data(pipes).join("path").attr("class", "gpipe").attr("d", (p) => line(p.path.map((q) => proj(q))))\n'
+     '    gGas.selectAll("path.gplan").data(pipes.filter((p) => (p.planned_path || []).length > 1)).join("path").attr("class", "gplan").attr("d", (p) => line(p.planned_path.map((q) => proj(q))))\n'
+     '      .selectAll("title").data((p) => [p]).join("title").text((p) => `${p.name}: planned section, not built`);\n'
+     '    gGas.selectAll("path.gpipe-c").data(pipes).join("path").attr("class", (p) => (idle(p) ? "gpipe-c idle" : "gpipe-c")).attr("d", (p) => line(p.path.map((q) => proj(q))));\n'
+     '    gGas.selectAll("path.gpipe").data(pipes).join("path").attr("class", (p) => (idle(p) ? "gpipe idle" : "gpipe")).attr("d", (p) => line(p.path.map((q) => proj(q))))\n'
      '      .selectAll("title").data((p) => [p]).join("title").text(pipeTip);\n'
      '    gGas.selectAll("path.glane").data(lanes).join("path").attr("class", "glane").attr("d", (f) => line(beside(lngPts(f).map((q) => proj(q)), 3.5)))\n'
      '      .selectAll("title").data((f) => [f]).join("title").text(gasTip);\n'
@@ -48,14 +53,15 @@ SWAPS = [
      '    gGas.style("display", st.mat ? "none" : null);\n'
      '    gGas.selectAll("path.glane").attr("stroke-width", (g) => 0.6 + Math.sqrt((g.value || 0) / mx * Math.max(f, 0.04)) * 4.5)\n'
      '      .classed("dim", (g) => !!own && g.to !== own && g.from !== own).style("animation-duration", `${(2.2 / Math.max(f, 0.15)).toFixed(2)}s`);\n'
-     '    gGas.selectAll("path.gpipe").attr("stroke-width", (p) => (p.bypasses_hormuz ? 2.6 : 2.6 * Math.max(f, 0.15)));\n'
-     '    gGas.selectAll("path.gpipe-c").attr("stroke-width", (p) => (p.bypasses_hormuz ? 5 : 2.4 + 2.6 * Math.max(f, 0.15)));\n'
+     '    const pf = (p) => (p.bypasses_hormuz ? 1 : Math.max(f, 0.15));\n'
+     '    gGas.selectAll("path.gpipe").attr("stroke-width", (p) => pipeW(p) * pf(p));\n'
+     '    gGas.selectAll("path.gpipe-c").attr("stroke-width", (p) => pipeW(p) * pf(p) + 2.4);\n'
      '  }\n'
      '  function gas3d() {\n'
      '    const GASD = gasD(); if (!GASD || st.mat) return [];\n'
      '    const mx = lngMax(), f = Math.min(st.flow / PREWAR, 1.1), out = [];\n'
      '    for (const g of GASD.lng || []) { const p = lngPts(g); if (p.length > 1) out.push({ gas: true, pts: p.map(([lng, lat]) => [lat, lng + 0.6]), w: 0.3 + 1.6 * Math.sqrt((g.value || 0) / mx * Math.max(f, 0.04)), label: gasTip(g) }); }\n'
-     '    for (const q of GASD.pipelines || []) if ((q.path || []).length > 1) out.push({ gas: true, pipe: true, pts: q.path.map(([lng, lat]) => [lat, lng]), w: 1.2, label: pipeTip(q) });\n'
+     '    for (const q of GASD.pipelines || []) if ((q.path || []).length > 1) out.push({ gas: true, pipe: true, pts: q.path.map(([lng, lat]) => [lat, lng]), w: 0.4 + 0.35 * pipeW(q), label: pipeTip(q) });\n'
      '    return out;\n'
      '  }\n'
      '  function drawFlatArcs() {\n', 1),
@@ -79,6 +85,9 @@ CSS = f"""/* gas on the World view (gas.py): violet, beside the yellow oil */
 #world .glane.dim {{ opacity: .25; }}
 #world .gpipe-c {{ stroke: #04060c; }}
 #world .gpipe {{ stroke: {GAS}; }}
+#world .gpipe.idle {{ stroke-dasharray: 3 4; opacity: .55; }}
+#world .gpipe-c.idle {{ opacity: .4; }}
+#world .gplan {{ stroke: {GAS}; stroke-width: 1.2px; stroke-dasharray: 1 4; opacity: .5; }}
 .legendbar .gaskey i {{ border-top: 3px dashed {GAS} !important; filter: none !important; }}
 @media (prefers-reduced-motion: reduce) {{ #world .glane {{ animation: none; }} }}
 """
