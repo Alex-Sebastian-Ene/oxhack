@@ -91,10 +91,12 @@ ECON_JS = MACRO_JS + r'''  // Which economy a country's numbers come from. Other
     const pad = Math.max((hi - lo) * 0.12, unit === "%" ? 0.1 : 0.02);
     lo -= pad; hi += pad;
     const x = (i) => L + i / 36 * (W - L - Rr), y = (v) => T + (hi - v) / (hi - lo) * (H - T - B);
-    const step = [0.01, 0.02, 0.05, 0.1, 0.2, 0.25, 0.5, 1, 2, 5].find((st_) => (hi - lo) / st_ <= 5) || 10;
+    // at most about five gridlines at any scale: a high-inflation country's price outlook can span hundreds of points
+    const step = [0.01, 0.02, 0.05, 0.1, 0.2, 0.25, 0.5, 1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500].find((st_) => (hi - lo) / st_ <= 5) || 1000;
     const fmt = (v) => `${v > 0.0001 ? "+" : v < -0.0001 ? "−" : ""}${Math.abs(v).toFixed(step < 0.1 ? 2 : 1)}`;
+    const tick = (v) => (step >= 10 ? fmt(v).replace(/\.\d+$/, "") : fmt(v));   // whole numbers once a step is 10 or more
     let g = "";
-    for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-9; v += step) g += `<line class="gl" x1="${L}" x2="${W - Rr}" y1="${y(v)}" y2="${y(v)}"/><text class="ax" x="${L - 6}" y="${y(v) + 3.5}" text-anchor="end">${fmt(v)}</text>`;
+    for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-9; v += step) g += `<line class="gl" x1="${L}" x2="${W - Rr}" y1="${y(v)}" y2="${y(v)}"/><text class="ax" x="${L - 6}" y="${y(v) + 3.5}" text-anchor="end">${tick(v)}</text>`;
     [[0, "now"], [12, "12 mo"], [24, "24"], [36, "36"]].forEach(([i, t]) => (g += `<text class="ax" x="${x(i)}" y="${H - 6}" text-anchor="middle">${t}</text>`));
     const band = `M${pts.map((p, i) => `${x(i)},${y(p[2])}`).join("L")}L${pts.map((p, i) => [i, p[1]]).reverse().map(([i, v]) => `${x(i)},${y(v)}`).join("L")}Z`;
     const line = `M${pts.map((p, i) => `${x(i)},${y(p[0])}`).join("L")}`;

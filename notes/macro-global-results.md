@@ -228,3 +228,28 @@ global_lin minus each benchmark (t), and how much lower global_lin's CRPS is:
 | 2025-02 | +2.4 | +2.0 (+0.2..+3.8) | +2.0 (-0.2..+4.1) | +2.7 | +2.7 | +4.2 |
 | 2025-05 | +4.1 | +1.9 (-0.1..+3.7) | +1.8 (-0.1..+3.7) | +3.0 | +2.7 | +6.4 |
 | 2025-08 | +3.3 | +2.1 (-0.0..+3.9) | +2.0 (-0.1..+4.3) | +2.6 | +2.7 | +4.7 |
+
+### Inflation by region: our models against the experts
+
+Forecast mode. Each row scores every forecaster on the origins they all share, with the v1 climatology's CRPS on those origins as the scale. The experts are the US benchmarks above (the SPF median from the latest survey public at each month-end, the Cleveland Fed's model and Michigan's households). None has been collected for the UK or the euro area yet, so their rows have the random walk only; n/a: the benchmark doesn't forecast that region. *Best expert* is the expert with the highest skill in the row; t is the Diebold–Mariano t (Newey–West, 12 lags) of our model minus it (negative: ours is better).
+
+| Region | h | Origins | global_lin | global | Bayes own-vol | SPF median, latest survey | Cleveland Fed | Michigan | Random walk | Best expert | global_lin minus best expert (t) | global minus best expert (t) | Bayes own-vol minus best expert (t) |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| US, UK and euro area | 12 | 212 | +0.171 | +0.165 | +0.162 | n/a | n/a | n/a | -0.115 | n/a | n/a | n/a | n/a |
+| US, UK and euro area | all | 209 | +0.176 | +0.165 | +0.107 | n/a | n/a | n/a | -0.023 | n/a | n/a | n/a | n/a |
+| US | 12 | 212 | +0.080 | +0.079 | +0.134 | +0.149 | +0.063 | -0.001 | -0.143 | SPF median, latest survey | +0.069 (+1.4) | +0.070 (+1.9) | +0.015 (+0.4) |
+| US | all | 209 | +0.071 | +0.083 | +0.118 | +0.077 | +0.020 | +0.028 | -0.082 | SPF median, latest survey | +0.005 (+0.1) | -0.007 (-0.2) | -0.041 (-1.0) |
+| UK | 12 | 213 | +0.223 | +0.223 | +0.168 | n/a | n/a | n/a | -0.093 | n/a | n/a | n/a | n/a |
+| UK | all | 213 | +0.218 | +0.191 | +0.105 | n/a | n/a | n/a | +0.017 | n/a | n/a | n/a | n/a |
+| Euro area | 12 | 213 | +0.207 | +0.191 | +0.182 | n/a | n/a | n/a | -0.111 | n/a | n/a | n/a | n/a |
+| Euro area | all | 213 | +0.236 | +0.220 | +0.097 | n/a | n/a | n/a | -0.004 | n/a | n/a | n/a | n/a |
+
+### Inflation over the next 12 months by region, from 2025-08
+
+Forecast mode, 100 × log change (≈ %), 2025-08 to 2026-08: the latest SPF release month whose 12-month outcome is known. Our models' forecast mean (90% interval).
+
+| Region | Actual | global_lin | global | Bayes own-vol | SPF median, latest survey | Cleveland Fed | Michigan | Random walk |
+|---|---|---|---|---|---|---|---|---|
+| US | +3.3 | +2.0 (-0.1..+4.3) | +2.1 (-0.0..+3.9) | +1.8 (-0.6..+3.9) | +2.6 | +2.7 | +4.7 | +2.7 |
+| UK | +3.0 | +2.1 (-0.0..+4.2) | +2.5 (+0.2..+4.9) | +2.1 (-0.4..+4.6) | n/a | n/a | n/a | +3.8 |
+| Euro area | +3.2 | +1.6 (-0.0..+3.5) | +1.6 (-0.3..+3.7) | +1.6 (-1.6..+4.3) | n/a | n/a | n/a | +2.0 |
