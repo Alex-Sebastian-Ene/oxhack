@@ -10,6 +10,10 @@ Open `index.html` in a browser; it needs no server. It is the same page as the s
 - **Strait view:** Edward's strait map. Ship positions are **simulated**. The side cards show **real**
   IMF PortWatch transit counts and tanker capacity for Hormuz (`chokepoint6`), cached to 18 Oct 2026
   and collected 2026-10-24. Click a ship to pause the replay and see its card.
+  The side panel leads with the flow estimate in one line (what AIS shows, our estimate, what never appears on
+  AIS) and the scenario it comes from; every number has a label; PortWatch cards are tagged **Real data** and the
+  map **Simulated ships**. "What this means" carries the lost flow to the World view's Brent price, and the
+  published-estimates chart shows when each figure refers to, with "Ours" marked as simulated.
 - **World view:** one shared state drawn as a flat map or a 3D globe.
   - **Exposure** (no product picked): each country's exposure to the shock, with the tanker routes out of
     Hormuz in yellow, blinking where they land.
