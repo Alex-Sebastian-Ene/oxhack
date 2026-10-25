@@ -387,6 +387,51 @@ HDI is a context card, not a link in the monthly chain.
    - The network's oil response depends on the state, so a single shock table needs an all-data fit, which hasn't been run yet.
    - Coverage is still short of 90%.
 
+### Forecast mode against the Fed and the forecasters
+
+What-if skill can't be compared with institutions, because the what-if is given the oil path that happened. So the networks also run in a **forecast mode** (`macro_global.py forecast`), which knows nothing after the origin. Each draw follows a simulated oil path, as in the Bayesian forecast mode: a block bootstrap of training months, scaled to the OVX implied volatility and centred on the WTI futures slope.
+
+- **Runs:** the same networks (same seeds, the same best epochs as the what-if runs) and the same 8 folds. They ran on Iridis on 2026-10-25; the surveys were fetched on 2026-10-24.
+- **Headline variant:** `global_lin`, chosen on what-if skill before the forecast mode was scored.
+
+| Forecast mode, skill | Inflation | Unemployment | Rate | Cost |
+|---|---|---|---|---|
+| global_lin | **+0.176** | +0.088 | +0.170 | **+0.124** |
+| global | +0.165 | **+0.092** | +0.204 | +0.101 |
+| Bayes own-vol | +0.106 | +0.007 | **+0.207** | +0.125 |
+
+- **Inflation (US, UK, euro area, all horizons):** `global_lin` beats the Bayesian forecast by 0.069 in scaled CRPS (t −3.3) and the random walk by 0.199 (t −2.5). Most of the gain is at 1–3 months.
+
+**US CPI over the next 12 months, against institutional forecasts** (`macro_global.py benchmarks`; each benchmark is compared on the origins it shares with the model):
+
+| Benchmark | Origins | Its skill | global_lin skill | global_lin minus it (t) | global_lin CRPS lower by | Bayes own-vol minus it (t) | Bayes own-vol CRPS lower by |
+|---|---|---|---|---|---|---|---|
+| Cleveland Fed 1-year expected inflation (FRED `EXPINF1YR`) | 212 | +0.063 | +0.080 | −0.017 (−0.2) | 2% | −0.071 (−1.4) | 8% |
+| Michigan 1-year expectations (FRED `MICH`) | 212 | −0.001 | +0.080 | −0.081 (−0.6) | 8% | −0.135 (−0.9) | 14% |
+| SPF median, at each release month | 71 | +0.162 | +0.078 | +0.084 (+1.3) | −10% | +0.033 (+0.7) | −4% |
+| SPF median, latest survey every month | 212 | +0.149 | +0.080 | +0.069 (+1.4) | −8% | +0.015 (+0.4) | −2% |
+| Random walk (last 12-month pace) | 212 | −0.143 | +0.080 | −0.223 (−1.6) | 20% | −0.277 (−2.0) | 24% |
+
+1. **None of our models beats the professional forecasters on US CPI over a year.**
+   - The SPF median has the highest 12-month skill.
+   - Our best model there is the Bayesian model, whose CRPS is 2–4% above the SPF's. `global_lin`'s is 8–10% above.
+   - None of these gaps is significant (|t| ≤ 1.4).
+2. **We beat the Cleveland Fed and Michigan, but not significantly.**
+   - `global_lin`'s CRPS is 2% lower than the Cleveland Fed's and 8% lower than Michigan's.
+   - The Bayesian model's is 8% and 14% lower (t −1.4 and −0.9).
+3. **The networks' edge over the institutions is at short horizons.**
+   - At 1 month, `global_lin`'s CRPS is 9% below the Cleveland Fed's (t −1.9), 7% below the latest SPF's (−1.4) and 14% below the random walk's (−2.1).
+   - Over all four US CPI horizons it is 5% below the Cleveland Fed's (t −1.0) and level with the latest SPF's (1% above, t +0.1).
+4. **2025 shows the gap.** In May 2025 the SPF median expected +3.0% over the next 12 months and the networks +1.8–1.9%; CPI rose 4.1%.
+5. **How the SPF is aligned** (tested on synthetic data in `tests/test_macro_global.py`):
+   - Each quarterly survey counts from the end of its release month, taken from the Philadelphia Fed's release-dates file: mid-February, May, August or November. The 2019Q1 survey came out in March, after a shutdown.
+   - The survey forecasts the annualised growth of quarterly-average CPI, for its own quarter and the next four. Each quarter's average is placed at its middle month, and the log level is interpolated linearly in between.
+   - At the usual release month, this makes the 12-month change exactly the survey's 4-quarter change from the current quarter. That window is centred on the 12 months we score.
+   - Later origins move the window along the same path: 0–2 months for the "latest" row, 3 for February 2019.
+   - Cleveland and Michigan are 1-year rates, so at shorter horizons they are scaled by h/12, like the random walk.
+   - Every point forecast gets a Gaussian band from its own training errors.
+6. **A caveat in our favour:** the surveys are real-time, while we're scored on revised data. This flatters us slightly: seasonally adjusted CPI is revised only through its seasonal factors.
+
 ## Reproduce
 
 ```bash
@@ -404,6 +449,9 @@ uv run experiments/macro_bayes.py benchmarks              # random walk, Clevela
 uv run experiments/macro_bayes.py report                  # notes/macro-bayes-results.md and macro-bayes-responses.csv
 uv run experiments/macro_global.py check                  # tiny end-to-end run
 uv run experiments/macro_global.py fold 0                 # ... to 7 (3-11 min each locally)
+uv run experiments/macro_global.py forecast 0             # ... to 7: both oil modes; or on Iridis:
+#   CMD=forecast sbatch --array=0-7 cluster/iridis/macro_global.slurm   (under a minute a fold)
+uv run experiments/macro_global.py benchmarks             # Cleveland Fed, Michigan, SPF, random walk (downloads the SPF files)
 uv run experiments/macro_global.py ols                    # least-squares benchmark, all folds
 uv run experiments/macro_global.py report                 # notes/macro-global-results.md
 uv run experiments/flow_price.py
