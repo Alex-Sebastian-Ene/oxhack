@@ -24,6 +24,8 @@ STEPS = [
     "patch_tidy.py",     # plain source lines and shorter info sheets for viewers (build notes stay in README and docs)
     "patch_trends.py",   # Trends tab: a country's prices over time, forecast skill, and the industry model's oil effect
     "patch_reserves.py", # Seb's emergency stocks: a release choice on the shock card, stock cover on country cards
+    "patch_industry.py", # Eileen's cost shares read from the CSV, Seb's sector-model prices per industry, exporter earnings
+    "patch_disruption.py", # audit fixes: Seb's x1.49 disruption multiplier for the 0.8 premium; slider starts at 82 AIS-visible
 ]
 for step in STEPS:
     r = subprocess.run([sys.executable, "-I", str(here / step)], capture_output=True, text=True)

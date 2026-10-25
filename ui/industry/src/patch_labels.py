@@ -17,10 +17,10 @@ def sub(old, new, count=1):
 
 
 TIP_SCORE = "Illustrative: the score's weights are hand-set, not from a model (asked on OXH-3)"
-TIP_FUEL = "Includes a hand-set shortage premium (0.8 per unit of missing flow x Hormuz share), not fitted to data"
+TIP_FUEL = "In a supply disruption fuel moves 1.49 times its normal link (Seb's cost-of-living model, 90% range 1.08 to 1.89; fitted on the US, UK and euro area, an assumption elsewhere)"
 TAG_SCORE = f'<i class="illus" title="{TIP_SCORE}">illustrative</i>'
-TAG_FUEL = f'<i class="illus" title="{TIP_FUEL}">assumed</i>'
-TIP_PATH = "Illustrative: built from the fuel cost (with its hand-set premium) and hand-set recovery speeds, not a model forecast"
+TAG_FUEL = f'<i class="illus" title="{TIP_FUEL}">disruption ×1.49</i>'
+TIP_PATH = "Illustrative: the fuel cost (with the disruption multiplier) decayed at hand-set recovery speeds, not a model forecast"
 TAG_PATH = f'<i class="illus" title="{TIP_PATH}">illustrative</i>'
 
 # map legend
@@ -35,14 +35,14 @@ sub('<span class="label">Fuel cost forecast, next 12 months <span class="mono fa
     f'<span class="label">Fuel cost path, next 12 months <span class="mono faint" style="margin:0">(pre-war = 100)</span> {TAG_PATH}</span>')
 # pop-up
 sub('kpi(fmtS(k.score), "exposure score", k.score', 'kpi(fmtS(k.score), "exposure score, illustrative", k.score', count=2)
-sub('kpi(pct(k.fuel), "fuel cost vs pre-war",', 'kpi(pct(k.fuel), "fuel cost, with assumed premium",')
+sub('kpi(pct(k.fuel), "fuel cost vs pre-war",', 'kpi(pct(k.fuel), "fuel cost, in a disruption",')
 # ranking
 sub("</svg> Most exposed</span>", f"</svg> Most exposed</span> {TAG_SCORE}")
 # info sheets
 sub('    score: { title: "Exposure score", html: `<p>',
-    '    score: { title: "Exposure score (illustrative)", html: `<p class="illus-note"><b>Illustrative, not from a model.</b> The weights below (0.4 and 0.6 for importers; ÷3, +0.15 and ×60 for exporters) and the 0.8 shortage premium inside the fuel cost are hand-set and have no source yet. They came with the original Hormuz Flow page; we asked Edward and Seb on OXH-3 (25 Oct 2026) to source or replace them. The inputs they combine are cited: EIA 2024 Hormuz volumes and Energy Institute consumption.</p><p>')
+    '    score: { title: "Exposure score (illustrative)", html: `<p class="illus-note"><b>Illustrative, not from a model.</b> The weights below (0.4 and 0.6 for importers; ÷3, +0.15 and ×60 for exporters) are hand-set and have no source: they came with the original Hormuz Flow page, and Seb confirmed on OXH-3 (25 Oct 2026) that the models cannot fit them. The fuel cost inside the score now uses Seb’s supply-disruption multiplier (1.49), which replaced a hand-set shortage premium. The inputs they combine are cited: EIA 2024 Hormuz volumes and Energy Institute consumption.</p><p>')
 sub("plus a shortage premium for the share of a country's oil that came through Hormuz.",
-    "plus a shortage premium for the share of a country's oil that came through Hormuz. That premium (0.8) is hand-set, not fitted to data.")
+    "plus a shortage premium for the share of a country's oil that came through Hormuz. That premium has been replaced by Seb's supply-disruption multiplier (fuel moves 1.49 times its normal link).")
 
 CSS = """
 .illus { display: inline-block; margin-left: 4px; padding: 0 6px; border-radius: 999px; border: 1px dashed var(--line2); font: 600 10.5px/1.6 var(--sans); font-style: normal; color: var(--muted); vertical-align: 1px; white-space: nowrap; cursor: help; }
