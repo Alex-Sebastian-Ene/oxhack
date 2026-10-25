@@ -94,15 +94,16 @@ QUICK = False
 
 def series_info(data: dict) -> dict:
     """Per target series: group, publication lag, oil lags, pooling cluster (group x lags), scale floor."""
-    reg = {s.key: s for s in md.registry(md.BLOCKS)}
+    reg = {s.key: s for s in md.registry(md.ALL_BLOCKS)}
     keys = data["target_keys"]
     groups = [reg[k].target for k in keys]
+    order = [*GROUPS, *sorted(set(groups) - set(GROUPS))]  # the sector runs add price, output, commodity
     clusters = sorted(set(zip(groups, data["target_lags"])))
     return {"keys": keys, "groups": groups, "pub_lag": np.array([reg[k].lag for k in keys]),
             "lags": np.array(data["target_lags"]),
             "cluster": np.array([clusters.index(c) for c in zip(groups, data["target_lags"])]),
             "clusters": [f"{g}/{n}" for g, n in clusters],
-            "vgroup": np.array([GROUPS.index(g) for g in groups]),
+            "vgroup": np.array([order.index(g) for g in groups]),
             "floor": np.array([SIGMA_FLOOR.get(g, SIGMA_FLOOR_DEFAULT) for g in groups])}
 
 
@@ -234,7 +235,7 @@ def fit(data: dict, last_month: int, seed: int = 0, vol: str = "oil") -> tuple[d
              **{k: jnp.asarray(v) for k, v in d.items()}, lagmask=jnp.asarray(lagmask),
              cluster=jnp.asarray(info["cluster"]), n_clusters=len(info["clusters"]),
              floor=jnp.asarray(info["floor"]), vgroup=jnp.asarray(info["vgroup"]),
-             n_vgroups=len(GROUPS) if vol == "cdv" else 0, own=vol == "own", own_us=jnp.asarray(st.us))
+             n_vgroups=int(info["vgroup"].max()) + 1 if vol == "cdv" else 0, own=vol == "own", own_us=jnp.asarray(st.us))
     grouped = mcmc.get_samples(group_by_chain=True)
     # every sampled site, hyperparameters included (they mix slowest in a non-centred hierarchy)
     summ = numpyro.diagnostics.summary({k: np.asarray(grouped[k]) for k in SITES if k in grouped})

@@ -192,9 +192,11 @@ class OLS(nn.Module):
 
     def __init__(self, x: np.ndarray, k: np.ndarray, y: np.ndarray, floor: np.ndarray) -> None:
         super().__init__()
-        K = int(k.max()) + 1
-        W, sd = np.zeros((K, x.shape[1] + 1)), np.zeros(K)
+        K = len(floor)
+        W, sd = np.zeros((K, x.shape[1] + 1)), np.ones(K)
         for kk in range(K):
+            if (k == kk).sum() <= x.shape[1] + 1:  # too few months to fit (a late-starting sector series)
+                continue
             A = np.column_stack([x[k == kk], np.ones((k == kk).sum())])
             W[kk], *_ = np.linalg.lstsq(A, y[k == kk], rcond=None)
             sd[kk] = max((y[k == kk] - A @ W[kk]).std(), floor[kk])
@@ -219,7 +221,7 @@ def train(x: np.ndarray, k: np.ndarray, y: np.ndarray, months: np.ndarray, floor
                torch.as_tensor(y, dtype=torch.float32))
     S = None if seq is None else torch.as_tensor(seq, dtype=torch.float32)
     cut = np.quantile(np.unique(months), 1 - VAL_SHARE)
-    n_series = int(k.max()) + 1
+    n_series = len(floor)  # every series, including any without training rows yet
 
     def fit(rows: np.ndarray, epochs: int, val: np.ndarray | None = None) -> tuple[Net, float, int]:
         torch.manual_seed(seed)

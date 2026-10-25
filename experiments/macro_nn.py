@@ -60,7 +60,8 @@ ARCHS = ("tcn", "transformer", "tcn_transformer", "lstm", "nbeats")
 SIZES = {"base": {"d": 64, "layers": 2}, "small": {"d": 24, "layers": 1}}
 TRAIN = {"epochs": 400, "patience": 40, "lr": 2e-3, "wd": 1e-2, "batch": 32, "dropout": 0.1}
 QUICK = False
-ANCHOR_LAGS = {"inflation": 12, "unemployment": 12, "rate": 12, "cost": 2}  # as in oil_chain.py
+ANCHOR_LAGS = {"inflation": 12, "unemployment": 12, "rate": 12, "cost": 2,  # as in oil_chain.py
+               "price": 12, "output": 12, "commodity": 12}  # sector runs (sector_global.py)
 ANCHOR_Z = 2.0  # a target is anchored only if its summed pass-through exceeds this many HAC errors
 CALIB_PRIOR = 20.0  # validation points' worth of pull towards the series-wide variance scale
 torch.set_num_threads(int(os.environ.get("SLURM_CPUS_PER_TASK", 2)))
