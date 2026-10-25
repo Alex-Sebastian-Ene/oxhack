@@ -41,6 +41,13 @@ function globe(cfg) {
   const land = mask((x, p) => { x.beginPath(); p(feats); x.fillStyle = "#fff"; x.fill(); });
   const bord = mask((x, p) => { x.beginPath(); p(feats); x.strokeStyle = "#fff"; x.lineWidth = 0.55; x.stroke(); });
   const grat = mask((x, p) => { x.beginPath(); p(d3.geoGraticule().step([15, 15])()); x.strokeStyle = "#fff"; x.lineWidth = 0.5; x.stroke(); });
+  // highlighted countries (cfg.hi: Map iso3 -> "oil" | "gas"), one mask per kind
+  const hiM = {};
+  for (const kind of ["oil", "gas"]) { const fs = cfg.hi ? window.COUNTRIES.features.filter((f) => cfg.hi.get(f.properties.iso3) === kind) : [];
+    if (fs.length) hiM[kind] = mask((x, p) => { x.beginPath(); p({ type: "FeatureCollection", features: fs }); x.fillStyle = "#fff"; x.fill(); }); }
+  const HI = cfg.hiRamps || { oil: ["#2c1706", "#5c300c", "#8c4c12", "#c06c18", "#e98c22", "#ffb547"], gas: ["#1d1338", "#362562", "#50388e", "#7050ba", "#9070e2", "#b69cf2"] };
+  const hiLift = cfg.hiLift ?? 1, hiEdge = cfg.hiEdge ?? 1;
+  const hb = buf(LW, LH), himg = hb.x.createImageData(LW, LH), hd = himg.data;
   const SEA = cfg.sea || ["#030716", "#05102b", "#0a1c40", "#0e2953", "#163a6c", "#204d88"];
   const LAND = cfg.land || ["#0a0d18", "#141a2c", "#222c47", "#324266", "#475a86", "#6177a5"];
   const out = buf(LW, LH), img = out.x.createImageData(LW, LH), d = img.data;
@@ -49,20 +56,23 @@ function globe(cfg) {
     const sh = shade(x, y); if (!sh) continue;
     const i = (y * LW + x) * 4, isL = land[i + 3] > 110;
     const v = clamp((sh.s + 0.18) / 1.05, 0, 1) * 5; let lv = Math.floor(v); if (dith(x, y, v - lv)) lv++; lv = clamp(lv, 0, 5);
-    let col = (isL ? LAND : SEA)[lv];
-    if (isL && bord[i + 3] > 80) col = LAND[clamp(lv + 1, 1, 5)];
+    const hk = isL && (hiM.oil && hiM.oil[i + 3] > 110 ? "oil" : hiM.gas && hiM.gas[i + 3] > 110 ? "gas" : null);
+    const lvH = clamp(lv + hiLift, 1, 5);   // lit a step brighter than plain land, so they read on the night side too
+    let col = hk ? HI[hk][lvH] : (isL ? LAND : SEA)[lv];
+    if (isL && bord[i + 3] > 80) col = hk ? HI[hk][clamp(lvH + 1 + hiEdge, 2, 5)] : LAND[clamp(lv + 1, 1, 5)];
+    if (hk) put(hd, i, HI[hk][clamp(lvH + 1, 2, 5)]);
     if (!isL && grat[i + 3] > 110 && lv >= 1 && dith(x, y, 0.55)) col = SEA[clamp(lv + 1, 0, 5)];
     if (sh.rr > 0.9 && sh.s > -0.1 && dith(x, y, (sh.rr - 0.9) * 8)) col = isL ? "#5f86c4" : "#2f6fb8";
     put(d, i, col);
   }
-  out.x.putImageData(img, 0, 0);
+  out.x.putImageData(img, 0, 0); hb.x.putImageData(himg, 0, 0);
   const R = d3.geoRotation(rot);
   // view space position of a point at height h (in globe radii) above the ground
   const at = (ll, h = 0) => { const [l, p] = R(ll).map((v) => v * Math.PI / 180), c = Math.cos(p); return [c * Math.sin(l) * (1 + h), -Math.sin(p) * (1 + h), c * Math.cos(l) * (1 + h)]; };
   const seen = (q) => q[2] > 0 || q[0] * q[0] + q[1] * q[1] > 1;
   const xy = (q) => [cx + r * q[0], cy + r * q[1]];
   const lit = (ll) => { const q = at(ll); return q[0] * L[0] + q[1] * L[1] + q[2] * L[2]; };
-  return { b: out, proj, at, seen, xy, lit, L, cx, cy, r, land };
+  return { b: out, hiGlow: hb, proj, at, seen, xy, lit, L, cx, cy, r, land };
 }
 // atmosphere: a dithered halo, stronger on the lit side
 function atmosphere(G, w = 0.1, cols = ["#3d8be0", "#2460a8", "#143a6a"]) {
@@ -283,4 +293,19 @@ function logoSea(x, y, px, kind = "blue", o = {}) {
   if (o.glow) { const off = document.createElement("canvas"); off.width = W; off.height = H; const ox = off.getContext("2d"); draw(ox);
     ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.globalAlpha = o.glow; ctx.filter = "blur(22px)"; ctx.drawImage(off, 0, 0); ctx.restore(); ctx.drawImage(off, 0, 0); }
   else draw(ctx);
+}
+// the countries the arcs end in, as Map iso3 -> "oil" | "gas" (oil wins where both land). Only arcs whose end
+// faces us (as arcs() draws them). Matched by name (oil: the app's country names) or ISO3 (LNG buyers); a buyer
+// with no polygon at this scale (Singapore) is left unlit rather than guessed.
+function destCountries(list, rot, minZ = 0.05) {
+  const R = d3.geoRotation(rot), F = window.COUNTRIES.features, out = new Map();
+  const faces = (ll) => { const [l, p] = R(ll).map((v) => v * Math.PI / 180); return Math.cos(p) * Math.cos(l) >= minZ; };
+  for (const A of list) {
+    if (!faces(A.b)) continue;
+    const f = F.find((g) => g.properties.name === A.name || g.properties.iso3 === A.name);
+    if (!f) continue;
+    const iso = f.properties.iso3;
+    if (A.kind === "oil" || !out.has(iso)) out.set(iso, A.kind);
+  }
+  return out;
 }

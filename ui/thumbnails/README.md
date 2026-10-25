@@ -16,7 +16,9 @@ rebuilt. Fonts: Pixelify Sans and VT323 (SIL Open Font License, `ui/app/vendor/f
 | `still-10-sea-blue.png`, `still-11-sea-gold.png` | The title in the pour lettering, a big tanker logo on the horizon, and a pixel sea that mirrors the globe with a glitter path: night blue, and glowing gold with the tanker as a silhouette (`sea-contact-sheet.png`) |
 | `still-12-set-blue.png`, `still-13-set-gold.png` | The same, with a bigger globe sinking into the sea like a setting sun |
 | `still-14-logo-blue.png` to `still-17-logo-gold-glow.png` | The 3:2 classic with the pour lettering (a hand-drawn pixel Z) and the tanker logo on its own strip of pixel water on the ship's grid: blue, gold, and each with a glow (`logo-sea-contact-sheet.png`) |
-| `still-18-logo-blue-centred.png` | The chosen one: the blue logo centred under the title |
+| `still-18-logo-blue-centred.png` | The blue logo centred under the title |
+| `still-19-logo-blue-lit.png` | The chosen one: 18 with the countries the rays end in picked out in copper (oil buyers) and violet (LNG-only buyers), matched by name; Singapore has no polygon at this scale and stays unlit |
+| `still-20-logo-blue-lit-bright.png` | The same with the buyers lit brightly |
 
 Arc widths come from the repo's own tables. Oil is pre-war kb/d via Hormuz by destination (`ui/industry`,
 EIA 2024). LNG is Mt/yr from `ui/app/data/gas.json`; those figures come from search results and are unverified.
