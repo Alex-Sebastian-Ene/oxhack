@@ -244,6 +244,48 @@ CRPS of Brent in percentage points of log change. Negative in the last column me
 
 **Sampler health (folds):** fold 0: R-hat 1.013, ESS 273.9, 0 divergences, 58 s; fold 1: R-hat 1.014, ESS 233.8, 0 divergences, 63 s; fold 2: R-hat 1.016, ESS 288.7, 0 divergences, 49 s; fold 3: R-hat 1.011, ESS 240.9, 0 divergences, 53 s; fold 4: R-hat 1.01, ESS 415.8, 0 divergences, 59 s; fold 5: R-hat 1.007, ESS 499.1, 0 divergences, 64 s; fold 6: R-hat 1.015, ESS 332.0, 0 divergences, 70 s; fold 7: R-hat 1.012, ESS 463.9, 0 divergences, 85 s
 
+## Against the Fed and the SPF: US CPI
+
+_Benchmarks from `runs/macro/global-benchmarks.json` (written by `experiments/macro_global.py benchmarks` on 2026-10-25; surveys fetched 2026-10-24, SPF to the 2026Q3 survey)._
+
+Our rows are the forecast mode with Lévy Brent paths: nothing after the origin is known. The benchmarks are the chain's, on the same 8 folds, matched by origin month. Each is a point forecast with a Gaussian band of the spread of its own errors on the fold's training origins. Cleveland and Michigan give 1-year rates, scaled by h/12 at shorter horizons; the SPF's quarterly path is interpolated to months (`docs/macro-ensemble.md`). The surveys were made with the data as first published, while we train and score on today's revised CPI (`CPIAUCSL`, revised only through its seasonal factors), which flatters us slightly.
+
+**Skill against the climatology of US headline CPI**, each on the origins it has (the release-month SPF has one a quarter)
+
+| Forecast | h=1 | h=3 | h=6 | h=12 |
+|---|---|---|---|---|
+| Our US composite (items + rest) | +0.245 | +0.109 | +0.069 | +0.084 |
+| Our US headline, forecast directly | +0.182 | +0.054 | +0.024 | +0.066 |
+| Cleveland Fed 1-year expected inflation (FRED EXPINF1YR) | -0.004 | -0.024 | -0.034 | +0.006 |
+| Michigan 1-year expectations (FRED MICH) | +0.013 | +0.023 | +0.001 | -0.048 |
+| SPF median, at the end of each release month | +0.057 | +0.070 | +0.069 | +0.102 |
+| SPF mean, at the end of each release month | +0.066 | +0.082 | +0.084 | +0.113 |
+| SPF median, latest survey at every month-end | +0.017 | +0.029 | +0.038 | +0.098 |
+| Random walk: last 12-month pace carries on | -0.058 | -0.082 | -0.129 | -0.215 |
+| 90% coverage of our US composite | 86% | 85% | 83% | 82% |
+
+**Our US composite (items + rest) against each benchmark**: how much lower our CRPS is, on the origins both have; t is the Diebold-Mariano statistic of ours minus theirs (Newey-West, 12 lags; negative = ours better)
+
+| Benchmark | h=1 | h=3 | h=6 | h=12 |
+|---|---|---|---|---|
+| Cleveland Fed 1-year expected inflation (FRED EXPINF1YR) | 25% lower (t -4.8, n 212) | 13% lower (t -3.5, n 210) | 10% lower (t -2.4, n 207) | 8% lower (t -1.3, n 201) |
+| Michigan 1-year expectations (FRED MICH) | 23% lower (t -3.9, n 212) | 9% lower (t -1.2, n 210) | 7% lower (t -0.7, n 207) | 13% lower (t -0.9, n 201) |
+| SPF median, at the end of each release month | 28% lower (t -4.4, n 71) | 12% lower (t -2.6, n 70) | 5% lower (t -1.4, n 69) | 2% higher (t +0.5, n 67) |
+| SPF mean, at the end of each release month | 28% lower (t -4.4, n 71) | 11% lower (t -2.4, n 70) | 3% lower (t -0.9, n 69) | 3% higher (t +0.7, n 67) |
+| SPF median, latest survey at every month-end | 23% lower (t -4.6, n 212) | 8% lower (t -2.3, n 210) | 4% lower (t -0.9, n 207) | 2% higher (t +0.4, n 201) |
+| Random walk: last 12-month pace carries on | 29% lower (t -4.3, n 212) | 18% lower (t -2.0, n 210) | 18% lower (t -1.5, n 207) | 25% lower (t -1.9, n 201) |
+
+**Our US headline, forecast directly against each benchmark**: how much lower our CRPS is, on the origins both have; t is the Diebold-Mariano statistic of ours minus theirs (Newey-West, 12 lags; negative = ours better)
+
+| Benchmark | h=1 | h=3 | h=6 | h=12 |
+|---|---|---|---|---|
+| Cleveland Fed 1-year expected inflation (FRED EXPINF1YR) | 18% lower (t -3.7, n 212) | 8% lower (t -2.0, n 210) | 6% lower (t -1.4, n 207) | 6% lower (t -1.0, n 201) |
+| Michigan 1-year expectations (FRED MICH) | 17% lower (t -2.6, n 212) | 3% lower (t -0.5, n 210) | 3% lower (t -0.3, n 207) | 11% lower (t -0.8, n 201) |
+| SPF median, at the end of each release month | 17% lower (t -2.9, n 71) | 3% lower (t -0.6, n 70) | 2% higher (t +0.5, n 69) | 4% higher (t +0.8, n 67) |
+| SPF mean, at the end of each release month | 16% lower (t -2.8, n 71) | 2% lower (t -0.3, n 70) | 4% higher (t +0.8, n 69) | 5% higher (t +1.0, n 67) |
+| SPF median, latest survey at every month-end | 17% lower (t -3.3, n 212) | 3% lower (t -0.7, n 210) | 1% higher (t +0.3, n 207) | 4% higher (t +0.9, n 201) |
+| Random walk: last 12-month pace carries on | 23% lower (t -3.6, n 212) | 13% lower (t -1.6, n 210) | 14% lower (t -1.3, n 207) | 23% lower (t -1.9, n 201) |
+
 ## The 2026 Hormuz closure as a test: fitted to 2026-02, scored 7 months on
 
 Supply-disruption months in the fit: 10. Each cell is the median change since the base month and its 90% interval, in % of the price level; ✓ marks an actual inside it.
