@@ -1,4 +1,5 @@
-"""experiments/flow_events.py: the event rule, per-point scaling, the placebo and the premium curve (synthetic data)."""
+"""experiments/flow_events.py: the event rule, per-point scaling, the placebo and the premium curve (synthetic data),
+and the IEA lost-flow path (synthetic, plus the sourced table's own consistency)."""
 
 import numpy as np
 import pandas as pd
@@ -145,3 +146,98 @@ def test_chain_premium_is_the_current_oil_paths_shape():
     assert c[fe.OP_D_PEAK - 1] == pytest.approx(fe.OP_E_PEAK)
     assert c[fe.OP_D_LATE - 1] == pytest.approx(fe.OP_E_LATE)
     assert c[-1] == pytest.approx(fe.OP_E_LATE) and len(c) == fe.CURVE_DAYS
+
+
+def test_equal_weights_give_the_unweighted_fit():
+    d = np.arange(1, 121, dtype=float)
+    y = fe.curve_shape(d, 0.002, 0.006, 15, 12.0, 0.003) + np.random.default_rng(4).normal(0, 2e-4, len(d))
+    p, pw = fe.fit_curve(y), fe.fit_curve(y, np.full(len(d), 7.0))
+    for key in ("jump", "peak", "d_peak", "half_life", "plateau", "rmse"):
+        assert pw[key] == pytest.approx(p[key])
+
+
+def test_fit_against_a_varying_loss_recovers_the_curve():
+    # Brent's move is the loss on each day times a known curve, plus noise of the same size every day.
+    rng = np.random.default_rng(5)
+    d = np.arange(1, 161, dtype=float)
+    truth = dict(jump=0.003, peak=0.008, d_peak=20, half_life=10.0, plateau=0.005)
+    lost = np.where(d <= 60, 88.0, np.where(d <= 100, 55.0, 47.0))
+    move = lost * fe.curve_shape(d, **truth) + rng.normal(0, 0.002, len(d))
+    walk = np.cumsum(rng.normal(0, 0.02, (300, 205)), axis=1)
+    noise = walk[:, 5:] - walk[:, :1]
+    curve, p = fe.premium_curve(move / lost, noise, lost, days=200)
+    assert p["d_peak"] == truth["d_peak"]
+    assert p["plateau"] == pytest.approx(truth["plateau"], abs=1e-4)
+    # held at 82 points throughout, the same moves give a plateau too low by at least the late losses over 82
+    _, p82 = fe.premium_curve(move / 82.0, noise, 82.0, days=200)
+    assert p82["plateau"] < truth["plateau"] * 55 / 82
+
+
+def test_premium_curve_band_follows_each_days_loss():
+    rng = np.random.default_rng(6)
+    obs, days = 100, 150
+    y = fe.curve_shape(np.arange(1, obs + 1, dtype=float), 0.002, 0.006, 20, 10.0, 0.003) + rng.normal(0, 3e-4, obs)
+    walk = np.cumsum(rng.normal(0, 0.02, (400, days + 5)), axis=1)
+    noise = walk[:, 5:] - walk[:, :1]
+    # a constant path is the same as the number
+    a, _ = fe.premium_curve(y, noise, 80.0, days=days)
+    b, _ = fe.premium_curve(y, noise, np.full(obs, 80.0), days=days)
+    pd.testing.assert_frame_equal(a, b)
+    # the band's upper half-width is the placebo's spread over that day's loss, the last loss after the data
+    lost = np.linspace(90.0, 45.0, obs)
+    c, _ = fe.premium_curve(y, noise, lost, days=days)
+    q = np.quantile(noise, [fe.Q[0], 0.5, fe.Q[1]], axis=0)
+    scale = np.r_[lost, np.full(days - obs, lost[-1])]
+    np.testing.assert_allclose(c["e_high"] - c["e_mid"], (q[2] - q[1]) / scale)
+
+
+def test_iea_lost_by_month():
+    strait = pd.Series([20.0, 2.0, 10.0], index=pd.PeriodIndex(["2026-02", "2026-03", "2026-04"], freq="M"))
+    dates = pd.to_datetime(["2026-02-20", "2026-03-05", "2026-03-31", "2026-04-01", "2026-05-12"])
+    lost, held = fe.iea_lost(dates, strait)
+    np.testing.assert_allclose(lost, [0, 90, 90, 50, 50])  # May holds April's, flagged
+    assert held.tolist() == [False, False, False, False, True]
+    with pytest.raises(ValueError):
+        fe.iea_lost(pd.to_datetime(["2026-01-30"]), strait)
+    with pytest.raises(ValueError):  # a missing month inside the series
+        fe.iea_lost(pd.to_datetime(["2026-03-05"]), strait.drop(pd.Period("2026-03", "M")).reindex(
+            pd.PeriodIndex(["2026-02", "2026-03", "2026-04"], freq="M")))
+
+
+def test_iea_monthly_takes_one_used_row_per_month():
+    figs = pd.DataFrame({"period": ["2026-02", "2026-03", "2026-03", "2026-02"], "measure": ["strait"] * 3 + ["bypass"],
+                         "mb_d": [20.0, 2.0, 3.0, 4.0], "used": ["yes", "yes", "no", "yes"]})
+    m = fe.iea_monthly(figs)
+    assert m.loc[pd.Period("2026-03", "M"), "strait"] == 2.0 and m.loc[pd.Period("2026-02", "M"), "bypass"] == 4.0
+    with pytest.raises(ValueError):
+        fe.iea_monthly(figs.assign(used="yes"))
+
+
+def test_the_sourced_iea_table():
+    figs = fe.iea_figures()
+    assert figs["url"].str.startswith("https://").all()
+    assert figs["published"].str.match(r"^20\d\d").all() and figs["source"].str.len().gt(0).all()
+    m = fe.iea_monthly(figs)
+    strait = m["strait"].dropna()
+    assert strait.index[0] == pd.Period("2026-02", "M")  # the pre-war month comes first
+    assert list(strait.index) == list(pd.period_range(strait.index[0], strait.index[-1], freq="M"))  # no gaps
+    assert strait.iloc[0] > 19 and (strait.iloc[1:] < strait.iloc[0]).all()
+    # the 22 June text's March-May average is that chart's strait plus STS columns, not the strait column alone
+    jun = figs[figs["published"] == "2026-06-22"].set_index(["period", "measure"])["mb_d"]
+    spring = ["2026-03", "2026-04", "2026-05"]
+    both = np.mean([jun[(p, "strait")] + jun[(p, "sts")] for p in spring])
+    assert both == pytest.approx(jun[("2026-03/2026-05", "strait")], abs=0.05)
+    assert np.mean([jun[(p, "strait")] for p in spring]) < 2.5
+
+
+def test_the_fit_keeps_the_tail_a_decay():
+    # a path that dips and then climbs: left free the tail rises past the peak, by default it may not
+    d = np.arange(1, 161, dtype=float)
+    y = np.where(d <= 20, 0.002 + 0.004 * d / 20, 0.003 + 0.00004 * (d - 20))
+    y = y + np.random.default_rng(7).normal(0, 1e-4, len(d))
+    free, kept = fe.fit_curve(y, decay_only=False), fe.fit_curve(y)
+    assert free["plateau"] > free["peak"]
+    assert kept["plateau"] == pytest.approx(kept["peak"]) and kept["sse"] >= free["sse"]  # flat from the peak
+    # a path that already decays gets the same fit either way
+    z = fe.curve_shape(d, 0.002, 0.007, 20, 15.0, 0.003)
+    assert fe.fit_curve(z, decay_only=False) == fe.fit_curve(z)
