@@ -107,6 +107,17 @@ only, because its ships are simulated. Everything else follows:
   counts it (`notes/chain-scenarios-2026-3m-margins.csv`: 89 points lost in March to 47 in September, later months
   holding the last), with Brent from the same curve over that path: about $95 ($75 to $145). The slider shows the
   path's March–October average, 67 points, and its mark sits there.
+- **Bab el-Mandeb** (`patch_straits.py`, the last step): under the Hormuz slider, set the points of Bab el-Mandeb's
+  normal flow lost (presets: normal, the 2024 Houthi diversion at 71, the Sep 2026 blockade of Saudi shipping at 46).
+  It is added in Hormuz points with Seb's numbers from `notes/mandeb-link.json` (`uv run experiments/flow_events.py
+  mandeb`, the same PortWatch flows and events as `notes/flow-events.md`): one Bab el-Mandeb point is 0.369 Hormuz
+  points of tanker tonnage, 63% of it reroutes round the Cape as in 2024 and still arrives, and with Hormuz shut the
+  Yanbu bypass (18% of the Gulf's lost exports over the 2026 closure) is lost too, in the same share as the strait's
+  flow unless measured (all of it in Sep 2026). That Hormuz-equivalent loss drives Brent, the release table and every
+  chain number. The chain's tables stop at 100 points, so a larger sum is shown at 100 and the card says so. The 2026
+  closure preset already holds the Red Sea as it happened, so it clears the control. On the map, pink lines show the
+  strait, the Red Sea route to Europe, Yanbu's crude to Asia, the East–West pipeline and, when ships reroute, the Cape
+  route (paths approximate; each says on hover what is modelled and what is assumed).
 - **Jet fuel, nitrogen fertiliser, plastics resin, diesel at the pump, CPI and unemployment (US, UK, euro area):**
   the chain's scenario table (`notes/chain-scenarios-3m-margins.csv`: bayes_own + global_lin + global, with the
   margin member on fuels), straight lines between its 0/25/50/82/100-point rows. Shown as the extra change against
@@ -154,6 +165,7 @@ Everything is a cached snapshot bundled into the page. Nothing is fetched live.
 | Cost to buyers | `notes/industry/`: airlines 31.4% fuel share (IATA), farming 40% fertiliser share (CIBC) | see that folder |
 | Trade tab: exports and imports, goods, fuel shares, main partners | `notes/trade-stats.json` (`experiments/trade_stats.py`): World Bank WDI (`NE.EXP/IMP.GNFS.CD` and `.ZS`, `TX/TM.VAL.MRCH.CD.WT`, `TX/TM.VAL.FUEL.ZS.UN`), UN Comtrade public preview (partners, all goods). Read by `src/patch_tradestats.py` at build time | 2026-10-25 (WDI updated 2026-10-08) |
 | Trends tab: inflation, industry prices and output, forecast skill, oil effect by industry | `notes/country-trends.json` (`experiments/country_trends.py`): Eurostat HICP, `sts_inppd_m` and `sts_inpr_m`; BLS CPI and PPIs, Fed industrial production and ONS CPI. Skill and oil effects are `global_lin`'s in the sector run (`notes/sector-global-results.md`). Read by `src/patch_trends.py` at build time | Eurostat and FRED, 2026-10-24/25 |
+| Bab el-Mandeb in Hormuz points: tonnage ratio, 2024 rerouting, Sep 2026 blockade, Yanbu bypass share | `notes/mandeb-link.json` (`experiments/flow_events.py mandeb`): IMF PortWatch `chokepoint4`, `chokepoint6`, `chokepoint7` and port exports (Yanbu `port570`, seven Gulf ports). The blockade's date is from news reports (`docs/strait-live-data.md`). Read by `src/patch_straits.py` at build time | PortWatch 2026-10-24 (data to 2026-10-18), generated 2026-10-25 |
 
 - All price moves are 12 months after the move in Brent from $70 pre-war, scaled by ln(1+x)/ln(1.1).
   The bands cover the average effect only; single moves vary more.

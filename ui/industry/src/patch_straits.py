@@ -126,7 +126,6 @@ sub(".resv { display: grid; gap: 6px; margin-top: 10px; }\n",
     ".babhead { display: flex; align-items: baseline; gap: 8px; }\n"
     ".babhead b { font: 500 26px/1 var(--mono); color: #d6337a; }\n.babhead span { font-size: 13px; color: var(--muted); }\n"
     ".babv input { width: 100%; margin: 0; accent-color: #d6337a; min-height: 28px; display: block; }\n"
-    ".babv .presets button[aria-pressed=\"true\"] { background: #d6337a; border-color: #d6337a; }\n"
     ".babv .tagm { font-style: normal; font-size: 11px; color: var(--muted); }\n")
 
 RENDER_BAB = r'''  // the Bab el-Mandeb control: what it adds, which parts are our model and which are assumed
@@ -141,7 +140,7 @@ RENDER_BAB = r'''  // the Bab el-Mandeb control: what it adds, which parts are o
     else if (!st.bab) t = `Normal: nothing added. Bab el-Mandeb carries about ${BAB.per.toFixed(2)} times Hormuz's tanker tonnage ${M}${st.lost ? `, and while Hormuz is shut it also carries the Saudi crude piped across Arabia to Yanbu and shipped on to Asia` : ""}.`;
     else {
       const share = st.babF >= 0.995 ? "all of it" : `${Math.round(st.babF * 100)}% of it`;
-      const via = st.babF === BAB.b2026.f && st.bab === BAB.b2026.lost ? `${share}, as measured in ${ymLabel(BAB.b2026.month)},` : `${share} (the same share as the strait's flow ${A})`;
+      const via = st.babF === BAB.b2026.f && st.bab === BAB.b2026.lost ? `${share}, as measured in ${ymLabel(BAB.b2026.month)},` : `${share}, the same share as the strait's flow ${A},`;
       t = `<b>${st.bab}</b> points of its flow are ${f1(st.bab * BAB.per)} Hormuz points of tanker tonnage ${M}. ${Math.round(BAB.rerouted * 100)}% of that goes round the Cape and still arrives, as in 2024 ${A}, so <b>${f1(q.red)}</b> count.`;
       if (st.lost) t += ` With Hormuz down ${st.lost} points, Yanbu's bypass sails through Bab el-Mandeb too: it made up ${Math.round(BAB.bypass * 100)}% of the Gulf's lost exports in 2026 ${M}, and losing ${via} adds <b>${f1(q.byp)}</b>.`;
       t += ` Brent and every number below follow <b>${st.lost} + ${f1(q.red)}${st.lost ? ` + ${f1(q.byp)}` : ""} = ${f1(q.raw)}</b> Hormuz-equivalent points.`;
@@ -226,7 +225,7 @@ MAP_JS = (
         tip: `Round the Cape of Good Hope: ${pc(BAB.rerouted)} of the Red Sea flow lost in 2024 went this way (PortWatch, our model). That the same share reroutes now is an assumption; these cargoes still arrive, two to three weeks later. Path approximate.` },
       { k: "red", v: pass, off: 4,
         tip: `Bab el-Mandeb and the Red Sea route to Europe through Suez: ${pc(pass)} of its normal flow passing${st.path26 ? ` (${ymLabel(BAB.b2026.month)})` : ", as set on the shock card"}. One point of its flow is ${BAB.per} Hormuz points of tanker tonnage (PortWatch, our model). Path approximate.` },
-      { k: "yanbu", v: run, idle: !st.lost, off: -4,
+      { k: "yanbu", v: run, idle: run < 0.005, off: -4,
         tip: st.lost ? `Yanbu bypass: Saudi crude piped to Yanbu on the Red Sea, then south through Bab el-Mandeb to Asia. It made up ${pc(BAB.bypass)} of the Gulf's lost exports over the 2026 closure (PortWatch, our model); ${pc(1 - f)} of it sails now${st.path26 ? " (stopped by the blockade)" : ""}. That it all goes through Bab el-Mandeb is an assumption. Path approximate.`
           : "Yanbu bypass to Asia: used while Hormuz is shut (none lost now). Path approximate." },
     ];
@@ -274,8 +273,8 @@ MAP_JS = (
     const base = (G3.pathsData() || []).filter((d) => !d.bab);
     const pc = G3.pathColor(), pw = G3.pathStroke(), pl = G3.pathLabel();
     const call = (fn, d, dflt) => (typeof fn === "function" ? fn(d) : fn == null ? dflt : fn);
-    G3.pathsData([...base, ...ls.map((d) => ({ bab: true, pts: BAB_LANES[d.k].map(([lng, lat]) => [lat, lng + (d.off || 0) * 0.08]), w: 0.4 + 1.6 * Math.sqrt(d.v), tip: d.tip }))])
-      .pathColor((d) => (d.bab ? ["rgba(255,79,154,0.35)", "''' + PINK + r'''"] : call(pc, d, "#ffd60a")))
+    G3.pathsData([...base, ...ls.map((d) => ({ bab: true, pts: BAB_LANES[d.k].map(([lng, lat]) => [lat, lng + (d.off || 0) * 0.08]), w: 0.8 + 1.8 * Math.sqrt(d.v), tip: d.tip }))])
+      .pathColor((d) => (d.bab ? ["''' + PINK + '", "' + PINK + r'''"] : call(pc, d, "#ffd60a")))
       .pathStroke((d) => (d.bab ? d.w : call(pw, d, 1)))
       .pathLabel((d) => (d.bab ? escH(d.tip) : typeof pl === "function" ? pl(d) : ""));
     G3.pointsData([...(G3.pointsData() || []).filter((d) => !d.bab), { bab: true, name: "Bab el-Mandeb", lat: BAB_PT[1], lng: BAB_PT[0], alt: 0.02, r: 0.4, color: "''' + PINK + r'''" }]);
