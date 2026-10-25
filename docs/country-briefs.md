@@ -68,6 +68,7 @@ Interactions API (`POST /v1beta/interactions`).
 ```sh
 echo 'GEMINI_API_KEY=<your key>' >> .env   # repo root; .env is git-ignored
 uv run experiments/country_brief.py      # serves http://127.0.0.1:8787
+    uv run experiments/country_brief.py check   # before a demo: one tiny live call per model, the models the key can use
 # then open ui/globe/index.html?brief=1
 ```
 
