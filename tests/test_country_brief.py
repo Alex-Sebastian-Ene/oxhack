@@ -153,3 +153,17 @@ def test_fake_mode_is_labelled_and_needs_no_key(tmp_path, monkeypatch):
     import base64
     raw = base64.b64decode(r["image"].split(",", 1)[1])
     assert raw[:8] == b"\x89PNG\r\n\x1a\n" and raw[12:16] == b"IHDR"
+
+
+def test_check_without_a_key_fails_without_calling_out(capsys):
+    assert cb.check(None) == 1
+    assert "nothing to check" in capsys.readouterr().out
+
+
+def test_http_error_reads_both_error_shapes():
+    import io, urllib.error
+    for body in (b'{"error": {"code": 401, "message": "bad key"}}', b'[{"error": {"code": 401, "message": "bad key"}}]', b"not json"):
+        e = urllib.error.HTTPError("https://example.invalid", 401, "Unauthorized", {}, io.BytesIO(body))
+        msg = cb._http_error(e)
+        assert msg.startswith("HTTP 401")
+        assert ("bad key" in msg) == body.startswith((b"{", b"["))
