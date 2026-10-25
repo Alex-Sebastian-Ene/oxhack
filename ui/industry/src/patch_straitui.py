@@ -72,7 +72,7 @@ LINK = '''      <section class="card" id="link-card">
 # ---------------------------------------------------------------- 4. the published-estimates chart: dates, and "Ours" marked simulated
 sub('''        <div id="published" class="pub" aria-label="Published estimates compared with ours"></div>''',
     '''        <div id="published" class="pub" aria-label="Published estimates compared with ours"></div>
-        <p class="faint">Published figures as reported, with when they refer to (sources: <code>docs/strait-live-data.md</code>; check before quoting). "Ours" is the estimate on the simulated scenario, not a measurement.</p>''')
+        <p class="faint">Published figures as reported, with the period each covers; check before quoting. "Ours" is our estimate on simulated ships, not a measurement.</p>''')
 sub('''    const rows = sc.published.map((p) => `<div class="r" title="${p.who}, ${p.when}"><span>${short[p.who] || p.who}</span>''',
     '''    const rows = sc.published.map((p) => `<div class="r" title="${p.who}, ${p.when}"><span>${short[p.who] || p.who}<i class="when">${p.when}</i></span>''')
 sub('''    rows.push(`<div class="r" title="Our estimate, 90% range"><span class="ours">Ours</span>''',
