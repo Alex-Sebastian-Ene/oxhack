@@ -1,6 +1,6 @@
 # /// script
 # requires-python = ">=3.11"
-# dependencies = ["numpy>=1.26", "pandas>=2.1"]
+# dependencies = ["numpy>=1.26", "pandas>=2.1", "scikit-learn>=1.4"]
 # ///
 """Each map country's own oil numbers for the World view, so no country falls back to a typical profile.
 
@@ -746,6 +746,21 @@ def imf_cpi(coicop: str, measure: str = "IX", freq: str = "M") -> dict[str, pd.S
     return out
 
 
+def with_oil(f: dict, brent: pd.Series, link: dict | None) -> dict:
+    """A country_outlook forecast plus Brent's known move since its origin month through the country's oil link
+    (the model doesn't see Brent after the last price month), in the naive outlook's format."""
+    lb = np.log(brent.dropna())
+    t0 = pd.Timestamp(f["from"] + "-01")
+    q = {}
+    for h, (lo, mid, hi) in f["q"].items():
+        t = min(t0 + pd.DateOffset(months=int(h)), lb.index[-1])
+        oil = link[h]["b"] * (lb[t] - lb[t0]) if link and t0 in lb.index and t > t0 else 0.0
+        adj = lambda x: round(float(100 * np.expm1(np.log1p(x / 100) + oil)), 2)  # noqa: E731
+        q[h] = [adj(lo), adj(mid), adj(hi), round(float(100 * oil), 2)]
+    return {"from": f["from"], "q": q, "rule": f["rule"],
+            "width12": round(float(np.log1p(q["12"][2] / 100) - np.log1p(q["12"][0] / 100)), 3)}
+
+
 def naive_misses(level: pd.Series, h: int = 12) -> list[float]:
     """What happened minus the naive rule ('the last 12 months' rate continues'), h months ahead, in log terms,
     from origins every 6 months 2015-2024: the spread of these sets the outlook's band."""
@@ -815,12 +830,24 @@ def prices_section() -> dict:
         for iso, f in shrunk.items():
             out[iso][kind]["link"] = (out[iso][kind]["link"] or {}) | {str(h): f | {"own": fits[iso]["b"]}}
     # the outlook needs the links, so it comes last; a country too unstable to fit gets the prior's link
-    for c in out.values():
+    # the cross-country forecasting model (experiments/country_outlook.py) beat the naive rule in its backtest for all
+    # prices and food at every horizon, so it replaces the rule there; the rule stays for housing and energy, and
+    # transport (not backtested), and wherever the model itself falls back to it (the fragile six, rates above 50%)
+    import country_outlook as cl  # here, not at the top: it imports this module
+    chosen = {iso: {k: c[k]["level"] for k in ("all", "food") if k in c and c[k]["level"] is not None} for iso, c in out.items()}
+    chosen = {iso: d for iso, d in chosen.items() if d}
+    model = cl.fit(chosen, brent)
+    bt = json.loads(cl.OUT_JSON.read_text(encoding="utf-8"))
+    for iso, c in out.items():
         for kind, v in c.items():
             level, misses = v.pop("level"), v.pop("misses")
             link = v["link"] or ({str(h): {"b": pooled[kind][str(h)]["b"]} for h in HORIZONS} if kind in pooled else None)
             fresh = level is not None and level.index[-1] >= pd.Timestamp(OUTLOOK_FROM)
             o = naive_outlook(level, brent, link, misses) if fresh else None
+            if fresh and kind in chosen.get(iso, {}):
+                f = cl.forecast(level, kind, brent, model, pair=chosen[iso].get("food" if kind == "all" else "all"), iso=iso)
+                if f and all(r != "naive" for r in f["rule"].values()):
+                    o = with_oil(f, brent, link)
             # a band wider than a factor of 16 over a year is no forecast; wider than 4 is shown, marked very uncertain
             v["outlook"] = o if o and o["width12"] <= MAX_WIDTH else None
             v["uncertain"] = bool(v["outlook"] and o["width12"] > WIDE)
@@ -842,7 +869,11 @@ def prices_section() -> dict:
                        "by its noise, the penalty set by how far the countries' true slopes spread around the model; "
                        "inflation is the 12-month change in the index, at the latest month and in Feb 2026 before the closure"),
             "prior": prior,
-            "outlook": ("the latest 12 months' inflation continues, plus the country's oil link applied to Brent's known "
+            "model": {"source": "experiments/country_outlook.py (notes/country-outlook.md)", "generated": bt["generated"],
+                      "skill": {k: {h: {"skill": v["skill_vs_naive"], "coverage": v["coverage90"], "rule": v["model"]} for h, v in by.items()}
+                                for k, by in bt["backtest"].items()}},
+            "outlook": ("all prices and food: the cross-country model (country_outlook.py) where it applies, else the rule; "
+                        "the rule: the latest 12 months' inflation continues, plus the country's oil link applied to Brent's known "
                         "move since the latest price month; 90% band from this country's past misses of that rule "
                         "(12-month forecasts from every 6 months, 2015-2024), scaled by the square root of the horizon"),
             # a per-country time-series model (own last month, month of year, Brent's last three months) was

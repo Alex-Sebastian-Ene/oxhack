@@ -17,7 +17,8 @@
   const ro = new ResizeObserver((es) => es.forEach((e) => sync(e.target)));
 
   function fold(el) {
-    if (el.classList.contains("fold") || el.textContent.length < LONG) return;
+    // a note that is already a dropdown of its own (<details>, as the Cost of living rows are) stays as it is
+    if (el.classList.contains("fold") || el.textContent.length < LONG || el.closest("details")) return;
     const k = key(el), t = document.createElement("button");
     t.type = "button";
     t.className = "fold-t";
