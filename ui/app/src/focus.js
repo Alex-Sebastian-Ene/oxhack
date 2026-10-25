@@ -31,6 +31,19 @@
       if (my === seq && window.HZZoomTo) window.HZZoomTo(name);
     })));
   }
+  // how far the detail has slid over the map, 0 to 1, for the map's dimming and the cards' frosting (focus.css). The
+  // stage scrolls on a wide screen, the page on a phone.
+  function cover() {
+    if (!stage.classList.contains("hz-focus")) { stage.style.removeProperty("--hz-cover"); return; }
+    const hud = stage.querySelector(".hud"), m = map.getBoundingClientRect(), h = hud && hud.getBoundingClientRect();
+    if (!h || !m.height) return;
+    const over = Math.max(0, m.bottom - h.top);   // how much of the map the detail now covers
+    stage.style.setProperty("--hz-cover", Math.min(1, over / (m.height * 0.7)).toFixed(3));
+  }
+  stage.addEventListener("scroll", cover, { passive: true });
+  window.addEventListener("scroll", cover, { passive: true });
+  document.addEventListener("hz-select", () => setTimeout(cover, 0));
+
   let current = null, again = 0;
   document.addEventListener("hz-select", (e) => { current = e.detail && e.detail.name; focus(current); });
   // the page refits the map whenever its box changes (a window resize, the phone's address bar), which leaves a zoom
