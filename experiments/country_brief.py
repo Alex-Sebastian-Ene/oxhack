@@ -158,6 +158,12 @@ def outputs(resp: dict) -> tuple[str, dict | None]:
     return text, (imgs[-1] if imgs else None)
 
 
+def served(resp: dict) -> str:
+    """The model that answered, as the response names it: Google can serve a request from another model than the
+    one asked for (on 25 Oct 2026 requests to gemini-3.5-flash counted against gemini-3.6-flash's quota)."""
+    return str(resp.get("model") or MODEL)
+
+
 def png(w: int, h: int, pixel) -> bytes:
     """A small RGB PNG from pixel(x, y) -> (r, g, b), standard library only."""
     import struct
@@ -196,7 +202,8 @@ def resource(payload: dict, key: str | None, refresh: bool = False, image: bool 
     else:
         if not key:
             raise PermissionError("GEMINI_API_KEY is not set (environment or the repo's .env) on the machine running country_brief.py")
-        text, _ = outputs(interact(MODEL, resource_prompt(name, facts), key))
+        resp = interact(MODEL, resource_prompt(name, facts), key)
+        text, _ = outputs(resp)
         if not text:
             raise ValueError("Gemini returned no description")
         img = None
@@ -205,7 +212,7 @@ def resource(payload: dict, key: str | None, refresh: bool = False, image: bool 
                 _, img = outputs(interact(IMAGE_MODEL, image_prompt(name), key))
             except (urllib.error.URLError, TimeoutError, ValueError) as e:
                 print(f"no picture for {name}: {_http_error(e)}", file=sys.stderr)
-        model, image_model = MODEL, IMAGE_MODEL
+        model, image_model = served(resp), IMAGE_MODEL
     out = {"id": rid, "name": name, "text": text, "facts": facts, "model": model, "image_model": image_model if img else None,
            "image": f"data:{img.get('mime_type') or 'image/png'};base64,{img['data']}" if img else None,
            "generated_at": datetime.now(UTC).isoformat(timespec="seconds")}
@@ -226,8 +233,9 @@ def country(payload: dict, key: str | None, refresh: bool = False) -> dict:
     else:
         if not key:
             raise PermissionError("GEMINI_API_KEY is not set (environment or the repo's .env) on the machine running country_brief.py")
-        text, _ = outputs(interact(MODEL, country_prompt(name, facts), key))
-        model = MODEL
+        resp = interact(MODEL, country_prompt(name, facts), key)
+        text, _ = outputs(resp)
+        model = served(resp)
         if not text:
             raise ValueError("Gemini returned no profile")
     out = {"iso3": iso3, "country": name, "text": text, "facts": facts, "model": model,
@@ -398,6 +406,9 @@ def _retrying(fn, label: str, tries: int = 6):
         time.sleep(wait)
 
 
+STUCK = 4   # failures in a row (after retries) before bake gives up on a model for now
+
+
 def bake(key: str | None, facts_path: Path = FACTS, out_path: Path = BAKED, workers: int = 4) -> int:
     """Every "What is it?" and "Summarise with Gemini" panel ahead of time, for the app build (ui/app/src/build.py
     puts ui/app/data/ai-panels.json in the page as window.HZ_AI_BAKED). The facts file holds exactly what each panel
@@ -405,7 +416,8 @@ def bake(key: str | None, facts_path: Path = FACTS, out_path: Path = BAKED, work
     the output file is kept while its facts are unchanged, whichever model wrote it, and new answers go through the
     service's cache, so a rerun (another day, or another GEMINI_MODEL) only asks for what is missing. Countries go in
     order of how many facts we hold on them, so a small daily quota covers the best-documented first. When the quota
-    runs out, the rest are listed as missing and the file is still written. Text only: pictures would add megabytes
+    runs out, or the model fails STUCK times in a row (overloaded: 503s or timeouts even after retrying), the rest are
+    listed as missing and the file is still written. Text only: pictures would add megabytes
     to the page. Returns the number of panels still missing."""
     import threading
     from concurrent.futures import ThreadPoolExecutor
@@ -418,7 +430,7 @@ def bake(key: str | None, facts_path: Path = FACTS, out_path: Path = BAKED, work
     # each job takes the key; with no key it can only return an answer from the cache (PermissionError otherwise)
     jobs = [("resources", r["id"], r, lambda k, r=r: resource(r, k, image=False)) for r in src["resources"]]
     jobs += [("countries", c["iso3"], c, lambda k, c=c: country(c, k)) for c in ctys]
-    done, missing, quota_out = {"resources": {}, "countries": {}}, [], threading.Event()
+    done, missing, stop, fails = {"resources": {}, "countries": {}}, [], threading.Event(), [0]
 
     def run(job):
         group, k, payload, fn = job
@@ -427,18 +439,23 @@ def bake(key: str | None, facts_path: Path = FACTS, out_path: Path = BAKED, work
             done[group][k] = prev
             return
         try:
-            b = fn(None) if quota_out.is_set() else _retrying(lambda: fn(key), k)
+            b = fn(None) if stop.is_set() else _retrying(lambda: fn(key), k)
         except QuotaOut as e:
-            if not quota_out.is_set():
+            if not stop.is_set():
                 print(f"  daily quota used up for {MODEL}: {str(e)[:120]}", file=sys.stderr)
-            quota_out.set()
+            stop.set()
             missing.append(k)
             return
         except (urllib.error.URLError, TimeoutError, ValueError, PermissionError) as e:
             missing.append(k)
-            if not quota_out.is_set():
+            if not stop.is_set():
                 print(f"  {k}: failed, {_http_error(e)}", file=sys.stderr)
+                fails[0] += 1
+                if fails[0] >= STUCK:
+                    print(f"  {MODEL} failed {fails[0]} times in a row: stopping (try later, or another GEMINI_MODEL)", file=sys.stderr)
+                    stop.set()
             return
+        fails[0] = 0
         done[group][k] = {f: b[f] for f in ("name", "country", "text", "facts", "model", "generated_at") if f in b}
         print(f"{'resource' if group == 'resources' else 'country'} {k}: {'cached' if b['cached'] else 'new'} ({sum(map(len, done.values()))}/{len(jobs)})", flush=True)
 

@@ -140,8 +140,17 @@ def test_country_profile_cites_only_our_facts(tmp_path, monkeypatch):
     monkeypatch.setattr(cb, "interact", lambda model, text, key: seen.append(text) or INTERACTION_TEXT)
     out = cb.country({"iso3": "kor", "country": "South Korea", "facts": ["Jet fuel exports: 14% of world, rank 2 (2025)"]}, "k")
     assert out["iso3"] == "KOR" and out["text"] and "[1] Jet fuel exports" in seen[0] and "Do not add numbers" in seen[0]
+    assert out["model"] == cb.MODEL   # the response names no model, so the one asked for
     with pytest.raises(ValueError):
         cb.country({"iso3": "KOR"}, "k")
+
+
+def test_answers_name_the_model_that_served_them(tmp_path, monkeypatch):
+    monkeypatch.setattr(cb, "CACHE", tmp_path)
+    monkeypatch.setattr(cb, "FAKE", False)
+    monkeypatch.setattr(cb, "interact", lambda model, text, key: {**INTERACTION_TEXT, "model": "gemini-other"})
+    assert cb.country({"iso3": "JPN", "country": "Japan", "facts": ["a"]}, "k")["model"] == "gemini-other"
+    assert cb.resource({"id": "urea", "name": "Urea", "facts": ["a"]}, "k", image=False)["model"] == "gemini-other"
 
 
 def test_fake_mode_is_labelled_and_needs_no_key(tmp_path, monkeypatch):
@@ -239,3 +248,23 @@ def test_bake_keeps_earlier_answers_and_stops_at_the_daily_quota(tmp_path, monke
     assert d["resources"]["steel"]["text"] == "- old"   # kept: same facts, no call
     assert set(d["countries"]) == {"JPN"} and d["missing"] == ["FJI"]   # Japan first: it has more facts
     assert "Japan" in asked[0] and len(asked) == 2
+
+
+def test_bake_gives_up_on_a_model_that_keeps_failing(tmp_path, monkeypatch):
+    import io, urllib.error
+    monkeypatch.setattr(cb, "CACHE", tmp_path)
+    monkeypatch.setattr(cb, "FAKE", False)
+    monkeypatch.setattr("time.sleep", lambda s: None)
+    facts = tmp_path / "facts.json"
+    facts.write_text(json.dumps({"setting": "2026-closure", "resources": [],
+                                 "countries": [{"iso3": f"C{i:02d}", "country": f"Country {i}", "facts": ["x"]} for i in range(10)]}))
+    out = tmp_path / "ai-panels.json"
+    asked = []
+
+    def interact(model, text, key):   # overloaded: every call is a 503
+        asked.append(text)
+        raise urllib.error.HTTPError("https://example.invalid", 503, "Service Unavailable", {}, io.BytesIO(b"{}"))
+    monkeypatch.setattr(cb, "interact", interact)
+    assert cb.bake("k", facts, out, workers=1) == 10
+    assert len(asked) == cb.STUCK * 6   # STUCK countries, six tries each, then no more calls
+    assert len(json.loads(out.read_text())["missing"]) == 10
