@@ -26,6 +26,11 @@ window.HZHouseholds = (() => {
   // provenance: label (SOURCE code, fetched date) for one series of notes/household-panel.csv
   const SRC = { fred: "FRED", ons: "ONS", eurostat: "Eurostat", boe: "Bank of England", hmlr: "HM Land Registry" };
   const cite = (k) => { const m = D.meta[k]; return m ? `${esc(m[0])} (${SRC[m[1]] || esc(m[1])} ${esc(String(m[2]).split("?")[0])}, fetched ${esc(m[3])})` : esc(k); };
+  // the panel behind each card's blue info key: short sections, and one line per source with its code and fetch date
+  const sec = (h, body) => `<section class="hz-sec"><h4>${h}</h4>${body}</section>`;
+  const srcRow = (who, name, meta) => `<li><span class="who">${who}</span><b>${name}</b>${meta ? `<span class="meta">${meta}</span>` : ""}</li>`;
+  const srcs = (rows) => `<ul class="hz-srcl">${rows.map(([who, k]) => { const m = D.meta[k];
+    return m ? srcRow(who, esc(m[0]), `${SRC[m[1]] || esc(m[1])} · ${esc(String(m[2]).split("?")[0])} · fetched ${esc(m[3])}`) : srcRow(who, esc(k)); }).join("")}</ul>`;
   const MODEL = '<span class="tagm" title="Model output, not observed data">MODEL OUTPUT</span>';
   const REAL = '<span class="tagr" title="Observed data, saved from its source">REAL DATA</span>';
 
@@ -85,7 +90,7 @@ window.HZHouseholds = (() => {
   const hs = (k, list) => list.map((h) => `<button type="button" data-${k}="${h}" aria-pressed="false">${h} mo</button>`).join("");
   // each card: a number, a plain question, a REAL DATA or MODEL OUTPUT tag, and an info button with its sources
   const INFO = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><path d="M12 7.5v.5"/></svg>';
-  const head = (n, q, tag, src) => `<div class="hz-ch"><span class="hz-n">${n}</span><h3>${q}</h3>${tag}<button type="button" class="ib hz-i" data-hsrc="${src}" aria-label="Sources for this card">${INFO}</button></div>`;
+  const head = (n, q, tag, src) => `<div class="hz-ch"><span class="hz-n">${n}</span><h3>${q}</h3>${tag}<button type="button" class="ib hz-i" data-hsrc="${src}" aria-label="About this card: method and sources">${INFO}</button></div>`;
   page.innerHTML = `
     <section class="card hz-head" id="hh-head" aria-live="polite">
       <span class="hz-kick">The short version</span>
@@ -191,8 +196,8 @@ window.HZHouseholds = (() => {
     const low = (g) => D.real_pay[g].filter(([t]) => t >= "2021-01" && t <= "2024-12").reduce((a, b) => (b[1] < a[1] ? b : a));
     $("hh-pay-lede").innerHTML = `Pay after prices, 2019 = 100. The euro area is ${last("ea")[1] < 100 ? "<b>still below 2019</b>" : "back above 2019"}: ${last("ea")[1].toFixed(1)} in ${mon(last("ea")[0])}, after a low of ${low("ea")[1].toFixed(1)} in ${mon(low("ea")[0])}.`;
     $("hh-pay-keys").innerHTML = Object.keys(D.real_pay).map((g) => `<span>${flag(g)} <i style="background:${REG[g].color}"></i>${REG[g].name}</span>`).join("");
-    $("hh-pay-src").innerHTML = "Real pay = pay ÷ consumer prices. " + Object.keys(D.real_pay).map((g) =>
-      `<b>${REG[g].short}:</b> ${cite(`${g}_pay`)} ÷ ${cite(`${g}_cpi`)}`).join(". ") + ". Euro-area pay is quarterly and starts in 2009.";
+    $("hh-pay-src").innerHTML = sec("How it's worked out", "<p>Real pay is pay divided by consumer prices, indexed so 2019 = 100.</p><p>Euro-area pay is quarterly and starts in 2009.</p>")
+      + sec("Sources", srcs(Object.keys(D.real_pay).flatMap((g) => [[`${REG[g].short} pay`, `${g}_pay`], [`${REG[g].short} prices`, `${g}_cpi`]])));
   }
   // rows of the essentials table: (label, item per region); the UK has no CPI rent index, so its row is housing
   const ESS = [["Food", { us: "food", uk: "food", ea: "food" }], ["Home energy", { us: "energy_home", uk: "energy_home", ea: "energy_home" }],
@@ -210,9 +215,9 @@ window.HZHouseholds = (() => {
     const months = [...new Set(regs.map((g) => D.essentials[g][0] && D.essentials[g][0].month))].filter(Boolean);
     const P = D.petrol;
     $("hh-petrol").innerHTML = `${flag("us")} A gallon of US petrol took <b>${P.y2019}</b> minutes of work in 2019, <b>${P.peak}</b> at the peak (${mon(P.peak_month)}) and <b>${P.now}</b> in ${mon(P.month)}.`;
-    $("hh-ess-src").innerHTML = `Latest month: ${months.map(mon).join(", ")}. Each item's price index ÷ pay, 2019 = 100. <sup>*</sup>UK: housing, water and fuels (no CPI rent index here). ` +
-      regs.map((g) => `<b>${REG[g].short}:</b> ${ESS.map(([, by]) => cite(`${g}_${by[g]}`)).join("; ")}; pay: ${cite(`${g}_pay`)}`).join(". ") +
-      `. Petrol: ${cite("us_p_petrol")} ÷ ${cite("us_pay")}.`;
+    $("hh-ess-src").innerHTML = sec("How it's worked out", `<p>Each item's price index divided by pay, with 2019 = 100: how much more work the item takes than in 2019. Petrol minutes are the US petrol price divided by hourly pay.</p>`
+      + `<p>Latest month: ${months.map(mon).join(", ")}. <sup>*</sup>The UK rent row is housing, water and fuels: there is no CPI rent index here.</p>`)
+      + sec("Sources", srcs([...regs.flatMap((g) => [...ESS.map(([l, by]) => [`${REG[g].short} ${l.toLowerCase()}`, `${g}_${by[g]}`]), [`${REG[g].short} pay`, `${g}_pay`]]), ["US petrol", "us_p_petrol"]]));
   }
   function whoTable() {
     const rows = groupsOf(st.gtype), maxShare = 25;
@@ -222,7 +227,8 @@ window.HZHouseholds = (() => {
         return `<tr${g.type === "all" ? ' class="all"' : ""}><td>${esc(gname(g.group))}</td><td title="${esc(`Of spending (${D.weights_year} weights): food ${s.food}%, home energy ${s.energy}%, motor fuel ${s.fuel}%`)}">${bar(s)} <small>${((s.food || 0) + (s.energy || 0) + (s.fuel || 0)).toFixed(0)}%</small></td>
           <td>${g.since2019 != null ? `+${g.since2019.toFixed(1)}%` : "–"}</td><td>${g.rate != null ? `${g.rate.toFixed(1)}%` : "–"}</td></tr>`; }).join("")}</tbody>`;
     const m = D.groups[0] && D.groups[0].month;
-    $("hh-who-src").innerHTML = `Household Costs Indices, all items, to ${m ? mon(m) : "the latest month"}; spending shares are the ${D.weights_year} weights. ${esc(D.groups_source)}, fetched ${esc(D.groups_fetched || "–")}. Official statistics in development.`;
+    $("hh-who-src").innerHTML = sec("What it shows", `<p>Household Costs Indices, all items, to ${m ? mon(m) : "the latest month"}. Spending shares are the ${D.weights_year} weights.</p><p>Official statistics in development.</p>`)
+      + sec("Source", `<ul class="hz-srcl">${srcRow("UK groups", esc(D.groups_source), `fetched ${esc(D.groups_fetched || "–")}`)}</ul>`);
   }
 
   // ------------------------------------------------------------ the two model cards
@@ -248,8 +254,8 @@ window.HZHouseholds = (() => {
       <span class="v" title="${esc(`Middle ${sgn(r.q50, 2)}%, 90% range ${sgn(r.q05)} to ${sgn(r.q95)}%${base && drop ? `; with no flow lost ${sgn(base.q50)}%` : ""}${r.actual != null ? `; what happened ${sgn(r.actual)}%` : ""}`)}">${sgn(r.q50)}%<br><small>${sgn(r.q05)} to ${sgn(r.q95)}</small></span></div>`).join("")
       + `<div class="rrow axis"><span></span><span class="ax"><span>${sgn(lo, 0)}%</span><span>${sgn(hi, 0)}%</span></span><span></span></div>`;
     const acts = rows.filter((x) => x.r.actual != null);
-    $("hh-scen-src").innerHTML = `Model output: the team's household model. Consumer prices follow the knock-on chain's paths for each scenario; nominal pay keeps its pace of the 12 months before Feb 2026, so the range is the price range. ` +
-      (acts.length ? `What happened (${acts.map((x) => REG[x.g].short).join(", ")}) uses the same pay and price series as the chart above.` : `Nothing to compare with yet at ${st.h} months.`);
+    $("hh-scen-src").innerHTML = sec("How the model works", "<p>The team's household model. Consumer prices follow the knock-on chain's paths for each scenario.</p><p>Nominal pay keeps its pace of the 12 months before Feb 2026, so the range is the price range.</p>")
+      + sec("What happened", `<p>${acts.length ? `The green marks (${acts.map((x) => REG[x.g].short).join(", ")}) use the same pay and price series as card 1.` : `Nothing to compare with yet at ${st.h} months.`}</p>`);
   }
   function gsCard() {
     const sev = sevFor(st.lost), scen = st.outlook ? "outlook" : sev, h = st.gh;
@@ -276,7 +282,8 @@ window.HZHouseholds = (() => {
       return `<div class="rrow${g.type === "all" ? " all" : ""}"><span class="nm">${esc(gname(g.group))}</span><div class="track">${segs}</div>
         <span class="v" title="${esc(`${tip}. ${parts.map((p) => `${p.l} ${sgn(p.v, 2)}`).join(", ")} pts`)}">${sgn(total, 2)}${st.outlook ? "%" : " pts"} <small>${st.outlook ? `${sgn(r.q05)} to ${sgn(r.q95)}` : `· costs ${sgn(r.q50)}%`}</small></span></div>`;
     }).join("") : `<p class="src">No closure, so nothing added. Choose a closure size, or move the slider.</p>`);
-    $("hh-gs-src").innerHTML = `Model output: the team's household model. Item price ranges from the basket-item model (run ${esc(D.fans_generated || "–")}) weighted by each group's ${D.weights_year} spending shares (${esc(D.groups_source)}). Mortgage interest is held flat. First-order sums; the range is an upper bound on its width.`;
+    $("hh-gs-src").innerHTML = sec("How the model works", `<p>The team's household model. Item price ranges from the basket-item model, weighted by each group's ${D.weights_year} spending shares. Mortgage interest is held flat.</p><p>First-order sums, so the range is an upper bound on its width.</p>`)
+      + sec("Inputs", `<ul class="hz-srcl">${srcRow("Prices", "Basket-item model", `run ${esc(D.fans_generated || "–")}`)}${srcRow("Shares", esc(D.groups_source), `${D.weights_year} weights`)}</ul>`);
   }
 
   // ------------------------------------------------------------ the shock card's households step (World view)
@@ -356,8 +363,9 @@ window.HZHouseholds = (() => {
     const d = b.dataset;
     if (d.hsrc != null) {
       const card = b.closest(".card"), q = card.querySelector("h3").textContent;
-      $("sheet-title").textContent = `Sources: ${q}`;
-      $("sheet-body").innerHTML = `<p>${$(d.hsrc).innerHTML}</p>`;
+      const tag = card.querySelector(".tagr, .tagm");
+      $("sheet-title").textContent = q;
+      $("sheet-body").innerHTML = `${tag ? `<div class="hz-tagline">${tag.outerHTML}</div>` : ""}${$(d.hsrc).innerHTML}`;
       $("sheet").hidden = false; $("sheet-close").focus();
       return;
     }

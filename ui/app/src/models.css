@@ -8,13 +8,18 @@
 /* the page's header: what the cards are, how to read skill, and a jump list */
 .hz-mtop { gap: 8px; }
 .hz-mtop h2 { font: 700 21px var(--pix); color: var(--text); letter-spacing: .4px; }
-.hz-mtop .lede { font-size: 14.5px; line-height: 1.45; color: var(--text); max-width: 82ch; }
-.hz-mtop .how { font-size: 13.5px; line-height: 1.45; color: var(--muted); max-width: 96ch; }
+.hz-mtop .lede { font-size: 14.5px; line-height: 1.45; color: var(--text); }
+.hz-mtop .how { font-size: 13.5px; line-height: 1.45; color: var(--muted); }
 .hz-mtop .how b, .hz-mtop .lede b { color: var(--oil-soft); font-weight: 600; }
-.hz-mtop .jump { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 2px; }
-.hz-mtop .jg { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-.hz-mtop .jt { font: 600 11px var(--pix); letter-spacing: .8px; text-transform: uppercase; color: var(--faint); margin-right: 2px; }
-.hz-mtop .jump button { min-height: 30px; padding: 0 9px; font-size: 13px; }
+/* the groups as tabs: one group of cards shows at a time */
+.hz-mtop .hz-mtabs { display: flex; width: 100%; margin-top: 4px; }
+.hz-mtop .hz-mtabs button { flex: 1 1 0; min-height: 40px; padding: 0 10px; font-size: 14px; white-space: nowrap; }
+.hz-mtop .hz-mtabs .mtn { font: 400 15px var(--mono); opacity: .7; margin-left: 2px; }
+.hz-mgrp[hidden] { display: none !important; }
+@media (max-width: 720px) {
+  .hz-mtop .hz-mtabs { flex-wrap: wrap; }
+  .hz-mtop .hz-mtabs button { flex: 1 1 45%; white-space: normal; min-height: 44px; border-left-width: 2px !important; }
+}
 
 /* groups of cards, in the chain's order */
 .hz-mgrp { display: flex; flex-direction: column; gap: 8px; }
@@ -22,13 +27,16 @@
   display: flex; align-items: center; gap: 10px; }
 .hz-mgrp .gt::after { content: ""; flex: 1 1 auto; height: 2px; background: var(--line); }
 .hz-mgrp .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 390px), 1fr)); gap: 12px; align-items: start; grid-auto-flow: dense; }
-@media (min-width: 860px) { .hz-mc.wide { grid-column: span 2; } }
+@media (min-width: 860px) { .hz-mc.wide { grid-column: span 2; } .hz-mc.full { grid-column: 1 / -1; } }
 
 /* one model */
 .hz-mc { gap: 10px; min-width: 0; scroll-margin-top: 8px; }
 .hz-mc:focus { outline: none; }
 .hz-mc:focus-visible { outline: 2px solid var(--oil); outline-offset: 2px; }
-.hz-mc .mh { display: flex; align-items: baseline; justify-content: space-between; gap: 4px 10px; flex-wrap: wrap; }
+.hz-mc .mh { display: flex; align-items: baseline; justify-content: space-between; gap: 4px 10px; flex-wrap: wrap; position: relative; padding-right: 40px; }
+/* the sources button, top right of the card (as on the Households page); the list opens in the shared sheet */
+.hz-mc .mh .hz-i { position: absolute; top: -4px; right: 0; width: 32px; min-height: 32px; }
+#sheet .mf { font: 400 14px/1.3 var(--mono); color: var(--faint); overflow-wrap: anywhere; }
 .hz-mc h3 { font: 700 17px var(--pix); color: var(--oil-soft); letter-spacing: .4px; }
 .hz-mc .kind { font: 400 16px var(--mono); color: var(--muted); border: 1px dashed var(--line2); padding: 0 6px; letter-spacing: .5px; white-space: nowrap; }
 .hz-mc .asks { font-size: 14.5px; line-height: 1.45; color: var(--text); }
@@ -37,6 +45,8 @@
 .hz-mc .st { display: flex; flex-direction: column; gap: 3px; min-width: 0; padding: 8px 10px; background: var(--panel2);
   border: 2px solid var(--ink); box-shadow: inset 2px 2px 0 rgba(0, 0, 0, .3); }
 .hz-mc .st .v { font: 400 32px/1 var(--mono); color: var(--text); overflow-wrap: anywhere; }
+.hz-mc .st .v.pos { color: var(--ok); }
+.hz-mc .st .v.neg { color: #ff8a7a; }
 .hz-mc .st .v small { font-size: 19px; color: var(--muted); white-space: nowrap; }
 .hz-mc .st .l { font-size: 14px; line-height: 1.3; color: var(--text); }
 .hz-mc .st .n { font-size: 12.5px; line-height: 1.35; color: var(--muted); }
@@ -96,7 +106,8 @@
    Ours in amber, the experts in blue, the naive rule in grey, as in the skill bars above; markers differ by shape too. */
 .hz-mx { gap: 10px; scroll-margin-top: 8px; }
 .hz-mx:focus { outline: none; }
-.hz-mx .xh { display: flex; align-items: baseline; justify-content: space-between; gap: 4px 10px; flex-wrap: wrap; }
+.hz-mx .xh { display: flex; align-items: baseline; justify-content: space-between; gap: 4px 10px; flex-wrap: wrap; position: relative; padding-right: 40px; }
+.hz-mx .xh .hz-i { position: absolute; top: -4px; right: 0; width: 32px; min-height: 32px; }
 .hz-mx h2 { font: 700 19px var(--pix); color: var(--oil-soft); letter-spacing: .4px; }
 .hz-mx .kind { font: 400 16px var(--mono); color: var(--muted); border: 1px dashed var(--line2); padding: 0 6px; letter-spacing: .5px; white-space: nowrap; }
 .hz-mx .asks { font-size: 14.5px; line-height: 1.45; color: var(--text); max-width: 96ch; }

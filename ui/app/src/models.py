@@ -131,7 +131,7 @@ def levy():
     tails, years = find(OPM, r"about\s+(\d+)\s+days\s+beyond\s+4\s+sd\s+in\s+(\d+)\s+training\s+years", None)
     crisis6 = cell(OP, "6, crisis", "GARCH-CGMY in 90%")
     return {
-        "id": "levy", "group": "oil", "title": "Oil price distribution", "kind": "Lévy processes + GARCH", "wide": True,
+        "id": "levy", "group": "oil", "title": "Oil price distribution", "kind": "Lévy processes + GARCH", "wide": True, "full": True,
         "asks": "How big are Brent's moves over a day, a week and a month, and how often do the extremes come? "
                 "It gives the spread of prices the chain is fed, not their direction.",
         "stats": [
@@ -171,7 +171,7 @@ def flow():
     h0, h1 = find(HFC, r"within noise at every horizon from (\d+) to (\d+) trading days", None)
     small = find(CHAIN, r"loss under about (\d+) Hormuz points")
     return {
-        "id": "flow", "group": "oil", "title": "Lost flow → Brent", "kind": "Event study + regression",
+        "id": "flow", "group": "oil", "title": "Lost flow → Brent", "kind": "Event study + regression", "wide": True, "full": True,
         "asks": "When tankers stop crossing Hormuz, how much does Brent rise for each point of normal flow lost, and how fast does that fade?",
         "stats": [
             stat(p(peak, "e_mid"), f"of Brent per point of lost flow at the peak, day {peak['trading_day']}",
