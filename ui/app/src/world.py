@@ -102,6 +102,10 @@ SWAPS = [
      'const countries = topojson.feature(topo, topo.objects.countries).features;\n'
      '  for (const f of countries) if (f.properties.name === "Macedonia") f.properties.name = "North Macedonia";', 1),
     ('{ name: "Arctic Ocean", lng: 20, lat: 80, tier: 1, globeOnly: true }', '{ name: "Arctic Ocean", lng: 20, lat: 80, tier: 1 }', 1),
+    # The globe's lighting makes the bright harm scale glare: its countries are drawn a little darker than the
+    # flat map's (no-data land keeps its colour, so it stays apart from the sea)
+    ('    G3.polygonCapColor((f) => fillFor(f.properties.name))',
+     '    G3.polygonCapColor((f) => { const c = fillFor(f.properties.name); return c === NODATA ? c : d3.color(c).darker(0.9).formatHex(); })', 1),
     # no continent labels on either map: the oceans and seas stay labelled, the land reads for itself
     ('  const CONTS = [\n'
      '    { name: "North America", lng: -100, lat: 47 }, { name: "South America", lng: -60, lat: -14 },\n'
