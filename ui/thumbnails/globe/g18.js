@@ -1,4 +1,4 @@
-// 18. the blue logo, centred: as 14, with the tanker and its water centred under the title.
+// 18. the blue logo, centred: as 14, with the middle of the tanker under the middle of HORMUZ.
 function draw() {
   const sk = sky("#02030d", "#0a1030", 3, 360);
   const G = globe({ cx: 392, cy: 162, r: 140, rot: [-84, -20, 0], light: [-0.82, -0.42, 0.4] });
@@ -12,9 +12,9 @@ function draw() {
   // the title in the pour lettering, then the logo: the tanker on its own strip of pixel water
   const T = pixelTitle([{ s: "HORMUZ", x: 28, y: 114, size: 52 }, { s: "FLOW", x: 28, y: 180, size: 60, fill: "oil" }]);
   layer(T); glowOnly(T, 10, 0.18);
-  // centre the ship (its 14 cells) on the title's width, measured from the drawn lettering
+  // put the ship's middle under the middle of HORMUZ: its cream letter pixels only, not the outline or shadow
   const td = T.x.getImageData(0, 0, LW, LH).data; let x0 = LW, x1 = 0;
-  for (let y = 0; y < LH; y++) for (let x = 0; x < LW; x++) if (td[(y * LW + x) * 4 + 3]) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); }
+  for (let y = 0; y < 124; y++) for (let x = 0; x < LW; x++) { const i = (y * LW + x) * 4; if (td[i + 3] && td[i] > 150) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); } }
   const px = 26, mid = (x0 + x1 + 1) / 2 * S;
   logoSea(Math.round(mid - 7 * px), 790, px, "blue", {});
 }

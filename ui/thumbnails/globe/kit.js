@@ -261,10 +261,11 @@ const LOGO_SEA = {
   blue: { c: "#a9d2f5", w: "#2460a8", d: "#163a6c", f: "#e4f1ff" },
   gold: { c: "#fff6d6", w: "#f2bd2c", d: "#c88a16", f: "#fff1c9" },
 };
+// symmetric about the hull: 20 cells, three either side of the ship's 14
 const SEA_ROWS = [
-  ["cw.ffw..........wfc.w", 5],
-  [".wcwwwdwwcwwwwdwcwww.", 6],
-  ["..dwwdwwcwwdwwwdwwd..", 7],
+  ["cw.ff..........ff.wc", 5],
+  [".wcwwdwwcwwcwwdwwcw.", 6],
+  ["..dwwdwwcwwcwwdwwd..", 7],
 ];
 function logoSea(x, y, px, kind = "blue", o = {}) {
   const pal = LOGO_SEA[kind], ship = o.ship || P.oil;
