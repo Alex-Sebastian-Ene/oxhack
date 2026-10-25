@@ -103,3 +103,53 @@ def test_load_env_reads_dotenv_without_overriding(tmp_path, monkeypatch):
     assert cb.os.environ["BRIEF_TEST_C"] == "from-env"  # the environment wins
     monkeypatch.delenv("BRIEF_TEST_A")
     monkeypatch.delenv("BRIEF_TEST_B")
+
+
+INTERACTION_TEXT = {"id": "i1", "steps": [{"type": "user_input", "content": [{"type": "text", "text": "q"}]},
+                                           {"type": "thought", "signature": "s"},
+                                           {"type": "model_output", "content": [{"type": "text", "text": "- Steel is iron with carbon [1]."}]}]}
+INTERACTION_IMAGE = {"id": "i2", "steps": [{"type": "model_output", "content": [{"type": "image", "data": "iVBORw0KGgo=", "mime_type": "image/png"}]}]}
+
+
+def test_outputs_reads_interactions_and_generatecontent_shapes():
+    assert cb.outputs(INTERACTION_TEXT) == ("- Steel is iron with carbon [1].", None)
+    text, img = cb.outputs(INTERACTION_IMAGE)
+    assert text == "" and img["mime_type"] == "image/png"
+    text, img = cb.outputs({"candidates": [{"content": {"parts": [{"text": "hi"}, {"inlineData": {"data": "AAA", "mimeType": "image/png"}}]}}]})
+    assert text == "hi" and img["data"] == "AAA"
+
+
+def test_resource_asks_for_text_and_a_pixel_picture(tmp_path, monkeypatch):
+    monkeypatch.setattr(cb, "CACHE", tmp_path)
+    monkeypatch.setattr(cb, "FAKE", False)
+    calls = []
+    monkeypatch.setattr(cb, "interact", lambda model, text, key: calls.append((model, text)) or (INTERACTION_TEXT if model == cb.MODEL else INTERACTION_IMAGE))
+    out = cb.resource({"id": "steel", "name": "Crude steel", "facts": ["China made 52% of world steel in 2025"]}, "k")
+    assert out["text"].startswith("- Steel") and out["image"].startswith("data:image/png;base64,")
+    assert [m for m, _ in calls] == [cb.MODEL, cb.IMAGE_MODEL]
+    assert "[1] China made 52%" in calls[0][1] and "pixel-art" in calls[1][1] and "No text" in calls[1][1]
+    assert cb.resource({"id": "steel", "name": "Crude steel", "facts": ["China made 52% of world steel in 2025"]}, None)["cached"] is True
+    with pytest.raises(PermissionError):
+        cb.resource({"id": "urea", "name": "Urea"}, None)
+
+
+def test_country_profile_cites_only_our_facts(tmp_path, monkeypatch):
+    monkeypatch.setattr(cb, "CACHE", tmp_path)
+    monkeypatch.setattr(cb, "FAKE", False)
+    seen = []
+    monkeypatch.setattr(cb, "interact", lambda model, text, key: seen.append(text) or INTERACTION_TEXT)
+    out = cb.country({"iso3": "kor", "country": "South Korea", "facts": ["Jet fuel exports: 14% of world, rank 2 (2025)"]}, "k")
+    assert out["iso3"] == "KOR" and out["text"] and "[1] Jet fuel exports" in seen[0] and "Do not add numbers" in seen[0]
+    with pytest.raises(ValueError):
+        cb.country({"iso3": "KOR"}, "k")
+
+
+def test_fake_mode_is_labelled_and_needs_no_key(tmp_path, monkeypatch):
+    monkeypatch.setattr(cb, "CACHE", tmp_path)
+    monkeypatch.setattr(cb, "FAKE", True)
+    r = cb.resource({"id": "naphtha", "name": "Naphtha"}, None)
+    c = cb.country({"iso3": "JPN", "country": "Japan", "facts": ["a"]}, None)
+    assert "TEST ANSWER" in r["text"] and "TEST ANSWER" in c["text"] and r["model"].startswith("test")
+    import base64
+    raw = base64.b64decode(r["image"].split(",", 1)[1])
+    assert raw[:8] == b"\x89PNG\r\n\x1a\n" and raw[12:16] == b"IHDR"
