@@ -67,7 +67,7 @@ Everything is a cached snapshot bundled into the page. Nothing is fetched live.
 | Ship transits and tanker capacity | IMF PortWatch `Daily_Chokepoints_Data`, `chokepoint6` | 2026-10-24 (data to 2026-10-18) |
 | Producers, exporters, inputs, trade flows | Edward's `ui/globe/data/materials.js` (from `notes/materials/`) | 2026-10-24 |
 | Jet fuel, fertiliser, plastic price moves | Seb's Bayesian pass-through, `notes/macro-bayes-responses.csv` (commit `b6886cf`) | FRED, 2026-10-24 |
-| Steel, aluminium price moves | Seb's linear links, `notes/steel-aluminium-responses.csv` (branch `claude/upbeat-jones-ba5f1a`, commit `e0d122f`, not on main yet), posted on OXH-5 | FRED, 2026-10-24 |
+| Steel, aluminium price moves | Seb's linear links, `notes/steel-aluminium-responses.csv` (on main via PR #19; first posted on OXH-5) | FRED, 2026-10-24 |
 | Petrol, energy CPI, headline CPI steps | `notes/oil-chain-links.md` | FRED, see that note |
 | Economy tab: CPI and unemployment paths, US / UK / euro area | Seb's Bayesian responses, `notes/macro-bayes-responses.csv` (`experiments/macro_bayes.py`), read by `src/patch_economy.py` at build time | FRED/ONS/Eurostat to 2026-10, generated 2026-10-24 |
 | Cost to buyers | `notes/industry/`: airlines 31.4% fuel share (IATA), farming 40% fertiliser share (CIBC) | see that folder |
