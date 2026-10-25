@@ -40,9 +40,10 @@ python ui/app/src/build.py                      # writes ui/app/index.html
 python ui/app/src/build.py --fragment out.html  # also writes the body for a claude.ai artifact
 ```
 
-**Published copy:** GitHub Pages serves the `gh-pages` branch at https://alex-sebastian-ene.github.io/oxhack/
-(Settings → Pages → Deploy from a branch → `gh-pages`, `/ (root)`). That branch holds only this page; the
-`Pages` workflow (`.github/workflows/pages.yml`) copies `ui/app/index.html` there whenever it changes on main.
+**Published copy:** https://alex-sebastian-ene.github.io/oxhack/ (GitHub Pages, deployed from `main`). The app is
+served at `ui/app/`, and the root `index.html` forwards there, keeping any `#households`-style address. The
+`gh-pages` branch holds the same page on its own, kept up to date by the `Pages` workflow
+(`.github/workflows/pages.yml`), for if Pages is ever pointed at that branch instead.
 
 ## Sound and pictures
 
