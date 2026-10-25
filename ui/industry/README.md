@@ -73,7 +73,9 @@ Offline tests: `uv run --no-project --with pytest pytest -q tests/test_explain_s
 ## The model behind the numbers
 
 The page runs on Seb's recommended chain (`docs/chain.md`). **You set the lost Hormuz flow** (0 to 100 points of the
-pre-war 20 mb/d) in The shock card; the scenario menu sets its starting value. Everything else follows:
+pre-war 20 mb/d, as the IEA counts it) in The shock card; the scenario menu sets its starting value: the 2026 closure
+preset below for the 2026 scenarios, 0 for pre-war. Edward's estimate of the true flow is shown beside it for comparison
+only, because its ships are simulated. Everything else follows:
 
 - **Brent:** pre-war $70 times Seb's flow-premium curve per point of the IEA's lost strait flow
   (`notes/flow-premium-iea.csv`, OXH-9), averaged over the next 252 trading days, with its 90% band. At 82 points

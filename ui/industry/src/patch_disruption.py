@@ -7,7 +7,8 @@
 #    Industries tab.
 # 2. Where the slider starts: the flow-premium curve was fitted on PortWatch's AIS-visible flow (82 points lost in the
 #    2026 closure), so the 2026 scenarios start the slider there. Edward's estimate of the true flow (dark tankers
-#    included, on simulated ships) is shown beside it, not fed into the curve.
+#    included, on simulated ships) is shown beside it, not fed into the curve. patch_iea.py (OXH-9) restates this on the
+#    IEA's count, which includes dark transits: the 2026 scenarios open on its 2026 path.
 import pathlib, subprocess
 
 here = pathlib.Path(__file__).parent

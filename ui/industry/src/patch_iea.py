@@ -1,4 +1,4 @@
-# Runs last, after patch_reserves.py. The 2026 preset on the IEA's lost flow (OXH-9, docs/chain.md step 1).
+# Runs last, after patch_disruption.py. The 2026 preset on the IEA's lost flow (OXH-9, docs/chain.md step 1).
 # patch_chain.py reads the premium curve per point of the IEA's lost strait flow (notes/flow-premium-iea.csv). On that
 # count 82 points held for 12 months is harsher than 2026 was, so:
 # 1. "2026 closure" is no longer the slider at 82. It is the chain's replay of 2026 as the IEA counts it
@@ -9,6 +9,10 @@
 # 2. The release choice: reserves.py has not been restated on the IEA curve yet (notes/reserve-scenarios.csv is per
 #    point of PortWatch's trough). Until it is, "No release" and "Maximum" keep their premium's ratio to the 2026
 #    releases at the same lost flow, applied to the IEA curve, so no release never comes out cheaper than 2026's.
+# 3. Where the slider starts: patch_disruption.py starts the 2026 scenarios at 82 points "as AIS sees it", because the
+#    old curve was fitted on PortWatch's AIS-visible count. The IEA's count includes dark transits and ship-to-ship
+#    transfers, so the 2026 scenarios now open on the 2026 preset and the slider is worded for the IEA's count.
+#    Edward's true-flow estimate stays beside it, not fed into the curve, because its ships are simulated.
 # Data is read from notes/ at build time.
 import csv, datetime, json, math, pathlib, re, subprocess
 
@@ -64,11 +68,12 @@ tip = (f"The 2026 closure as the IEA counts it: {path[0]} points lost in March, 
 sub('            <button type="button" data-lost="82" aria-pressed="false">2026 closure · 82</button>\n',
     f'            <button type="button" data-path="iea2026" data-avg="{P26["avg"]}" data-txt="{path[0]} points lost in March, {path[-1]} by September" '
     f'aria-pressed="false" title="{tip}">2026 closure</button>\n')
-# the slider's unit line (patch_disruption.py, if present, words it for AIS-visible flow); kept for the held case
-u = re.findall(r'<b id="lost-v">(\d+)</b><span>([^<]*)</span>', s)
-assert len(u) == 1, u
-LOST_U = u[0][1]
-sub(f'<b id="lost-v">{u[0][0]}</b><span>{LOST_U}</span>', f'<b id="lost-v">{u[0][0]}</b><span id="lost-u">{LOST_U}</span>')
+# the slider's numbers on the IEA's count, not patch_disruption.py's AIS-visible one; the unit line is kept for the held case
+LOST_U = "points of normal flow lost, as the IEA counts it"
+sub('<b id="lost-v">82</b><span>points of normal flow lost, as AIS sees it</span>',
+    f'<b id="lost-v">{P26["avg"]}</b><span id="lost-u">{LOST_U}</span>')
+sub('max="100" step="1" value="82" aria-describedby="shock-explain">', f'max="100" step="1" value="{P26["avg"]}" aria-describedby="shock-explain">')
+sub("<span>million barrels a day getting through, AIS-visible</span>", "<span>million barrels a day getting through, as the IEA counts it</span>")
 sub('<span>a barrel, average over the next 12 months</span>', '<span id="brent-u">a barrel, average over the next 12 months</span>')
 sub('const st = { key: "aug2026", rel: "2026",', 'const st = { key: "aug2026", path26: false, rel: "2026",')
 
@@ -103,6 +108,17 @@ sub("  function setLost(v) {\n    st.lost = ", "  function setLost(v) {\n    st.
 sub('''  document.querySelectorAll("[data-lost]").forEach((b) => b.addEventListener("click", () => { setLost(Number(b.dataset.lost)); update(); }));''',
     '''  document.querySelectorAll("[data-lost]").forEach((b) => b.addEventListener("click", () => { setLost(Number(b.dataset.lost)); update(); }));
   document.querySelectorAll("[data-path]").forEach((b) => b.addEventListener("click", () => { setPath26(); update(); }));''')
+# the 2026 scenarios open on the 2026 preset, not at patch_disruption.py's 82 AIS-visible points
+sub("  const AIS_LOST = 82;   // PortWatch AIS-visible loss in the 2026 closure, the loss the flow-premium curve was fitted on\n", "")
+sub('''    // the curve was fitted on AIS-visible flow, 82 points lost in the 2026 closure; Edward's true-flow estimate is shown beside it
+    st.est = { ...D.scenarios[key].estimate.total, label: D.scenarios[key].label };
+    setLost(key === "prewar" ? 0 : AIS_LOST);''',
+    '''    // the curve counts the IEA's lost flow, dark transits included, so the 2026 scenarios open on its 2026 path;
+    // Edward's true-flow estimate is on simulated ships, so it is shown beside it, not fed into the curve
+    st.est = { ...D.scenarios[key].estimate.total, label: D.scenarios[key].label };
+    if (key === "prewar") setLost(0); else setPath26();''')
+sub("Shown for comparison: the price curve was fitted on AIS-visible flow, so the slider uses that measure.",
+    "Shown for comparison only: its ships are simulated, so the price uses the IEA's count, which includes dark tankers too.")
 
 # ---------------------------------------------------------------- what the shock card, the explainers and the sources say
 sub('    $("lost-v").textContent = st.lost;\n',
@@ -126,7 +142,9 @@ sub('      : `With <b>${st.lost}%</b> of Hormuz oil lost, prices in ${ECO_NAME[e
     '      : `${st.path26 ? "In the 2026 closure as the IEA counts it" : `With <b>${st.lost}%</b> of Hormuz oil lost`}, prices in ${ECO_NAME[eco]} end up')
 sub('`With ${st.lost}% of Hormuz flow lost (Brent about $${st.brent}), 12 months on.',
     '`${st.path26 ? "In the 2026 closure as the IEA counts it" : `With ${st.lost}% of Hormuz flow lost`} (Brent about $${st.brent}), 12 months on.')
-# the explainer's scenario line (its wording differs once patch_disruption.py has run)
+# the explainer's scenario line, reworded from patch_explain.py's AIS-visible count
+sub("${st.lost} points of normal Hormuz flow lost as AIS sees it (the reader's choice; the price curve was fitted on AIS-visible flow)",
+    "${st.lost} points of normal Hormuz flow lost as the IEA counts it, held for 12 months (the reader's choice)")
 s, n = re.subn(r"(  const scenFact = \(\) => `Scenario: )(\$\{st\.lost\} points of normal Hormuz flow lost[^`]*?\)), so",
                lambda g: g.group(1) + "${st.path26 ? `the 2026 closure as the IEA counts it (${pathTxt()}; ${st.lost} on average)` : `" + g.group(2) + "`}, so", s, count=1)
 assert n == 1, "scenFact"
