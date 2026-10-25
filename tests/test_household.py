@@ -87,7 +87,7 @@ def test_real_pay_scenarios(tmp_path):
 def test_group_scenarios_weight_items_by_spending_shares():
     # one group spending 20% on food, 10% on energy, 5% on motor fuel, 5% on mortgage interest (held flat), 65% on the rest
     w = pd.DataFrame([(2026, "G", c, "", v) for c, v in (("01", 200), ("04", 150), ("04.5", 100), ("07", 100), ("07.2.2", 50),
-                                                         ("04.2a", 50), ("12", 650 - 50))],
+                                                         ("04.2a", 50), ("12", 550))],  # divisions 01+04+07+12 = 1000
                      columns=["period", "group", "code", "category", "value"])
     items = {"uk_bread": 0.02, "uk_meat": 0.02, "uk_dairy": 0.01, "uk_oils_fats": 0.0, "uk_fruit": 0.01, "uk_vegetables": 0.01,
              "uk_sugar": 0.01, "uk_electricity": 0.02, "uk_gas": 0.02, "uk_fuel": 0.03, "uk_restaurants": 0.1, "uk_rest": 0.7}
