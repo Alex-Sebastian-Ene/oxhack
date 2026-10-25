@@ -33,7 +33,10 @@
 .hz-mc { gap: 10px; min-width: 0; scroll-margin-top: 8px; }
 .hz-mc:focus { outline: none; }
 .hz-mc:focus-visible { outline: 2px solid var(--oil); outline-offset: 2px; }
-.hz-mc .mh { display: flex; align-items: baseline; justify-content: space-between; gap: 4px 10px; flex-wrap: wrap; }
+.hz-mc .mh { display: flex; align-items: baseline; justify-content: space-between; gap: 4px 10px; flex-wrap: wrap; position: relative; padding-right: 40px; }
+/* the sources button, top right of the card (as on the Households page); the list opens in the shared sheet */
+.hz-mc .mh .hz-i { position: absolute; top: -4px; right: 0; width: 32px; min-height: 32px; }
+#sheet .mf { font: 400 14px/1.3 var(--mono); color: var(--faint); overflow-wrap: anywhere; }
 .hz-mc h3 { font: 700 17px var(--pix); color: var(--oil-soft); letter-spacing: .4px; }
 .hz-mc .kind { font: 400 16px var(--mono); color: var(--muted); border: 1px dashed var(--line2); padding: 0 6px; letter-spacing: .5px; white-space: nowrap; }
 .hz-mc .asks { font-size: 14.5px; line-height: 1.45; color: var(--text); }
