@@ -12,7 +12,8 @@ fitted on TRAIN and then used, unchanged, to predict TEST (out-of-sample R^2 aga
 mean), so a link only counts if it carries over to years it never saw. The last table chains the
 fitted links for a 10% oil-price rise, which is what the "what if" slider needs.
 
-    uv run experiments/oil_chain.py   # fetches the series into data/raw/, writes notes/oil-chain-links.md
+    uv run experiments/oil_chain.py      # fetches the series into data/raw/, writes notes/oil-chain-links.md
+    uv run experiments/oil_chain.py cv   # blocked and forward k-fold, k = 8..16: notes/oil-chain-cv.md
 """
 
 from __future__ import annotations
@@ -27,6 +28,8 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parent.parent
 RAW = ROOT / "data" / "raw"
 OUT = ROOT / "notes" / "oil-chain-links.md"
+CV_OUT = ROOT / "notes" / "oil-chain-cv.md"
+FOLDS = range(8, 17)  # k for the fold-level split tests
 FRED_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv?id={}"
 TRAIN, TEST = ("1991-01-01", "2008-12-31"), ("2009-01-01", "2026-12-31")
 SHOCK = 0.10  # oil-price rise used for the chained example
@@ -110,30 +113,103 @@ def taylor(core_yoy: pd.Series, unrate: pd.Series, ff: pd.Series, era: tuple[str
             "se_pi": np.sqrt(cov[1, 1]), "b_u": b[2], "se_u": np.sqrt(cov[2, 2])}
 
 
-def main() -> None:
+def blocked_folds(n: int, k: int, purge: int):
+    """k contiguous test blocks over n rows; training is every other row except `purge` either side."""
+    edges = np.linspace(0, n, k + 1).round().astype(int)
+    for lo, hi in zip(edges[:-1], edges[1:]):
+        test = np.zeros(n, bool)
+        test[lo:hi] = True
+        train = np.ones(n, bool)
+        train[max(0, lo - purge):hi + purge] = False
+        yield train, test
+
+
+def cv_link(spec: dict, k: int, forward: bool = False) -> dict:
+    """Cross-validate one link over its whole window with k blocks.
+
+    Blocked: each block is held out once and the link is fitted on all other blocks, minus a gap of
+    `lags` months either side so lagged regressors cannot straddle the cut. Forward: each block is
+    predicted from the blocks before it only (skipping blocks with under 3 years of past data).
+    """
+    window = (spec.get("train", TRAIN)[0], spec.get("test", TEST)[1])
+    d = design(spec["y"], spec["regressors"], spec["lags"]).loc[window[0]:window[1]]
+    cols = [c for c in d.columns if c != "y"]
+    idx = [i for i, c in enumerate(cols) if c.startswith(spec.get("cumulate", "oil") + "_")]
+    X, y = d[cols].values, d["y"].values
+    purge = max(spec["lags"], 1)
+    effects, r2, sse, sst = [], [], 0.0, 0.0
+    for train, test in blocked_folds(len(y), k, purge):
+        if forward:
+            train = np.arange(len(y)) < np.argmax(test) - purge
+            if train.sum() < 36:
+                continue
+        b = np.linalg.lstsq(X[train], y[train], rcond=None)[0]
+        e = np.sum((y[test] - X[test] @ b) ** 2)
+        s = np.sum((y[test] - y[train].mean()) ** 2)
+        effects.append(b[idx].sum() * spec["scale"])
+        r2.append(1 - e / s)
+        sse, sst = sse + e, sst + s
+    return {"k": k, "effects": np.array(effects), "r2": np.array(r2), "pooled_r2": 1 - sse / sst,
+            "window": f"{d.index[0]:%Y-%m}..{d.index[-1]:%Y-%m}", "months": len(y)}
+
+
+def full_window_effect(spec: dict) -> tuple[float, float]:
+    """The link fitted on its whole window, with a Newey-West standard error."""
+    window = (spec.get("train", TRAIN)[0], spec.get("test", TEST)[1])
+    d = design(spec["y"], spec["regressors"], spec["lags"]).loc[window[0]:window[1]]
+    cols = [c for c in d.columns if c != "y"]
+    idx = [i for i, c in enumerate(cols) if c.startswith(spec.get("cumulate", "oil") + "_")]
+    b, cov = ols_hac(d["y"].values, d[cols].values, spec["hac_lag"])
+    ones = np.ones(len(idx))
+    return b[idx].sum() * spec["scale"], float(np.sqrt(ones @ cov[np.ix_(idx, idx)] @ ones)) * spec["scale"]
+
+
+def cv_taylor(core_yoy: pd.Series, unrate: pd.Series, ff: pd.Series, k: int) -> np.ndarray:
+    """The Taylor-rule inflation coefficient from each blocked fold (months above the lower bound)."""
+    d = pd.DataFrame({"y": ff, "const": 1.0, "pi": core_yoy.shift(1), "u": unrate.shift(1)}).dropna()
+    d = d.loc["1991-01-01":]
+    d = d[d["y"] > 0.5]
+    X, y = d[["const", "pi", "u"]].values, d["y"].values
+    return np.array([np.linalg.lstsq(X[tr], y[tr], rcond=None)[0][1] for tr, _ in blocked_folds(len(y), k, 12)])
+
+
+def load_inputs():
     data, fetched = {}, {}
     for sid in SERIES:
         data[sid], fetched[sid] = fetch(sid)
     dl = {k: np.log(v).diff() for k, v in data.items() if k in ("DCOILBRENTEU", "GASREGW", "CPIENGSL",
                                                                    "CPIAUCSL", "CPILFESL")}
-    oil = dl["DCOILBRENTEU"]
-    core_yoy = 100 * np.log(data["CPILFESL"]).diff(12)
-    pct = SHOCK * 100
+    return data, fetched, dl
 
-    links = [
-        link("Oil -> petrol price", dl["GASREGW"], {"oil": oil}, 2, 6, pct, "% for a 10% oil rise, within 2 months"),
-        link("Oil -> energy CPI", dl["CPIENGSL"], {"oil": oil}, 2, 6, pct, "% for a 10% oil rise, within 2 months"),
-        link("Oil -> headline CPI", dl["CPIAUCSL"], {"oil": oil}, 12, 12, pct, "% (pp of price level) within 12 months"),
-        link("Oil -> core CPI", dl["CPILFESL"], {"oil": oil}, 12, 12, pct, "% (pp of price level) within 12 months"),
-        link("Oil -> 5y inflation expectations", data["T5YIE"].diff(), {"oil": oil}, 1, 6, SHOCK,
-             "pp for a 10% oil rise", train=("2003-01-01", "2013-12-31"), test=("2014-01-01", "2026-12-31")),
-        link("10y Treasury -> mortgage rate", data["MORTGAGE30US"].diff(),
-             {"ten": data["DGS10"].diff(), "ff": data["FEDFUNDS"].diff()}, 1, 6, 1.0,
-             "pp per 1 pp move in the 10y yield, within a month", cumulate="ten"),
-        link("Fed funds -> mortgage rate (holding 10y)", data["MORTGAGE30US"].diff(),
-             {"ten": data["DGS10"].diff(), "ff": data["FEDFUNDS"].diff()}, 1, 6, 1.0,
-             "pp per 1 pp move in fed funds, within a month", cumulate="ff"),
+
+def link_specs(data: dict, dl: dict) -> list[dict]:
+    """The household chain: one dict of `link()` arguments per link."""
+    oil, pct = dl["DCOILBRENTEU"], SHOCK * 100
+    rates = {"ten": data["DGS10"].diff(), "ff": data["FEDFUNDS"].diff()}
+    month2, year = "% for a 10% oil rise, within 2 months", "% (pp of price level) within 12 months"
+    return [
+        dict(name="Oil -> petrol price", y=dl["GASREGW"], regressors={"oil": oil}, lags=2, hac_lag=6,
+             scale=pct, unit=month2),
+        dict(name="Oil -> energy CPI", y=dl["CPIENGSL"], regressors={"oil": oil}, lags=2, hac_lag=6,
+             scale=pct, unit=month2),
+        dict(name="Oil -> headline CPI", y=dl["CPIAUCSL"], regressors={"oil": oil}, lags=12, hac_lag=12,
+             scale=pct, unit=year),
+        dict(name="Oil -> core CPI", y=dl["CPILFESL"], regressors={"oil": oil}, lags=12, hac_lag=12,
+             scale=pct, unit=year),
+        dict(name="Oil -> 5y inflation expectations", y=data["T5YIE"].diff(), regressors={"oil": oil},
+             lags=1, hac_lag=6, scale=SHOCK, unit="pp for a 10% oil rise",
+             train=("2003-01-01", "2013-12-31"), test=("2014-01-01", "2026-12-31")),
+        dict(name="10y Treasury -> mortgage rate", y=data["MORTGAGE30US"].diff(), regressors=rates, lags=1,
+             hac_lag=6, scale=1.0, unit="pp per 1 pp move in the 10y yield, within a month", cumulate="ten"),
+        dict(name="Fed funds -> mortgage rate (holding 10y)", y=data["MORTGAGE30US"].diff(), regressors=rates,
+             lags=1, hac_lag=6, scale=1.0, unit="pp per 1 pp move in fed funds, within a month", cumulate="ff"),
     ]
+
+
+def main() -> None:
+    data, fetched, dl = load_inputs()
+    core_yoy = 100 * np.log(data["CPILFESL"]).diff(12)
+    links = [link(**spec) for spec in link_specs(data, dl)]
     rules = [taylor(core_yoy, data["UNRATE"], data["FEDFUNDS"], era) for era in
              (("1991-01-01", "2008-12-31"), ("2016-01-01", "2026-12-31"))]
 
@@ -203,5 +279,90 @@ def write_report(links, rules, fetched, data, headline, core, fed, fed_se, by) -
     print("\n".join(out))
 
 
+def verdict(blocked: dict, effects: np.ndarray, r2: np.ndarray, sign: float) -> str:
+    pooled = np.array([res["pooled_r2"] for res in blocked.values()])
+    same = np.mean(np.sign(effects) == np.sign(sign))
+    if pooled.min() > 0 and np.mean(r2 > 0) >= 0.8 and same >= 0.9:
+        return "**Holds** at every k"
+    if pooled.min() > 0:
+        return "Predicts on average, but not in every fold"
+    if pooled.max() > 0:
+        return "Depends on k"
+    return "**Fails**: never beats a constant"
+
+
+def run_cv() -> None:
+    data, fetched, dl = load_inputs()
+    core_yoy = 100 * np.log(data["CPILFESL"]).diff(12)
+    summary, per_k = [], []
+    for spec in link_specs(data, dl):
+        blocked = {k: cv_link(spec, k) for k in FOLDS}
+        forward = {k: cv_link(spec, k, forward=True) for k in FOLDS}
+        effects = np.concatenate([res["effects"] for res in blocked.values()])
+        r2 = np.concatenate([res["r2"] for res in blocked.values()])
+        full, full_se = full_window_effect(spec)
+        pb = [res["pooled_r2"] for res in blocked.values()]
+        pf = [res["pooled_r2"] for res in forward.values()]
+        lo, med, hi = np.quantile(effects, [0.05, 0.5, 0.95])
+        summary.append(
+            f"| {spec['name']} | {blocked[8]['window']} | {full:+.3f} ± {full_se:.3f} | "
+            f"{min(pb):+.2f} to {max(pb):+.2f} | {min(pf):+.2f} to {max(pf):+.2f} | "
+            f"{np.mean(r2 > 0):.0%} of {len(r2)} | {med:+.3f} [{lo:+.3f}, {hi:+.3f}] | "
+            f"{np.mean(np.sign(effects) == np.sign(full)):.0%} | {verdict(blocked, effects, r2, full)} |")
+        per_k.append(f"| {spec['name']} | " + " | ".join(f"{p:+.2f}" for p in pb) + " |")
+        print(f"{spec['name']}: blocked pooled R2 {min(pb):+.2f}..{max(pb):+.2f}", flush=True)
+    taylor_rows = []
+    for k in FOLDS:
+        b = cv_taylor(core_yoy, data["UNRATE"], data["FEDFUNDS"], k)
+        taylor_rows.append(f"| {k} | {np.median(b):+.2f} | {b.min():+.2f} to {b.max():+.2f} |")
+
+    ks = list(FOLDS)
+    out = [
+        "# Knock-on chain: fold-level split testing (k = 8 to 16)",
+        "",
+        f"_Generated by `experiments/oil_chain.py cv` on {datetime.now(UTC).date().isoformat()}. Same FRED "
+        "series and link definitions as `notes/oil-chain-links.md` (fetched "
+        + ", ".join(sorted(set(fetched.values()))) + "). Nothing here is synthetic._",
+        "",
+        "The single split in `notes/oil-chain-links.md` (train 1991–2008, test 2009–2026) depends on "
+        "where the cut falls. Here each link's whole window is cut into k contiguous blocks, for every "
+        f"k from {ks[0]} to {ks[-1]}, which gives {sum(ks)} folds per link.",
+        "",
+        "- **Blocked:** each block is held out once, and the link is fitted on all the other blocks. "
+        "A gap the length of the link's lags is left either side of the block, so lagged regressors "
+        "cannot straddle the cut.",
+        "- **Forward:** each block is predicted only from the blocks before it. Blocks with under 3 "
+        "years of past data are skipped. This is the time-honest version.",
+        "- **R²** is out of sample, against the training mean. **Pooled R²** combines all the folds "
+        "for one k. **Fold effects** are the link's summed lag coefficient in each fold, in the units "
+        "of `notes/oil-chain-links.md`.",
+        "",
+        "| Link | Window | Effect, whole window | Blocked pooled R², over k | Forward pooled R², over k | Folds with R² > 0 | Fold effects: median [5%, 95%] | Same sign as whole window | Verdict |",
+        "|---|---|---|---|---|---|---|---|---|",
+    ] + summary + [
+        "",
+        "The two mortgage rows are one regression on the 10-year yield and fed funds together, so they "
+        "share its R². Judge the fed-funds row by its effect, whose fold range straddles zero.",
+        "",
+        "Blocked pooled out-of-sample R² for each k:",
+        "",
+        "| Link | " + " | ".join(f"k={k}" for k in ks) + " |",
+        "|---|" + "---|" * len(ks),
+    ] + per_k + [
+        "",
+        "## Fed reaction across folds",
+        "",
+        "Taylor-rule coefficient on last month's core inflation, refitted with each blocked fold held "
+        "out (months with fed funds above 0.5%, 1991 onwards, 12-month gap either side).",
+        "",
+        "| k | Median coefficient | Range across folds |",
+        "|---|---|---|",
+    ] + taylor_rows + [""]
+    CV_OUT.write_text("\n".join(out), encoding="utf-8")
+    print(f"wrote {CV_OUT}")
+
+
 if __name__ == "__main__":
-    main()
+    import sys
+
+    run_cv() if sys.argv[1:] == ["cv"] else main()
