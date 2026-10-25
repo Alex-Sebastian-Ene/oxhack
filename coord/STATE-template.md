@@ -6,23 +6,26 @@ to the decisions log.
 
 ## Now
 
-- **Idea:** TODO (one sentence: who it helps and what they decide with it)
-- **Deadline:** TODO (submission lock, code freeze, submit-by)
-- **Next milestone:** TODO
+- **Idea:** Hormuz Flow estimates how much oil really gets through the Strait of Hormuz, dark tankers
+  included, and follows it to oil prices, inflation and the cost of living by country, so analysts,
+  policymakers, businesses and households can judge what a disruption means for them.
+- **Deadline:** see `coord/PROTOCOL.md` rule 9 (submission lock, code freeze, submit-by)
+- **Next milestone:** <the next thing the team ships, e.g. the pitch and demo run-through>
 
 ## Lanes
 
 ### seb
 
-- Working on: TODO (issue id)
-- Ready for others: TODO (paths, signatures, columns)
+- Working on: <issue id>
+- Ready for others: <paths, signatures, columns>
 - Blocked on: -
 
 <!-- Copy the block above for each handle in coord/team.toml. -->
 
 ## Interfaces
 
-TODO: same contract as coord/PROTOCOL.md "Interfaces". Change via this doc + a comment `@all`.
+The contract in `coord/PROTOCOL.md` "Interfaces" (the files each lane writes and others read). Change it
+via this doc + a comment `@all`.
 
 ## Decisions log
 

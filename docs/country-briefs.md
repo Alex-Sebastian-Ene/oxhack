@@ -116,9 +116,10 @@ page at another proxy.
   picture fails: the free tier has no quota for the image model (HTTP 429, limit 0), so "What is it?" now
   returns the text without a picture rather than failing. The `generateContent` call timed out at 60 s,
   so `/brief` (the globe's grounded brief) is still unconfirmed.
-- **Event rules on AI use.** AGENTS.md still has a TODO for the hackathon's AI-use and provenance
-  rules. If they restrict generated content in the demo, keep the button off.
-- **The published artifact** is a page on claude.ai, so it can't reach a localhost proxy. If we
-  want briefs there, the artifact runtime can ask Claude directly, with no key in the page. That
-  would be a separate, labelled path.
+- **Event rules on AI use.** The organisers had not published AI-use or provenance rules
+  (`Context/event-rules.md`). If they restrict generated content in the demo, build without
+  `ui/app/data/ai-panels.json`: the panels then show only their "on request" button.
+- **The published artifact** shows the answers baked into the page. It is a page on claude.ai, so
+  anything not baked can't reach a localhost service from there; the artifact runtime could ask Claude
+  directly, with no key in the page, as a separate, labelled path.
 - **Fact checking.** A next step is to flag any number in the brief that disagrees with our tables.

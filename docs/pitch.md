@@ -1,7 +1,8 @@
 # Pitch: context for anyone writing slides, the video or the demo script
 
-Draft. The product itself is in `docs/design.md`; the screens are in `docs/ui.md`. Judging
-criteria and time limits go in `Context/event-rules.md` once we have them (TODO).
+The product itself is in `docs/design.md`; the screens are in `docs/ui.md`. Judging criteria and time
+limits go in `Context/event-rules.md`; the organisers had not published them in anything we found by 25 Oct
+2026, so ask at the event.
 
 ## The hook we have now (verify first)
 
@@ -31,7 +32,26 @@ people's bills.
    and a household's monthly costs move, each with its source.
 5. **Why trust it.** Every number shows where it came from and when. Estimates show their range.
    Anything synthetic or cached is labelled.
-6. **Who it's for / what's next.** TODO once section 1 of `docs/design.md` names the user.
+6. **Who it's for / what's next.** Several users, one chain (`docs/design.md`, sections 1 and 2): energy
+   analysts and traders, journalists, policymakers, aid and government planners, businesses with
+   oil-linked costs, and households. Lead with one framing (below) and name the others in a line.
+   What's next:
+   - switch the strait map from its calibrated simulation to real observations (the collectors in
+     `experiments/strait_sources.py` are built; they need a network that reaches GFW and Copernicus);
+   - more chokepoints (Bab el-Mandeb is in; Suez, Malacca and Panama next);
+   - household groups beyond the UK, and alerts when the estimate moves;
+   - Gemini pictures for each resource once the key has image quota (`bake --images` is wired).
+
+## Framings, one line each
+
+- **The analyst's instrument:** the flow figures disagree by 3x; we count the ships nobody else counts,
+  show our range, and follow it to prices.
+- **The policymaker's dashboard:** one slider from the strait to inflation, emergency stocks and the
+  countries hit hardest, with every model tested against the experts.
+- **The household's translator:** what a closed strait does to your groceries, energy and transport,
+  country by country, with a source for every number.
+- **The open public good:** what paid terminals sell to traders, free, offline in one file, and honest
+  about what it doesn't know.
 
 ## Rules for pitch material
 
@@ -39,7 +59,10 @@ people's bills.
 - Don't claim live data in the video unless it was live when recorded; say "recorded on <date>".
 - "Ghost ships" is the hook word; also say "dark fleet / AIS switched off" once so experts follow.
 
-## Open questions
+## Decided (swap in Linear if the team prefers)
 
-- Audience framing: global (Fed and oil markets) or local (a UK or US household)?
-- Which real event do we replay as the example shock?
+- **Audience framing:** start global (the strait, the flow figures that disagree, Brent and inflation) and
+  land local (one country's groceries and bills, a UK household group). The framings above let the
+  speaker lean towards whoever is judging.
+- **The example shock:** the 2026 closure as the IEA counts it (89 points of normal flow lost in March,
+  47 by September), with the 2023–24 Red Sea disruption as the check on the price link.

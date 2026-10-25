@@ -1,7 +1,11 @@
 # UI: context for anyone building the front end
 
-Draft. What the product does is in `docs/design.md`; the story the demo has to tell is in
-`docs/pitch.md`. Stack: TODO.
+What the product does is in `docs/design.md`; the story the demo has to tell is in `docs/pitch.md`. Stack:
+one self-contained HTML page (`ui/app/index.html`) in plain JavaScript and CSS, no framework, built by
+`ui/app/src/build.py` from Eileen's industry page plus the layers in `ui/app/src/` (`ui/app/README.md` lists
+them). Maps and charts: D3 7.9 and TopoJSON on Natural Earth; the 3D globe: globe.gl. Pixel art and sound are
+made in code. Data from the Python pipeline in `experiments/` is inlined at build time, so the page needs no
+server and no network, and the same file is published as a claude.ai artifact.
 
 Sketches of every screen below, plus the dynamic features (live pulse, receipts, judge mode,
 satellite swipe, us vs the analysts and more), are on the design canvas; `docs/ideas.md` lists
@@ -29,7 +33,21 @@ them by letter.
 - Estimates show a range, not just one number.
 - Works on a laptop projector for the demo first; phone layout is a nice-to-have.
 
-## Open questions
+## As built
 
-- Map library and tile source (licence and offline fallback for the demo venue's Wi-Fi).
-- Which cost-of-living measures to show (petrol, energy bill, mortgage payment, CPI basket).
+- Strait map (screen 1) and flow panel (2): the Strait view, with seen and dark ships, each ship's card, the
+  estimate's 90% range and real PortWatch counts; the header's FLOW readout.
+- Knock-on chain (3) and what-if (4): "The shock" card on the World view, in four steps (lost flow, Brent,
+  the next 12 months, households), with presets for the 2026 closure, half and shut.
+- Added since: the World map's exposure, materials and countries, the Product and country cards, the
+  Households view and the Models view.
+
+## Decided
+
+- **Map library and tiles:** D3 and TopoJSON on Natural Earth for the flat map, globe.gl for the globe, all
+  bundled into the page, so the demo needs no Wi-Fi (licences in `ui/app/vendor/`).
+- **Cost-of-living measures:** US diesel at the pump, energy bills and overall inflation in the shock card;
+  for every country groceries, housing and energy, transport and all prices; the UK and euro area by basket
+  item; UK household groups on the Households view, mortgage holders among them. There is no mortgage-payment
+  figure: holding the 10-year yield, the Fed's rate has no direct effect on mortgage rates
+  (`docs/knock-on-validation.md`).
