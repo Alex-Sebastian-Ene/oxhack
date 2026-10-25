@@ -92,6 +92,9 @@ HS = (1, 3, 6, 12)  # horizons scored
 WARMUP = int(os.environ.get("COL_WARMUP", 500))
 SAMPLES = int(os.environ.get("COL_SAMPLES", 500))  # per chain
 DRAWS = 400  # posterior draws that go into the simulations
+# COL_DRAWS: keys (comma-separated) whose 1-3 month Lévy forecasts each fold also saves, every draw
+# and origin, to fold-<j>-draws.npz, for rescoring against first-published CPI and nowcasts
+SAVE_KEYS = [k for k in os.environ.get("COL_DRAWS", "").split(",") if k]
 VOL_FLOOR, NU_MIN, SIGMA_FLOOR = 0.05, 2.5, 0.05
 SHOCK = np.log(1.10)
 DAYS = 21  # trading days per simulated month
@@ -966,6 +969,11 @@ def run_fold(data: dict, j: int) -> dict:
         fc = {c: np.stack([p[c] for p in paths], 1) for c in CHANNELS}  # [N, O, H]
         S = with_composites(simulate(post, st, data, t0, fc, Dfc, zres, rng), data)
         res["modes"][f"forecast_{driver}"] = pack(score(S, actual), actual)
+        if driver == "GARCH-CGMY" and SAVE_KEYS:
+            RUNS.mkdir(parents=True, exist_ok=True)
+            np.savez_compressed(RUNS / f"fold-{j}{'-quick' if QUICK else ''}-draws.npz",
+                                S=S[:, :, :3][..., [OUT_KEYS.index(k) for k in SAVE_KEYS]].astype(np.float32),
+                                origins=np.array(res["origins"]), keys=np.array(SAVE_KEYS))
         B = np.cumsum(fc["x"], 2) * 100
         res["brent"][driver] = pack(score(B[..., None], brent_actual[..., None]), brent_actual[..., None])
     res["benchmarks"] = {k: pack(v, actual) for k, v in benchmarks(data, last, t0, actual, rng).items()}
