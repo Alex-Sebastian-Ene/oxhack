@@ -56,8 +56,12 @@ MAX_AGE = 10  # years: older "latest" figures describe another economy
 CT = "https://comtradeapi.un.org/public/v1/preview/C/A/HS?reporterCode={}&period={}&flowCode={}&partnerCode={}&cmdCode=TOTAL"
 CT_REF = "https://comtradeapi.un.org/files/v1/app/reference/{}.json"
 FLOWS = {"X": "exports", "M": "imports"}
+CT_PAUSE = 8  # seconds between preview calls: faster than one every few seconds draws HTTP 429
 # World, bunkers, free zones, special categories, areas not specified: not partners to rank
 NOT_PARTNERS = {0, 837, 838, 839, 899}
+CT_ISO = {"_KS": "KOS"}  # Comtrade's partner code where the map's differs
+# Partner areas named "..., nes" are trade a report doesn't assign to a named country (for many reporters "Other
+# Asia, nes" is mostly Taiwan). They stay in the ranking, with no flag, and their share is summed per flow.
 TOP = 5
 
 # Said in the app for map countries the sources don't cover
@@ -80,12 +84,13 @@ class QuotaError(RuntimeError):
     """Comtrade's public preview is out of calls until its quota refills (about an hour)."""
 
 
-def get_json(url: str, path: Path, ok=lambda d: True, tries: int = 6) -> tuple[object, str]:
+def get_json(url: str, path: Path, ok=lambda d: True, tries: int = 6, pause: float = 1.0) -> tuple[object, str]:
     """The parsed response, cached at `path`, and the day it was fetched. Retries (with back-off) on errors
-    and on answers `ok` rejects, such as Comtrade's rate-limit notes."""
+    and on answers `ok` rejects; waits `pause` seconds after each fetch."""
     if not path.exists():
         path.parent.mkdir(parents=True, exist_ok=True)
         for k in range(tries):
+            wait = 2 ** (k + 1)
             try:
                 with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=120) as resp:
                     body = resp.read()
@@ -96,13 +101,17 @@ def get_json(url: str, path: Path, ok=lambda d: True, tries: int = 6) -> tuple[o
             except urllib.error.HTTPError as e:
                 if e.code == 403:
                     raise QuotaError(f"{url}: {e.read()[:200]!r}") from e
+                if e.code in (400, 404):  # a bad request won't get better by asking again
+                    raise RuntimeError(f"{url}: {e}") from e
+                if e.code == 429:  # too fast for Comtrade's preview: back off for minutes, not seconds
+                    wait = 30 * 2 ** min(k, 3)
                 why = e
             except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as e:
                 why = e
             if k == tries - 1:
                 raise RuntimeError(f"{url}: {why}")
-            time.sleep(2 ** (k + 1))
-        time.sleep(1.2)  # Comtrade's public preview takes about one call a second
+            time.sleep(wait)
+        time.sleep(pause)
     return json.loads(path.read_text(encoding="utf-8")), collected(path)
 
 
@@ -152,7 +161,7 @@ def comtrade(countries: dict[str, str]) -> tuple[dict, dict]:
     totals, days = {}, set()
     for year in range(this_year - 1, this_year - 8, -1):
         for flow in FLOWS:
-            d, day = get_json(CT.format("", year, flow, 0), RAW / f"comtrade_world_{flow}_{year}.json", ok=has_data)
+            d, day = get_json(CT.format("", year, flow, 0), RAW / f"comtrade_world_{flow}_{year}.json", ok=has_data, pause=CT_PAUSE)
             days.add(day)
             assert d["count"] < 500, f"{year} {flow}: the preview's 500-row cap was hit"
             for r in filter(is_total, d["data"]):
@@ -164,7 +173,7 @@ def comtrade(countries: dict[str, str]) -> tuple[dict, dict]:
         if quota["out"] and not path.exists():
             raise QuotaError(quota["out"])
         try:
-            return get_json(url, path, ok=has_data)
+            return get_json(url, path, ok=has_data, pause=CT_PAUSE)
         except QuotaError as e:
             quota["out"] = str(e)
             raise
@@ -208,13 +217,16 @@ def comtrade(countries: dict[str, str]) -> tuple[dict, dict]:
             rows.sort(key=lambda r: -r["primaryValue"])
             total = totals[(rep, flow)][year]
             top = []
+            named = lambda r: ", nes" not in pname.get(r["partnerCode"], "")  # noqa: E731
             for r in rows[:TOP]:
-                p = piso.get(r["partnerCode"], "")
-                top.append({"iso3": p if re.fullmatch("[A-Z]{3}", p) else None, "on_map": p in countries,
-                            "name": countries[p] if p in countries else pname.get(r["partnerCode"], str(r["partnerCode"])),
+                p = CT_ISO.get(piso.get(r["partnerCode"], ""), piso.get(r["partnerCode"], ""))
+                ok = named(r) and re.fullmatch("[A-Z]{3}", p)  # "Europe EU, nes" carries Monaco's code
+                top.append({"iso3": p if ok else None, "on_map": bool(ok) and p in countries, "named": named(r),
+                            "name": countries[p] if ok and p in countries else pname.get(r["partnerCode"], str(r["partnerCode"])),
                             "value": r["primaryValue"], "share": round(r["primaryValue"] / total, 4)})
             out.setdefault(iso, {})[word] = {
                 "year": year, "total": total, "partners_listed": len(rows), "top": top,
+                "unnamed_share": round(sum(r["primaryValue"] for r in rows if not named(r)) / total, 4),
                 "indicator": "HS TOTAL (all commodities), primary value: exports FOB, imports CIF",
                 "source": "UN Comtrade", "reporter_code": rep, "collected": day}
     meta = {"name": "UN Comtrade", "url": "https://comtradeplus.un.org/", "api": CT.split("?")[0],
