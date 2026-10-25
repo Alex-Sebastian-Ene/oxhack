@@ -5,9 +5,11 @@ cannot reach most of these sites; anything marked *unconfirmed* needs checking a
 it goes on a slide.
 
 **Try it:** open `ui/strait/index.html` in a browser (no server needed) or the published page.
+Add `?strait=mandeb` for Bab el-Mandeb (section 7).
 **Code:** `experiments/strait_geo.py` (map), `experiments/strait_flow.py` (estimator, ghost score,
 simulator), `experiments/strait_sources.py` (real-data collectors), `experiments/strait_bundle.py`
-(one-file build). Tests: `tests/test_strait_flow.py`.
+(one-file build). The first two take `--strait mandeb`. Tests: `tests/test_strait_flow.py`,
+`tests/test_strait_mandeb.py`.
 
 ## 1. Can it be live? No, not for free
 
@@ -174,3 +176,81 @@ pitch: estimates of the shadow fleet run from about 670 (Lloyd's List) to over 1
 3. Feed real rows through `observations_to_sim` and publish a "cached, collected <date>" scenario
    alongside the simulated ones.
 4. Tune the ghost weights on a dozen hand-checked ships (Equasis, GISIS, MARS).
+
+## 7. Bab el-Mandeb
+
+Added 25 Oct 2026. The same model, for the strait between Yemen and Djibouti:
+
+    uv run experiments/strait_geo.py --strait mandeb    # ui/strait/data/mandeb-geo.json
+    uv run experiments/strait_flow.py --strait mandeb   # ui/strait/data/mandeb-scenarios.js, notes/strait-flow-mandeb.md
+
+`mandeb-scenarios.js` sets `window.STRAITS.mandeb`, with the same shape as `window.STRAIT` plus one
+key, `geo.lat0` (12.6), the latitude for turning degrees into km. A reader that hard-codes Hormuz's
+26.4 still works but draws the map about 8% too narrow. Hormuz output is unchanged; a test checks it.
+
+**Map.** View 42.5–44.5°E, 11.8–13.6°N. Two lanes run through the main channel west of Perim
+(Mayyun), where the traffic separation scheme is about 40 km long
+([CNES](https://cnes.fr/sites/default/files/drupal/202107/default/2021-035_6_expo_frontieres_babelmanded_a0-bd.pdf)).
+Southbound ships (out of the Red Sea, `outbound`) keep to the western lane and northbound ships
+(`inbound`) to the eastern one. North of the strait both lanes pass east of the Hanish islands, as
+the IMO scheme off Jabal Zuqar does (COLREG.2/Circ.52, 2003). The gate runs along 43.41°E from the
+Djibouti shore to Perim and closes the southern mouth of the main channel. It is a meridian, not the
+narrowest line, because the estimator and the map find crossings by the gate's meridian;
+`strait_geo.py` refuses a gate that is not one, and any lane or gate that touches land. Lanes are
+approximate, never for navigation.
+
+**What changes from Hormuz.**
+- Laden tankers cross both ways, so both lanes are counted. Hormuz counts only the outbound lane.
+- The radar corridor is the whole lane. The lanes span about 160 km east to west, inside one
+  250 km Sentinel-1 swath. Dark detections from both lanes are pooled into one Little's-law count.
+- A 48-hour window holds only about 5 to 23 laden tankers, so one draw can land far from its
+  published figure. The page shows the first seed whose true flow is within 10% of it. The choice
+  looks at the truth, never at the estimate.
+- Ghost behaviour uses the same mechanisms: AIS gaps across the gate (bridged), tankers never on
+  AIS (radar only) and spoofed jumps. Ships with AIS on may broadcast a security message such as
+  "ALL CHINESE CREW" instead of a destination, as reported in July 2026
+  ([Aaj TV](https://english.aaj.tv/news/330464718),
+  [Al-Monitor](https://al-monitor.com/originals/2026/07/tankers-keep-sailing-red-sea-despite-houthi-threats-saudi-oil-lifeline-faces)).
+
+**Scenarios** (all ships SYNTHETIC; results in `notes/strait-flow-mandeb.md`):
+
+| Scenario | Calibrated to | Dark tankers (gap + never on AIS) | Basis for the dark share |
+|---|---|---|---|
+| Pre-crisis 2023 | 8.7 mb/d, EIA (Vortexa data), 2023 average | 3% + 2% | Hormuz pre-war baseline; nothing published |
+| 2024 after the Houthi attacks | 4.0 mb/d, EIA (Vortexa data), Jan–Aug 2024 | 6% + 5% | about 10% of passings dark, Feb 2024 ([risk report via HKSOA](https://hksoa.org/wp-content/uploads/2024/02/MC2416-Annex-A-Monthly-Intelligence-Report-February-2024.pdf)) |
+| Q2 2026, Hormuz shut, Saudi crude via Yanbu | 8.1 mb/d, EIA STEO Aug 2026 | 6% + 4% | Kpler daily counts: 3 of 26 crossings dark on 7 Aug 2026 ([via Libnanews](https://live.libnanews.com/event/ev-1786145397634-a146)), 4 of 49 on one July day (news reports, article not pinned) |
+| Sep 2026, Houthi blockade of Saudi shipping | 2.56 mb/d, Kpler preliminary, Sep 2026 | 20% + 20% | assumption; one report says most ships cross with transponders off |
+
+On 40 fresh seeds per scenario, the 90% range covered the truth 39, 38, 39 and 34 times. Every
+miss was an over-estimate. When radar catches no dark tanker, the count is zero and its Jeffreys
+prior still adds about 0.5 mb/d, which matters most at 2.56 mb/d.
+
+**The knock-on from Hormuz.** With Hormuz shut from late February 2026, Saudi Arabia moved crude
+through its East-West pipeline to Yanbu on the Red Sea. Most of it sailed south through Bab
+el-Mandeb to Asia: no direct European deliveries were recorded in June–July
+([Wood Mackenzie](https://www.woodmac.com/press-releases/saudi-arabias-red-sea-crude-bypass-peaks-in-march-and-declines-41-by-june/)).
+Flow through the strait rose from about 5.4 mb/d before the war to 8.1 in Q2 2026 (EIA). The
+Houthis declared a blockade of Saudi shipping on 20 July 2026. By September the strait carried
+2.56 mb/d, and Saudi barrels had moved back to Hormuz (2.58 mb/d in September, Kpler via The National).
+
+**Published figures** (read from search-result snippets on 25 Oct 2026; eia.gov and the news sites
+could not be opened from our cloud session, so **verify at source**):
+
+| Figure | Value (mb/d) | Source |
+|---|---|---|
+| 2023 average | 8.7 | [EIA Today in Energy, Sep 2024](https://www.eia.gov/todayinenergy/detail.php?id=63446) (Vortexa data) |
+| 2023 in EIA's chokepoint table | 9.3 (Mar 2026 edition), 8.6 (Jun 2024 edition) | [EIA World Oil Transit Chokepoints](https://www.eia.gov/international/content/analysis/special_topics/World_Oil_Transit_Chokepoints) |
+| 1H 2023 | 8.8 | secondary summary of EIA data; the [Dec 2023 EIA article](https://www.eia.gov/todayinenergy/detail.php?id=61025) has it only in a chart |
+| Jan–Aug 2024 | 4.0 (Cape of Good Hope 6.0 → 9.2) | EIA Today in Energy, Sep 2024 |
+| 2024; 1H 2025 | 4.1; 4.2 | EIA chokepoint table, Mar 2026 edition |
+| Before the war; Q1 2026; Q2 2026 | 5.4; 5.6; 8.1 | EIA STEO Aug 2026, via [Il Foglio](https://www.ilfoglio.it/en/economy/2026/08/13/news/the-attack-on-bab-el-mandeb-and-the-crude-oil-shortage-paltrinieri-speaks-out--404739) and [Connaissance des Energies (AFP)](https://www.connaissancedesenergies.org/afp/le-detroit-de-bab-el-mandeb-lautre-passage-maritime-strategique-menace-260910) |
+| Jun–Jul 2026 | 7.4 | Kpler, via [Energy Connects](https://www.energyconnects.com/opinion/features/2026/july/bab-el-mandeb-tanker-attacks-challenge-alternative-oil-routes/) |
+| Aug 2026; Sep 2026 | 5.45; 2.56 | Kpler preliminary, via [The National, 29 Sep 2026](https://www.thenationalnews.com/business/energy/2026/09/29/oil-flows-through-strait-of-hormuz-rise-on-saudi-pivot-as-red-sea-traffic-plunges/) |
+| Yanbu crude exports | 3.8 average Mar–Jul 2026, 1.5 in Aug | Kpler, via Connaissance des Energies (AFP) |
+
+**Assumptions with no published source:** the split by direction (50% south in 2023 and 2024, 75%
+in Q2 2026, 60% in Sep 2026), the laden share each way (85% south, 75% north), the tanker size mix
+before 2026 (fewer VLCCs, since a laden VLCC is too deep for the Suez Canal), the crude share
+(45–60%) and the dark shares for Sep 2026. Real collectors for this strait are not written yet:
+`strait_sources.py` covers Hormuz only. PortWatch's id for Bab el-Mandeb is `chokepoint4`, already
+used by `experiments/flow_events.py`.

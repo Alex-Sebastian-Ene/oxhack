@@ -21,7 +21,7 @@ def bundle(fragment: bool) -> str:
     html = (UI / "index.html").read_text()
     css = (UI / "style.css").read_text()
     html = html.replace('<link rel="stylesheet" href="style.css">', f"<style>\n{css}</style>")
-    for src in ("data/scenarios.js", "app.js"):
+    for src in ("data/scenarios.js", "data/mandeb-scenarios.js", "app.js"):
         js = (UI / src).read_text().replace("</script", "<\\/script")
         html = html.replace(f'<script src="{src}"></script>', f"<script>\n{js}</script>")
     if fragment:
