@@ -23,6 +23,8 @@ At each forecast origin (the end of month t):
   band from 2019-2025 placebo days; checked out of sample against Bab el-Mandeb 2023-24). Each
   path draws its own place in the band. The premium also enters the GARCH update, so the band
   widens after the jump as it did in March 2026
+- emergency stocks: `release` scales the premium by experiments/reserves.py's factor ("2026", the
+  default, leaves it as fitted; "none" and "max" change how many of the lost barrels stocks replace)
 
     uv run experiments/oil_paths.py check   # backtest against the bootstrap paths -> notes/oil-paths-results.md
 """
@@ -41,6 +43,7 @@ import levy_fourier as lf
 import macro_bayes as mb
 import macro_data as md
 import macro_nn as mn
+import reserves as rv
 
 INNOV = {"cgmy": ("GARCH-CGMY", "levy"), "t": ("GARCH-Student-t", "student")}
 N_PATHS = mb.DRAWS
@@ -90,25 +93,27 @@ def premium_curve() -> tuple[np.ndarray, np.ndarray, np.ndarray, str]:
             f"notes/flow-premium.csv (generated {df['generated'].iloc[0]})")
 
 
-def premium(lost: float, days: int, z: np.ndarray) -> np.ndarray:
+def premium(lost: float, days: int, z: np.ndarray, release: str = "2026") -> np.ndarray:
     """Log premium on Brent on trading days 1..days for `lost` points of Hormuz flow lost for the
     whole path, one row per path [len(z), days]. Path i sits at standard-normal score z[i] of the
     CSV's 90% band on every day (a split normal around e_mid, never below 0), so a path is a high-
-    or a low-premium world throughout; days past the end of the CSV keep its last row."""
+    or a low-premium world throughout; days past the end of the CSV keep its last row. release:
+    the emergency-stock policy (reserves.factor); "2026" is the curve as fitted."""
     lo, mid, hi, _ = premium_curve()
     d = np.minimum(np.arange(days), len(mid) - 1)
     lo, mid, hi = lo[d], mid[d], hi[d]
     z = np.asarray(z, float)[:, None]
     e = np.where(z >= 0, mid + z * (hi - mid) / Z90, mid + z * (mid - lo) / Z90)
-    return lost * np.maximum(e, 0.0)
+    f = 1.0 if release == "2026" or not lost else rv.factor(lost, release, days)
+    return lost * np.maximum(e, 0.0) * f
 
 
 def monthly_paths(prices: pd.Series, months: pd.DatetimeIndex, n: int, rng, innov: str = "cgmy",
-                  drift: np.ndarray | None = None, lost: float = 0.0) -> np.ndarray:
+                  drift: np.ndarray | None = None, lost: float = 0.0, release: str = "2026") -> np.ndarray:
     """Monthly log changes of the mean Brent price in the 12 months after each origin month
     [n, len(months), 12], from daily GARCH-Lévy paths. drift: [len(months), 12] expected monthly
     log changes added to the paths (the futures curve); lost: points of Hormuz flow lost from the
-    day after the origin (scenario)."""
+    day after the origin (scenario); release: the emergency-stock policy (premium)."""
     logp = np.log(prices)
     r = logp.diff().dropna()
     out = np.zeros((n, len(months), mn.OIL_AHEAD))
@@ -124,7 +129,7 @@ def monthly_paths(prices: pd.Series, months: pd.DatetimeIndex, n: int, rng, inno
         count = np.bincount(month, minlength=mn.OIL_AHEAD)
         step = drift[i][month] / count[month] if drift is not None else np.zeros(len(days))
         z = rng.standard_normal(n) if lost else np.zeros(n)  # drawn only with a scenario: lost=0 paths are unchanged
-        prem = premium(lost, len(days), z)  # [n, days]
+        prem = premium(lost, len(days), z, release)  # [n, days]
         jump = np.diff(np.column_stack([np.zeros(n), prem]), axis=1)
         x, total = np.zeros(n), np.zeros((n, mn.OIL_AHEAD))  # x: log price relative to the last close
         u = rng.random((len(days), n))
