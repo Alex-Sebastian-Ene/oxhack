@@ -15,6 +15,8 @@ STEPS = [
     "patch_strait.py",   # Strait view on the same palette
     "patch_metals.py",   # Seb's OXH-5 steel and aluminium links
     "patch_panel.py",    # roomier right panel, country card in tabs (Overview, Industries, Trade)
+    "patch_shock.py",    # country card first; "The shock" card in three steps with quick prices and a plain-English line
+    "patch_economy.py",  # Economy tab: prices and unemployment for the US, UK or euro area (Seb's Bayesian responses)
     "patch_suppliers.py",  # Your suppliers: rate a company's own list (Gemini reads it, our numbers rate it)
 ]
 for step in STEPS:

@@ -19,6 +19,12 @@ Open `index.html` in a browser; it needs no server. It is the same page as the s
   - **Click a country:** it floats with a flag tag, a short pop-up gives the main numbers, and the right
     panel has the full analysis in three tabs: Overview (key numbers and the fuel-cost chart), Industries
     (cost impact by industry) and Trade (what it makes, where its inputs come from and where it ships).
+  - **Economy tab:** how consumer prices and unemployment respond over 36 months at the slider's Brent price,
+    for the US, the UK or the euro area (a euro-area country shows euro-area figures; other countries can compare
+    the three). Unemployment is drawn in grey and labelled "No reliable effect": its historical link with oil has
+    the demand sign, so the what-if keeps it at zero (`docs/macro-ensemble.md`).
+- **The shock card** sits under the country card and reads as three steps: what the scenario sets, the Brent price
+  you choose (with $70 / $109 / $140 quick prices), and what follows, with a plain-English sentence.
 
 ## Your suppliers (Gemini reads the list, our numbers rate it)
 
@@ -39,11 +45,8 @@ The page labels the rows as read by Gemini (model, time, cached or not) and asks
 file. Gemini never supplies a number. **Try a sample list** uses a made-up list and no AI, so the card also works in the
 published page.
 
-Uploading is off by default. To run it locally, in PowerShell:
-
-```powershell
-$env:GEMINI_API_KEY = "your-key"
-```
+Uploading is off by default. To run it locally, put the key in the repo's `.env` (git-ignored, the same file
+Edward's brief proxy reads) as a line `GEMINI_API_KEY=your-key`, or set it in the shell, then:
 
 ```powershell
 uv run ui/industry/extract_server.py
@@ -54,7 +57,7 @@ Then open `ui/industry/index.html?suppliers=1`, or `?suppliers=<url>` for a serv
 - **Key:** stays in the environment of the machine running the service, never in the page, git or Linear.
 - **Origins:** the service answers only pages from disk or localhost. A deployment adds its own address in
   `EXTRACT_ORIGINS`.
-- **Model:** `GEMINI_MODEL`, default `gemini-3.7-flash`.
+- **Model:** `GEMINI_MODEL`, default `gemini-3.8-flash`.
 - **Quota:** it uses no Google Search tool, so it runs on the plain free-tier quota. Each file is cached in
   `data/raw/extract/` (git-ignored), so the same file costs one request.
 
@@ -71,6 +74,7 @@ Everything is a cached snapshot bundled into the page. Nothing is fetched live.
 | Jet fuel, fertiliser, plastic price moves | Seb's Bayesian pass-through, `notes/macro-bayes-responses.csv` (commit `b6886cf`) | FRED, 2026-10-24 |
 | Steel, aluminium price moves | Seb's linear links, `notes/steel-aluminium-responses.csv` (branch `claude/upbeat-jones-ba5f1a`, commit `e0d122f`, not on main yet), posted on OXH-5 | FRED, 2026-10-24 |
 | Petrol, energy CPI, headline CPI steps | `notes/oil-chain-links.md` | FRED, see that note |
+| Economy tab: CPI and unemployment paths, US / UK / euro area | Seb's Bayesian responses, `notes/macro-bayes-responses.csv` (`experiments/macro_bayes.py`), read by `src/patch_economy.py` at build time | FRED/ONS/Eurostat to 2026-10, generated 2026-10-24 |
 | Cost to buyers | `notes/industry/`: airlines 31.4% fuel share (IATA), farming 40% fertiliser share (CIBC) | see that folder |
 
 - All price moves are 12 months after the move in Brent from $70 pre-war, scaled by ln(1+x)/ln(1.1).
