@@ -31,21 +31,26 @@ NAMES = {"steel": "Crude steel", "jet_fuel": "Jet fuel", "aluminium": "Primary a
          "fertiliser": "Nitrogen fertiliser", "polyethylene": "Polyethylene"}
 INPUT_COLOR = {"iron_ore": "#e07a5f", "coking_coal": "#9aa5b1", "scrap": "#c9b37e", "crude_oil": "#f0a23b",
                "bauxite": "#d9822b", "alumina": "#f2c6a0", "natural_gas": "#5cb8f0", "lng": "#5cb8f0",
-               "naphtha": "#b39ddb", "ethane": "#7fd3a8", "electricity": "#ffe08a", "urea": "#9fd36b"}
+               "naphtha": "#b39ddb", "ethane": "#7fd3a8", "electricity": "#ffe08a", "urea": "#9fd36b",
+               "polyethylene_imports": "#e7a6c8"}
+# Export tables an input borrows: gas trades by sea as LNG, and imported urea is the fertiliser trade.
+EXPORT_ALIAS = {"natural_gas": "lng", "urea": "fertiliser"}
 
-SEB = ("Seb's Bayesian pass-through model, notes/macro-bayes-responses.csv on seb/macro-nn "
+SEB = ("Seb's Bayesian pass-through model, notes/macro-bayes-responses.csv on seb/macro-nn, commit b6886cf "
        "(experiments/macro_bayes.py; FRED series fetched 2026-10-24)")
 # % price change 12 months after a one-off Brent move of +10% (up) or -10% (down): posterior mean and
-# 90% interval. Rises and falls differ, so the page uses the matching row and scales by
+# 90% interval of the AVERAGE effect (parameter uncertainty only; single outcomes vary more, per Seb on
+# OXH-3). Rises and falls differ, so the page uses the matching row and scales by
 # ln(1+x)/ln(1.1) or ln(1+x)/ln(0.9).
+INTERVAL = "90% interval of the average effect (parameter uncertainty); actual moves vary more"
 OIL = {
-    "jet_fuel": {"up": [8.17, 7.18, 9.12], "down": [-9.47, -10.47, -8.68], "series": "FRED DJFUELUSGULF (US Gulf jet)",
-                 "validated": True, "horizon": "12 months", "source": SEB,
+    "jet_fuel": {"up": [8.41, 7.32, 9.35], "down": [-9.37, -10.26, -8.57], "series": "FRED DJFUELUSGULF (US Gulf jet)",
+                 "validated": True, "horizon": "12 months", "source": SEB, "interval": INTERVAL,
                  "disruption": {"lo": 13, "hi": 15, "note": "event-based range from past supply shocks (OXH-4)"}},
-    "fertiliser": {"up": [6.30, 3.93, 8.86], "down": [-7.48, -9.80, -5.33], "series": "FRED PCU325311325311 (PPI nitrogen fertiliser)",
-                   "validated": True, "horizon": "12 months", "source": SEB},
-    "polyethylene": {"up": [2.32, 1.51, 3.14], "down": [-2.53, -3.27, -1.82], "series": "FRED PCU325211325211 (PPI plastics resin)",
-                     "validated": True, "horizon": "12 months", "source": SEB},
+    "fertiliser": {"up": [6.58, 4.11, 8.88], "down": [-6.41, -8.49, -4.44], "series": "FRED PCU325311325311 (PPI nitrogen fertiliser)",
+                   "validated": True, "horizon": "12 months", "source": SEB, "interval": INTERVAL},
+    "polyethylene": {"up": [2.30, 1.58, 3.05], "down": [-2.52, -3.18, -1.88], "series": "FRED PCU325211325211 (PPI plastics resin)",
+                     "validated": True, "horizon": "12 months", "source": SEB, "interval": INTERVAL},
     "steel": {"note": "requested from Seb (OXH-5)"},  # no fitted link yet
     "aluminium": {"note": "requested from Seb (OXH-5)"},
 }
@@ -89,7 +94,7 @@ def main() -> None:
     exports = {e["id"]: e for e in json.loads((NOTES / "exports.json").read_text())} if (NOTES / "exports.json").exists() else {}
 
     def export_block(eid, where):
-        e = exports.get({"natural_gas": "lng"}.get(eid, eid))  # gas trades by sea as LNG
+        e = exports.get(EXPORT_ALIAS.get(eid, eid))
         if not e:
             return None, []
         flows = [f for f in e.get("flows", []) if f.get("from") in codes and f.get("to") in codes]
