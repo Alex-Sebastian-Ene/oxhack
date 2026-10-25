@@ -36,7 +36,7 @@ INPUT_COLOR = {"iron_ore": "#e07a5f", "coking_coal": "#9aa5b1", "scrap": "#c9b37
 # Export tables an input borrows: gas trades by sea as LNG, and imported urea is the fertiliser trade.
 EXPORT_ALIAS = {"natural_gas": "lng", "urea": "fertiliser"}
 
-SEB = ("Seb's Bayesian pass-through model, notes/macro-bayes-responses.csv on seb/macro-nn, commit b6886cf "
+SEB = ("Seb's Bayesian pass-through model, notes/macro-bayes-responses.csv on seb/macro-nn, commit 6d6c83e "
        "(experiments/macro_bayes.py; FRED series fetched 2026-10-24)")
 # % price change 12 months after a one-off Brent move of +10% (up) or -10% (down): posterior mean and
 # 90% interval of the AVERAGE effect (parameter uncertainty only; single outcomes vary more, per Seb on

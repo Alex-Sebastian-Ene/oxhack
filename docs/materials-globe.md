@@ -46,7 +46,7 @@ Build: `uv run experiments/globe_geo.py`, `uv run experiments/globe_data.py`, th
   volume, rather than a share we can't back up. A share estimated from the table's own ratio is
   marked "≈".
 - **Oil → price** comes from Seb's Bayesian pass-through model (`notes/macro-bayes-responses.csv`
-  on `seb/macro-nn`, commit b6886cf): the 12-month response to a one-off ±10% Brent move. Its 90%
+  on `seb/macro-nn`, commit 6d6c83e): the 12-month response to a one-off ±10% Brent move. Its 90%
   interval covers the average effect only.
   Rises and falls use separate rows because they differ, scaled by ln(1+x)/ln(1.1) or
   ln(1+x)/ln(0.9). Steel and aluminium show "?" until Seb fits them (OXH-5).

@@ -1,6 +1,6 @@
 # Independent verification of the knock-on modelling results
 
-_Checked on 2026-10-24 against branch `seb/macro-nn` at commit `ed727f5`. Model code was not changed. Inputs were
+_Checked on 2026-10-24 against branch `seb/macro-nn` at commit `eda796a`. Model code was not changed. Inputs were
 copied read-only from the main checkout: `data/raw/` (fetched 2026-10-24, 17:03 to 20:42 BST) and `runs/macro/`
 and `runs/levy/`. The run files are: v1 folds `fold-*.json` (Iridis job 1971341, finished 2026-10-24 16:22 UTC);
 `bayes-own-fold-*.json` (generated 20:17 to 20:27 UTC); `bayes-fold-*.json` (19:59 to 20:05 UTC); and
@@ -261,7 +261,7 @@ Inside the 90% band: **Bayes own-vol what-if 12/15, Bayes own-vol forecast 12/15
    takes the realised path. The forecast mode (Bayes only) takes a block bootstrap of training-month Brent changes,
    scaled to OVX and centred on the WTI futures slope (`macro_bayes.py:258-280`). **The Lévy model from step 2 is
    not used anywhere in the knock-on code.** The `oil_paths.py` / `macro_chain.py` that would connect them are not
-   committed: `seb/levy-chain` is at `ed727f5`, the same commit as `seb/macro-nn`. `macro_chain.py` folds were
+   committed: `seb/levy-chain` is at `eda796a`, the same commit as `seb/macro-nn`. `macro_chain.py` folds were
    running on this machine while this check ran, so that link is in progress, not scored here.
 
 **Validated out of sample:**

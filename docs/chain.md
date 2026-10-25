@@ -134,7 +134,7 @@ Run on Iridis: job 1972767 for the folds, 1972803 for the report, 1972768 for th
 
 ## Independent verification
 
-A separate audit is in `notes/verification.md` on branch `claude/silly-fermat-ac28f6`, with its scripts in `notes/verification/`. It found:
+A separate audit is in `notes/verification.md` on branch `seb/knock-on-verification`, with its scripts in `notes/verification/`. It found:
 
 - **No leakage.** Six index and perturbation checks: training ends before each test block; standardisation and early stopping use training months only; no input contains its own target; the simulators read published months only; the what-if path starts the month after the start point. Publication lags leave at most one series-month per fold exposed, which is negligible.
 - **Exact reproduction.** Every skill, coverage and Diebold–Mariano number in the notes reproduces from the run files.
