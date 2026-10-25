@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import json
 import sys
+import time
 from datetime import UTC, datetime
 
 import numpy as np
@@ -50,14 +51,16 @@ GEO_ISO3 = {"AL": "ALB", "AT": "AUT", "BE": "BEL", "BA": "BIH", "BG": "BGR", "HR
             "ME": "MNE", "NL": "NLD", "MK": "MKD", "NO": "NOR", "PL": "POL", "PT": "PRT", "RO": "ROU", "RS": "SRB",
             "SK": "SVK", "SI": "SVN", "ES": "ESP", "SE": "SWE", "CH": "CHE", "TR": "TUR", "UK": "GBR", "US": "USA"}
 CT = ("https://comtradeapi.un.org/public/v1/preview/C/A/HS?reporterCode=&period={year}&partnerCode={partners}"
-      "&cmdCode=2709,2710&flowCode={flow}")
+      "&cmdCode={cmd}&flowCode={flow}")
 CT_REPORTERS = "https://comtradeapi.un.org/files/v1/app/reference/Reporters.json"
+CMDS = (2709, 2710)  # crude, refined products
 # the Gulf producers whose oil exports pass the strait (Oman's terminals are outside it), Comtrade codes
 GULF = {682: "Saudi Arabia", 368: "Iraq", 784: "United Arab Emirates", 414: "Kuwait", 634: "Qatar", 48: "Bahrain", 364: "Iran"}
-# the preview API returns at most 500 rows, so the seven partners go in two calls
-GULF_CALLS = [(682, 784), (368, 414, 634, 48, 364)]
+# the preview API returns at most 500 rows, so one product and a few partners per call
+GULF_CALLS = [(682, 784), (368, 414), (634, 48, 364)]
 YEARS = (2024, 2023)
 PREVIEW_CAP = 500
+PAUSE = 2.0  # seconds between calls to the public preview
 
 
 def today() -> str:
@@ -112,14 +115,15 @@ def fuel_section() -> dict:
 
 
 # ------------------------------------------------------------------------------------------------- trade
-def comtrade(year: int, partners: str, flow: str) -> list[dict]:
-    path = md._get(CT.format(year=year, partners=partners, flow=flow), RAW / f"oil_{flow}_{partners.replace(',', '-')}_{year}.json")
+def comtrade(year: int, partners: str, flow: str, cmd: int) -> list[dict]:
+    path = RAW / f"oil_{flow}_{cmd}_{partners.replace(',', '-')}_{year}.json"
+    if not path.exists():
+        md._get(CT.format(year=year, partners=partners, flow=flow, cmd=cmd), path)
+        time.sleep(PAUSE)
     body = json.loads(path.read_text(encoding="utf-8"))
-    if "data" not in body:  # quota or error message: don't keep it in the cache
+    if "data" not in body or body.get("count", 0) >= PREVIEW_CAP:  # quota, error or truncated: don't cache it
         path.unlink()
-        sys.exit(f"Comtrade: {body}")
-    if body.get("count", 0) >= PREVIEW_CAP:
-        sys.exit(f"Comtrade returned the preview cap of {PREVIEW_CAP} rows for {path.name}: split the call")
+        sys.exit(f"Comtrade {path.name}: {body.get('message') or body.get('error') or f'{PREVIEW_CAP} rows, split the call'}")
     # keep the reporter-level totals: all transport modes, all customs procedures, no second partner
     return [r for r in body["data"] if r.get("partner2Code", 0) == 0 and r.get("motCode", 0) == 0
             and r.get("customsCode", "C00") == "C00" and r.get("primaryValue")]
@@ -143,15 +147,15 @@ def trade_profile(imp: float, exp: float, gulf_by: dict[str, float]) -> dict:
 
 def trade_section() -> dict:
     ref = json.loads(md._get(CT_REPORTERS, RAW / "reporters.json").read_text(encoding="utf-8"))["results"]
-    iso = {r["reporterCode"]: r["reporterCodeIsoAlpha3"].strip() for r in ref}
+    iso = {r["reporterCode"]: r["reporterCodeIsoAlpha3"].strip() for r in ref if not r.get("isGroup")}
     out = {}
     for year in YEARS:
-        imp = sum_by_reporter(comtrade(year, "0", "M"))
-        exp = sum_by_reporter(comtrade(year, "0", "X"))
-        gulf_rows = [r for group in GULF_CALLS for r in comtrade(year, ",".join(map(str, group)), "M")]
+        imp = sum_by_reporter([r for cmd in CMDS for r in comtrade(year, "0", "M", cmd)])
+        exp = sum_by_reporter([r for cmd in CMDS for r in comtrade(year, "0", "X", cmd)])
+        gulf_rows = [r for cmd in CMDS for group in GULF_CALLS for r in comtrade(year, ",".join(map(str, group)), "M", cmd)]
         for rep, total in imp.items():
             code = iso.get(rep)
-            if not code or code in out or rep in GULF and total <= 0:
+            if not code or code in out:  # 2024 first; 2023 only for countries without a 2024 report
                 continue
             by: dict[str, float] = {}
             for r in gulf_rows:
