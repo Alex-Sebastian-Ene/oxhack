@@ -1,0 +1,29 @@
+name: Pages
+# GitHub Pages serves the gh-pages branch: the built app (ui/app/index.html) as index.html, nothing else.
+# This copies it there whenever main's build changes (python3 ui/app/src/build.py writes it; it needs no server).
+on:
+  push:
+    branches: [main]
+    paths: [ui/app/index.html]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: pages
+  cancel-in-progress: true
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Copy the app onto gh-pages
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          mkdir site && cp ui/app/index.html site/index.html && touch site/.nojekyll
+          cd site
+          git init -q -b gh-pages
+          git add -A
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -q -m "Pages: the app from ${GITHUB_SHA::7}"
+          git push -q -f "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" gh-pages
