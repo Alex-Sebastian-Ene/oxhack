@@ -85,9 +85,17 @@ SWAPS = [
      '      const m = mats[st.mat], iso = isoOf[name];\n'
      '      const row = (md, lab) => { const r = tableOf(m, md).find((x) => x.iso3 === iso); return `<span${md === st.mode ? "" : \' class="faint"\'}>${lab}: <span class="mono">${r ? shareTxt(r) : "not listed"}</span></span>`; };\n'
      '      return `<b>${iso ? flagImg(iso) + " " : ""}${escH(name === "United States of America" ? "United States" : name)}</b>${row("production", "Made")}${row("exports", "Shipped")}', 1),
-    ('return `<b>${escH(name)}</b><span class="mono ${k.score',
-     'return `<b>${isoOf[name] ? flagImg(isoOf[name]) + " " : ""}${escH(name === "United States of America" ? "United States" : name)}</b><span class="mono ${k.score', 1),
-    # Flat map and globe show the same things: one tooltip for both (patch_countryoil.py builds it)
+    # One tooltip for the flat map and the globe (tipHtml): the flag, the cost of an oil cut-off in harm/gain colour,
+    # fuel, and prices and food where we have them. The flat map's tooltip used to build its own copy.
+    ('    const pr = COIL.prices[isoOf[name]], al = pr && pr.all && pr.all.now, fd = pr && pr.food && pr.food.now;\n'
+     '    t.innerHTML = `<b>${name}</b><span class="mono ${k.score > 0.5 ? "hurt" : k.score < -0.5 ? "gain" : ""}">${cutTxt(k)}</span>\n'
+     '      <span>Fuel <span class="mono">${pct(k.fuel)}${k.d.pt.own ? "" : " (pooled)"}</span></span>${al ? `<span>Prices <span class="mono">${pctP(al.v)}</span>, food <span class="mono">${fd ? pctP(fd.v) : "–"}</span> (${ymLabel(al.month)})</span>` : ""}`;\n',
+     '    t.innerHTML = tipHtml(name);\n', 1),
+    ('    return `<b>${escH(name)}</b><span class="mono">${cutTxt(k)}</span><span>Fuel <span class="mono">${pct(k.fuel)}${k.d.pt.own ? "" : " (pooled)"}</span></span>`;',
+     '    const pr = COIL.prices[isoOf[name]], al = pr && pr.all && pr.all.now, fd = pr && pr.food && pr.food.now;\n'
+     '    return `<b>${isoOf[name] ? flagImg(isoOf[name]) + " " : ""}${escH(name === "United States of America" ? "United States" : name)}</b>'
+     '<span class="mono ${k.score > 0.5 ? "hurt" : k.score < -0.5 ? "gain" : ""}">${cutTxt(k)}</span><span>Fuel <span class="mono">${pct(k.fuel)}${k.d.pt.own ? "" : " (pooled)"}</span></span>'
+     '${al ? `<span>Prices <span class="mono">${pctP(al.v)}</span>, food <span class="mono">${fd ? pctP(fd.v) : "–"}</span> (${ymLabel(al.month)})</span>` : ""}`;', 1),
     # Antarctica (and the French Southern lands) on the flat map too, and the flat map's "Macedonia" under the
     # globe's name, so it can be selected and found in our tables
     ('const countries = topojson.feature(topo, topo.objects.countries).features.filter((f) => f.properties.name !== "Antarctica" && f.properties.name !== "Fr. S. Antarctic Lands");',
@@ -102,7 +110,7 @@ SWAPS = [
     # tooltip that says so (the exposure model would otherwise score them as a generic importer)
     ('  function fillFor(name) { if (st.mat) return matShade(name);',
      '  const NOSCORE = new Set(["Antarctica", "Fr. S. Antarctic Lands"]);\n'
-     '  function fillFor(name) { if (NOSCORE.has(name)) return "#243049"; if (st.mat) return matShade(name);', 1),
+     '  function fillFor(name) { if (NOSCORE.has(name)) return NODATA; if (st.mat) return matShade(name);', 1),
     ('function tipHtml(name) {\n    if (st.mat) {',
      'function tipHtml(name) {\n    if (NOSCORE.has(name)) return `<b>${escH(name)}</b><span>No population: not scored</span>`;\n    if (st.mat) {', 1),
     ('  function select(name, anchor) {\n    st.sel = name && name === st.sel ? null : name;',

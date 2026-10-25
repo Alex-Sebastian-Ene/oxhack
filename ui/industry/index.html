@@ -1943,8 +1943,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
       return `<b>${iso ? flagImg(iso) + " " : ""}${escH(name === "United States of America" ? "United States" : name)}</b><span>${escH(m.short || m.name)} ${st.mode === "exports" ? "shipped" : "made"}: <span class="mono">${r ? shareTxt(r) : "not listed"}</span></span>${VIA[name] ? `<span>${VIA[name]}</span>` : ""}`;
     }
     const k = calc(name);
-    const pr = COIL.prices[isoOf[name]], al = pr && pr.all && pr.all.now, fd = pr && pr.food && pr.food.now;
-    return `<b>${escH(name)}</b><span class="mono ${k.score > 0.5 ? "hurt" : k.score < -0.5 ? "gain" : ""}">${cutTxt(k)}</span><span>Fuel <span class="mono">${pct(k.fuel)}${k.d.pt.own ? "" : " (pooled)"}</span></span>${al ? `<span>Prices <span class="mono">${pctP(al.v)}</span>, food <span class="mono">${fd ? pctP(fd.v) : "–"}</span> (${ymLabel(al.month)})</span>` : ""}`;
+    return `<b>${escH(name)}</b><span class="mono">${cutTxt(k)}</span><span>Fuel <span class="mono">${pct(k.fuel)}${k.d.pt.own ? "" : " (pooled)"}</span></span>`;
   }
 
   // ------------------------------------------------------------ 3D globe (built the first time 3D is chosen)
@@ -2333,7 +2332,9 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
       return;
     }
     const r = svgEl.node().getBoundingClientRect();
-    t.innerHTML = tipHtml(name);
+    const pr = COIL.prices[isoOf[name]], al = pr && pr.all && pr.all.now, fd = pr && pr.food && pr.food.now;
+    t.innerHTML = `<b>${name}</b><span class="mono ${k.score > 0.5 ? "hurt" : k.score < -0.5 ? "gain" : ""}">${cutTxt(k)}</span>
+      <span>Fuel <span class="mono">${pct(k.fuel)}${k.d.pt.own ? "" : " (pooled)"}</span></span>${al ? `<span>Prices <span class="mono">${pctP(al.v)}</span>, food <span class="mono">${fd ? pctP(fd.v) : "–"}</span> (${ymLabel(al.month)})</span>` : ""}`;
     t.hidden = false;
     let x = e.clientX - r.left + 14, y = e.clientY - r.top + 14;
     if (x + t.offsetWidth > r.width - 8) x = e.clientX - r.left - t.offsetWidth - 14;

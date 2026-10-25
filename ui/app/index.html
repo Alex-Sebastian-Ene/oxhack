@@ -5051,7 +5051,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
     return rampOf(st.mat)(f);
   }
   const NOSCORE = new Set(["Antarctica", "Fr. S. Antarctic Lands"]);
-  function fillFor(name) { if (NOSCORE.has(name)) return "#243049"; if (st.mat) return matShade(name); const v = calc(name).score; return v == null ? NODATA : color(v); }
+  function fillFor(name) { if (NOSCORE.has(name)) return NODATA; if (st.mat) return matShade(name); const v = calc(name).score; return v == null ? NODATA : color(v); }
   // 12-month price change (%) for the current Brent vs pre-war, with the 90% interval of the average effect
   // Seb's recommended chain (docs/chain.md): scenario table, notes/chain-scenarios-3m-margins.csv, as
   // series -> lost-flow points -> months ahead -> [mean, q05, q95], in 100 x log change (pp for unemployment)
