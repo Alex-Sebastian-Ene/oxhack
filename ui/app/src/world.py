@@ -67,8 +67,8 @@ SWAPS = [
      '.arcColor((d) => (d.faded ? [d.color + "0a", d.color + "55"] : [d.color + "55", d.color])).arcStroke((d) => (d.faded ? 0.45 : 1) * (0.25 + 1.2 * Math.sqrt(d.weight || 0.1)))', 1),
 
     # titles and keys say what each form means
-    ('$("wttl").textContent = m ? `${m.name}: ${st.mode === "exports" ? "who ships it" : "who makes it"}` : "Exposure score (illustrative)";',
-     '$("wttl").textContent = m ? `${m.short || m.name}: ${st.mode === "exports" ? "shipped (fill) · made (columns)" : "made (fill) · shipped (columns)"}` : "Exposure score (illustrative)";', 1),
+    ('$("wttl").textContent = m ? `${m.name}: ${st.mode === "exports" ? "who ships it" : "who makes it"}` : "Oil cut off by the shock";',
+     '$("wttl").textContent = m ? `${m.short || m.name}: ${st.mode === "exports" ? "shipped (fill) · made (columns)" : "made (fill) · shipped (columns)"}` : "Oil cut off by the shock";', 1),
     ('aria-label="Who makes it or who ships it"', 'aria-label="Which layer is in front"', 1),
 
     ("$(\"wticks\").innerHTML = '<span style=\"left:0;transform:none\">smaller</span><span style=\"left:100%;transform:translateX(-100%)\">larger producer</span><span class=\"viarow\"><i class=\"viakey\"></i>amber edge: Gulf producer, ships via Hormuz</span>';",
@@ -85,17 +85,17 @@ SWAPS = [
      '      const m = mats[st.mat], iso = isoOf[name];\n'
      '      const row = (md, lab) => { const r = tableOf(m, md).find((x) => x.iso3 === iso); return `<span${md === st.mode ? "" : \' class="faint"\'}>${lab}: <span class="mono">${r ? shareTxt(r) : "not listed"}</span></span>`; };\n'
      '      return `<b>${iso ? flagImg(iso) + " " : ""}${escH(name === "United States of America" ? "United States" : name)}</b>${row("production", "Made")}${row("exports", "Shipped")}', 1),
-    ('return `<b>${escH(name)}</b><span>Exposure',
-     'return `<b>${isoOf[name] ? flagImg(isoOf[name]) + " " : ""}${escH(name === "United States of America" ? "United States" : name)}</b><span>Exposure', 1),
-
-    # Flat map and globe show the same things. The tooltip is one function for both: the globe's had no "Via Hormuz"
-    # row or harm/gain colour, and the flat one built its own title without the flag.
-    ('<span class="mono">${fmtS(k.score)}</span></span><span>Fuel cost <span class="mono">${pct(k.fuel)}</span></span>`;',
-     '<span class="mono ${k.score > 0.5 ? "hurt" : k.score < -0.5 ? "gain" : ""}">${fmtS(k.score)}</span></span><span>Fuel cost <span class="mono">${pct(k.fuel)}</span></span>'
-     '${k.d.h ? `<span>Via Hormuz <span class="mono">${(k.hz * 100).toFixed(0)}% of use</span></span>` : ""}`;', 1),
-    ('    t.innerHTML = `<b>${name}</b><span>Exposure <span class="mono ${k.score > 0.5 ? "hurt" : k.score < -0.5 ? "gain" : ""}">${fmtS(k.score)}</span></span>\n'
-     '      <span>Fuel cost <span class="mono">${pct(k.fuel)}</span></span>${k.d.h ? `<span>Via Hormuz <span class="mono">${(k.hz * 100).toFixed(0)}% of use</span></span>` : ""}`;\n',
+    # One tooltip for the flat map and the globe (tipHtml): the flag, the cost of an oil cut-off in harm/gain colour,
+    # fuel, and prices and food where we have them. The flat map's tooltip used to build its own copy.
+    ('    const pr = COIL.prices[isoOf[name]], al = pr && pr.all && pr.all.now, fd = pr && pr.food && pr.food.now;\n'
+     '    t.innerHTML = `<b>${name}</b><span class="mono ${k.score > 0.5 ? "hurt" : k.score < -0.5 ? "gain" : ""}">${cutTxt(k)}</span>\n'
+     '      <span>Fuel <span class="mono">${pct(k.fuel)}${k.d.pt.own ? "" : " (pooled)"}</span></span>${al ? `<span>Prices <span class="mono">${pctP(al.v)}</span>, food <span class="mono">${fd ? pctP(fd.v) : "–"}</span> (${ymLabel(al.month)})</span>` : ""}`;\n',
      '    t.innerHTML = tipHtml(name);\n', 1),
+    ('    return `<b>${escH(name)}</b><span class="mono">${cutTxt(k)}</span><span>Fuel <span class="mono">${pct(k.fuel)}${k.d.pt.own ? "" : " (pooled)"}</span></span>`;',
+     '    const pr = COIL.prices[isoOf[name]], al = pr && pr.all && pr.all.now, fd = pr && pr.food && pr.food.now;\n'
+     '    return `<b>${isoOf[name] ? flagImg(isoOf[name]) + " " : ""}${escH(name === "United States of America" ? "United States" : name)}</b>'
+     '<span class="mono ${k.score > 0.5 ? "hurt" : k.score < -0.5 ? "gain" : ""}">${cutTxt(k)}</span><span>Fuel <span class="mono">${pct(k.fuel)}${k.d.pt.own ? "" : " (pooled)"}</span></span>'
+     '${al ? `<span>Prices <span class="mono">${pctP(al.v)}</span>, food <span class="mono">${fd ? pctP(fd.v) : "–"}</span> (${ymLabel(al.month)})</span>` : ""}`;', 1),
     # Antarctica (and the French Southern lands) on the flat map too, and the flat map's "Macedonia" under the
     # globe's name, so it can be selected and found in our tables
     ('const countries = topojson.feature(topo, topo.objects.countries).features.filter((f) => f.properties.name !== "Antarctica" && f.properties.name !== "Fr. S. Antarctic Lands");',
@@ -108,9 +108,9 @@ SWAPS = [
      'G3.labelsData([...SEAS.filter((x) => !x.flatOnly), ...CONTS.map((x) => ({ ...x, cont: true })), { name: "HORMUZ", lng: 54.2, lat: 25.9, hz: true }])', 1),
     # Antarctica and the French Southern lands have no people and no score: no-data grey on both maps, and a
     # tooltip that says so (the exposure model would otherwise score them as a generic importer)
-    ('  function fillFor(name) { return st.mat ?',
+    ('  function fillFor(name) { if (st.mat) return matShade(name);',
      '  const NOSCORE = new Set(["Antarctica", "Fr. S. Antarctic Lands"]);\n'
-     '  function fillFor(name) { return NOSCORE.has(name) ? "#243049" : st.mat ?', 1),
+     '  function fillFor(name) { if (NOSCORE.has(name)) return NODATA; if (st.mat) return matShade(name);', 1),
     ('function tipHtml(name) {\n    if (st.mat) {',
      'function tipHtml(name) {\n    if (NOSCORE.has(name)) return `<b>${escH(name)}</b><span>No population: not scored</span>`;\n    if (st.mat) {', 1),
     ('  function select(name, anchor) {\n    st.sel = name && name === st.sel ? null : name;',
