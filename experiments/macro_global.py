@@ -890,7 +890,7 @@ def forecast_section(folds: list[dict], refs: list, clim: np.ndarray, names: lis
     # the 2025 survey dates: what each forecaster expected for the next 12 months
     i12 = int(cpi[0])
     dates = [d for x in fc for d in x["test_dates"]]
-    mu = {k: stack(lambda x, k=k: bfold[x["fold"]]["mu"][k]) for k in ("spf", "cleveland", "michigan")}
+    mu = {k: stack(lambda x, k=k: bfold[x["fold"]]["mu"][k]) for k in ("spf", "cleveland", "michigan", "spf_latest", "rw")}
     G = {m: {q: stack(lambda x, m=m, q=q: x["models"][m]["modes"]["forecast"][q]) for q in ("mu", "q05", "q95")} for m in fv}
     rows = [i for i, d in enumerate(dates) if d >= "2024-01" and np.isfinite(mu["spf"][i, i12])]
     out += ["", "### US CPI over the next 12 months at the 2024–25 survey dates", "",
@@ -901,6 +901,78 @@ def forecast_section(folds: list[dict], refs: list, clim: np.ndarray, names: lis
         cells = [f"{G[m]['mu'][i, i12]:+.1f} ({G[m]['q05'][i, i12]:+.1f}..{G[m]['q95'][i, i12]:+.1f})" for m in fv]
         out.append(f"| {dates[i]} | {'n/a' if not np.isfinite(yv) else f'{yv:+.1f}'} | " + " | ".join(cells)
                    + f" | {mu['spf'][i, i12]:+.1f} | {mu['cleveland'][i, i12]:+.1f} | {mu['michigan'][i, i12]:+.1f} |")
+    return out + region_section(F, B, mu, clim, names, G, y_all, dates, rows, i12, folds, ours, refs[0])
+
+
+REGIONS = (("US, UK and euro area", ("us_cpi", "uk_cpi", "ea_cpi")), ("US", ("us_cpi",)), ("UK", ("uk_cpi",)),
+           ("Euro area", ("ea_cpi",)))
+EXPERTS = (("spf_latest", "SPF median, latest survey"), ("cleveland", "Cleveland Fed"), ("michigan", "Michigan"))
+
+
+def region_skill(Ms: dict, clim: np.ndarray, c: np.ndarray) -> tuple[int, dict, np.ndarray, np.ndarray]:
+    """Skill of each forecaster in Ms (CRPS [origins, outputs]) on the origins where all of them score every
+    output in c, scaled by the v1 climatology's CRPS on those origins (as compare); also the mask and the scale."""
+    ok = np.all([np.isfinite(M[:, c]).all(1) for M in Ms.values()], 0)
+    sc = clim[ok][:, c].mean(0)
+    return int(ok.sum()), {k: 1 - (M[ok][:, c] / sc).mean() for k, M in Ms.items()}, ok, sc
+
+
+def region_section(F: dict, B: dict, mu: dict, clim: np.ndarray, names: list, G: dict, y_all: np.ndarray, dates: list,
+                   rows: list, i12: int, folds: list, ours: list, ref: tuple) -> list[str]:
+    """Inflation by region (US, UK, euro area and the three together): our models' skill against every benchmark
+    that forecasts the region, on the origins they all share, then what each expected at the latest SPF release
+    month whose 12-month outcome is known. F and B are CRPS [origins, outputs], mu the benchmarks' point forecasts,
+    G the networks' forecast mean and band, ref the main Bayesian model (column, run tag)."""
+    bench = [*EXPERTS, ("rw", "Random walk")]
+    label = dict(bench)
+    out = ["", "### Inflation by region: our models against the experts", "",
+           "Forecast mode. Each row scores every forecaster on the origins they all share, with the v1 climatology's CRPS "
+           "on those origins as the scale. The experts are the US benchmarks above (the SPF median from the latest "
+           "survey public at each month-end, the Cleveland Fed's model and Michigan's households). None has been "
+           "collected for the UK or the euro area yet, so their rows have the random walk only; n/a: the benchmark "
+           "doesn't forecast that region. *Best expert* is the expert with the highest skill in the row; t is the "
+           "Diebold–Mariano t (Newey–West, 12 lags) of our model minus it (negative: ours is better).", "",
+           "| Region | h | Origins | " + " | ".join(ours) + " | " + " | ".join(label.values()) + " | Best expert | "
+           + " | ".join(f"{m} minus best expert (t)" for m in ours) + " |",
+           "|---|---|---|" + "---|" * (2 * len(ours) + len(bench) + 1)]
+    for lab, keys in REGIONS:
+        for h in (12, "all"):
+            c = np.array([names.index(f"{k}@{hh}") for k in keys for hh in (mn.HORIZONS if h == "all" else (h,))])
+            have = [k for k, _ in bench if np.isfinite(B[k][:, c]).all(1).any()]  # the benchmarks that forecast it
+            n, s, ok, sc = region_skill({**{m: F[m] for m in ours}, **{k: B[k] for k in have}}, clim, c)
+            exp = [k for k, _ in EXPERTS if k in have]
+            best = max(exp, key=lambda k: s[k]) if exp else None
+            vs = []
+            for m in ours:
+                if best is None:
+                    vs.append("n/a")
+                    continue
+                d = ((F[m][ok][:, c] - B[best][ok][:, c]) / sc).mean(1)
+                vs.append(f"{d.mean():+.3f} ({mb.nw_t(d):+.1f})")
+            out.append(f"| {lab} | {h} | {n} | " + " | ".join(f"{s[m]:+.3f}" for m in ours) + " | "
+                       + " | ".join(f"{s[k]:+.3f}" if k in s else "n/a" for k, _ in bench) + f" | {label[best] if best else 'n/a'} | "
+                       + " | ".join(vs) + " |")
+
+    # the latest SPF release month whose 12-month outcome is known: what each forecaster expected, by region
+    known = [i for i in rows if np.isfinite(y_all[i, i12])]
+    if not known:
+        return out
+    i = known[-1]
+    col, tag = ref
+    P = {**{m: G[m] for m in ours if m in G},
+         col: {q: np.vstack([np.array(f["bayes"][tag]["modes"]["forecast"][q], float) for f in folds]) for q in ("mu", "q05", "q95")}}
+    end = f"{int(dates[i][:4]) + 1}{dates[i][4:]}"
+    out += ["", f"### Inflation over the next 12 months by region, from {dates[i]}", "",
+            f"Forecast mode, 100 × log change (≈ %), {dates[i]} to {end}: the latest SPF release month whose 12-month "
+            "outcome is known. Our models' forecast mean (90% interval).", "",
+            "| Region | Actual | " + " | ".join(ours) + " | " + " | ".join(label.values()) + " |",
+            "|---|---|" + "---|" * (len(ours) + len(bench))]
+    for lab, keys in REGIONS[1:]:
+        j = names.index(f"{keys[0]}@12")
+        yv = y_all[i, j]
+        cells = [f"{P[m]['mu'][i, j]:+.1f} ({P[m]['q05'][i, j]:+.1f}..{P[m]['q95'][i, j]:+.1f})" for m in ours]
+        cells += [f"{mu[k][i, j]:+.1f}" if np.isfinite(mu[k][i, j]) else "n/a" for k, _ in bench]
+        out.append(f"| {lab} | {'n/a' if not np.isfinite(yv) else f'{yv:+.1f}'} | " + " | ".join(cells) + " |")
     return out
 
 

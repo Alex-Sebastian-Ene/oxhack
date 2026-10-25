@@ -39,6 +39,74 @@ window.HZModels = (() => {
         <span class="val mono" role="cell">${fmt(r.v)}</span></div>`).join("")}</div>
       <p class="ax">0 = climatology, the series' own history; higher is better.</p>${src(b.src, b.date)}</figure>`;
   }
+  // ------------------------------------------------------------ our models against the experts, by region
+  const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const month = (ym) => `${MON[+ym.slice(5, 7) - 1]} ${ym.slice(0, 4)}`;
+  const val = (s) => parseFloat(String(s).replace("−", "-"));
+  const pc = (v) => `${v < 0 ? "−" : "+"}${Math.abs(v).toFixed(1)}%`;
+  const WHO = [["stats", "Our stats model", "Bayesian pass-through"], ["ml", "Our ML model", "Global network"],
+    ["expert", "Experts", "best in the row"], ["naive", "Naive rule", "last 12 months' pace carries on"]];
+  const mark = (k) => `<i class="mk ${k}" aria-hidden="true"></i>`;
+  function experts(E) {
+    // how accurate: skill per region, a thin bar from zero under each number, the best in each row marked
+    const all = E.rows.flatMap((r) => [r.stats, r.ml, r.naive, r.expert && r.expert.v].filter(Boolean).map(val));
+    const lo = Math.min(0, ...all), hi = Math.max(0, ...all), x = (v) => (100 * (v - lo)) / (hi - lo);
+    const sk = (k, s, top, extra = "") => {
+      const v = val(s);
+      return `<td class="sk ${k}${top ? " top" : ""}"${extra}><b class="mono">${esc(s)}</b>
+        <span class="mt"><span class="z" style="left:${x(0).toFixed(1)}%"></span><span class="b" style="left:${x(Math.min(0, v)).toFixed(1)}%;width:${(x(Math.max(0, v)) - x(Math.min(0, v))).toFixed(1)}%"></span></span>${top ? '<span class="best">best</span>' : ""}</td>`;
+    };
+    const rows = E.rows.map((r) => {
+      const vs = { stats: val(r.stats), ml: val(r.ml), naive: val(r.naive), ...(r.expert ? { expert: val(r.expert.v) } : {}) };
+      const top = Object.keys(vs).reduce((a, b) => (vs[b] > vs[a] ? b : a));
+      const ex = r.expert
+        ? sk("expert", r.expert.v, top === "expert", ` title="${esc([r.expert.name, ...r.expert.others.map((o) => `${o[0]} ${o[1]}`)].join(" · "))}"`)
+          .replace("</b>", `</b><small>${esc(r.expert.name.replace(/.*\((\w+)\)$/, "$1").replace(" model", ""))}</small>`)
+        : `<td class="sk none"><span>none collected</span></td>`;
+      return `<tr><th scope="row">${esc(r.region)}${r.region === "All three" ? "<small>US, UK, euro area</small>" : ""}</th>
+        ${sk("stats", r.stats, top === "stats")}${sk("ml", r.ml, top === "ml")}${ex}${sk("naive", r.naive, top === "naive")}</tr>`;
+    }).join("");
+    const us = E.rows.find((r) => r.expert);
+    const sig = (t) => Math.abs(val(t)) >= 2;
+    const read = us ? `${esc(us.region)}: ${val(us.expert.v) > Math.max(val(us.stats), val(us.ml)) ? `the ${esc(us.expert.name.toLowerCase().replace(/ \(.*/, ""))} lead` : "our models lead"};
+      the gap is ${sig(us.expert.t.stats) || sig(us.expert.t.ml) ? "" : "not "}significant (t ${esc(us.expert.t.stats)} for the stats model, ${esc(us.expert.t.ml)} for ML).` : "";
+    const none = E.rows.filter((r) => !r.expert && r.region !== "All three").map((r) => `the ${r.region.replace(/^Euro/, "euro")}`);
+
+    // what each expected: one lane per forecaster on a shared % axis, the outcome as a line through the lanes
+    const pts = E.pred.flatMap((p) => [p.actual, p.stats, p.ml, p.expert, p.naive, ...p.stats_band, ...p.ml_band]).filter((v) => v != null);
+    const a = Math.floor(Math.min(...pts)), b = Math.ceil(Math.max(...pts)), px = (v) => (100 * (v - a)) / (b - a);
+    const lane = (p, k, name) => {
+      const v = p[k], band = p[`${k}_band`];
+      if (v == null) return `<div class="ln ${k} gap"><span class="nm">${mark(k)}${esc(name)}</span><span class="tr"><span class="act" style="left:${px(p.actual).toFixed(1)}%"></span><em>no forecast collected</em></span><span class="vl"></span></div>`;
+      const say = `${name}: ${pc(v)}${band ? ` (90% range ${pc(band[0])} to ${pc(band[1])})` : ""}`;
+      return `<div class="ln ${k}" role="listitem" aria-label="${esc(say)}" title="${esc(say)}"><span class="nm">${mark(k)}${esc(name)}</span>
+        <span class="tr"><span class="act" style="left:${px(p.actual).toFixed(1)}%"></span>${band ? `<span class="bd" style="left:${px(band[0]).toFixed(1)}%;width:${(px(band[1]) - px(band[0])).toFixed(1)}%"></span>` : ""}
+        <span class="dot" style="left:${px(v).toFixed(1)}%"></span></span><span class="vl mono">${pc(v)}</span></div>`;
+    };
+    const ticks = Array.from({ length: b - a + 1 }, (_, i) => a + i);
+    const strips = E.pred.map((p) => `<div class="rg" role="list" aria-label="${esc(p.region)}: actual ${pc(p.actual)}">
+      <div class="rh"><b>${esc(p.region)}</b><span>actual <b class="mono">${pc(p.actual)}</b></span></div>
+      ${lane(p, "stats", "Stats")}${lane(p, "ml", "ML")}${lane(p, "expert", us && p.region === us.region ? us.expert.name.replace(/.*\((\w+)\)$/, "$1") : "Experts")}${lane(p, "naive", "Naive")}</div>`).join("");
+
+    return `<section class="card hz-mx" id="mod-experts" aria-label="Our models against the experts">
+      <div class="xh"><h2>Against the experts</h2><span class="kind">Forecasting oil too · 12 months ahead</span></div>
+      <p class="asks">Inflation over the next 12 months: our statistical and ML models against professional forecasters and a naive rule.
+        Every forecast uses only what was known on the day it was made. Backtest ${esc(month(E.span.split("–")[0]))} to ${esc(month(E.span.split("–")[1]))}.</p>
+      <p class="keys">${WHO.map(([k, n, d]) => `<span>${mark(k)}<b>${esc(n)}</b> ${esc(d)}</span>`).join("")}</p>
+      <div class="xg">
+        <figure class="xa"><figcaption>How accurate <small>skill: 0 = the series' own history, higher is better; shaded: best in the row</small></figcaption>
+          <table><thead><tr><th scope="col">Region</th>${WHO.map(([k, n]) => `<th scope="col" class="${k}">${mark(k)}${esc(n.replace("Our ", ""))}</th>`).join("")}</tr></thead>
+          <tbody>${rows}</tbody></table>
+          <p class="rd">${read} ${none.length ? `For ${esc(none.join(" and "))} no expert forecasts have been collected yet, so the naive rule is the only benchmark.` : ""}</p>
+        </figure>
+        <figure class="xp"><figcaption>What each expected <small>% change in consumer prices, ${esc(month(E.origin))} to ${esc(month(E.end))}; bars are 90% ranges</small></figcaption>
+          ${strips}
+          <div class="ax" aria-hidden="true"><span class="nm"></span><span class="tr">${ticks.map((t) => `<span style="left:${px(t).toFixed(1)}%">${t}%</span>`).join("")}</span><span class="vl"></span></div>
+        </figure>
+      </div>
+      ${src(E.src, E.date)}
+    </section>`;
+  }
   function card(c) {
     return `<article class="card hz-mc${c.wide ? " wide" : ""}" id="mod-${esc(c.id)}">
       <div class="mh"><h3>${esc(c.title)}</h3><span class="kind">${esc(c.kind)}</span></div>
@@ -68,9 +136,10 @@ window.HZModels = (() => {
     <p class="how"><b>Skill</b> = 1 − CRPS ÷ the CRPS of climatology (each series' own history): 0 is no better than the historical average,
       higher is better. <b>Given the oil path</b> means the run knew the oil price that happened; <b>forecasting oil too</b> means it knew nothing
       after the forecast date. All scores are backtests on real, revised data.</p>
-    <nav class="jump" aria-label="Models">${groups.map(([, title, cs]) => `<span class="jg"><span class="jt">${esc(title)}</span>${cs.map((c) =>
+    <nav class="jump" aria-label="Models">${D.experts ? `<span class="jg"><span class="jt">Compare</span><button type="button" data-mjump="experts">Against the experts</button></span>` : ""}${groups.map(([, title, cs]) => `<span class="jg"><span class="jt">${esc(title)}</span>${cs.map((c) =>
       `<button type="button" data-mjump="${esc(c.id)}">${esc(c.title)}</button>`).join("")}</span>`).join("")}</nav>
   </header>
+  ${D.experts ? experts(D.experts) : ""}
   ${groups.map(([g, title, cs]) => `<section class="hz-mgrp" aria-label="${esc(title)}"><h2 class="gt">${esc(title)}</h2>
     <div class="grid">${cs.map(card).join("")}</div></section>`).join("")}`;
   ($("hz-households") || straitStage).after(page);
@@ -102,7 +171,7 @@ window.HZModels = (() => {
     const el = b && $(`mod-${b.dataset.mjump}`);
     if (el) { el.focus({ preventScroll: true }); el.scrollIntoView({ block: "start" }); }
   });
-  page.querySelectorAll(".hz-mc").forEach((c) => { c.tabIndex = -1; });
+  page.querySelectorAll(".hz-mc, .hz-mx").forEach((c) => { c.tabIndex = -1; });
 
   let saved = "";
   try { saved = localStorage.getItem(KEY) || ""; } catch (e) {}
