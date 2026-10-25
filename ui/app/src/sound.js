@@ -156,6 +156,9 @@ window.HZSound = (() => {
       hiss(sfxBus, { t: t + 0.25, dur: 1.1, vol: 0.09, type: "lowpass", f: 300, sweep: 2600 });
     },
     horn: () => horn(sfxBus, 0.13, 1),
+    // oil pouring: a low rush and a few glugs
+    pour: () => { hiss(sfxBus, { t: now(), dur: 1.0, vol: 0.05, type: "lowpass", f: 380, q: 1.1, sweep: 900 });
+      [0.12, 0.34, 0.55, 0.8].forEach((d, i) => tone(sfxBus, { f: 150 - i * 12, slide: 85, t: now() + d, dur: 0.08, vol: 0.045, duty: 0.5 })); },
   };
 
   // ------------------------------------------------------------ switches

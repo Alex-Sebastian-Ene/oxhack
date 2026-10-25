@@ -52,24 +52,61 @@ window.HZIcons = {
     window.HZScene.setFlow(flow / 20);
   }
 
-  // ------------------------------------------------------------ pixel wipe between the landing and the app
+  // ------------------------------------------------------------ oil pours in, fills the screen, then drains away
+  // Three pixel streams pour from the top and splash where they land; the pool rises with a lit, rolling surface.
+  // When the screen is full, mid() swaps what is underneath; then the oil drains down, dripping from the top.
   function wipe(mid, done) {
     if (reduce) { mid(); if (done) done(); return; }
-    const cell = 24, cols = Math.ceil(innerWidth / cell), rows = Math.ceil(innerHeight / cell);
-    wipeC.width = cols; wipeC.height = rows; wipeC.hidden = false;
-    const c = wipeC.getContext("2d"), order = [...Array(cols * rows).keys()].sort(() => Math.random() - 0.5);
-    const run = (fill, ms, then) => {
-      const t0 = performance.now();
-      const stepF = (now) => {
-        const k = Math.min(order.length, Math.round(((now - t0) / ms) * order.length));
-        c.fillStyle = "#04060c";
-        for (let n = 0; n < k; n++) { const j = order[n], x = j % cols, y = (j / cols) | 0; fill ? c.fillRect(x, y, 1, 1) : c.clearRect(x, y, 1, 1); }
-        if (k < order.length) requestAnimationFrame(stepF); else then();
-      };
-      requestAnimationFrame(stepF);
-    };
-    c.clearRect(0, 0, cols, rows);
-    run(true, 380, () => { mid(); c.fillStyle = "#04060c"; c.fillRect(0, 0, cols, rows); setTimeout(() => run(false, 420, () => { wipeC.hidden = true; if (done) done(); }), 60); });
+    const px = 6, W = Math.ceil(innerWidth / px), H = Math.ceil(innerHeight / px);
+    wipeC.width = W; wipeC.height = H; wipeC.hidden = false;
+    const c = wipeC.getContext("2d");
+    const BODY = "#1a1108", DEEP = "#100a04", SHEEN = "#4a2f12", LIP = "#ffa424", LIP2 = "#ffd27a", DROP = "#2c1c0b";
+    const streams = [0.2, 0.5, 0.8].map((f, i) => ({ x: Math.round(W * f + (Math.random() - 0.5) * W * 0.06), w: i === 1 ? 4 : 3, delay: [80, 0, 150][i] }));
+    const drops = [], FILL = 1000, HOLD = 140, DRAIN = 700, END = FILL + HOLD + DRAIN;
+    const t0 = performance.now();
+    let last = t0, switched = false, level = H + 2;
+    const ease = (k) => k * k * (3 - 2 * k);
+    const surf = (x, t) => Math.round(Math.sin(x * 0.19 + t * 0.011) * 1.3 + Math.sin(x * 0.07 - t * 0.007) * 1.1);
+    const splash = (x, y, n, up) => { for (let i = 0; i < n; i++) drops.push({ x, y, vx: (Math.random() - 0.5) * 1.8, vy: -(0.6 + Math.random() * up), lit: Math.random() < 0.5 }); };
+    window.HZSound.play("pour");
+    function frame(now) {
+      const t = now - t0, dt = Math.min(48, now - last) / 16.7, draining = t > FILL + HOLD;
+      last = now;
+      if (t < FILL) level = H + 2 - (H + 8) * ease(t / FILL);
+      else if (!draining) level = -6;
+      else level = -6 + (H + 14) * Math.pow(Math.min(1, (t - FILL - HOLD) / DRAIN), 1.6);
+      if (!switched && t >= FILL) { switched = true; mid(); }
+      c.clearRect(0, 0, W, H);
+      // the pour
+      if (!draining) for (const s of streams) {
+        if (t < s.delay) continue;
+        const bottom = Math.max(0, Math.ceil(level));
+        c.fillStyle = BODY; c.fillRect(s.x, 0, s.w, bottom);
+        c.fillStyle = LIP; c.fillRect(s.x + 1, 0, 1, bottom);
+        if (level > 3 && Math.random() < 0.7 * dt) splash(s.x + s.w / 2, level - 1, 3, 2.1);
+      }
+      // the pool: dark body, a lit lip that rolls, a few sheen pixels under it
+      for (let x = 0; x < W; x++) {
+        const y = Math.round(level + surf(x, t));
+        if (y >= H) continue;
+        const top = Math.max(0, y);
+        c.fillStyle = BODY; c.fillRect(x, top, 1, H - top);
+        if (y + 8 < H) { c.fillStyle = DEEP; c.fillRect(x, Math.max(0, y + 8), 1, H - Math.max(0, y + 8)); }
+        if (y >= 0) { c.fillStyle = (x + Math.floor(t / 70)) % 11 === 0 ? LIP2 : LIP; c.fillRect(x, y, 1, 1); }
+        if (y + 2 >= 0 && y + 2 < H && (x + Math.floor(t / 120)) % 14 < 5) { c.fillStyle = SHEEN; c.fillRect(x, y + 2, 1, 1); }
+      }
+      // drips off the top while it drains
+      if (draining && level > 6 && level < H * 0.75 && Math.random() < 0.55 * dt) drops.push({ x: Math.random() * W, y: 0, vx: 0, vy: 0.4, lit: false });
+      for (let i = drops.length - 1; i >= 0; i--) {
+        const d = drops[i];
+        d.vy += 0.13 * dt; d.x += d.vx * dt; d.y += d.vy * dt;
+        if (d.y > level + 1 || d.y > H + 2) { drops.splice(i, 1); continue; }
+        c.fillStyle = d.lit ? LIP : DROP; c.fillRect(Math.round(d.x), Math.round(d.y), 1, d.vy > 1.5 ? 2 : 1);
+      }
+      if (t >= END && (!drops.length || t > END + 700)) { c.clearRect(0, 0, W, H); wipeC.hidden = true; if (done) done(); return; }
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
   }
 
   let opening = false;
