@@ -197,14 +197,13 @@ def test_benchmarks_are_matched_by_origin_month():
 
 
 def test_nowcasts_skip_release_lines_and_run_into_the_next_year(tmp_path, monkeypatch):
-    rep = pytest.importorskip("cost_of_living_report")
     monkeypatch.setattr(col.md, "RAW", tmp_path)  # a cached file, so nothing is downloaded
     cats = [{"label": "12/30"}, {"label": "CPI Nov", "vline": "true"}, {"label": "01/03"}, {"label": "01/12"}]
     entry = {"chart": {"subcaption": "2021-12"}, "categories": [{"category": cats}],
              "dataset": [{"seriesname": "CPI Inflation", "data": [{"value": "0.4"}, {"value": "0.5"}, {"value": ""}]},
                          {"seriesname": "Actual CPI Inflation", "data": [{"value": ""}, {"value": ""}, {"value": "0.6"}]}]}
     (tmp_path / "cleveland_nowcast_month.json").write_text(json.dumps([entry]))
-    row = rep.nowcasts("month").loc[pd.Timestamp("2021-12-01")]
+    row = col.nowcasts("month").loc[pd.Timestamp("2021-12-01")]
     assert row["nowcasts"].to_dict() == {pd.Timestamp("2021-12-30"): 0.4, pd.Timestamp("2022-01-03"): 0.5}
     assert row["released"] == pd.Timestamp("2022-01-12")
     assert row["actual"] == pytest.approx(0.6)
@@ -243,3 +242,59 @@ def test_a_forecast_started_a_month_early_scores_the_same_window():
     assert window == pytest.approx(0.3 * np.arange(1, col.H + 1))
     par = {"mu": 0.001, "omega": 0.0004, "alpha": 0.1, "beta": 0.8, "nu": 5.0, "s2_next": 0.005}
     assert col.garch_paths(par, 10, np.zeros(col.H + 1), np.random.default_rng(1)).shape == (10, col.H + 1)
+
+
+def test_petrol_month_fixes_the_published_weeks_and_walks_the_rest():
+    weeks = pd.date_range("2022-01-03", "2024-03-25", freq="W-MON")
+    price = pd.Series(2.0, index=weeks)
+    price[price.index >= "2024-03-01"] = 2.2  # March's weeks are 10% up on February's
+    feb = pd.Timestamp("2024-02-01")
+    # all of March's Mondays published: no randomness left, the month's average is known
+    full = col.petrol_month(price, feb, pd.Timestamp("2024-03-29"), 50, np.random.default_rng(8))
+    assert full == pytest.approx(np.full(50, np.log(1.1)))
+    # only March 4 and 11 published: the other weeks wander from the latest price, centred on it
+    part = col.petrol_month(price, feb, pd.Timestamp("2024-03-14"), 4000, np.random.default_rng(8))
+    assert np.median(part) == pytest.approx(np.log(1.1), abs=0.005)
+    assert 0 < part.std() < 0.05
+
+
+def test_lag_fit_recovers_a_distributed_lag_and_lag_apply_replays_it():
+    rng = np.random.default_rng(9)
+    x = rng.normal(0, 0.08, 300)
+    y = 0.5 * x + 0.3 * np.r_[0, x[:-1]] + 0.1 * np.r_[0, 0, x[:-2]] + rng.normal(0, 0.002, 300)
+    b, res = col.lag_fit(x, y, 2)
+    assert b == pytest.approx([0.5, 0.3, 0.1], abs=0.01)
+    assert res.std() < 0.003
+    fx = col.lag_apply(b, x[None, 100:], x[98:100])[0]  # the two months before as history
+    assert np.allclose(fx, b[0] * x[100:] + b[1] * x[99:-1] + b[2] * x[98:-2])
+
+
+def test_petrol_moves_only_the_series_it_drives(monkeypatch):
+    monkeypatch.setattr(col, "CHANNELS", col.CHANNELS + ("g_petrol",))
+    post = toy_post()
+    post["Pm"] = np.zeros((2, K, col.LAGS))
+    post["Pm"][:, :, 0] = 2.0 * col.series_arrays()["pmask"][:, 0]  # the mask the model applies
+    data = toy_data() | {"g_petrol": np.zeros(T)}
+    unit = SimpleNamespace(**(vars(UNIT) | {"sd": UNIT.sd | {"g_petrol": 1.0}}))
+    fut = {"g_petrol": np.zeros((1, 1, col.H))}
+    fut["g_petrol"][..., 0] = 0.1
+    out = col.simulate(post, unit, data, np.array([30]), fut, np.zeros((1, col.H)), np.zeros((5, K)),
+                       np.random.default_rng(0))[0, 0]
+    keys = [s.key for s in col.SERIES]
+    moved = {keys[k] for k in np.flatnonzero(np.abs(out[-1]) > 1e-9)}
+    assert moved == set(col.PETROL_KEYS)
+    assert out[-1, keys.index("us_fuel")] == pytest.approx(0.2)
+
+
+@pytest.mark.skipif(not (col.md.RAW / "fred_DCOILBRENTEU.csv").exists() or not (col.LEVY_RUNS / "rolling-2025.json").exists(),
+                    reason="needs the cached daily Brent file and runs/levy/rolling-2025.json")
+def test_daily_paths_condition_on_the_days_already_known():
+    daily = col.daily_brent()
+    month = pd.Timestamp("2025-03-01")
+    base = col.daily_paths("GARCH-CGMY", daily, month, 400, np.zeros(3), np.random.default_rng(10))
+    known = col.daily_paths("GARCH-CGMY", daily, month, 400, np.zeros(3), np.random.default_rng(10),
+                            through=pd.Timestamp("2025-04-16"))
+    assert known[:, 0].std() < 0.6 * base[:, 0].std()  # half of April's days are fixed
+    apr = daily["2025-04-01":"2025-04-15"]
+    assert known[:, 0].min() < np.log(apr.mean() / daily["2025-03-01":"2025-03-31"].mean()) < known[:, 0].max()
+    assert known[:, 1].std() > 0.5 * base[:, 1].std()  # May is still a forecast
