@@ -644,10 +644,10 @@ select { padding: 0 8px; }
         </div>
         <div class="step">
           <div class="stephead you"><span class="num">1</span> You choose: how much Hormuz oil is lost <span class="hint">drag the slider</span></div>
-          <div class="pricebig"><b id="lost-v">82</b><span id="lost-u">points of normal flow lost, as AIS sees it</span></div>
+          <div class="pricebig"><b id="lost-v">67</b><span id="lost-u">points of normal flow lost, as the IEA counts it</span></div>
           <div class="slidewrap">
             <label for="lost" class="sr">Lost Hormuz flow, points of the pre-war 20 million barrels a day</label>
-            <input id="lost" type="range" min="0" max="100" step="1" value="82" aria-describedby="shock-explain">
+            <input id="lost" type="range" min="0" max="100" step="1" value="67" aria-describedby="shock-explain">
             <input id="brent" type="hidden" value="104">
             <div class="marks" aria-hidden="true">
               <span style="left:0%">0<br>normal</span>
@@ -663,7 +663,7 @@ select { padding: 0 8px; }
             <button type="button" data-lost="100" aria-pressed="false">Shut · 100</button>
           </div>
           <div class="kpis kpis2">
-            <div><b id="w-flow" class="hurt">–</b><span>million barrels a day getting through, AIS-visible</span></div>
+            <div><b id="w-flow" class="hurt">–</b><span>million barrels a day getting through, as the IEA counts it</span></div>
             <div><b id="w-miss" class="hurt">–</b><span>million barrels a day missing vs the pre-war 20</span></div>
           </div>
           <p class="sub west" id="w-est"></p>
@@ -2438,7 +2438,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
       out.innerHTML = ""; btn.disabled = false;
     }
   }
-  const scenFact = () => `Scenario: ${st.path26 ? `the 2026 closure as the IEA counts it (${pathTxt()}; ${st.lost} on average)` : `${st.lost} points of normal Hormuz flow lost as AIS sees it (the reader's choice; the price curve was fitted on AIS-visible flow)`}, so ${st.flow.toFixed(1)} of about ${PREWAR} mb/d get through. Brent averages about $${st.brent} over the next 12 months vs $${BRENT0} pre-war (Seb's flow-premium curve, fitted to the 2026 closure)`;
+  const scenFact = () => `Scenario: ${st.path26 ? `the 2026 closure as the IEA counts it (${pathTxt()}; ${st.lost} on average)` : `${st.lost} points of normal Hormuz flow lost as the IEA counts it, held for 12 months (the reader's choice)`}, so ${st.flow.toFixed(1)} of about ${PREWAR} mb/d get through. Brent averages about $${st.brent} over the next 12 months vs $${BRENT0} pre-war (Seb's flow-premium curve, fitted to the 2026 closure)`;
   // what the page shows for a country, each with where it comes from
   function countryFacts(name) {
     const iso = isoOf[name], k = calc(name), out = [scenFact()];
@@ -2755,14 +2755,14 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
   function renderShock() {
     $("w-flow").textContent = st.flow.toFixed(1);
     const e = st.est, f1 = (x) => Number(x).toFixed(1);
-    $("w-est").innerHTML = e && st.key !== "prewar" ? `<b>Edward's estimate of the true flow, dark tankers included: ${f1(e.p50)} mb/d</b> (${f1(e.p5)}\u2013${f1(e.p95)}), on the simulated "${escH(e.label)}" scenario. Shown for comparison: the price curve was fitted on AIS-visible flow, so the slider uses that measure.` : "";
+    $("w-est").innerHTML = e && st.key !== "prewar" ? `<b>Edward's estimate of the true flow, dark tankers included: ${f1(e.p50)} mb/d</b> (${f1(e.p5)}\u2013${f1(e.p95)}), on the simulated "${escH(e.label)}" scenario. Shown for comparison only: its ships are simulated, so the price uses the IEA's count, which includes dark tankers too.` : "";
     const miss = Math.max(0, PREWAR - st.flow);
     $("w-miss").textContent = miss < 0.05 ? "0" : `−${miss.toFixed(1)}`;
     $("w-miss").className = miss > 0.05 ? "hurt" : "";
     $("w-flow").className = miss > 0.05 ? "hurt" : "";
     const pct = (st.brent / BRENT0 - 1) * 100, sign = (x) => (x > 0.05 ? "+" : x < -0.05 ? "−" : ""), a = Math.abs;
     $("lost-v").textContent = st.lost;
-    $("lost-u").textContent = st.path26 ? `points lost on average in 2026 as the IEA counts it (${P26.path[0]} in March, ${P26.path[P26.path.length - 1]} by September)` : "points of normal flow lost, as AIS sees it";
+    $("lost-u").textContent = st.path26 ? `points lost on average in 2026 as the IEA counts it (${P26.path[0]} in March, ${P26.path[P26.path.length - 1]} by September)` : "points of normal flow lost, as the IEA counts it";
     $("brent-u").textContent = st.path26 ? "a barrel, average over the 12 months from March 2026" : "a barrel, average over the next 12 months";
     $("w-brent").textContent = a(pct) < 0.5 ? "same as pre-war" : `${pct > 0 ? "+" : "−"}${a(pct).toFixed(0)}% vs pre-war`;
     $("w-brent").className = "delta " + (pct > 2 ? "hurt" : pct < -2 ? "gain" : "");
@@ -2826,13 +2826,13 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
   function shockFlash(el) { el.classList.remove("bump"); void el.offsetWidth; el.classList.add("bump"); }
   function update() { renderShock(); paint(); renderCountry(); renderRank(); renderMat(); }
 
-  const AIS_LOST = 82;   // PortWatch AIS-visible loss in the 2026 closure, the loss the flow-premium curve was fitted on
   function loadScenario(key) {
     if (!D.scenarios[key]) return;
     st.key = key;
-    // the curve was fitted on AIS-visible flow, 82 points lost in the 2026 closure; Edward's true-flow estimate is shown beside it
+    // the curve counts the IEA's lost flow, dark transits included, so the 2026 scenarios open on its 2026 path;
+    // Edward's true-flow estimate is on simulated ships, so it is shown beside it, not fed into the curve
     st.est = { ...D.scenarios[key].estimate.total, label: D.scenarios[key].label };
-    setLost(key === "prewar" ? 0 : AIS_LOST);
+    if (key === "prewar") setLost(0); else setPath26();
     update();
   }
   $("scenario").addEventListener("change", (e) => loadScenario(e.target.value));
