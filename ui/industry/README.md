@@ -23,6 +23,17 @@ Open `index.html` in a browser; it needs no server. It is the same page as the s
   - **Click a country:** it floats with a flag tag, a short pop-up gives the main numbers, and the right
     panel has the full analysis in three tabs: Overview (key numbers and the fuel-cost chart), Industries
     (cost impact by industry) and Trade (what it makes, where its inputs come from and where it ships).
+  - **Each country's own numbers** (`notes/country-oil.json` from `experiments/country_oil.py`, read by
+    `src/patch_countryoil.py`):
+    - **Import dependence and the Gulf share** of its oil imports come from UN Comtrade (crude and refined
+      products, by value). The Gulf share is an upper bound for oil through the strait: Yanbu and Fujairah
+      bypass it. Where Comtrade has nothing (Taiwan, Iran), the hand-entered table (EIA, Energy Institute)
+      fills in. A country in neither is grey and says "not in our data".
+    - **Fuel cost** uses the country's own Brent to pump-price pass-through, fitted on its motor-fuel prices
+      (Europe, Türkiye, the US), or the median of those, marked "pooled". The Industries tab and the fuel-cost
+      path use the same pass-through.
+    - **The pop-up adds our models' 12-month what-ifs** where they reach: consumer prices (the Bayesian
+      model: US, UK, euro area) and factory prices (the sector model: Europe, Türkiye, the US).
   - **Industries tab:** five hand-picked industries per country (illustrative), then **Add an industry**:
     - any of the page's 16 oil-exposed industries, drawn the same way as the hand-picked ones;
     - any of the 20 industries in Seb's sector model (`notes/country-trends.json`): its producer prices after
