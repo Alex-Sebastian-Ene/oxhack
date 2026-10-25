@@ -150,6 +150,32 @@ CSS = """/* Households page (households.py, households.js) */
 .hz-hhmini .hz-mr small { grid-column: 1 / -1; font-size: 11px; color: var(--faint); }
 .hz-hhstep .sub .flag { margin-right: 4px; }
 .hz-hhgo { min-height: 30px; font-size: 12.5px; align-self: flex-start; }
+/* reading order: a headline, then numbered cards left to right, top to bottom; sources behind each card's info button */
+.hz-hh { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.hz-hh .hz-head, .hz-hh .hz-saved { grid-column: 1 / -1; }
+.hz-hh .hz-head { gap: 10px; border-color: var(--oil) !important; }
+.hz-hh .hz-kick { font: 600 11px var(--pix); letter-spacing: .8px; text-transform: uppercase; color: var(--oil-soft); }
+.hz-hh .hz-hl { margin: 0; font-size: 16px; line-height: 1.6; color: var(--text); text-wrap: pretty; }
+.hz-hh .hz-hl b { color: var(--oil-soft); }
+.hz-hh .hz-hlnums { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 8px; }
+.hz-hh .hz-t { display: flex; flex-direction: column; gap: 3px; padding: 10px 12px; background: var(--panel2); border: 2px solid var(--ink); }
+.hz-hh .hz-t b { font: 400 30px/1 var(--mono); color: var(--text); }
+.hz-hh .hz-t.hurt b { color: var(--harm); }
+.hz-hh .hz-t span { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text); }
+.hz-hh .hz-t small { font-size: 11.5px; color: var(--faint); }
+.hz-hh .hz-ch { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; position: relative; padding-right: 40px; min-height: 32px; }
+.hz-hh .hz-ch h3 { flex: 0 1 auto; }
+.hz-hh .hz-n { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; flex: none; background: var(--oil); color: var(--ink, #070b16); font: 700 14px var(--pix); }
+/* the info button sits in the header's top-right corner, so a long title can't push it onto a line of its own */
+.hz-hh .hz-ch .hz-i { position: absolute; top: 0; right: 0; width: 32px; min-height: 32px; }
+.hz-hh .tagr { font: 400 15px var(--mono); padding: 0 6px; border: 2px dashed #3f9a6e; color: #7ee0b0; letter-spacing: 1px; }
+.hz-hh .hz-keys-c { justify-content: center; margin-top: -4px; }
+/* step 3: each value on one line, so its rows sit at the same spacing as the table beside it */
+.hz-hh #hh-gs-rows { gap: 0; }
+.hz-hh #hh-gs-rows .rrow { grid-template-columns: 130px minmax(0, 1fr) 200px; min-height: 30px; border-top: 1px solid var(--line); }
+.hz-hh #hh-gs-rows .rrow:first-child { border-top: 0; }
+.hz-hh #hh-gs-rows .rrow .v small { font-size: 13px; }
+@media (max-width: 560px) { .hz-hh #hh-gs-rows .rrow { grid-template-columns: 90px minmax(0, 1fr) 150px; } }
 @media (max-width: 980px) { .hz-hh { grid-template-columns: 1fr; } }
 @media (max-width: 720px) { .hz-hh { overflow: visible; } }
 @media (max-width: 560px) { .hz-hh .rrow { grid-template-columns: 96px minmax(0, 1fr) 104px; font-size: 12px; } .hz-hh .mini { width: 70px; } }

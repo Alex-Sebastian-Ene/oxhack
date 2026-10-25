@@ -28,6 +28,7 @@ STEPS = [
     "patch_disruption.py", # audit fixes: Seb's x1.49 disruption multiplier for the 0.8 premium; slider starts at 82 AIS-visible
     "patch_iea.py",      # OXH-9: the 2026 preset (and the 2026 scenarios' start) is the chain's replay on the IEA's lost flow, not 82 points
     "patch_pickind.py",  # Industries tab: add any industry, including the sector model's 20, with its own prices and Trends chart
+    "patch_tradestats.py", # Trade tab: every country's exports and imports (World Bank WDI) and main goods partners (UN Comtrade)
     "patch_countryoil.py", # every country's own numbers: Comtrade dependence and Gulf share, own fuel pass-through, model what-ifs
 ]
 for step in STEPS:
