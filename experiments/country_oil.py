@@ -74,6 +74,8 @@ FAO_ZIP = md.ROOT / "data" / "raw" / "faostat" / "cpi.zip"
 FAO_ITEMS = {"Consumer Prices, General Indices (2015 = 100)": "all", "Consumer Prices, Food Indices (2015 = 100)": "food"}
 HORIZONS = (1, 2, 3, 6, 12)
 NOISY_SE = 0.15  # a 12-month slope with a larger standard error than this is too noisy to show
+OUTLOOK_FROM = "2025-10-01"  # a series whose latest month is older than this gets no outlook (it shows its date)
+MAX_BAND = 100.0  # points: a 12-month 90% band wider than this is not a forecast
 # FAOSTAT's M49 codes where the Comtrade reporter list (our ISO3 source) uses another code or has none
 M49_FIX = {250: "FRA", 578: "NOR", 756: "CHE", 840: "USA", 158: "TWN", 630: "PRI", 316: "GUM"}
 MONTH_NO = {m: i + 1 for i, m in enumerate(["January", "February", "March", "April", "May", "June", "July",
@@ -169,6 +171,40 @@ def trade_profile(imp: float, exp: float, gulf_by: dict[str, float]) -> dict:
             "by": {k: round(v) for k, v in sorted(gulf_by.items(), key=lambda kv: -kv[1]) if v > 0}}
 
 
+# map countries that don't report oil trade, by Comtrade partner code (Taiwan is "Other Asia, nes", 490), in small
+# groups so no call reaches the preview's 500 rows; the big exporters get groups of their own
+MIRROR = {"RUS": 643, "BLR": 112, "VEN": 862, "LBY": 434, "TKM": 795, "GNQ": 226, "TCD": 148, "SDN": 729, "SSD": 728,
+          "SYR": 760, "AFG": 4, "BGD": 50, "NPL": 524, "PRK": 408, "TWN": 490, "KOS": 412, "CUB": 192, "HTI": 332, "PRI": 630,
+          "GRL": 304, "NCL": 540, "SLB": 90, "VUT": 548, "ERI": 232, "GIN": 324, "GNB": 624, "SLE": 694, "SOM": 706}
+MIRROR_GROUPS = [("RUS", "BLR"), ("VEN", "LBY", "TKM"), ("GNQ", "TCD", "SDN", "SSD", "SYR"), ("AFG", "BGD", "NPL", "PRK", "TWN", "KOS"),
+                 ("CUB", "HTI", "PRI", "GRL", "NCL", "SLB", "VUT"), ("ERI", "GIN", "GNB", "SLE", "SOM")]
+MIRROR_YEAR = 2023  # partners' 2023 records are the most complete
+
+
+def mirror_trade(year: int = MIRROR_YEAR) -> dict:
+    """Oil trade of countries that don't report it, from their partners' records: what partners say they exported
+    to the country (its imports; the Gulf share from the Gulf producers that report: Iraq, Iran and Kuwait often
+    don't, so it can be low) and what they say they imported from it (its exports)."""
+    code_iso = {MIRROR[i]: i for g in MIRROR_GROUPS for i in g}
+    imp, exp, gulf = {}, {}, {}
+    for group in MIRROR_GROUPS:
+        partners = ",".join(str(MIRROR[i]) for i in group)
+        for cmd in CMDS:
+            for r in comtrade(year, partners, "X", cmd):
+                iso = code_iso.get(r["partnerCode"])
+                if iso:
+                    imp[iso] = imp.get(iso, 0.0) + float(r["primaryValue"])
+                    if r["reporterCode"] in GULF:
+                        by = gulf.setdefault(iso, {})
+                        by[GULF[r["reporterCode"]]] = by.get(GULF[r["reporterCode"]], 0.0) + float(r["primaryValue"])
+            for r in comtrade(year, partners, "M", cmd):
+                iso = code_iso.get(r["partnerCode"])
+                if iso:
+                    exp[iso] = exp.get(iso, 0.0) + float(r["primaryValue"])
+    return {iso: trade_profile(imp.get(iso, 0.0), exp.get(iso, 0.0), gulf.get(iso, {})) | {"year": year, "mirror": True}
+            for iso in code_iso if imp.get(iso) or exp.get(iso)}
+
+
 def trade_section() -> dict:
     ref = json.loads(md._get(CT_REPORTERS, RAW / "reporters.json").read_text(encoding="utf-8"))["results"]
     iso = {r["reporterCode"]: r["reporterCodeIsoAlpha3"].strip() for r in ref if not r.get("isGroup")}
@@ -186,13 +222,16 @@ def trade_section() -> dict:
                 if r["reporterCode"] == rep:
                     by[GULF[r["partnerCode"]]] = by.get(GULF[r["partnerCode"]], 0.0) + float(r["primaryValue"])
             out[code] = trade_profile(total, exp.get(rep, 0.0), by) | {"year": year}
+    for iso, v in mirror_trade().items():
+        out.setdefault(iso, v)
     collected = datetime.fromtimestamp(min(p.stat().st_mtime for p in RAW.glob("oil_*.json")), UTC).strftime("%Y-%m-%d")
     return {"source": "UN Comtrade, public preview API (HS 2709 crude and HS 2710 refined products, imports CIF and "
                       "exports FOB as each country reports them, US$)",
             "url": "https://comtradeplus.un.org/", "collected": collected,
             "gulf": list(GULF.values()),
             "notes": ("gulf_share: imports from the seven Gulf producers / all oil imports, an upper bound for oil "
-                      "through the strait (Yanbu and Fujairah bypass it); m: net oil imports / oil imports"),
+                      "through the strait (Yanbu and Fujairah bypass it); m: net oil imports / oil imports; countries "
+                      f"marked mirror don't report, so their figures are their partners' {MIRROR_YEAR} records"),
             "countries": out}
 
 
@@ -357,15 +396,71 @@ def naive_outlook(level: pd.Series, brent: pd.Series, link: dict | None, misses:
     return {"from": t0.strftime("%Y-%m"), "q": out}
 
 
+IMF_URL = ("https://api.imf.org/external/sdmx/3.0/data/dataflow/IMF.STA/CPI/+/*.CPI.{coicop}.{measure}.{freq}"
+           "?c%5BTIME_PERIOD%5D=ge:2005-01")
+IMF_RAW = md.ROOT / "data" / "raw" / "imf"
+# IMF CPI divisions (COICOP 1999): all items, food, housing and energy (rent, water, electricity, gas, fuels), transport
+IMF_KINDS = {"all": "_T", "food": "CP01", "energy": "CP04", "transport": "CP07"}
+
+
+def imf_cpi(coicop: str, measure: str = "IX", freq: str = "M") -> dict[str, pd.Series]:
+    """{iso3: Series} from the IMF's CPI dataset (SDMX 3.0 JSON, no key), monthly or quarterly periods."""
+    path = md._get(IMF_URL.format(coicop=coicop, measure=measure, freq=freq), IMF_RAW / f"cpi_{coicop}_{measure}_{freq.replace('*', 'all')}.json")
+    d = json.loads(path.read_text(encoding="utf-8"))["data"]
+    st = d["structures"][0]
+    dims, times = st["dimensions"]["series"], [v["value"] for v in st["dimensions"]["observation"][0]["values"]]
+
+    def when(t):
+        y, p = t.split("-")
+        return pd.Timestamp(int(y), int(p[1:]) if p[0] == "M" else 3 * int(p[1:]), 1)
+
+    out = {}
+    for key, ser in d["dataSets"][0].get("series", {}).items():
+        iso = dims[0]["values"][int(key.split(":")[0])]["id"]
+        vals = {when(times[int(i)]): float(o[0]) for i, o in ser.get("observations", {}).items() if o and o[0] not in (None, "")}
+        if vals:
+            out[iso] = pd.Series(vals).sort_index()
+    return out
+
+
+def naive_misses(level: pd.Series, h: int = 12) -> list[float]:
+    """What happened minus the naive rule ('the last 12 months' rate continues'), h months ahead, from origins
+    every 6 months 2015-2024: the spread of these sets the outlook's band."""
+    s = level[level > 0]
+    out = []
+    for origin in pd.date_range("2015-06-01", "2024-06-01", freq="6MS"):
+        end, back = origin + pd.DateOffset(months=h), origin - pd.DateOffset(months=12)
+        if all(t in s.index for t in (origin, end, back)):
+            out.append(100 * (s[end] / s[origin] - 1) - 100 * ((s[origin] / s[back]) ** (h / 12) - 1))
+    return out
+
+
 def prices_section() -> dict:
     ref = json.loads(md._get(CT_REPORTERS, RAW / "reporters.json").read_text(encoding="utf-8"))["results"]
     m49_iso = {r["reporterCode"]: r["reporterCodeIsoAlpha3"].strip() for r in ref if not r.get("isGroup")} | M49_FIX
-    levels = fao_levels(md._get(FAO_URL, FAO_ZIP), m49_iso)
+    fao = fao_levels(md._get(FAO_URL, FAO_ZIP), m49_iso)
+    imf = {kind: imf_cpi(code) for kind, code in IMF_KINDS.items()}
+    # each household budget's shares (% of spending) on food, housing and energy, and transport, latest year
+    weights = {}
+    for kind, code in IMF_KINDS.items():
+        if kind != "all":
+            for iso, w in imf_cpi(code, "WGT_PT", "*").items():
+                weights.setdefault(iso, {})[kind] = round(float(w.iloc[-1]), 1)
     brent = md.fetch_fred("MCOILBRENTEU")
+    # the IMF first (four divisions, months to Sep 2026); FAOSTAT where the IMF has no series or an older one
+    levels: dict[str, dict[str, tuple[pd.Series, str]]] = {}
+    for kind, by in imf.items():
+        for iso, s in by.items():
+            levels.setdefault(iso, {})[kind] = (s, "IMF")
+    for iso, d in fao.items():
+        for kind, s in d.items():
+            cur = levels.get(iso, {}).get(kind)
+            if cur is None or cur[0].index[-1] < s.index[-1] - pd.DateOffset(months=6):
+                levels.setdefault(iso, {})[kind] = (s, "FAOSTAT")
     out, noisy, raw, errs = {}, [], {}, {}
     for iso, d in sorted(levels.items()):
         c = {}
-        for kind, level in d.items():
+        for kind, (level, src) in d.items():
             links = {h: horizon_link(level, brent, h) for h in HORIZONS}
             ok = all(links.values()) and links[12]["se"] <= NOISY_SE
             if not ok and links[12] is not None:
@@ -373,31 +468,50 @@ def prices_section() -> dict:
             if ok:
                 for h, f in links.items():
                     raw.setdefault((kind, h), {})[iso] = f
+            # the time-series model's backtest (it lost to the naive rule) is kept for all prices and food only
+            if ok and kind in ("all", "food") and src == "FAOSTAT":
+                errs.setdefault(kind, []).extend(backtest(level, brent))
             # inflation now, and in Feb 2026, the last month before the Hormuz closure
-            bt = backtest(level, brent) if ok else []
-            if bt:
-                errs.setdefault(kind, []).extend(bt)
-            c[kind] = {"now": latest_yoy(level), "before": latest_yoy(level, "2026-02"), "link": None, "own": ok,
-                       "misses": [e[2] for e in bt], "level": level}
+            c[kind] = {"now": latest_yoy(level), "before": latest_yoy(level, "2026-02"), "link": None, "own": ok, "src": src,
+                       "misses": naive_misses(level), "level": level}
         out[iso] = c
-    # ridge update of each country's link towards our cost-of-living model; keep its own fit and the prior to show
+    # Kosovo isn't in the IMF's or FAO's data; the trends data has its HICP (annual rates only)
+    xk = json.loads(TRENDS.read_text(encoding="utf-8"))["countries"].get("XK", {}).get("consumer", {})
+    for kind, code in (("all", "TOTAL"), ("food", "CP01")):
+        ser = yoy_series(xk[code]).dropna() if code in xk else None
+        if ser is not None and len(ser):
+            out.setdefault("KOS", {})[kind] = {"now": {"v": round(float(ser.iloc[-1]), 1), "month": ser.index[-1].strftime("%Y-%m")},
+                                              "before": None, "link": None, "own": False, "src": "Eurostat HICP", "misses": [], "level": None}
+    # ridge update of each country's link: towards our cost-of-living model for all prices and food, towards the
+    # cross-country average for housing and energy, and transport (our model has no such composites)
     prior = model_prior()
     pooled = {}
     for (kind, h), fits in raw.items():
-        shrunk, pooled.setdefault(kind, {})[str(h)] = partial_pool(fits, prior[kind][str(h)])
+        shrunk, pooled.setdefault(kind, {})[str(h)] = partial_pool(fits, prior[kind][str(h)] if kind in prior else None)
         for iso, f in shrunk.items():
             out[iso][kind]["link"] = (out[iso][kind]["link"] or {}) | {str(h): f | {"own": fits[iso]["b"]}}
-    # the outlook needs the pooled links, so it comes last
+    # the outlook needs the links, so it comes last; a country too unstable to fit gets the prior's link
     for c in out.values():
         for kind, v in c.items():
             level, misses = v.pop("level"), v.pop("misses")
-            v["outlook"] = naive_outlook(level, brent, v["link"], misses) if v["own"] else None
+            link = v["link"] or ({str(h): {"b": pooled[kind][str(h)]["b"]} for h in HORIZONS} if kind in pooled else None)
+            fresh = level is not None and level.index[-1] >= pd.Timestamp(OUTLOOK_FROM)
+            o = naive_outlook(level, brent, link, misses) if fresh else None
+            # a band wider than MAX_BAND over a year is no forecast: very high inflation, or a broken series
+            v["outlook"] = o if o and o["q"]["12"][2] - o["q"]["12"][0] <= MAX_BAND else None
+            v["why_none"] = (None if v["outlook"] else "annual rates only" if level is None
+                             else "its latest month is too old to forecast from" if not fresh else "prices too unstable to forecast")
     fetched = datetime.fromtimestamp(FAO_ZIP.stat().st_mtime, UTC).strftime("%Y-%m-%d")
-    return {"source": f"FAOSTAT consumer price indices (general and food, 2015 = 100, monthly), fetched {fetched}",
-            "url": "https://www.fao.org/faostat/en/#data/CP",
+    imf_fetched = datetime.fromtimestamp(min(p.stat().st_mtime for p in IMF_RAW.glob("cpi_*.json")), UTC).strftime("%Y-%m-%d")
+    return {"source": (f"IMF consumer price indices by COICOP division (all items, food, housing and energy, transport; "
+                       f"monthly; budget weights), fetched {imf_fetched}; FAOSTAT consumer price indices (general and food) "
+                       f"where the IMF has none, fetched {fetched}"),
+            "url": "https://data.imf.org/ (CPI); https://www.fao.org/faostat/en/#data/CP",
+            "weights": weights,
             "method": ("h-month log change in the price index on the h-month log change in Brent (FRED MCOILBRENTEU, US$), "
                        f"{SAMPLE[0][:7]} to {SAMPLE[1][:7]}, Newey-West errors over h months; each country's slope is "
-                       "ridge-updated towards our cost-of-living model's link (US, UK and euro-area average, normal regime) "
+                       "ridge-updated towards our cost-of-living model's link for all prices and food (US, UK and euro-area "
+                       "average, normal regime) and towards the cross-country average for housing and energy, and transport, "
                        "by its noise, the penalty set by how far the countries' true slopes spread around the model; "
                        "inflation is the 12-month change in the index, at the latest month and in Feb 2026 before the closure"),
             "prior": prior,
