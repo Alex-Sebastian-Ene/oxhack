@@ -31,6 +31,15 @@ MODES = [("whatif", "Bayesian, given oil and gas"), ("whatif_no_regime", "same, 
 
 
 R_HAT_MAX, ESS_MIN = 1.05, 100  # the convergence bar of experiments/macro_bayes.py
+# Institutional US CPI forecasts, scored by `experiments/macro_global.py benchmarks` on the chain's 8 folds
+BENCH_FILE = col.ROOT / "runs" / "macro" / "global-benchmarks.json"
+INSTITUTIONS = (("cleveland", "Cleveland Fed 1-year expected inflation (FRED EXPINF1YR)"),
+                ("michigan", "Michigan 1-year expectations (FRED MICH)"),
+                ("spf", "SPF median, at the end of each release month"),
+                ("spf_mean", "SPF mean, at the end of each release month"),
+                ("spf_latest", "SPF median, latest survey at every month-end"),
+                ("rw", "Random walk: last 12-month pace carries on"))
+BENCH_LAG = 12  # Newey-West lags of the comparison, as in the chain's Diebold-Mariano tests
 
 
 def converged(d: dict) -> bool:
@@ -176,6 +185,70 @@ def fold_section(folds: list[dict]) -> list[str]:
     return out
 
 
+def bench_by_origin(bench: dict, origins: list[str], key: str, h: int) -> np.ndarray:
+    """A benchmark's US CPI CRPS at horizon h for each of our origins (NaN where it has none). The two
+    sets of folds can differ by a month or two at their edges, so the match is by origin month."""
+    by = {}
+    for f in bench["folds"]:
+        j = f["names"].index(f"us_cpi@{h}")
+        for o, date in enumerate(f["test_dates"]):
+            by[date] = f["crps"][key][o][j]
+    return np.array([np.nan if by.get(d) is None else by[d] for d in origins], float)
+
+
+def institutions_section(folds: list[dict], bench: dict) -> list[str]:
+    mode = "forecast_GARCH-CGMY"
+    origins = [o for f in folds for o in f["origins"]]
+    clim, S, I = stack(folds, "climatology"), stack(folds, mode), stack(folds, mode, "inside90")
+    ours = (("us_composite", "Our US composite (items + rest)"), ("us_all", "Our US headline, forecast directly"))
+    B = {(k, h): bench_by_origin(bench, origins, k, h) for k, _ in INSTITUTIONS for h in col.HS}
+    head = KEYS.index("us_all")  # one scale for every row: the climatology of US headline CPI
+    gen = bench["meta"]["generated"][:10]
+    out = ["## Against the Fed and the SPF: US CPI", "",
+           f"_Benchmarks from `{BENCH_FILE.relative_to(col.ROOT).as_posix()}` (written by `experiments/macro_global.py "
+           f"benchmarks` on {gen}; surveys fetched {bench['fetched']}, SPF to the {bench['spf_last_survey']} survey)._", "",
+           "Our rows are the forecast mode with Lévy Brent paths: nothing after the origin is known. The benchmarks are the "
+           "chain's, on the same 8 folds, matched by origin month. Each is a point forecast with a Gaussian band of the "
+           "spread of its own errors on the fold's training origins. Cleveland and Michigan give 1-year rates, scaled by "
+           "h/12 at shorter horizons; the SPF's quarterly path is interpolated to months (`docs/macro-ensemble.md`). The "
+           "surveys were made with the data as first published, while we train and score on today's revised CPI "
+           "(`CPIAUCSL`, revised only through its seasonal factors), which flatters us slightly.", "",
+           "**Skill against the climatology of US headline CPI**, each on the origins it has (the release-month SPF has "
+           "one a quarter)", "",
+           "| Forecast | " + " | ".join(f"h={h}" for h in col.HS) + " |", "|---|" + "---|" * len(col.HS)]
+    for k, lab in ours:
+        c = KEYS.index(k)
+        out.append(f"| {lab} | " + " | ".join(f3(1 - np.nanmean(S[:, H_IDX[h], c]) / np.nanmean(clim[:, H_IDX[h], head]))
+                                              for h in col.HS) + " |")
+    for k, lab in INSTITUTIONS:
+        cells = []
+        for h in col.HS:
+            b, cl = B[(k, h)], clim[:, H_IDX[h], head]
+            ok = np.isfinite(b) & np.isfinite(cl)
+            cells.append(f3(1 - b[ok].mean() / cl[ok].mean()))
+        out.append(f"| {lab} | " + " | ".join(cells) + " |")
+    out += ["| 90% coverage of our US composite | " + " | ".join(
+        pct(np.nanmean(I[:, H_IDX[h], KEYS.index("us_composite")])) for h in col.HS) + " |", ""]
+    for k, lab in ours:
+        c = KEYS.index(k)
+        out += [f"**{lab} against each benchmark**: how much lower our CRPS is, on the origins both have; t is the "
+                f"Diebold-Mariano statistic of ours minus theirs (Newey-West, {BENCH_LAG} lags; negative = ours better)", "",
+                "| Benchmark | " + " | ".join(f"h={h}" for h in col.HS) + " |", "|---|" + "---|" * len(col.HS)]
+        for bk, blab in INSTITUTIONS:
+            cells = []
+            for h in col.HS:
+                a, b, cl = S[:, H_IDX[h], c], B[(bk, h)], clim[:, H_IDX[h], head]
+                ok = np.isfinite(a) & np.isfinite(b) & np.isfinite(cl)
+                d = (a[ok] - b[ok]) / cl[ok].mean()
+                m_, cov = oc.ols_hac(d, np.ones((len(d), 1)), BENCH_LAG)
+                lower = 1 - a[ok].mean() / b[ok].mean()
+                cells.append(f"{abs(100 * lower):.0f}% {'lower' if lower >= 0 else 'higher'} "
+                             f"(t {m_[0] / np.sqrt(cov[0, 0]):+.1f}, n {ok.sum()})")
+            out.append(f"| {blab} | " + " | ".join(cells) + " |")
+        out.append("")
+    return out
+
+
 def event_test(ev: dict, label: str) -> list[str]:
     """The fan given the oil and gas that happened, against the actual, at the last known month."""
     n = ev["actual_months"]
@@ -217,34 +290,47 @@ def event_test(ev: dict, label: str) -> list[str]:
     return out + [""]
 
 
-def multipliers_section(fin: dict) -> tuple[list[str], list[list]]:
+def multipliers_section(fin: dict, ev: dict | None = None) -> tuple[list[str], list[list]]:
     """The supply-disruption multiplier for every metric: how much more of an energy-cost move passes
-    through in a disruption month (1 + kappa), pooled by kind and for each series."""
+    through in a disruption month (1 + kappa), pooled by kind and for each series. With ev (the 2026
+    event fit, to Feb 2026) a second column gives the multiplier learned from 2022's months alone.
+    Each row ends with that column's median and interval (blank without ev)."""
     kq, ks = fin["mu_kappa"], fin["kappa"]
     clear = lambda lo, hi: "clearly above 1" if lo > 1 else ("clearly below 1" if hi < 1 else "within noise")  # noqa: E731
+    band = lambda q, i: tuple(1 + q[p][i] for p in ("q05", "q50", "q95"))  # noqa: E731
+    cell = lambda lo, mid, hi: f"×{mid:.2f} ({lo:.2f} to {hi:.2f})"  # noqa: E731
+    early = f" | From 2022 only (fit to {ev['diagnostics']['last']})" if ev else ""
     out = ["## Supply-disruption multiplier for every metric", "",
-           "In a supply-disruption month each series' energy-cost pass-through is multiplied by 1 + kappa. These are the "
-           "fitted multipliers from the all-data fit, median and 90% interval. Pooled is the kind's mean across regions; "
-           "a series' own value is shrunk towards it.", "", "| Kind | Pooled multiplier | Reading |", "|---|---|---|"]
+           f"In a supply-disruption month each series' energy-cost pass-through is multiplied by 1 + kappa. These are the "
+           f"fitted multipliers from the all-data fit ({fin['diagnostics']['supply_months']} disruption months, 2022 and "
+           f"2026), median and 90% interval. Pooled is the kind's mean across regions; a series' own value is shrunk "
+           f"towards it."
+           + (f" The last column is the 2026 test's fit, which has only 2022's {ev['diagnostics']['supply_months']} "
+              "disruption months to learn from: what a model would have carried into the 2026 closure." if ev else ""),
+           "", f"| Kind | Pooled multiplier | Reading{early} |", "|---|---|---|" + ("---|" if ev else "")]
     for i, k in enumerate(col.KINDS):
-        lo, mid, hi = (1 + kq[q][i] for q in ("q05", "q50", "q95"))
-        out.append(f"| {col.KIND_NAMES[k]} | ×{mid:.2f} ({lo:.2f} to {hi:.2f}) | {clear(lo, hi)} |")
-    out += ["", "| Series | Multiplier | Reading | 12-month response to +10% Brent, normal → disruption |", "|---|---|---|---|"]
+        lo, mid, hi = band(kq, i)
+        out.append(f"| {col.KIND_NAMES[k]} | {cell(lo, mid, hi)} | {clear(lo, hi)}"
+                   + (f" | {cell(*band(ev['mu_kappa'], i))}" if ev else "") + " |")
+    out += ["", f"| Series | Multiplier | Reading | 12-month response to +10% Brent, normal → disruption{early} |",
+            "|---|---|---|---|" + ("---|" if ev else "")]
     rn, rs = fin["response_10pct"]["normal"], fin["response_10pct"]["supply"]
     rows = []
     for j, s in enumerate(col.SERIES):
-        lo, mid, hi = (1 + ks[q][j] for q in ("q05", "q50", "q95"))
+        lo, mid, hi = band(ks, j)
+        e = band(ev["kappa"], j) if ev else None
         k = KEYS.index(s.key)
         unit = "pp" if s.transform == "diff" else "%"
-        out.append(f"| {s.name} | ×{mid:.2f} ({lo:.2f} to {hi:.2f}) | {clear(lo, hi)} | {rn['q50'][11][k]:+.2f} → "
-                   f"{rs['q50'][11][k]:+.2f} {unit} |")
+        out.append(f"| {s.name} | {cell(lo, mid, hi)} | {clear(lo, hi)} | {rn['q50'][11][k]:+.2f} → "
+                   f"{rs['q50'][11][k]:+.2f} {unit}" + (f" | {cell(*e)}" if ev else "") + " |")
         rows.append([s.key, s.region, s.kind, round(mid, 3), round(lo, 3), round(hi, 3), round(rn["q50"][11][k], 4),
-                     round(rs["q50"][11][k], 4), unit])
+                     round(rs["q50"][11][k], 4), unit] + ([round(e[1], 3), round(e[0], 3), round(e[2], 3)] if ev else ["", "", ""]))
     for r in col.REGIONS:
         k = KEYS.index(f"{r}_composite")
         a, b = rn["q50"][11][k], rs["q50"][11][k]
-        out.append(f"| {NAME[f'{r}_composite']} | ×{b / a:.2f} (ratio of medians) | | {a:+.2f} → {b:+.2f} % |")
-        rows.append([f"{r}_composite", r, "composite", round(b / a, 3), "", "", round(a, 4), round(b, 4), "%"])
+        out.append(f"| {NAME[f'{r}_composite']} | ×{b / a:.2f} (ratio of medians) | | {a:+.2f} → {b:+.2f} %"
+                   + (" | |" if ev else " |"))
+        rows.append([f"{r}_composite", r, "composite", round(b / a, 3), "", "", round(a, 4), round(b, 4), "%", "", "", ""])
     return out + [""], rows
 
 
@@ -611,6 +697,8 @@ def write() -> None:
     out += events_section(data)
     if folds:
         out += fold_section(folds)
+        if BENCH_FILE.exists():
+            out += institutions_section(folds, json.loads(BENCH_FILE.read_text()))
     for name, label in (("event-2026", "The 2026 Hormuz closure as a test"), ("event-2022", "The 2022 shock as a test")):
         if name in runs:
             ev = runs[name] | {"weights": data["weights"]["w"]}
@@ -619,7 +707,7 @@ def write() -> None:
         out += scenario_section(runs["event-2026"], data["weights"]["w"])
     if "final" in runs:
         out += final_section(runs["final"], data["weights"]["w"])
-        out += multipliers_section(runs["final"])[0]
+        out += multipliers_section(runs["final"], runs.get("event-2026"))[0]
     if base_runs:
         out += bread_section(base_runs, runs)
     if base_runs and food_runs:
@@ -629,11 +717,14 @@ def write() -> None:
     write_csvs(runs, data)
     write_contributions(runs)
     if "final" in runs:
-        _, rows = multipliers_section(runs["final"])
+        ev = runs.get("event-2026")
+        _, rows = multipliers_section(runs["final"], ev)
         with open(col.NOTES / "cost-of-living-multipliers.csv", "w", newline="") as fh:
             wr = csv.writer(fh)
             wr.writerow(["series", "region", "kind", "multiplier_q50", "multiplier_q05", "multiplier_q95",
-                         "response_normal_12m", "response_disruption_12m", "unit", "fitted_to", "generated"])
+                         "response_normal_12m", "response_disruption_12m", "unit", "fitted_to", "generated",
+                         "multiplier_2022only_q50", "multiplier_2022only_q05", "multiplier_2022only_q95", "fitted_to_2022only"])
             gen = datetime.now(UTC).date().isoformat()
-            wr.writerows(r + [runs["final"]["latest"], gen] for r in rows)
+            early = ev["diagnostics"]["last"] if ev else ""
+            wr.writerows(r[:9] + [runs["final"]["latest"], gen] + r[9:] + [early if r[9] != "" else ""] for r in rows)
     print(f"wrote {col.NOTES / 'cost-of-living.md'} and the CSVs")
