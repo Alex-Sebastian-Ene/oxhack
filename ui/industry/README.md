@@ -3,7 +3,7 @@
 Edward's strait page with his materials globe built in, aimed at industry users: which products an
 oil shock reaches, which countries make and ship them, and what it does to their price.
 Open `index.html` in a browser; it needs no server. It is the same page as the shared artifact
-<https://claude.ai/artifact/84rJe1aD8Vpe7KvAnq8a39> (version 25).
+<https://claude.ai/artifact/84rJe1aD8Vpe7KvAnq8a39> (version 26).
 
 ## What it shows
 
@@ -71,6 +71,14 @@ pre-war 20 mb/d) in The shock card; the scenario menu sets its starting value. E
   no disruption, with the table's 90% range of outcomes. Unemployment is shown grey: Seb marks it forecast only.
 - **Steel and aluminium, energy bills, country fuel costs:** Seb's linear Brent links (OXH-5, `notes/oil-chain-links.md`),
   at the Brent price above.
+
+**Not from a model, labelled "illustrative" on the page** (asked on OXH-3, 25 Oct 2026):
+
+- **The exposure score** (map colours, "Most exposed"): a hand-written formula from the original Hormuz Flow page.
+  Its inputs are cited; its weights (0.4 / 0.6 for importers, ÷3, +0.15 and ×60 for exporters) are not.
+- **The shortage premium** inside each country's fuel cost: `0.8 × share of flow missing × share of oil via Hormuz`,
+  hand-set and not fitted to data.
+- **The 12-month fuel-cost path:** that fuel cost, decayed at hand-set recovery speeds.
 
 ## Where the numbers come from
 
