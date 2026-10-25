@@ -11,6 +11,9 @@ check, node on PATH.
 """
 import base64, pathlib, re, shutil, subprocess, sys
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import copy_text, world  # noqa: E402  (World view behaviour, shorter copy)
+
 HERE = pathlib.Path(__file__).resolve().parent
 APP = HERE.parent
 SRC = APP.parent / "industry" / "index.html"
@@ -27,8 +30,8 @@ SWAPS = [
     # Strait view canvas: sea, land, lanes and labels
     ('const COL = { seen: "#0a4fd0", oil: "#f26b00", oilSoft: "#c24f00", fake: "#e0201b", sea: "#a8d8f8", land: "#efe1c2",\n'
      '    landEdge: "#c2a978", lane: "#ffdc2e", laneEdge: "rgba(20,32,46,0.4)", text: "#14202e", faint: "#1f5f8f", white: "#14202e", other: "#5e6b7a" };',
-     'const COL = { seen: "#5aa9ff", oil: "#ffa424", oilSoft: "#ffbf5c", fake: "#ff4d3a", sea: "#0b2038", land: "#1c2536",\n'
-     '    landEdge: "#3d4c6e", lane: "#d9a92e", laneEdge: "rgba(0,0,0,0.55)", text: "#f1e8d2", faint: "#8fbbe3", white: "#f1e8d2", other: "#8b97ad" };', 1),
+     'const COL = { seen: "#5aa9ff", oil: "#ffa424", oilSoft: "#ffbf5c", fake: "#ff4d3a", sea: "#0a2342", land: "#363a50",\n'
+     '    landEdge: "#6a7194", lane: "#d9a92e", laneEdge: "rgba(0,0,0,0.55)", text: "#f1e8d2", faint: "#8fbbe3", white: "#f1e8d2", other: "#8b97ad" };', 1),
     ('ctx.fillStyle = "rgba(20,32,46,0.5)";', 'ctx.fillStyle = "rgba(241,232,210,0.45)";', 1),
     ('ctx.strokeStyle = "rgba(20,32,46,0.5)";', 'ctx.strokeStyle = "rgba(241,232,210,0.55)";', 1),
     ('ctx.strokeStyle = `rgba(20,32,46,${a})`;', 'ctx.strokeStyle = `rgba(241,232,210,${a})`;', 1),
@@ -73,7 +76,7 @@ def font_css() -> str:
 
 def main() -> None:
     page = SRC.read_text(encoding="utf-8")
-    for old, new, n in SWAPS:
+    for old, new, n in SWAPS + world.SWAPS + copy_text.SWAPS:
         got = page.count(old)
         if got != n:
             sys.exit(f"expected {n} of {old[:70]!r}, found {got}: the industry page changed, update SWAPS")

@@ -662,6 +662,11 @@ svg.pxi { stroke: none !important; fill: none; overflow: visible; }
 .hz-read .lost { color: var(--harm); }
 @media (max-width: 720px) { .hz-read { font-size: 15px; } .hz-key { width: 38px; min-height: 36px; padding: 6px; } .hz-brand { display: none; } }
 @media (prefers-reduced-motion: reduce) { .hz-oil { animation: none; } body::after { display: none; } }
+/* World view: the layer not in front (see world.py) */
+#world .arc.faded { animation-duration: 3.6s; filter: none; }
+#world .cols rect { pointer-events: none; stroke: #04060c; stroke-width: 1px; vector-effect: non-scaling-stroke; opacity: .78; shape-rendering: crispEdges; }
+.colkey { display: inline-block; width: 5px; height: 12px; margin-right: 6px; vertical-align: -1px; background: #8fd0f5; border: 1px solid #04060c; }
+.wtip .faint { color: var(--faint); }
 
 /* Landing page: the night refinery fills the screen; the words sit in the sky on the left (on top on a phone). */
 body.hz-landing-open { overflow: hidden; }
@@ -801,17 +806,30 @@ a.hz-src:hover { background: #163257; }
   .hz-ai-res { grid-template-columns: 1fr; } .hz-rk { grid-template-columns: minmax(0, 1fr) 90px; } .hz-rk-b { display: none; }
   .hz-row { grid-template-columns: 1fr; }
 }
+/* flags in rank order: gold 40%+ of world, silver 20%+, bronze 10%+ */
+.hz-fstrip { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 5px; }
+.hz-fs { display: inline-flex; padding: 1px; border: 2px solid transparent; }
+.hz-fs .flag { width: 20px; height: 14px; }
+.hz-fc { display: inline-flex; align-items: center; gap: 6px; padding: 3px 7px 3px 4px; background: var(--panel); border: 2px solid var(--ink); cursor: default; }
+.hz-fc .flag { width: 24px; height: 17px; }
+.hz-fc b { font: 400 17px/1 var(--mono); color: var(--oil-soft); }
+.hz-fs.gold, .hz-fc.gold { border-color: #ffcf3f; box-shadow: 0 0 0 1px #04060c, 0 0 8px rgba(255, 207, 63, .45); }
+.hz-fs.silver, .hz-fc.silver { border-color: #c9d3e3; }
+.hz-fs.bronze, .hz-fc.bronze { border-color: #c98a4b; }
+.hz-more { font: 400 16px var(--mono); color: var(--faint); }
+.hz-tierkey { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--faint); }
+.hz-tierkey i { display: inline-block; width: 10px; height: 10px; margin-right: 5px; vertical-align: -1px; border: 2px solid; }
 </style>
 <div class="hz-landing" id="hz-landing" role="dialog" aria-modal="true" aria-labelledby="hz-l-title">
   <canvas class="hz-scene" id="hz-scene" aria-hidden="true"></canvas>
   <button type="button" class="hz-l-sound hint" id="hz-l-sound" aria-pressed="false"><span id="hz-l-sound-i"></span><span id="hz-l-sound-t">Sound on</span></button>
   <div class="hz-l-card">
-    <p class="hz-l-kicker">Strait of Hormuz · night shift · the 2026 closure</p>
+    <p class="hz-l-kicker">Strait of Hormuz · 2026</p>
     <div class="hz-l-plate"><h1 id="hz-l-title">Hormuz <span>Flow</span></h1></div>
-    <p class="hz-l-sub">Where the oil goes when the strait closes, who it hurts, and what it does to prices.</p>
+    <p class="hz-l-sub">The strait is closing. Follow the oil.</p>
     <div class="hz-l-tickets" id="hz-l-tickets"></div>
     <button type="button" class="hz-l-go" id="hz-l-go"><span id="hz-l-go-i"></span>Open the valve</button>
-    <p class="hz-l-src" id="hz-l-src">Loading the data…</p>
+    <p class="hz-l-src" id="hz-l-src">Loading…</p>
   </div>
   <p class="hz-l-down" aria-hidden="true">scroll ▼</p>
 </div>
@@ -1367,11 +1385,11 @@ window.HZIcons = {
     const sc = S.scenarios.aug2026 || Object.values(S.scenarios)[0], flow = sc.estimate.total.p50, lost = Math.round((1 - flow / 20) * 100);
     const i = PW.dates.length - 1, day = new Date(PW.dates[i] + "T00:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
     $("hz-l-tickets").innerHTML =
-      `<span class="hz-l-ticket"><b>${flow.toFixed(1)}</b><span>million barrels a day through Hormuz (est.)</span></span>` +
-      `<span class="hz-l-ticket"><b class="lost">${lost}%</b><span>of the pre-war 20 mb/d lost</span></span>` +
-      `<span class="hz-l-ticket"><b class="real">${PW.n_total[i]}</b><span>ships crossed on ${day} (real count)</span></span>`;
-    $("hz-l-src").textContent = `Flow: our estimator on the simulated "${sc.label}" scenario, against about 20 mb/d before the war (EIA, 2024 average). ` +
-      `Ship count: IMF PortWatch, cached, collected ${String(PW.collected_at).slice(0, 10)}. Nothing here is live.`;
+      `<span class="hz-l-ticket"><b>${flow.toFixed(1)}</b><span>mb/d getting through (est.)</span></span>` +
+      `<span class="hz-l-ticket"><b class="lost">${lost}%</b><span>of normal flow lost</span></span>` +
+      `<span class="hz-l-ticket"><b class="real">${PW.n_total[i]}</b><span>ships on ${day} (real)</span></span>`;
+    $("hz-l-src").textContent = `Flow: our estimate, simulated ${sc.label.split(",")[0]} scenario, vs 20 mb/d pre-war (EIA 2024). ` +
+      `Ships: IMF PortWatch, cached ${String(PW.collected_at).slice(0, 10)}. Not live.`;
     window.HZScene.setFlow(flow / 20);
   }
 
@@ -1583,7 +1601,7 @@ window.HZIcons = {
             <button type="button" class="ib" id="m-close" aria-label="Close product details"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
           <div class="row between" style="align-items:baseline;margin-top:8px"><b class="pprice" id="m-price">–</b><span class="sub">price in 12 months</span></div>
           <p class="faint" id="m-band"></p>
-          <div class="seg mseg" role="group" aria-label="Who makes it or who ships it"><button type="button" data-mmode="production" aria-pressed="true">Made</button><button type="button" data-mmode="exports" aria-pressed="false">Shipped</button></div>
+          <div class="seg mseg" role="group" aria-label="Which layer is in front"><button type="button" data-mmode="production" aria-pressed="true">Made</button><button type="button" data-mmode="exports" aria-pressed="false">Shipped</button></div>
           <div class="pbars" id="m-bars"></div>
           <p class="sub" id="m-hormuz"></p>
           <span class="label" style="margin-top:4px">What it costs buyers</span>
@@ -1699,7 +1717,7 @@ window.HZIcons = {
         <p class="big"><span id="cap-n" class="mono cap-n">–</span><span class="unit">kt a day, 7 days to <span id="cap-date"></span></span></p>
         <p class="mono faint" id="cap-sub"></p>
         <div class="chartbox"><svg class="chart" id="cap-chart" viewBox="0 0 320 126" role="img" aria-label="Deadweight tonnage of tankers crossing the Strait of Hormuz per day, 7-day average, January 2025 to October 2026"></svg></div>
-        <p class="faint">Deadweight of tankers that crossed with AIS on, both directions: what they <b>could</b> carry, not what they carried. PortWatch doesn't know if a tanker was loaded, or with what.</p>
+        <p class="faint">Deadweight of tankers crossing with AIS on, both ways: what they <b>could</b> carry, not cargo.</p>
       </section>
 
 
@@ -1714,7 +1732,7 @@ window.HZIcons = {
           <div title="Missing compared with the pre-war 20 mb/d"><b class="mono dark" id="g-missing"></b><span>vs pre-war</span></div>
         </div>
         <div id="published" class="pub" aria-label="Published estimates compared with ours"></div>
-        <p class="faint">Published figures as reported, with the period each covers; check before quoting. "Ours" is our estimate on simulated ships, not a measurement.</p>
+        <p class="faint">Published figures and their periods; check before quoting. "Ours" is our estimate on simulated ships.</p>
       </section>
     </aside>
   </main>
@@ -1737,8 +1755,8 @@ window.STRAIT = {"geo":{"bbox":[54.6,24.9,57.9,27.5],"clip":[52.5,23.0,60.0,29.0
   const geo = D.geo;
   const KM_LAT = 111.32;
   const KX = KM_LAT * Math.cos(26.4 * Math.PI / 180);
-  const COL = { seen: "#5aa9ff", oil: "#ffa424", oilSoft: "#ffbf5c", fake: "#ff4d3a", sea: "#0b2038", land: "#1c2536",
-    landEdge: "#3d4c6e", lane: "#d9a92e", laneEdge: "rgba(0,0,0,0.55)", text: "#f1e8d2", faint: "#8fbbe3", white: "#f1e8d2", other: "#8b97ad" };
+  const COL = { seen: "#5aa9ff", oil: "#ffa424", oilSoft: "#ffbf5c", fake: "#ff4d3a", sea: "#0a2342", land: "#363a50",
+    landEdge: "#6a7194", lane: "#d9a92e", laneEdge: "rgba(0,0,0,0.55)", text: "#f1e8d2", faint: "#8fbbe3", white: "#f1e8d2", other: "#8b97ad" };
   const ISO = { Panama: "PA", Liberia: "LR", "Marshall Islands": "MH", Malta: "MT", Greece: "GR", Bahamas: "BS",
     Singapore: "SG", "Hong Kong": "HK", UAE: "AE", Iran: "IR", Comoros: "KM", Cameroon: "CM", Gabon: "GA",
     Guinea: "GN", "Netherlands Antilles": "AN", Guyana: "GY", Aruba: "AW", Oman: "OM", "Saudi Arabia": "SA",
@@ -2072,7 +2090,7 @@ window.STRAIT = {"geo":{"bbox":[54.6,24.9,57.9,27.5],"clip":[52.5,23.0,60.0,29.0
     capChart();
     $("pw-day").max = String(n - 1);
     $("pw-day").value = String(pwIdx);
-    $("pw-note").textContent = `Data to ${longDate(PW.dates.at(-1))}, collected ${PW.collected_at.slice(0, 10)}. Counts are real; positions on the map are illustrative.`;
+    $("pw-note").textContent = `To ${longDate(PW.dates.at(-1))}, collected ${PW.collected_at.slice(0, 10)}. Real counts, illustrative positions.`;
   }
 
   function renderPW() {
@@ -2119,7 +2137,7 @@ window.STRAIT = {"geo":{"bbox":[54.6,24.9,57.9,27.5],"clip":[52.5,23.0,60.0,29.0
     // one line a judge can read first, and which scenario this is
     const lastReal = (window.PORTWATCH && window.PORTWATCH.dates) ? window.PORTWATCH.dates[window.PORTWATCH.dates.length - 1] : null;
     $("est-line").innerHTML = `AIS shows <b>${fmt(e.seen.p50)}</b> · we estimate <b>${fmt(e.total.p50)}</b> (${fmt(e.total.p5)}–${fmt(e.total.p95)}) · <b>${fmt(e.hidden.p50)}</b> of it never appears on AIS`;
-    $("est-when").textContent = `Scenario: ${sc.label}. Simulated ships, calibrated to that published figure.${lastReal ? ` Real PortWatch counts run to ${new Date(lastReal + "T00:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })}.` : ""}`;
+    $("est-when").textContent = `${sc.label}. Simulated ships, set to that published figure.${lastReal ? ` PortWatch counts to ${new Date(lastReal + "T00:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })}.` : ""}`;
     renderLink();
     $("g-world").textContent = `${(e.global.share_of_world_p50 * 100).toFixed(1)}%`;
     $("g-missing").textContent = `−${fmt(e.global.missing_vs_prewar_mbd.p50)}`;
@@ -2138,8 +2156,8 @@ window.STRAIT = {"geo":{"bbox":[54.6,24.9,57.9,27.5],"clip":[52.5,23.0,60.0,29.0
     if (!sc || sc.real || !sc.estimate) return;
     const flow = Math.min(sc.estimate.total.p50, 20), lost = Math.round(Math.max(0, Math.min(100, (1 - flow / 20) * 100)));
     const brent = ($("brent-v") && $("brent-v").textContent.trim()) || "";
-    $("link-text").innerHTML = `About <b>${fmt(flow)}</b> of the pre-war 20 million barrels a day get through, so <b>${lost}%</b> of the flow is lost. ` +
-      (brent ? `In the World view, that sets Brent at about <b>${brent}</b> a barrel and drives fuel, food and product prices and each country's exposure.` : `The World view turns that into a Brent price and its knock-ons.`);
+    $("link-text").innerHTML = `<b>${fmt(flow)}</b> of 20 mb/d gets through: <b>${lost}%</b> lost. ` +
+      (brent ? `That sets Brent near <b>${brent}</b> in the World view.` : `The World view turns that into a Brent price.`);
   }
   // the replay button changed the scenario without telling the World view, so the two could disagree; tell it now
   if ($("brent-v")) new MutationObserver(() => renderLink()).observe($("brent-v"), { childList: true, characterData: true, subtree: true });
@@ -2716,27 +2734,29 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
   function arcsFor() {
     const m = mats[st.mat], iso = st.sel ? isoOf[st.sel] : null, out = [];
     if (!m) return out;
-    const add = (from, to, col, weight, label) => { if (from !== to && where[from] && where[to]) out.push({ from, to, color: col, weight, label }); };
-    if (st.mode === "production") {
+    const add = (from, to, col, weight, label, kind) => { if (from !== to && where[from] && where[to]) out.push({ from, to, color: col, weight, label, kind, faded: kind !== st.mode }); };
+    {
       if (iso) for (const l of m.links.filter((x) => x.to === iso)) {
         const inp = MAT.inputs[l.input];
-        add(l.from, l.to, ingColor(m, l.input), l.share, `${inp ? inp.name : l.input}: ${nmIso(l.from)} → ${nmIso(l.to)} ${Math.round(l.share * 100)}%`);
+        add(l.from, l.to, ingColor(m, l.input), l.share, `${inp ? inp.name : l.input}: ${nmIso(l.from)} → ${nmIso(l.to)} ${Math.round(l.share * 100)}%`, "production");
       }
-    } else {
+    }
+    {
       const flows = [...(m.flows || []), ...m.inputs.flatMap((id) => (MAT.inputs[id] && MAT.inputs[id].flows) || [])].filter((f) => !iso || f.from === iso || f.to === iso);
       const maxv = Math.max(...flows.map((f) => f.value || 0), 1);
-      for (const f of flows.slice(0, 16)) add(f.from, f.to, "#ffd60a", f.value != null ? f.value / maxv : f.share_of_importer || f.share_of_exporter || 0.1,
-        `${nmIso(f.from)} → ${nmIso(f.to)}${f.value != null ? ` · ${f.value}` : ""}${f.share_of_importer != null ? ` · ${Math.round(f.share_of_importer * 100)}% of its imports` : ""}`);
+      for (const f of flows.slice(0, 16)) add(f.from, f.to, "#8fd0f5", f.value != null ? f.value / maxv : f.share_of_importer || f.share_of_exporter || 0.1,
+        `${nmIso(f.from)} → ${nmIso(f.to)}${f.value != null ? ` · ${f.value}` : ""}${f.share_of_importer != null ? ` · ${Math.round(f.share_of_importer * 100)}% of its imports` : ""}`, "exports");
     }
     return out;
   }
   function tipHtml(name) {
     if (st.mat) {
-      const m = mats[st.mat], iso = isoOf[name], r = tableOf(m, st.mode).find((x) => x.iso3 === iso);
-      return `<b>${iso ? flagImg(iso) + " " : ""}${escH(name === "United States of America" ? "United States" : name)}</b><span>${escH(m.short || m.name)} ${st.mode === "exports" ? "shipped" : "made"}: <span class="mono">${r ? shareTxt(r) : "not listed"}</span></span>${VIA[name] ? `<span>${VIA[name]}</span>` : ""}`;
+      const m = mats[st.mat], iso = isoOf[name];
+      const row = (md, lab) => { const r = tableOf(m, md).find((x) => x.iso3 === iso); return `<span${md === st.mode ? "" : ' class="faint"'}>${lab}: <span class="mono">${r ? shareTxt(r) : "not listed"}</span></span>`; };
+      return `<b>${iso ? flagImg(iso) + " " : ""}${escH(name === "United States of America" ? "United States" : name)}</b>${row("production", "Made")}${row("exports", "Shipped")}${VIA[name] ? `<span>${VIA[name]}</span>` : ""}`;
     }
     const k = calc(name);
-    return `<b>${escH(name)}</b><span>Exposure <span class="mono">${fmtS(k.score)}</span></span><span>Fuel cost <span class="mono">${pct(k.fuel)}</span></span>`;
+    return `<b>${isoOf[name] ? flagImg(isoOf[name]) + " " : ""}${escH(name === "United States of America" ? "United States" : name)}</b><span>Exposure <span class="mono">${fmtS(k.score)}</span></span><span>Fuel cost <span class="mono">${pct(k.fuel)}</span></span>`;
   }
 
   // ------------------------------------------------------------ 3D globe (built the first time 3D is chosen)
@@ -2785,12 +2805,13 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
     G3.polygonCapColor((f) => fillFor(f.properties.name))
       .polygonSideColor((f) => (f.properties.name === st.sel ? "rgba(20,32,46,0.6)" : "rgba(50,80,110,0.3)"))
       .polygonStrokeColor((f) => (f.properties.name === st.sel ? "#f1e8d2" : st.mat && VIA[f.properties.name] ? "#e06a00" : "rgba(255,255,255,0.8)"))
-      .polygonAltitude((f) => (f.properties.name === st.sel ? 0.085 : 0.006));
+      .polygonAltitude((f) => (f.properties.name === st.sel ? 0.085 : 0.006 + (s3[f.properties.name] ? 0.06 * Math.sqrt(s3[f.properties.name] / max) : 0)));
     const pts = [{ hz: true, name: "Strait of Hormuz", lat: 26.5, lng: 56.4, alt: 0.02, r: 0.45, color: "#c26f12" }];
     for (const p of Object.values(CN.points)) if (C[p.name] || s3[p.name]) pts.push({ name: p.name, lat: p.lat, lng: p.lng, alt: p.name === st.sel ? 0.1 : 0.02, r: 0.5, color: fillFor(p.name) });
+    for (const d of backCols()) { const c = d3.color(d.color); c.opacity = 0.45; pts.push({ name: d.n, lat: d.lat, lng: d.lng, alt: 0.02 + 0.16 * Math.sqrt(d.v), r: 0.7, color: c.formatRgb() }); }
     G3.pointsData(pts).pointColor((d) => d.color).pointAltitude((d) => d.alt).pointRadius((d) => d.r);
-    G3.arcsData(arcsFor().map((a) => ({ startLat: where[a.from].lat, startLng: where[a.from].lng, endLat: where[a.to].lat, endLng: where[a.to].lng, color: a.color, weight: a.weight, label: a.label })))
-      .arcColor((d) => [d.color + "55", d.color]).arcStroke((d) => 0.25 + 1.2 * Math.sqrt(d.weight || 0.1)).arcLabel((d) => escH(d.label));
+    G3.arcsData(arcsFor().map((a) => ({ startLat: where[a.from].lat, startLng: where[a.from].lng, endLat: where[a.to].lat, endLng: where[a.to].lng, color: a.color, weight: a.weight, label: a.label, faded: a.faded })))
+      .arcColor((d) => (d.faded ? [d.color + "0a", d.color + "55"] : [d.color + "55", d.color])).arcStroke((d) => (d.faded ? 0.45 : 1) * (0.25 + 1.2 * Math.sqrt(d.weight || 0.1))).arcLabel((d) => escH(d.label));
     const w = st.sel && isoOf[st.sel] && where[isoOf[st.sel]];
     const rgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)).join(",");
     const rings = [w ? { lat: w.lat, lng: w.lng, color: "#f1e8d2", max: 5 } : { lat: 26.5, lng: 56.4, color: "#c26f12", max: 3 },
@@ -2960,6 +2981,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
     gFl.selectAll("g.flabel").attr("transform", (d) => `translate(${d.x},${d.y}) scale(${1 / k})`);
     gLift.selectAll("path").attr("stroke-width", 1.6);
     gPulse.selectAll("circle").attr("r", (d) => d.r / k);
+    placeCols(k);
     const hz = proj([56.4, 26.5]);
     gH.select("text").attr("x", hz[0] - 8 / k).attr("y", hz[1] - 10 / k);
   }
@@ -2978,17 +3000,17 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
     gRB.selectAll("path").attr("stroke-width", ([, d]) => 0.8 + Math.sqrt(d.h / 5400) * 7).classed("hi", ([n]) => n === st.sel);
     gR.selectAll("path").attr("stroke-width", wd).classed("dim", ([n]) => st.sel && C[st.sel] && C[st.sel].r && n !== st.sel)
       .style("animation-duration", `${(1.6 / Math.max(f, 0.15)).toFixed(2)}s`);
-    $("wflowkey").textContent = st.mat ? (st.sel ? (st.mode === "exports" ? "Trade flows of this product, blinking at the buyer" : "Arcs: where its ingredients come from, blinking where they land") : "Click a country for its supplier and trade arcs")
+    $("wflowkey").textContent = st.mat ? (st.sel ? (st.mode === "exports" ? "Trade flows, blinking at the buyer" : "Where its inputs come from") : "Click a country to see its arcs")
       : `Oil routes out of Hormuz, blinking where they land · flow now ${(f * 100).toFixed(0)}% of pre-war`;
     const m = mats[st.mat];
-    $("wttl").textContent = m ? `${m.name}: ${st.mode === "exports" ? "who ships it" : "who makes it"}` : "Exposure score (illustrative)";
+    $("wttl").textContent = m ? `${m.short || m.name}: ${st.mode === "exports" ? "shipped (fill) · made (columns)" : "made (fill) · shipped (columns)"}` : "Exposure score (illustrative)";
     if (m) {
       const r = rampOf(st.mat);
       $("wgrad").style.background = `linear-gradient(90deg, ${r(0)}, ${r(0.55)} 55%, ${r(1)})`;
-      $("wticks").innerHTML = '<span style="left:0;transform:none">smaller</span><span style="left:100%;transform:translateX(-100%)">larger producer</span><span class="viarow"><i class="viakey"></i>amber edge: Gulf producer, ships via Hormuz</span>';
+      $("wticks").innerHTML = `<span style="left:0;transform:none">smaller</span><span style="left:100%;transform:translateX(-100%)">larger ${st.mode === "exports" ? "exporter" : "producer"}</span><span class="viarow"><i class="colkey" style="background:${st.mode === "exports" ? hueOf(st.mat) : "#8fd0f5"}"></i>columns: ${st.mode === "exports" ? "made" : "shipped"}</span><span class="viarow"><i class="viakey"></i>amber edge: ships via Hormuz</span>`;
     } else { $("wgrad").style.background = GRAD0; $("wticks").innerHTML = TICKS0; }
     const fk = $("wflowkey").previousElementSibling;
-    if (fk) fk.style.borderTopColor = "#ffd60a";
+    if (fk) fk.style.borderTopColor = st.mat && st.mode === "exports" ? "#8fd0f5" : "#ffd60a";
     drawFlatArcs();
     drawLift();
     drawPulses();
@@ -2999,7 +3021,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
   function endsOf() {
     if (st.mat) {
       const seen = new Map();
-      for (const a of arcsFor()) if (!seen.has(a.to)) seen.set(a.to, { lng: where[a.to].lng, lat: where[a.to].lat, color: a.color });
+      for (const a of arcsFor()) if (!a.faded && !seen.has(a.to)) seen.set(a.to, { lng: where[a.to].lng, lat: where[a.to].lat, color: a.color });
       return [...seen.values()];
     }
     const own = st.sel && C[st.sel] && C[st.sel].r;
@@ -3049,13 +3071,30 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
     rescale();
   }
   function drawFlatArcs() {
-    const arcs = st.mat ? arcsFor() : [];
-    gArc.selectAll("path").data(arcs).join("path").attr("class", "arc")
+    const arcs = st.mat ? arcsFor().sort((a, b) => b.faded - a.faded) : [];
+    gArc.selectAll("path").data(arcs).join("path").attr("class", (a) => (a.faded ? "arc faded" : "arc"))
       .attr("d", (a) => gpath({ type: "LineString", coordinates: [[where[a.from].lng, where[a.from].lat], [where[a.to].lng, where[a.to].lat]] }))
-      .attr("stroke", (a) => a.color).attr("stroke-width", (a) => 1 + 2.6 * Math.sqrt(a.weight || 0.1)).attr("opacity", 0.9)
+      .attr("stroke", (a) => a.color).attr("stroke-width", (a) => (a.faded ? 0.5 : 1) * (1 + 2.6 * Math.sqrt(a.weight || 0.1))).attr("opacity", (a) => (a.faded ? 0.32 : 0.95))
       .selectAll("title").data((a) => [a]).join("title").text((a) => a.label);
     gR.style("display", st.mat ? "none" : null);
     gRB.style("display", st.mat ? "none" : null);
+    let gCol = gArc.select("g.cols");
+    if (gCol.empty()) gCol = gArc.insert("g", ":first-child").attr("class", "cols");
+    gCol.selectAll("rect").data(backCols(), (d) => d.n).join("rect").attr("fill", (d) => d.color);
+    placeCols(cur.k);
+  }
+  // the layer not in front: one see-through column per country, height by its share
+  function backCols() {
+    if (!st.mat) return [];
+    const w = weightsByName(st.mode === "exports" ? "production" : "exports"), max = Math.max(...Object.values(w), 0.01);
+    const c = d3.color(st.mode === "exports" ? hueOf(st.mat) : "#8fd0f5").brighter(0.4);
+    return Object.entries(w).map(([n, v]) => { const p = where[isoOf[n]]; return p && { n, v: v / max, lng: p.lng, lat: p.lat, color: c.formatHex() }; }).filter(Boolean);
+  }
+  function placeCols(k) {
+    gArc.select("g.cols").selectAll("rect").each(function (d) {
+      const [x, y] = proj([d.lng, d.lat]), h = (6 + 28 * Math.sqrt(d.v)) / k, w = 6 / k;
+      d3.select(this).attr("x", x - w / 2).attr("y", y - h).attr("width", w).attr("height", h);
+    });
   }
 
   const pct = (x, dp = 0) => `${x > 0.0005 ? "+" : x < -0.0005 ? "−" : ""}${Math.abs(x * 100).toFixed(dp)}%`;
@@ -3208,7 +3247,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
     ecoChart($("e-un-chart"), un, { unit: " pts", grey: true });
     $("e-un-note").textContent = !st.lost ? "" :
       `The grey line moves ${u12[0] < 0 ? "down" : "up"} about ${a(u12[0]).toFixed(2)} points, but the model finds no proven link from oil to jobs, so it's shown for reference only.`;
-    $("e-src").textContent = `Change against no disruption. The range covers 90% of outcomes. ${chainSrc()}.`;
+    $("e-src").textContent = `Vs no disruption. 90% range. ${chainSrc()}.`;
   }
   document.querySelectorAll("[data-eco]").forEach((b) => b.addEventListener("click", () => { ecoPick = b.dataset.eco; renderEcon(); }));
   // ------------------------------------------------------------ optional "Why these numbers?" (Gemini explains)
@@ -3303,7 +3342,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
     let sub;
     if (k.kind === "gulf") sub = `About ${Math.round(d.gulf * 100)}% of its exports must pass the strait. ${d.note || ""}`;
     else if (k.kind === "exp") sub = `Sells oil abroad, so a higher price brings in revenue, though drivers and airlines still pay more. ${d.note || ""}`;
-    else if (d.h) sub = `Before the war it took about ${(d.h / 1000).toFixed(d.h >= 1000 ? 1 : 2)} mb/d through Hormuz. At today's estimated flow that is roughly ${(d.h * Math.min(st.flow / PREWAR, 1) / 1000).toFixed(2)} mb/d.`;
+    else if (d.h) sub = `Via Hormuz: ${(d.h / 1000).toFixed(d.h >= 1000 ? 1 : 2)} mb/d pre-war, about ${(d.h * Math.min(st.flow / PREWAR, 1) / 1000).toFixed(2)} now.`;
     else sub = d.generic ? "No direct Hormuz cargoes in this model, so the shock arrives through the world oil price. Figures use a typical importer profile." : "Feels the shock through the world oil price.";
     $("c-sub").textContent = sub;
     const sc = $("c-score");
@@ -3405,7 +3444,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
     put("w-petrol", dsl.mean, `${sign(dsl.mean)}${a(dsl.mean).toFixed(0)}%`, `Diesel at the pump · range ${sign(dsl.lo)}${a(dsl.lo).toFixed(0)} to ${sign(dsl.hi)}${a(dsl.hi).toFixed(0)}%`);
     put("w-ecpi", ec, `${sign(ec)}${a(ec).toFixed(1)}%`, `Energy bills · range ${sign(elo)}${a(elo).toFixed(1)} to ${sign(ehi)}${a(ehi).toFixed(1)}%`);
     put("w-cpi", cpi.mean, `${sign(cpi.mean)}${a(cpi.mean).toFixed(1)}`, `Overall inflation, in points · range ${sign(cpi.lo)}${a(cpi.lo).toFixed(1)} to ${sign(cpi.hi)}${a(cpi.hi).toFixed(1)}`);
-    $("w-src").textContent = `Change against no disruption, 12 months on (US). Ranges cover 90% of outcomes. ${chainSrc()}; energy bills from US price data (FRED).`;
+    $("w-src").textContent = `12 months on, vs no disruption, US. 90% ranges. ${chainSrc()}; energy bills: FRED.`;
     document.querySelectorAll("[data-lost]").forEach((b) => b.setAttribute("aria-pressed", String(Number(b.dataset.lost) === st.lost)));
     renderShockExplain();
   }
@@ -3413,16 +3452,16 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
   function renderShockExplain() {
     const pct = (st.brent / BRENT0 - 1) * 100, a = Math.abs, f0 = (x) => a(x).toFixed(0), f1 = (x) => a(x).toFixed(1);
     const dsl = chainEffect("ind_gasdesw").mean, cpi = chainEffect("us_cpi").mean, out = [];
-    if (!st.lost) out.push("With Hormuz flowing normally, Seb's chain adds nothing to oil, diesel or inflation.");
+    if (!st.lost) out.push("Hormuz flowing normally: no change to oil, diesel or inflation.");
     else {
-      out.push(`With <b>${st.lost}%</b> of Hormuz oil lost, Brent averages about <b>$${st.brent}</b> over the next year, <b>${f0(pct)}% more</b> than before the war.`);
-      out.push(`Within a year that pushes diesel at the pump <b>up about ${f0(dsl)}%</b> and overall inflation <b>up about ${f1(cpi)} points</b> (US figures, against no disruption).`);
+      out.push(`<b>${st.lost}%</b> lost: Brent about <b>$${st.brent}</b> over the year (<b>+${f0(pct)}%</b>).`);
+      out.push(`US diesel <b>+${f0(dsl)}%</b>, inflation <b>+${f1(cpi)} pts</b>.`);
     }
     if (st.sel) {
       const k = calc(st.sel), nm = st.sel === "United States of America" ? "the United States" : st.sel;
-      if (k.kind === "gulf") out.push(`${nm} is a Gulf producer: what hurts it is oil it can't ship, not the price.`);
-      else if (k.kind === "exp") out.push(`${nm} sells oil abroad, so a higher price helps it.`);
-      else if (a(k.fuel) >= 0.005) out.push(`For ${nm}, fuel would cost about <b>${f0(k.fuel * 100)}% ${k.fuel > 0 ? "more" : "less"}</b> than before the war${k.hz > 0.01 ? `, with an extra shortage premium because ${f0(k.hz * 100)}% of its oil came through Hormuz` : ""}.`);
+      if (k.kind === "gulf") out.push(`${nm}: hurt by oil it can't ship, not by price.`);
+      else if (k.kind === "exp") out.push(`${nm} exports oil: a higher price helps.`);
+      else if (a(k.fuel) >= 0.005) out.push(`${nm}: fuel <b>${k.fuel > 0 ? "+" : "−"}${f0(k.fuel * 100)}%</b>${k.hz > 0.01 ? `, ${f0(k.hz * 100)}% of its oil came via Hormuz` : ""}.`);
     }
     $("shock-explain").innerHTML = out.join(" ");
   }
@@ -3791,7 +3830,7 @@ window.HZAI = (() => {
   const bullets = (text, nFacts) => `<ul class="hz-ai-list">${String(text).split(/\n+/).map((l) => l.replace(/^\s*[-*•]\s*/, "").trim()).filter(Boolean)
     .map((l) => `<li>${esc(l).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/\[(\d+)\]/g, (m, n) => (Number(n) <= nFacts ? `<span class="hz-ref">[${n}]</span>` : `<span class="hz-ref bad" title="No such fact">[${n}?]</span>`))}</li>`).join("")}</ul>`;
   const stamp = (b, extra = "") => `<p class="hz-ai-stamp">AI-written by ${esc(b.model)}${b.image_model ? `, picture by ${esc(b.image_model)}` : ""}, ${b.cached ? "cached, written " : ""}${esc(new Date(b.generated_at).toLocaleString())}. Not checked by the team${extra}.</p>`;
-  const helpLine = (msg) => `<p class="hz-ai-off">No answer: ${esc(msg)}. Start <code>uv run experiments/country_brief.py</code> on this machine with <code>GEMINI_API_KEY</code> in the repo's <code>.env</code>, then try again.</p>`;
+  const helpLine = (msg) => `<p class="hz-ai-off">No answer: ${esc(msg)}. Run <code>uv run experiments/country_brief.py</code> with <code>GEMINI_API_KEY</code> in <code>.env</code>.</p>`;
   function aiBox(id, label, run) {
     return `<div class="hz-ai" id="${id}"><div class="hz-ai-head">${px(ICON.spark, "#ffd27a")}<b>${label}</b><span>Gemini, on request</span></div>
       <button type="button" class="hz-ai-go" data-run="${id}">${run}</button><div class="hz-ai-out" aria-live="polite"></div></div>`;
@@ -3803,7 +3842,11 @@ window.HZAI = (() => {
     ...Object.values(M.inputs).map((i) => ({ id: i.id, item: i, kind: "Ingredient", icon: ICON.ore, color: i.color || "#c4baa3" })),
   ];
   const usedIn = (id) => M.materials.filter((m) => m.inputs.includes(id)).map((m) => m.name);
-  function top(rows, n = 3) { return rows.slice(0, n).map((r) => `<span class="hz-chip">${flag(r.iso3)}${esc(nameOf(r.iso3))} <b>${share(r)}</b></span>`).join(""); }
+  // flags in rank order; the name is on hover. Border by share of world: gold 40%+, silver 20%+, bronze 10%+
+  const tier = (r) => (r.share == null ? "" : r.share >= 0.4 ? " gold" : r.share >= 0.2 ? " silver" : r.share >= 0.1 ? " bronze" : "");
+  const tip = (r, i) => `#${i + 1} ${nameOf(r.iso3)} · ${share(r)}`;
+  function flagRow(rows) { return rows.map((r, i) => `<span class="hz-fc${tier(r)}" title="${esc(tip(r, i))}" aria-label="${esc(tip(r, i))}">${flag(r.iso3)}<b>${share(r)}</b></span>`).join(""); }
+  function flagStrip(rows, n = 10) { return rows.slice(0, n).map((r, i) => `<span class="hz-fs${tier(r)}" title="${esc(tip(r, i))}">${flag(r.iso3)}</span>`).join("") + (rows.length > n ? `<span class="hz-more">+${rows.length - n}</span>` : ""); }
   function resourceFacts(x) {
     const it = x.item, out = [];
     const made = it.producers || [], ship = (it.exports && it.exports.list) || [];
@@ -3828,19 +3871,19 @@ window.HZAI = (() => {
     const cards = all.map((x) => {
       const it = x.item, made = it.producers || [], ship = (it.exports && it.exports.list) || [], u = usedIn(x.id);
       return `<details class="hz-res" style="--hue:${x.color}"><summary><span class="hz-res-i">${px(x.icon, x.color)}</span><span class="hz-res-t"><b>${esc(it.name)}</b>
-          <small>${x.kind}${u.length ? ` · in ${esc(u.join(", "))}` : ""}${made[0] ? ` · top maker ${esc(nameOf(made[0].iso3))}` : ""}</small></span><span class="hz-chev">▾</span></summary>
+          <small>${x.kind}${u.length ? ` · in ${esc(u.join(", "))}` : ""}</small>${made.length ? `<span class="hz-fstrip" aria-label="Top makers">${flagStrip(made)}</span>` : ""}</span><span class="hz-chev">▾</span></summary>
         <div class="hz-res-b">
-          ${made.length ? `<div class="hz-row"><span class="hz-k">Made by</span><div class="hz-chips">${top(made)}</div></div>` : ""}
-          ${ship.length ? `<div class="hz-row"><span class="hz-k">Shipped by</span><div class="hz-chips">${top(ship)}</div></div>` : ""}
+          ${made.length ? `<div class="hz-row"><span class="hz-k">Made by</span><div class="hz-chips">${flagRow(made)}</div></div>` : ""}
+          ${ship.length ? `<div class="hz-row"><span class="hz-k">Shipped by</span><div class="hz-chips">${flagRow(ship)}</div></div>` : ""}
           <div class="hz-ds"><span class="hz-badge made">Made</span><span class="hz-yr">${esc(it.year || "")}</span><span class="hz-fine">${esc(it.unit || "")}</span><div class="hz-srcs">${linkify(it.source || "")}</div></div>
           ${it.exports ? `<div class="hz-ds"><span class="hz-badge ship">Shipped</span><span class="hz-yr">${esc(it.exports.year || "")}</span><span class="hz-fine">${esc(it.exports.unit || "")}</span><div class="hz-srcs">${linkify(it.exports.source || "")}</div>${it.exports.note_2026 ? `<p class="hz-fine">${linkify(it.exports.note_2026)}</p>` : ""}</div>` : ""}
           ${aiBox(`hz-res-${x.id}`, `What is ${esc(it.name.toLowerCase())}?`, "Explain it, with a picture")}
         </div></details>`;
     }).join("");
-    return `<p class="hz-lede">Every material and ingredient on the map: who makes and ships it, and where each number comes from.</p>
+    return `<p class="hz-lede">Every material on the map, who makes and ships it, and the source of each number.</p><p class="hz-tierkey"><span><i style="border-color:#ffcf3f"></i>40%+ of world</span><span><i style="border-color:#c9d3e3"></i>20%+</span><span><i style="border-color:#c98a4b"></i>10%+</span><span>Hover a flag for its country</span></p>
       <div class="hz-tiles"><div><b>${pages.size}</b><span>source pages</span></div><div><b>${isos.size}</b><span>countries</span></div>
         <div><b>${links}</b><span>supplier links</span></div><div><b>${Math.min(...years)}–${Math.max(...years)}</b><span>data years</span></div></div>
-      <p class="hz-note">Collected by web search on ${esc(M.generated)}. Most primary sites were blocked from our sandbox, so figures are from search-result snippets of the pages cited. ≈ marks a share we estimated from the table's own ratio. Nothing here is live.</p>
+      <p class="hz-note">Collected ${esc(M.generated)} from search results of the pages cited. ≈ is our estimate from the table. Not live.</p>
       <div class="hz-res-list">${cards}</div>`;
   }
   async function runResource(box) {
@@ -3901,7 +3944,7 @@ window.HZAI = (() => {
       ${rows.length ? `<h3 class="hz-h3">Where it ranks</h3><div class="hz-rks">${bars}</div>` : ""}
       ${into.length ? `<h3 class="hz-h3">Key inputs come from</h3><div class="hz-chips">${into.join("")}</div>` : ""}
       ${aiBox("hz-prof-ai", `${esc(nameOf(iso))} in a few lines`, "Summarise with Gemini")}
-      <p class="hz-note">Ranks are among the countries each table lists, not all countries. Every number above is from the sourced tables (see Sources) or this page's model.</p>`;
+      <p class="hz-note">Ranks are within each table's listed countries. Numbers come from Sources or this page's model.</p>`;
   }
   let profIso = null;
   async function runProfile(box) {
