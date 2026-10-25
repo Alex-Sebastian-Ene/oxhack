@@ -4,14 +4,14 @@
  "facts_read": "2026-10-25T10:07:40Z",
  "models": [
   "gemini-3-flash-preview",
-  "gemini-3.5-flash"
+  "gemini-3.5-flash",
+  "gemini-3.8-flash"
  ],
  "written": [
   "2026-10-25T08:56:26+00:00",
-  "2026-10-25T10:19:54+00:00"
+  "2026-10-25T10:27:12+00:00"
  ],
  "missing": [
-  "AFG",
   "AGO",
   "ALB",
   "ARG",
@@ -46,7 +46,6 @@
   "DOM",
   "DZA",
   "ECU",
-  "EGY",
   "ERI",
   "ESH",
   "ETH",
@@ -64,8 +63,6 @@
   "HND",
   "HTI",
   "HUN",
-  "IDN",
-  "IRQ",
   "ISL",
   "ISR",
   "JAM",
@@ -89,7 +86,6 @@
   "MLI",
   "MMR",
   "MNE",
-  "MNG",
   "MOZ",
   "MRT",
   "MWI",
@@ -97,12 +93,10 @@
   "NAM",
   "NCL",
   "NER",
-  "NGA",
   "NIC",
   "NOR",
   "NPL",
   "NZL",
-  "OMN",
   "PAK",
   "PAN",
   "PER",
@@ -143,10 +137,8 @@
   "URY",
   "UZB",
   "VEN",
-  "VNM",
   "VUT",
   "YEM",
-  "ZAF",
   "ZMB",
   "ZWE"
  ],
@@ -391,6 +383,18 @@
   }
  },
  "countries": {
+  "AFG": {
+   "country": "Afghanistan",
+   "text": "- Oil trade data is not available, but with Hormuz flow at 6.6 [1] / 20 [1] mb/d (67% [1] lost), fuel cost is +12% [1] versus pre-war.\n- Prior to the closure in Feb 2026 [2], prices were +6.4% [2] (food +6.0% [2]), rising by Jun 2026 [2] to +7.6% [2] (food +7.2% [2]).\n- Grocery prices rise +8.2% [3] by Jun 2027 [3] (100 [3] spent costs 108.2 [3]), with oil's moves adding +1.02% [3].\n- All prices rise +8.7% [4] by Jun 2027 [4] (100 [4] spent costs 108.7 [4]), with oil's moves adding +1.07% [4].",
+   "facts": [
+    "Afghanistan in this page's Hormuz model at the current setting (FLOW 6.6/20 mb/d · LOST 67%): – oil cut off: not in our data; fuel cost +12% vs pre-war; – of its oil imports came from the Gulf; No oil trade data",
+    "In Jun 2026 prices in Afghanistan were +7.6% on a year earlier, food +7.2%. Before the Hormuz closure, in Feb 2026: +6.4%, food +6.0%. (FAOSTAT)",
+    "Groceries (food prices): +8.2%. By Jun 2027, 100 spent today costs 108.2 (90% range 84.1 to 122.9). Oil's moves since Jun 2026 add +1.02%. Brent at $95 instead of the pre-war $70, over 12 months by itself: our cost-of-living model +0.93%, Afghanistan's own data +1.38%, combined +1.08% (a ridge update of our model on Afghanistan's prices).",
+    "All prices: +8.7%. By Jun 2027, 100 spent today costs 108.7 (90% range 91.5 to 118.6). Oil's moves since Jun 2026 add +1.07%. Brent at $95 instead of the pre-war $70, over 12 months by itself: our cost-of-living model +0.98%, Afghanistan's own data +1.33%, combined +1.13% (a ridge update of our model on Afghanistan's prices)."
+   ],
+   "model": "gemini-3.8-flash",
+   "generated_at": "2026-10-25T10:26:41+00:00"
+  },
   "ARE": {
    "country": "United Arab Emirates",
    "text": "- The UAE’s biggest global role is as the #1 exporter of naphtha (574 kb/d) [9], while primary aluminium is a major export ranking #2 ($7.36bn) [6].\n- It ranks #5 in primary aluminium production (3.6% of world output) [5], #8 in crude oil production [7], and #5 in crude oil exports [8].\n- As a Gulf producer [1], its exposure to a Hormuz shock would trap 37% of its oil exports and increase fuel costs by 12% [1].\n- Projected oil price moves (Brent at $95) would add 0.27% to total domestic prices [4] and 0.34% to grocery costs [3].",
@@ -627,6 +631,19 @@
    "model": "gemini-3.5-flash",
    "generated_at": "2026-10-25T10:09:20+00:00"
   },
+  "EGY": {
+   "country": "Egypt",
+   "text": "- World role: For nitrogen fertiliser production, Egypt ranks #8 [5] of 11 [5] listed, accounting for 2.7% [5] of world output in 2025 [5].\n- Key inputs: Egypt is a net importer, with 72% [1] of its oil imports coming from the Gulf.\n- Hormuz shock exposure: Under the model's current setting, 48% [1] of Egypt's oil imports are cut off, raising fuel costs by 12% [1] compared to pre-war levels.\n- Inflation impact: Overall price inflation increased from 13.4% [2] in Feb 2026 [2] to 14.3% [2] in Jun 2026 [2]; by Jun 2027 [4], overall prices are projected at +15.0% [4], with groceries up 6.3% [3].",
+   "facts": [
+    "Egypt in this page's Hormuz model at the current setting (FLOW 6.6/20 mb/d · LOST 67%): 48% of its oil imports cut off; fuel cost +12% vs pre-war; 72% of its oil imports came from the Gulf; Net importer",
+    "In Jun 2026 prices in Egypt were +14.3% on a year earlier, food +5.4%. Before the Hormuz closure, in Feb 2026: +13.4%, food +4.6%. (FAOSTAT)",
+    "Groceries (food prices): +6.3%. By Jun 2027, 100 spent today costs 106.3 (90% range 70.9 to 138.9). Oil's moves since Jun 2026 add +0.96%. Brent at $95 instead of the pre-war $70, over 12 months by itself: our cost-of-living model +0.93%, Egypt's own data +1.21%, combined +1.01% (a ridge update of our model on Egypt's prices).",
+    "All prices: +15.0%. By Jun 2027, 100 spent today costs 115.0 (90% range 101.7 to 132.3). Oil's moves since Jun 2026 add +0.68%. Brent at $95 instead of the pre-war $70, over 12 months by itself: our cost-of-living model +0.98%, Egypt's own data +0.24%, combined +0.71% (a ridge update of our model on Egypt's prices).",
+    "Nitrogen fertiliser production: Egypt ranks #8 of 11 listed, 2.7% of world output (2025; worldpopulationreview.com)"
+   ],
+   "model": "gemini-3.8-flash",
+   "generated_at": "2026-10-25T10:24:50+00:00"
+  },
   "ESP": {
    "country": "Spain",
    "text": "- Spain is a net importer of oil [1].\n- The country sources 9% of its oil imports from the Gulf [1].\n- Under the Hormuz shock model, Spain faces a 6% cut to its oil imports and a 13% increase in fuel costs relative to pre-war levels [1].\n- Total prices are forecast to rise 4.2% by June 2027, with oil's movement since June 2026 adding 0.95% to that figure [4].\n- Regional disruption models project specific price increases of 10.9% for motor fuel and 11.1% for gas [13, 12].",
@@ -803,6 +820,20 @@
    "model": "gemini-3.5-flash",
    "generated_at": "2026-10-25T10:12:14+00:00"
   },
+  "IDN": {
+   "country": "Indonesia",
+   "text": "- Production rankings: Indonesia ranks #5 [5] of 11 [5] in nitrogen fertiliser (4.0% [5] of world output) and #6 [6] of 6 [6] in bauxite (2.3% [6] of world output).\n- Key inputs: Indonesia is a net importer [1], with 12% [1] of its oil imports coming from the Gulf [1].\n- Hormuz shock exposure: Under the model, 8% [1] of its oil imports are cut off [1], driving fuel costs up +12% [1] versus pre-war levels.\n- Domestic price impact: Annual price inflation was +4.8% [2] (food +3.5% [2]) in February 2026 [2] before the Hormuz closure, moving to +3.3% [2] (food +4.7% [2]) in June 2026 [2].",
+   "facts": [
+    "Indonesia in this page's Hormuz model at the current setting (FLOW 6.6/20 mb/d · LOST 67%): 8% of its oil imports cut off; fuel cost +12% vs pre-war; 12% of its oil imports came from the Gulf; Net importer",
+    "In Jun 2026 prices in Indonesia were +3.3% on a year earlier, food +4.7%. Before the Hormuz closure, in Feb 2026: +4.8%, food +3.5%. (FAOSTAT)",
+    "Groceries (food prices): +4.5%. By Jun 2027, 100 spent today costs 104.5 (90% range 98.3 to 111.1). Oil's moves since Jun 2026 add −0.19%. Brent at $95 instead of the pre-war $70, over 12 months by itself: our cost-of-living model +0.93%, Indonesia's own data −0.36%, combined −0.20% (a ridge update of our model on Indonesia's prices).",
+    "All prices: +3.2%. By Jun 2027, 100 spent today costs 103.2 (90% range 101.3 to 106.4). Oil's moves since Jun 2026 add −0.14%. Brent at $95 instead of the pre-war $70, over 12 months by itself: our cost-of-living model +0.98%, Indonesia's own data −0.30%, combined −0.14% (a ridge update of our model on Indonesia's prices).",
+    "Nitrogen fertiliser production: Indonesia ranks #5 of 11 listed, 4.0% of world output (2025; worldpopulationreview.com)",
+    "Bauxite production: Indonesia ranks #6 of 6 listed, 2.3% of world output (2025; pubs.usgs.gov)"
+   ],
+   "model": "gemini-3.8-flash",
+   "generated_at": "2026-10-25T10:21:26+00:00"
+  },
   "IND": {
    "country": "India",
    "text": "- Exports & top role: India ranks #5 [11] of 5 [11] in iron ore exports (1.7% [11]); its largest production share is iron ore at 12% [10] (#3 [10] of 8 [10]).\n- Material ranks: It is a net importer [1] of oil, ranking #2 [5] of 12 [5] in crude steel, #2 [7] of 7 [7] in aluminium, #2 [8] of 11 [8] in fertiliser, and #4 [6] of 8 [6] in jet fuel.\n- Key inputs: Coking coal comes from Australia (54% [14]) and Russia (16% [15]); crude oil from Russia (33% [16]) and Iraq (20% [17]); and imported urea from Oman (46% [18]) and Russia (16% [19]).\n- Hormuz shock exposure: 46% [1] of oil imports came from the Gulf [1], causing 31% [1] of oil imports to be cut off and fuel costs to rise 12% [1].",
@@ -869,6 +900,20 @@
    ],
    "model": "gemini-3-flash-preview",
    "generated_at": "2026-10-25T10:19:43+00:00"
+  },
+  "IRQ": {
+   "country": "Iraq",
+   "text": "- In crude oil production, Iraq accounts for 5.2% [5] of world output in 2025 [5] and ranks #5 [5] of 10 [5] listed countries.\n- For crude oil exports, it ranks #6 [6] of 6 [6] listed with 179.6 [6] Mt in 2024 [6] (steel, other materials, and key input sources are not listed).\n- Exposed to the Hormuz shock as a Gulf producer, 60% [1] of its oil exports are trapped and fuel costs rise +12% [1] versus pre-war.\n- Post-closure price inflation accelerated from +0.8% [2] in Feb 2026 [2] to +3.5% [2] in Jun 2026 [2], with food inflation shifting from −0.1% [2] to +3.2% [2].",
+   "facts": [
+    "Iraq in this page's Hormuz model at the current setting (FLOW 6.6/20 mb/d · LOST 67%): 60% of its oil exports trapped; fuel cost +12% vs pre-war; – of its oil imports came from the Gulf; Gulf producer",
+    "In Jun 2026 prices in Iraq were +3.5% on a year earlier, food +3.2%. Before the Hormuz closure, in Feb 2026: +0.8%, food −0.1%. (FAOSTAT)",
+    "Groceries (food prices): +3.7%. By Jun 2027, 100 spent today costs 103.7 (90% range 100.7 to 111.2). Oil's moves since Jun 2026 add +0.47%. Brent at $95 instead of the pre-war $70, over 12 months by itself: our cost-of-living model +0.93%, Iraq's own data +0.31%, combined +0.50% (a ridge update of our model on Iraq's prices).",
+    "All prices: +4.1%. By Jun 2027, 100 spent today costs 104.1 (90% range 101.0 to 108.0). Oil's moves since Jun 2026 add +0.54%. Brent at $95 instead of the pre-war $70, over 12 months by itself: our cost-of-living model +0.98%, Iraq's own data +0.38%, combined +0.56% (a ridge update of our model on Iraq's prices).",
+    "Crude oil production: Iraq ranks #5 of 10 listed, 5.2% of world output (2025; eia.gov)",
+    "Crude oil exports: Iraq ranks #6 of 6 listed, 179.6 Mt (2024; statbase.org)"
+   ],
+   "model": "gemini-3.8-flash",
+   "generated_at": "2026-10-25T10:21:48+00:00"
   },
   "ITA": {
    "country": "Italy",
@@ -1022,6 +1067,33 @@
    "model": "gemini-3-flash-preview",
    "generated_at": "2026-10-25T10:17:37+00:00"
   },
+  "MNG": {
+   "country": "Mongolia",
+   "text": "- Coking coal exports: Mongolia ranks #2 [6] of 5 [6] listed, accounting for 15% [6] of world exports.\n- Coking coal production: It ranks #3 [5] of 4 [5] listed, representing 14% [5] of world output.\n- Oil and materials: Mongolia is a net importer [1] of oil (steel rankings and input origins are not covered in the facts and are left out).\n- Hormuz supply exposure: 0% [1] of its oil imports are cut off, as 0% [1] came from the Gulf.\n- Hormuz price exposure: Fuel costs rise +12% [1] versus pre-war, with overall inflation reaching +12.0% [2] (food +24.8% [2]), up from +6.5% [2] (food +12.3% [2]) before the closure.",
+   "facts": [
+    "Mongolia in this page's Hormuz model at the current setting (FLOW 6.6/20 mb/d · LOST 67%): 0% of its oil imports cut off; fuel cost +12% vs pre-war; 0% of its oil imports came from the Gulf; Net importer",
+    "In Jun 2026 prices in Mongolia were +12.0% on a year earlier, food +24.8%. Before the Hormuz closure, in Feb 2026: +6.5%, food +12.3%. (FAOSTAT)",
+    "Groceries (food prices): +26.0%. By Jun 2027, 100 spent today costs 126.0 (90% range 118.5 to 136.6). Oil's moves since Jun 2026 add +1.20%. Brent at $95 instead of the pre-war $70, over 12 months by itself: our cost-of-living model +0.93%, Mongolia's own data +1.49%, combined +1.27% (a ridge update of our model on Mongolia's prices).",
+    "All prices: +12.6%. By Jun 2027, 100 spent today costs 112.6 (90% range 106.5 to 123.0). Oil's moves since Jun 2026 add +0.57%. Brent at $95 instead of the pre-war $70, over 12 months by itself: our cost-of-living model +0.98%, Mongolia's own data +0.37%, combined +0.60% (a ridge update of our model on Mongolia's prices).",
+    "Coking coal production: Mongolia ranks #3 of 4 listed, 14% of world output (2024; steelorbis.com)",
+    "Coking coal exports: Mongolia ranks #2 of 5 listed, 15% of world exports (2024; iea.org)"
+   ],
+   "model": "gemini-3.8-flash",
+   "generated_at": "2026-10-25T10:21:47+00:00"
+  },
+  "NGA": {
+   "country": "Nigeria",
+   "text": "- In world trade, Nigeria is a net exporter [1] whose jet fuel exports accounted for 5.0% [5] of world exports in 2025 [5].\n- For the materials listed, Nigeria ranks #4 [5] of 5 [5] in jet fuel exports [5].\n- Regarding key inputs, – of its oil imports came from the Gulf [1].\n- Exposed to the Hormuz shock, Nigeria sees oil export earnings rise +36% [1] and fuel costs increase +12% [1] vs pre-war [1], while domestic price inflation reached +15.9% [2] (food +18.3% [2]) in Jun 2026 [2] compared to +15.1% [2] (food +12.1% [2]) in Feb 2026 [2].",
+   "facts": [
+    "Nigeria in this page's Hormuz model at the current setting (FLOW 6.6/20 mb/d · LOST 67%): +36% oil export earnings; fuel cost +12% vs pre-war; – of its oil imports came from the Gulf; Net exporter",
+    "In Jun 2026 prices in Nigeria were +15.9% on a year earlier, food +18.3%. Before the Hormuz closure, in Feb 2026: +15.1%, food +12.1%. (FAOSTAT)",
+    "Groceries (food prices): +18.9%. By Jun 2027, 100 spent today costs 119.0 (90% range 109.8 to 130.4). Oil's moves since Jun 2026 add +0.62%. Brent at $95 instead of the pre-war $70, over 12 months by itself: our cost-of-living model +0.93%, Nigeria's own data +0.54%, combined +0.66% (a ridge update of our model on Nigeria's prices).",
+    "All prices: +16.6%. By Jun 2027, 100 spent today costs 116.5 (90% range 110.7 to 125.1). Oil's moves since Jun 2026 add +0.64%. Brent at $95 instead of the pre-war $70, over 12 months by itself: our cost-of-living model +0.98%, Nigeria's own data +0.51%, combined +0.68% (a ridge update of our model on Nigeria's prices).",
+    "Jet fuel exports: Nigeria ranks #4 of 5 listed, 5.0% of world exports (2025; windward.ai)"
+   ],
+   "model": "gemini-3.8-flash",
+   "generated_at": "2026-10-25T10:23:13+00:00"
+  },
   "NLD": {
    "country": "Netherlands",
    "text": "- The Netherlands acts as a net importer [1], with 13% [1] of its oil imports originating from the Gulf [1].\n- Its exposure to the Hormuz shock involves a 9% [1] cutoff of oil imports and fuel costs increasing by 11% [1] compared to pre-war levels.\n- Energy price impacts are significant, with models projecting increases of 11.1% [12] for gas and 10.9% [13] for motor fuel.\n- Overall price levels are forecast to rise 3.4% [4] by June 2027 [4], while grocery costs are expected to reach 99.5 [3] relative to a current base of 100 [3].",
@@ -1044,6 +1116,19 @@
    ],
    "model": "gemini-3-flash-preview",
    "generated_at": "2026-10-25T10:18:15+00:00"
+  },
+  "OMN": {
+   "country": "Oman",
+   "text": "- Trade ranking: Oman ranks #5 [5] of 5 [5] listed in jet fuel exports, accounting for 2.8% [5] of world exports in 2025 [5].\n- Input sources: Oman is classified as a net exporter, with '–' of its oil imports coming from the Gulf [1].\n- Hormuz shock earnings: In the Hormuz model, Oman experiences a +36% [1] increase in oil export earnings, alongside a fuel cost increase of +12% [1] versus pre-war levels.\n- Hormuz shock prices: Domestic inflation rose from +1.6% [2] (food +3.7% [2]) in Feb 2026 [2] before the closure to +2.4% [2] (food +6.9% [2]) in Jun 2026 [2].",
+   "facts": [
+    "Oman in this page's Hormuz model at the current setting (FLOW 6.6/20 mb/d · LOST 67%): +36% oil export earnings; fuel cost +12% vs pre-war; – of its oil imports came from the Gulf; Net exporter",
+    "In Jun 2026 prices in Oman were +2.4% on a year earlier, food +6.9%. Before the Hormuz closure, in Feb 2026: +1.6%, food +3.7%. (FAOSTAT)",
+    "Groceries (food prices): +7.1%. By Jun 2027, 100 spent today costs 107.1 (90% range 102.7 to 112.3). Oil's moves since Jun 2026 add +0.23%. Brent at $95 instead of the pre-war $70, over 12 months by itself: our cost-of-living model +0.93%, Oman's own data +0.13%, combined +0.24% (a ridge update of our model on Oman's prices).",
+    "All prices: +2.8%. By Jun 2027, 100 spent today costs 102.8 (90% range 101.1 to 105.5). Oil's moves since Jun 2026 add +0.41%. Brent at $95 instead of the pre-war $70, over 12 months by itself: our cost-of-living model +0.98%, Oman's own data +0.34%, combined +0.43% (a ridge update of our model on Oman's prices).",
+    "Jet fuel exports: Oman ranks #5 of 5 listed, 2.8% of world exports (2025; windward.ai)"
+   ],
+   "model": "gemini-3.8-flash",
+   "generated_at": "2026-10-25T10:23:42+00:00"
   },
   "PRT": {
    "country": "Portugal",
@@ -1232,6 +1317,33 @@
    ],
    "model": "gemini-3.5-flash",
    "generated_at": "2026-10-25T10:08:51+00:00"
+  },
+  "VNM": {
+   "country": "Vietnam",
+   "text": "- In materials production, Vietnam ranks #11 [5] of 12 [5] listed countries for crude steel, producing 1.3% [5] of world output.\n- For energy inputs, it is a net importer, with 36% [1] of its oil imports originating from the Gulf.\n- Under the Hormuz disruption model, Vietnam is exposed with 24% [1] of its oil imports cut off and fuel costs rising 12% [1] compared to pre-war levels.\n- Flow-through price pressures project an overall price increase of 5.6% [4] and a grocery price rise of 3.7% [3].",
+   "facts": [
+    "Vietnam in this page's Hormuz model at the current setting (FLOW 6.6/20 mb/d · LOST 67%): 24% of its oil imports cut off; fuel cost +12% vs pre-war; 36% of its oil imports came from the Gulf; Net importer",
+    "In Jun 2026 prices in Vietnam were +4.7% on a year earlier, food +3.1%. Before the Hormuz closure, in Feb 2026: +3.3%, food +3.5%. (FAOSTAT)",
+    "Groceries (food prices): +3.7%. By Jun 2027, 100 spent today costs 103.7 (90% range 95.6 to 112.3). Oil's moves since Jun 2026 add +0.61%. Brent at $95 instead of the pre-war $70, over 12 months by itself: our cost-of-living model +0.93%, Vietnam's own data +0.17%, combined +0.64% (a ridge update of our model on Vietnam's prices).",
+    "All prices: +5.6%. By Jun 2027, 100 spent today costs 105.6 (90% range 102.4 to 108.0). Oil's moves since Jun 2026 add +0.88%. Brent at $95 instead of the pre-war $70, over 12 months by itself: our cost-of-living model +0.98%, Vietnam's own data +0.85%, combined +0.92% (a ridge update of our model on Vietnam's prices).",
+    "Crude steel production: Vietnam ranks #11 of 12 listed, 1.3% of world output (2025; worldsteel.org)"
+   ],
+   "model": "gemini-3.8-flash",
+   "generated_at": "2026-10-25T10:27:12+00:00"
+  },
+  "ZAF": {
+   "country": "South Africa",
+   "text": "- In listed trade, South Africa's largest role is iron ore exports, where it ranks #4 [6] of 5 [6] listed and supplies 3.3% [6] of world exports.\n- In production, it ranks #8 [5] of 8 [5] listed for iron ore, representing 2.6% [5] of world output.\n- For key inputs, South Africa is a net oil importer, with 35% [1] of its oil imports sourced from the Gulf.\n- It is vulnerable to the Hormuz shock: 23% [1] of its oil imports are cut off, driving fuel costs up +12% [1] versus pre-war.\n- Overall price inflation reached +5.0% [2] compared to +3.0% [2] before the Hormuz closure, with food prices at +1.9% [2].",
+   "facts": [
+    "South Africa in this page's Hormuz model at the current setting (FLOW 6.6/20 mb/d · LOST 67%): 23% of its oil imports cut off; fuel cost +12% vs pre-war; 35% of its oil imports came from the Gulf; Net importer",
+    "In Jun 2026 prices in South Africa were +5.0% on a year earlier, food +1.9%. Before the Hormuz closure, in Feb 2026: +3.0%, food +3.7%. (FAOSTAT)",
+    "Groceries (food prices): +1.9%. By May 2027, 100 spent today costs 101.9 (90% range 95.1 to 105.6). Oil's moves since May 2026 add 0.02%. Brent at $95 instead of the pre-war $70, over 12 months by itself: our cost-of-living model +0.93%, South Africa's own data −0.38%, combined −0.12% (a ridge update of our model on South Africa's prices).",
+    "All prices: +5.1%. By Jun 2027, 100 spent today costs 105.1 (90% range 102.7 to 107.9). Oil's moves since Jun 2026 add +0.11%. Brent at $95 instead of the pre-war $70, over 12 months by itself: our cost-of-living model +0.98%, South Africa's own data 0.02%, combined +0.11% (a ridge update of our model on South Africa's prices).",
+    "Iron ore production: South Africa ranks #8 of 8 listed, 2.6% of world output (2025; statranker.org)",
+    "Iron ore exports: South Africa ranks #4 of 5 listed, 3.3% of world exports (2025; hellenicshippingnews.com)"
+   ],
+   "model": "gemini-3.8-flash",
+   "generated_at": "2026-10-25T10:23:10+00:00"
   }
  }
 }
