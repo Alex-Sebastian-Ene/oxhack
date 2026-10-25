@@ -9,13 +9,12 @@
 }
 #world-stage.hz-focus .hud > * { min-width: 0; }
 #world-stage.hz-focus .hud > #country-card { grid-column: 1; grid-row: 1; }
-/* the shock card and the cards under it sit in one column (.hz-side, made by focus.js) that stays in place while the
-   country detail scrolls; it is capped at the screen's height and scrolls on its own. Elsewhere it has no box. */
+/* two columns: the country card, and the shock card with the cards under it (.hz-side, made by focus.js; it has no box
+   elsewhere). Both scroll with the page; the shorter one stops when its bottom reaches the bottom of the screen (or at
+   the top, if it fits), so neither side runs out into blank space. focus.js sets each column's --hz-top. */
 .hz-side { display: contents; }
-#world-stage.hz-focus .hud > .hz-side {
-  grid-column: 2; grid-row: 1; display: flex; flex-direction: column; gap: 14px;
-  position: sticky; top: 0; max-height: calc(100vh - 120px); overflow-y: auto; overscroll-behavior: contain;
-}
+#world-stage.hz-focus .hud > .hz-side { grid-column: 2; grid-row: 1; display: flex; flex-direction: column; gap: 14px; }
+#world-stage.hz-focus .hud > #country-card, #world-stage.hz-focus .hud > .hz-side { position: sticky; top: var(--hz-top, 0px); }
 /* with the room, the country card's tabs go back on one row and its numbers get bigger */
 #world-stage.hz-focus #ctabs { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; }
 #world-stage.hz-focus #ctabs button { min-width: 0; padding: 0 6px; border-left-width: 2px !important; white-space: normal; line-height: 1.15; }
@@ -39,7 +38,7 @@
   /* the page scrolls on a phone, not the stage: the stage must not be a scroll box, or nothing inside it can stay put */
   #world-stage.hz-focus { overflow: visible; }
   #world-stage.hz-focus .hud { grid-template-columns: minmax(0, 1fr); }
-  #world-stage.hz-focus .hud > #country-card { grid-column: 1; grid-row: auto; }
+  #world-stage.hz-focus .hud > #country-card { grid-column: 1; grid-row: auto; position: relative; top: auto; }
   /* one column on a phone: the shock card follows the detail rather than staying beside it */
   #world-stage.hz-focus .hud > .hz-side { display: contents; }
   #world-stage.hz-focus .mapwrap { height: 40vh; min-height: 240px; }
