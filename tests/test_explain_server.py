@@ -92,3 +92,36 @@ def test_allowed_origin(monkeypatch):
     assert not ex.allowed_origin("https://evil.example")
     monkeypatch.setenv("EXPLAIN_ORIGINS", "https://hormuz.example")
     assert ex.allowed_origin("https://hormuz.example")
+
+
+def test_ask_gemini_retries_once_when_busy(monkeypatch):
+    import io, urllib.error
+    calls = []
+
+    class Resp(io.BytesIO):
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+
+    def fake(req, timeout):
+        calls.append(1)
+        if len(calls) == 1:
+            raise urllib.error.HTTPError(req.full_url, 503, "busy", {}, None)
+        return Resp(json.dumps(reply({"bullets": []})).encode())
+
+    monkeypatch.setattr(ex.urllib.request, "urlopen", fake)
+    monkeypatch.setattr(ex, "RETRY_WAIT", 0)
+    assert ex.ask_gemini({}, "key")["candidates"] and len(calls) == 2
+
+
+def test_ask_gemini_does_not_retry_a_bad_request(monkeypatch):
+    import urllib.error
+    calls = []
+
+    def fake(req, timeout):
+        calls.append(1)
+        raise urllib.error.HTTPError(req.full_url, 400, "bad", {}, None)
+
+    monkeypatch.setattr(ex.urllib.request, "urlopen", fake)
+    with pytest.raises(urllib.error.HTTPError):
+        ex.ask_gemini({}, "key")
+    assert len(calls) == 1

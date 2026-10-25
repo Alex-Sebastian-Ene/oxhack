@@ -26,6 +26,7 @@ import json
 import os
 import re
 import sys
+import time
 import urllib.error
 import urllib.request
 from datetime import UTC, datetime
@@ -56,6 +57,7 @@ PORT = int(os.environ.get("EXPLAIN_PORT", "8789"))
 MAX_FACTS = 30
 THINKING = os.environ.get("GEMINI_THINKING", "low")  # low, medium or high
 TIMEOUT = 120
+RETRY_WAIT = 8  # seconds before the one retry
 KINDS = {"country": "a country's exposure to the Strait of Hormuz oil shock",
          "product": "how the Hormuz oil shock reaches one product's price and its buyers"}
 
@@ -155,10 +157,19 @@ def allowed_origin(origin: str | None) -> bool:
 
 
 def ask_gemini(body: dict, key: str) -> dict:
-    req = urllib.request.Request(API.format(model=MODEL), data=json.dumps(body).encode(), method="POST",
-                                 headers={"Content-Type": "application/json", "x-goog-api-key": key})
-    with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
-        return json.loads(r.read())
+    """One call, retried once after a pause when Gemini is busy or over its per-minute limit."""
+    for attempt in (1, 2):
+        req = urllib.request.Request(API.format(model=MODEL), data=json.dumps(body).encode(), method="POST",
+                                     headers={"Content-Type": "application/json", "x-goog-api-key": key})
+        try:
+            with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
+                return json.loads(r.read())
+        except urllib.error.HTTPError as e:
+            sys.stderr.write(f"Gemini answered HTTP {e.code} (attempt {attempt})
+")  # the code only, never the body
+            if attempt == 2 or e.code not in (429, 500, 503):
+                raise
+            time.sleep(RETRY_WAIT)
 
 
 def explain(payload: dict, key: str | None) -> dict:
@@ -209,7 +220,8 @@ class Handler(BaseHTTPRequestHandler):
         except PermissionError as e:
             self._send(503, {"error": str(e)})
         except urllib.error.HTTPError as e:
-            msg = {429: "Gemini quota used up (HTTP 429): try later or another GEMINI_MODEL",
+            msg = {429: "Gemini's free limit was hit (HTTP 429), even after one retry: wait a minute and try again",
+                   503: "Gemini is busy (HTTP 503), even after one retry: try again shortly",
                    404: f"model {MODEL} not found (HTTP 404): set GEMINI_MODEL"}.get(e.code, f"Gemini HTTP {e.code}")
             self._send(502, {"error": msg})  # the body can echo the request; keep it out
         except TimeoutError:
