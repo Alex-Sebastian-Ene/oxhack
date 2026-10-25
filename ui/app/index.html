@@ -5321,7 +5321,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
   function paint3d() {
     if (!G3 || st.wview !== "3d") return;
     const s3 = st.mat ? weightsByName() : {}, max = Math.max(...Object.values(s3), 0.01);
-    G3.polygonCapColor((f) => fillFor(f.properties.name))
+    G3.polygonCapColor((f) => { const c = fillFor(f.properties.name); return c === NODATA ? c : d3.color(c).darker(0.9).formatHex(); })
       .polygonSideColor((f) => (f.properties.name === st.sel ? "rgba(255,196,64,0.7)" : "rgba(50,80,110,0.3)"))
       .polygonStrokeColor((f) => (f.properties.name === st.sel ? "#ffd27a" : st.mat && VIA[f.properties.name] ? "#e06a00" : "rgba(255,255,255,0.8)"))
       .polygonAltitude((f) => (f.properties.name === st.sel ? 0.085 : 0.006 + (s3[f.properties.name] ? 0.06 * Math.sqrt(s3[f.properties.name] / max) : 0)));
