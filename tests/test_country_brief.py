@@ -140,8 +140,17 @@ def test_country_profile_cites_only_our_facts(tmp_path, monkeypatch):
     monkeypatch.setattr(cb, "interact", lambda model, text, key: seen.append(text) or INTERACTION_TEXT)
     out = cb.country({"iso3": "kor", "country": "South Korea", "facts": ["Jet fuel exports: 14% of world, rank 2 (2025)"]}, "k")
     assert out["iso3"] == "KOR" and out["text"] and "[1] Jet fuel exports" in seen[0] and "Do not add numbers" in seen[0]
+    assert out["model"] == cb.MODEL   # the response names no model, so the one asked for
     with pytest.raises(ValueError):
         cb.country({"iso3": "KOR"}, "k")
+
+
+def test_answers_name_the_model_that_served_them(tmp_path, monkeypatch):
+    monkeypatch.setattr(cb, "CACHE", tmp_path)
+    monkeypatch.setattr(cb, "FAKE", False)
+    monkeypatch.setattr(cb, "interact", lambda model, text, key: {**INTERACTION_TEXT, "model": "gemini-other"})
+    assert cb.country({"iso3": "JPN", "country": "Japan", "facts": ["a"]}, "k")["model"] == "gemini-other"
+    assert cb.resource({"id": "urea", "name": "Urea", "facts": ["a"]}, "k", image=False)["model"] == "gemini-other"
 
 
 def test_fake_mode_is_labelled_and_needs_no_key(tmp_path, monkeypatch):
@@ -167,3 +176,111 @@ def test_http_error_reads_both_error_shapes():
         msg = cb._http_error(e)
         assert msg.startswith("HTTP 401")
         assert ("bad key" in msg) == body.startswith((b"{", b"["))
+
+
+def test_resource_keeps_the_text_when_the_picture_is_refused(tmp_path, monkeypatch):
+    import io, urllib.error
+    monkeypatch.setattr(cb, "CACHE", tmp_path)
+    monkeypatch.setattr(cb, "FAKE", False)
+
+    def interact(model, text, key):
+        if model == cb.IMAGE_MODEL:   # a free-tier key: no image quota
+            raise urllib.error.HTTPError("https://example.invalid", 429, "Too Many Requests", {}, io.BytesIO(b'{"error": {"message": "limit: 0"}}'))
+        return INTERACTION_TEXT
+    monkeypatch.setattr(cb, "interact", interact)
+    out = cb.resource({"id": "steel", "name": "Crude steel", "facts": ["a"]}, "k")
+    assert out["text"].startswith("- Steel") and out["image"] is None and out["image_model"] is None
+    calls = []
+    monkeypatch.setattr(cb, "interact", lambda model, text, key: calls.append(model) or INTERACTION_TEXT)
+    cb.resource({"id": "urea", "name": "Urea", "facts": ["a"]}, "k", image=False)
+    assert calls == [cb.MODEL]
+
+
+def test_retrying_waits_out_rate_limits(monkeypatch):
+    import io, urllib.error
+    monkeypatch.setattr("time.sleep", lambda s: None)
+    tries = []
+
+    def flaky():
+        tries.append(1)
+        if len(tries) < 3:
+            raise urllib.error.HTTPError("https://example.invalid", 429 if len(tries) == 1 else 503, "busy", {}, io.BytesIO(b"{}"))
+        return "ok"
+    assert cb._retrying(flaky, "x") == "ok" and len(tries) == 3
+    with pytest.raises(urllib.error.HTTPError):   # a bad request is not retried
+        cb._retrying(lambda: (_ for _ in ()).throw(urllib.error.HTTPError("https://example.invalid", 400, "bad", {}, io.BytesIO(b"{}"))), "y")
+
+
+def test_bake_writes_every_panel_with_its_facts_and_setting(tmp_path, monkeypatch):
+    monkeypatch.setattr(cb, "CACHE", tmp_path)
+    monkeypatch.setattr(cb, "FAKE", True)
+    facts = tmp_path / "facts.json"
+    facts.write_text(json.dumps({"setting": "2026-closure", "read_at": "2026-10-25T08:00:00Z",
+                                 "resources": [{"id": "steel", "name": "Crude steel", "facts": ["a", "b"]}],
+                                 "countries": [{"iso3": "JPN", "country": "Japan", "facts": ["c"]}]}))
+    out = tmp_path / "ai-panels.json"
+    assert cb.bake(None, facts, out, workers=2) == 0
+    d = json.loads(out.read_text())
+    assert d["setting"] == "2026-closure" and set(d["resources"]) == {"steel"} and set(d["countries"]) == {"JPN"}
+    assert d["resources"]["steel"]["facts"] == ["a", "b"] and "image" not in d["resources"]["steel"]
+    assert d["countries"]["JPN"]["country"] == "Japan" and "TEST ANSWER" in d["countries"]["JPN"]["text"] and d["written"]
+
+
+def test_bake_keeps_earlier_answers_and_stops_at_the_daily_quota(tmp_path, monkeypatch):
+    import io, urllib.error
+    monkeypatch.setattr(cb, "CACHE", tmp_path)
+    monkeypatch.setattr(cb, "FAKE", False)
+    facts = tmp_path / "facts.json"
+    facts.write_text(json.dumps({"setting": "2026-closure", "resources": [{"id": "steel", "name": "Crude steel", "facts": ["a"]}],
+                                 "countries": [{"iso3": "JPN", "country": "Japan", "facts": ["c", "d"]}, {"iso3": "FJI", "country": "Fiji", "facts": ["e"]}]}))
+    out = tmp_path / "ai-panels.json"
+    out.write_text(json.dumps({"resources": {"steel": {"name": "Crude steel", "text": "- old", "facts": ["a"], "model": "m0", "generated_at": "2026-10-25T08:00:00+00:00"}}}))
+    asked = []
+
+    def interact(model, text, key):
+        asked.append(text)
+        if len(asked) > 1:   # the second call finds the day's quota used up
+            raise urllib.error.HTTPError("https://example.invalid", 429, "Too Many Requests", {"Retry-After": "79000"}, io.BytesIO(b"{}"))
+        return INTERACTION_TEXT
+    monkeypatch.setattr(cb, "interact", interact)
+    assert cb.bake("k", facts, out, workers=1) == 1
+    d = json.loads(out.read_text())
+    assert d["resources"]["steel"]["text"] == "- old"   # kept: same facts, no call
+    assert set(d["countries"]) == {"JPN"} and d["missing"] == ["FJI"]   # Japan first: it has more facts
+    assert "Japan" in asked[0] and len(asked) == 2
+
+
+def test_bake_gives_up_on_a_model_that_keeps_failing(tmp_path, monkeypatch):
+    import io, urllib.error
+    monkeypatch.setattr(cb, "CACHE", tmp_path)
+    monkeypatch.setattr(cb, "FAKE", False)
+    monkeypatch.setattr("time.sleep", lambda s: None)
+    facts = tmp_path / "facts.json"
+    facts.write_text(json.dumps({"setting": "2026-closure", "resources": [],
+                                 "countries": [{"iso3": f"C{i:02d}", "country": f"Country {i}", "facts": ["x"]} for i in range(10)]}))
+    out = tmp_path / "ai-panels.json"
+    asked = []
+
+    def interact(model, text, key):   # overloaded: every call is a 503
+        asked.append(text)
+        raise urllib.error.HTTPError("https://example.invalid", 503, "Service Unavailable", {}, io.BytesIO(b"{}"))
+    monkeypatch.setattr(cb, "interact", interact)
+    assert cb.bake("k", facts, out, workers=1) == 10
+    assert len(asked) == cb.STUCK * 6   # STUCK countries, six tries each, then no more calls
+    assert len(json.loads(out.read_text())["missing"]) == 10
+
+
+def test_bake_keeps_an_answer_whose_long_facts_were_cut(tmp_path, monkeypatch):
+    monkeypatch.setattr(cb, "CACHE", tmp_path)
+    monkeypatch.setattr(cb, "FAKE", False)
+    long = "x" * 450   # the service sends at most 400 characters of a fact, and stores what it sent
+    facts = tmp_path / "facts.json"
+    facts.write_text(json.dumps({"setting": "2026-closure", "resources": [], "countries": [{"iso3": "LBN", "country": "Lebanon", "facts": [long]}]}))
+    out = tmp_path / "ai-panels.json"
+    asked = []
+    monkeypatch.setattr(cb, "interact", lambda model, text, key: asked.append(text) or INTERACTION_TEXT)
+    assert cb.bake("k", facts, out, workers=1) == 0 and len(asked) == 1
+    assert json.loads(out.read_text())["countries"]["LBN"]["facts"] == ["x" * 400]
+    for f in tmp_path.glob("cty-*.json"):
+        f.unlink()   # not from the cache: a rerun keeps the baked answer without asking
+    assert cb.bake("k", facts, out, workers=1) == 0 and len(asked) == 1

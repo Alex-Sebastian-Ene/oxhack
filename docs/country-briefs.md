@@ -38,6 +38,30 @@ Interactions API (`POST /v1beta/interactions`).
     doesn't exist shows as `[n?]`.
 - **Test mode.** `BRIEF_FAKE=1` answers both with clearly labelled test text and a striped test picture,
   so the panels can be tried without a key.
+- **Written ahead.** `uv run experiments/country_brief.py bake` writes both panels ahead of time for
+  every resource and every country, from the facts `node ui/app/src/ai_facts.cjs` reads off the built
+  app at the 2026-closure setting. They go into `ui/app/data/ai-panels.json`, which the app build puts in the
+  page. Each panel names the model that wrote it, as Gemini's response names it.
+- **The bake of 25 Oct 2026** (free-tier key) covers every panel: the 16 resources and the 175 countries
+  you can select on the World map, at the 2026-closure setting (Hong Kong, Malta, Mauritius, Northern Cyprus,
+  Somaliland, Antarctica and the French Southern Lands have no shape to click, so no summary).
+  - The free tier allows 20 requests a day for each full-size flash model; `gemini-3.5-flash-lite` allowed 15 a
+    minute and was not used up by about 200. Requests to `gemini-3.5-flash` counted against
+    `gemini-3.6-flash`'s quota, and `gemini-3.7-flash` and `gemini-flash-latest` against `gemini-3.8-flash`'s.
+    The pro models have no free quota (limit 0). `gemini-3.8-flash` also returned "high demand" errors and
+    120 s timeouts.
+  - Resources: all 16 from `gemini-3.5-flash`, written before `bake` recorded the model that answered, so they
+    name the model asked for (Google may have served them from `gemini-3.6-flash`, whose quota they used).
+  - Countries: main's new country data (fuel pass-through, partner-reported oil trade and IMF cost of living,
+    merged the same morning) changed every country's facts, so all 175 were asked again after the flash
+    models' quotas had run out: 146 are from `gemini-3.5-flash-lite` and 29 from `gemini-3.1-flash-lite`. Answers
+    `gemini-3.5-flash-lite` gave too thinly (two bullets, or a doubled dash) were dropped and asked again of
+    `gemini-3.1-flash-lite`, as were Lebanon and Suriname (each has one fact over 400 characters, which `bake`
+    failed to match until it compared the facts as cut). The 9 countries whose fuel cost changed in #71 were
+    asked again after it merged. To replace any answer with a stronger model's, delete its entry from
+    `ai-panels.json` and run `bake` with that `GEMINI_MODEL` on a day its quota is free.
+  - Checked: every `[n]` points to a fact that exists; spot checks of the US, Netherlands and Iran summaries against
+    their facts found no wrong numbers. Not checked line by line by the team, and each panel says so.
 
 ## Why an LLM, and why Gemini
 
@@ -81,15 +105,11 @@ page at another proxy.
 
 ## Not done yet / open questions
 
-- **The Interactions request shape is from the skill, not tested live.** The service sends
-  `{"model", "input"}` and reads `model_output` steps, plus a `generateContent`-style answer in case one
-  comes back. The first live run should confirm both models and the image output.
-- **Untested against the live API.** Our sandbox can't reach `generativelanguage.googleapis.com`,
-  and no one has shared a key yet. The tests cover the prompt, the response parsing, the cache and
-  the origin check offline. The first live run should confirm that `generateContent` with the
-  `google_search` tool still answers for `gemini-3.8-flash`. Google now steers new code to the
-  Interactions API (`POST /v1beta/interactions`), where search results arrive as
-  `google_search_result` steps; moving there is the fallback if `generateContent` is refused.
+- **Live check, 25 Oct 2026** (`country_brief.py check`, free-tier key): the key lists 60 models,
+  including `gemini-3.8-flash` and `gemini-nano-banana-2.1`. Text through the Interactions API works. The
+  picture fails: the free tier has no quota for the image model (HTTP 429, limit 0), so "What is it?" now
+  returns the text without a picture rather than failing. The `generateContent` call timed out at 60 s,
+  so `/brief` (the globe's grounded brief) is still unconfirmed.
 - **Event rules on AI use.** AGENTS.md still has a TODO for the hackathon's AI-use and provenance
   rules. If they restrict generated content in the demo, keep the button off.
 - **The published artifact** is a page on claude.ai, so it can't reach a localhost proxy. If we
