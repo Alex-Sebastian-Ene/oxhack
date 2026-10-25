@@ -1,13 +1,13 @@
 {
  "about": "Gemini panels written ahead of time by `uv run experiments/country_brief.py bake`; AI-written, not checked by the team. Facts are what each panel sends, read from the built app by ui/app/src/ai_facts.cjs.",
  "setting": "2026-closure",
- "facts_read": "2026-10-25T08:51:01Z",
+ "facts_read": "2026-10-25T10:07:40Z",
  "models": [
   "gemini-3.5-flash"
  ],
  "written": [
   "2026-10-25T08:56:26+00:00",
-  "2026-10-25T09:04:31+00:00"
+  "2026-10-25T10:12:14+00:00"
  ],
  "missing": [
   "AFG",
@@ -17,14 +17,11 @@
   "ARG",
   "ARM",
   "AUS",
-  "AUT",
   "AZE",
   "BDI",
-  "BEL",
   "BEN",
   "BFA",
   "BGD",
-  "BGR",
   "BHR",
   "BHS",
   "BIH",
@@ -36,6 +33,7 @@
   "BTN",
   "BWA",
   "CAF",
+  "CAN",
   "CHE",
   "CHL",
   "CIV",
@@ -45,9 +43,7 @@
   "COL",
   "CRI",
   "CUB",
-  "CYP",
   "CZE",
-  "DEU",
   "DJI",
   "DNK",
   "DOM",
@@ -57,13 +53,12 @@
   "ERI",
   "ESH",
   "ESP",
-  "EST",
   "ETH",
   "FIN",
+  "FJI",
   "FLK",
   "FRA",
   "GAB",
-  "GBR",
   "GEO",
   "GHA",
   "GIN",
@@ -75,17 +70,14 @@
   "GTM",
   "GUY",
   "HND",
-  "HRV",
   "HTI",
   "HUN",
   "IDN",
-  "IND",
   "IRL",
   "IRN",
   "IRQ",
   "ISL",
   "ISR",
-  "ITA",
   "JAM",
   "JOR",
   "JPN",
@@ -109,6 +101,7 @@
   "MDA",
   "MDG",
   "MEX",
+  "MKD",
   "MLI",
   "MMR",
   "MNE",
@@ -140,7 +133,6 @@
   "PSE",
   "QAT",
   "ROU",
-  "RUS",
   "RWA",
   "SAU",
   "SDN",
@@ -168,10 +160,10 @@
   "TUN",
   "TUR",
   "TWN",
+  "TZA",
   "UGA",
   "UKR",
   "URY",
-  "USA",
   "UZB",
   "VEN",
   "VNM",
@@ -179,9 +171,7 @@
   "YEM",
   "ZAF",
   "ZMB",
-  "ZWE",
-  "polyethylene_imports",
-  "urea"
+  "ZWE"
  ],
  "resources": {
   "alumina": {
@@ -371,6 +361,15 @@
    "model": "gemini-3.5-flash",
    "generated_at": "2026-10-25T08:56:43+00:00"
   },
+  "polyethylene_imports": {
+   "name": "Polyethylene (imported)",
+   "text": "- Polyethylene is a common synthetic plastic polymer made by processing ethylene gas extracted from crude oil or natural gas refining.\n- It is an ingredient of many everyday products [1], including plastic packaging, squeeze bottles, moisture barriers, and industrial pipes.\n- Crude oil provides its primary feedstock, making its production cost directly tied to oil prices, while geopolitical conflict around maritime chokepoints like the Strait of Hormuz threatens imported supply lines.",
+   "facts": [
+    "An ingredient of: Polyethylene"
+   ],
+   "model": "gemini-3.5-flash",
+   "generated_at": "2026-10-25T10:08:29+00:00"
+  },
   "scrap": {
    "name": "Steel scrap",
    "text": "- Steel scrap is recycled metal recovered from discarded structures, vehicles, and manufacturing waste, which is then collected, sorted, and shredded.\n- It is a primary ingredient of crude steel [4], melted in furnaces to make new metal products.\n- Shipping massive international volumes—like 11.767 Mt [1] from the United States, 7.711 Mt [2] from Japan, or 6.532 Mt [3] from the United Kingdom—relies heavily on maritime fuel, meaning oil price spikes or Strait of Hormuz disruptions inflate sea freight and smelting costs.",
@@ -400,35 +399,98 @@
    ],
    "model": "gemini-3.5-flash",
    "generated_at": "2026-10-25T08:56:47+00:00"
+  },
+  "urea": {
+   "name": "Urea (imported)",
+   "text": "- **What it is and how it is made:** Urea is an organic chemical compound synthesized from ammonia and carbon dioxide through energy-intensive processes powered by fossil fuels.\n- **What it is used for:** It serves as a primary ingredient of nitrogen fertiliser [3], making imported urea essential for sustaining global food production.\n- **Why oil and Hormuz matter:** Energy prices directly dictate urea manufacturing costs, while the Strait of Hormuz is a vital bottleneck that carries ~34% [4] of global urea trade and ~40% [4] of seaborne urea; disruptions can be severe, as Hormuz-dependent exports once fell 83% [4].",
+   "facts": [
+    "Urea (imported) exports: #1 Russia, 10.8 Mt urea exported (2025; t.me)",
+    "Urea (imported) exports: #2 China, 4.9 Mt urea exported (2025; t.me)",
+    "An ingredient of: Nitrogen fertiliser",
+    "2026: Saudi Arabia (~4 Mt) and Oman (~3.5 Mt) seen only in a LinkedIn post, so left out. Hormuz carries ~34% of urea trade (WTO), ~40% of seaborne urea (Kpler). Urea exports from Hormuz-dependent economies fell 83% by volume i"
+   ],
+   "model": "gemini-3.5-flash",
+   "generated_at": "2026-10-25T10:08:31+00:00"
   }
  },
  "countries": {
-  "CAN": {
-   "country": "Canada",
-   "text": "- Primary aluminium is Canada's top export rank (#1 [3] of 3 [3] listed, 8.27 [3] USD bn); its production ranks #4 [2] of 7 [2] (4.5% [2] of world output).\n- Energy: Crude oil production ranks #4 [9] of 10 [9] (5.9% [9]) and exports rank #3 [10] of 6 [10] (219.4 [10] Mt); natural gas output ranks #5 [11] of 8 [11] (4.7% [11]).\n- Other materials: Iron ore exports rank #3 [6] of 5 [6] (3.6% [6]; output #7 [5] of 8 [5], 2.7% [5]), steel scrap exports #4 [8] of 4 [8] (4.28 [8] Mt), coking coal exports #5 [7] of 5 [7] (8.3% [7]), and fertiliser output #9 [4] of 11 [4] (2.5% [4]).\n- Inputs: Primary aluminium alumina imports come from Brazil (82% [12]) and Australia (12% [13]).\n- Hormuz shock: Net exporter [1] score -14 [1] (scale -40 [1] to +65 [1]), fuel cost +31% [1].",
+  "AUT": {
+   "country": "Austria",
+   "text": "- Austria is a net importer [1] that sourced 7% [1] of its oil imports from the Gulf [1].\n- Under the Hormuz shock model, 5% [1] of its oil imports are cut off [1], driving fuel costs up by 14% [1] versus pre-war levels [1].\n- Overall inflation reached 3.0% [2] in June 2026 [2], up from 2.2% [2] in February 2026 [2] prior to the Hormuz closure [2].\n- Total consumer prices are projected to rise 3.5% [4] by June 2027 [4], with grocery prices increasing 1.9% [3].\n- Euro area models project gas costs rising 11.1% [12], motor fuel 10.9% [13], and electricity 7.7% [11] by September 2027 [11].",
    "facts": [
-    "Canada in this page's Hormuz model at the current setting (FLOW 6.6/20 mb/d · LOST 67%): exposure score −14 on a -40 (gains) to +65 (hurt) scale; fuel cost +31% vs pre-war; – of its oil came via Hormuz; Net exporter",
-    "Primary aluminium production: Canada ranks #4 of 7 listed, 4.5% of world output (2025; pubs.usgs.gov)",
-    "Primary aluminium exports: Canada ranks #1 of 3 listed, 8.27 USD bn (2024; oec.world)",
-    "Nitrogen fertiliser production: Canada ranks #9 of 11 listed, 2.5% of world output (2025; worldpopulationreview.com)",
-    "Iron ore production: Canada ranks #7 of 8 listed, 2.7% of world output (2025; statranker.org)",
-    "Iron ore exports: Canada ranks #3 of 5 listed, 3.6% of world exports (2025; hellenicshippingnews.com)",
-    "Coking coal exports: Canada ranks #5 of 5 listed, 8.3% of world exports (2024; iea.org)",
-    "Steel scrap exports: Canada ranks #4 of 4 listed, 4.28 Mt (2025; steelorbis.com)",
-    "Crude oil production: Canada ranks #4 of 10 listed, 5.9% of world output (2025; eia.gov)",
-    "Crude oil exports: Canada ranks #3 of 6 listed, 219.4 Mt (2024; statbase.org)",
-    "Natural gas production: Canada ranks #5 of 8 listed, 4.7% of world output (2024; raw.githubusercontent.com)",
-    "For Primary aluminium, 82% of Canada's Alumina comes from Brazil (share of Canada's alumina import value; 2022; oec.world)",
-    "For Primary aluminium, 12% of Canada's Alumina comes from Australia (share of Canada's alumina import value; 2022; oec.world)"
+    "Austria in this page's Hormuz model at the current setting (FLOW 6.6/20 mb/d · LOST 67%): 5% of its oil imports cut off; fuel cost +14% vs pre-war; 7% of its oil imports came from the Gulf; Net importer",
+    "In Jun 2026 prices in Austria were +3.0% on a year earlier, food +1.6%. Before the Hormuz closure, in Feb 2026: +2.2%, food +2.5%. (FAOSTAT)",
+    "Groceries (food prices): +1.9%. By Jun 2027, 100 spent today costs 101.8 (90% range 92.3 to 114.0). Oil's moves since Jun 2026 add +0.26%. Brent at $95 instead of the pre-war $70, over 12 months by itself: our cost-of-living model +0.93%, Austria's own data +0.16%, combined +0.27% (a ridge update of our model on Austria's prices).",
+    "All prices: +3.5%. By Jun 2027, 100 spent today costs 103.5 (90% range 98.9 to 109.4). Oil's moves since Jun 2026 add +0.50%. Brent at $95 instead of the pre-war $70, over 12 months by itself: our cost-of-living model +0.98%, Austria's own data +0.47%, combined +0.52% (a ridge update of our model on Austria's prices).",
+    "Bread euro area model: +2.9%. By Sep 2027, 100 spent today costs 102.9 (90% range 98.1 to 108.9). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Dairy euro area model: +5.0%. By Sep 2027, 100 spent today costs 105.0 (90% range 98.1 to 114.8). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Meat euro area model: +2.5%. By Sep 2027, 100 spent today costs 102.5 (90% range 98.5 to 108.5). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Fruit and vegetables euro area model: +5.1%. By Sep 2027, 100 spent today costs 105.1 (90% range 91.4 to 116.7). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Oils and fats euro area model: +1.6%. By Sep 2027, 100 spent today costs 101.6 (90% range 91.2 to 114.0). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Sugar euro area model: +2.2%. By Sep 2027, 100 spent today costs 102.2 (90% range 96.6 to 109.0). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Electricity euro area model: +7.7%. By Sep 2027, 100 spent today costs 107.7 (90% range 89.3 to 125.5). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Gas euro area model: +11.1%. By Sep 2027, 100 spent today costs 111.1 (90% range 89.2 to 136.0). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Motor fuel euro area model: +10.9%. By Sep 2027, 100 spent today costs 110.9 (90% range 78.0 to 141.3). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Eating out euro area model: +3.1%. By Sep 2027, 100 spent today costs 103.1 (90% range 100.5 to 106.4). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Whole basket euro area model: +3.1%. By Sep 2027, 100 spent today costs 103.1 (90% range 100.5 to 106.5). Seb's cost-of-living model (euro area), with the disruption continuing."
    ],
    "model": "gemini-3.5-flash",
-   "generated_at": "2026-10-25T08:58:56+00:00"
+   "generated_at": "2026-10-25T10:09:32+00:00"
+  },
+  "BEL": {
+   "country": "Belgium",
+   "text": "- Key inputs: Belgium is a net oil importer, with 2% [1] of its oil imports coming from the Gulf [1]. (Main exports and rankings in steel or other materials are not provided in the data).\n- Exposure to Hormuz shock: Under the model, 1% [1] of Belgium's oil imports are cut off [1], and fuel costs increase by +13% [1] compared to pre-war levels.\n- Inflation context: Prior to the closure in Feb 2026 [2], price inflation was +1.5% [2], which rose to +3.4% [2] in Jun 2026 [2].\n- Overall price impact: Oil movements since Jun 2026 [4] add +0.68% [4] to the cost of living, pushing all prices up by +4.1% [4] by Jun 2027 [4].",
+   "facts": [
+    "Belgium in this page's Hormuz model at the current setting (FLOW 6.6/20 mb/d · LOST 67%): 1% of its oil imports cut off; fuel cost +13% vs pre-war; 2% of its oil imports came from the Gulf; Net importer",
+    "In Jun 2026 prices in Belgium were +3.4% on a year earlier, food −0.1%. Before the Hormuz closure, in Feb 2026: +1.5%, food +0.7%. (FAOSTAT)",
+    "Groceries (food prices): −0.2%. By Jun 2027, 100 spent today costs 99.8 (90% range 90.2 to 110.7). Oil's moves since Jun 2026 add −0.06%. Brent at $95 instead of the pre-war $70, over 12 months by itself: our cost-of-living model +0.93%, Belgium's own data −0.24%, combined −0.06% (a ridge update of our model on Belgium's prices).",
+    "All prices: +4.1%. By Jun 2027, 100 spent today costs 104.1 (90% range 97.7 to 110.1). Oil's moves since Jun 2026 add +0.68%. Brent at $95 instead of the pre-war $70, over 12 months by itself: our cost-of-living model +0.98%, Belgium's own data +0.67%, combined +0.72% (a ridge update of our model on Belgium's prices).",
+    "Bread euro area model: +2.9%. By Sep 2027, 100 spent today costs 102.9 (90% range 98.1 to 108.9). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Dairy euro area model: +5.0%. By Sep 2027, 100 spent today costs 105.0 (90% range 98.1 to 114.8). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Meat euro area model: +2.5%. By Sep 2027, 100 spent today costs 102.5 (90% range 98.5 to 108.5). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Fruit and vegetables euro area model: +5.1%. By Sep 2027, 100 spent today costs 105.1 (90% range 91.4 to 116.7). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Oils and fats euro area model: +1.6%. By Sep 2027, 100 spent today costs 101.6 (90% range 91.2 to 114.0). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Sugar euro area model: +2.2%. By Sep 2027, 100 spent today costs 102.2 (90% range 96.6 to 109.0). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Electricity euro area model: +7.7%. By Sep 2027, 100 spent today costs 107.7 (90% range 89.3 to 125.5). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Gas euro area model: +11.1%. By Sep 2027, 100 spent today costs 111.1 (90% range 89.2 to 136.0). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Motor fuel euro area model: +10.9%. By Sep 2027, 100 spent today costs 110.9 (90% range 78.0 to 141.3). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Eating out euro area model: +3.1%. By Sep 2027, 100 spent today costs 103.1 (90% range 100.5 to 106.4). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Whole basket euro area model: +3.1%. By Sep 2027, 100 spent today costs 103.1 (90% range 100.5 to 106.5). Seb's cost-of-living model (euro area), with the disruption continuing."
+   ],
+   "model": "gemini-3.5-flash",
+   "generated_at": "2026-10-25T10:10:19+00:00"
+  },
+  "BGR": {
+   "country": "Bulgaria",
+   "text": "- As a net importer [1], Bulgaria sourced 25% [1] of its oil imports from the Gulf [1].\n- Under the Hormuz shock model, 17% [1] of its oil imports are cut off, driving fuel costs up 15% [1] compared to pre-war levels.\n- Annual inflation reached 5.4% [2] in June 2026 [2] (food at 3.9% [2]), up from 3.3% [2] in February 2026 [2] before the closure.\n- By June 2027 [4], overall prices are projected to rise 6.2% [4], taking 100 [4] spent today to 106.2 [4] (90% [4] range 97.1 [4] to 116.6 [4]).\n- Grocery costs are projected to increase 4.6% [3] by June 2027 [3], with 100 [3] spent today reaching 104.6 [3].",
+   "facts": [
+    "Bulgaria in this page's Hormuz model at the current setting (FLOW 6.6/20 mb/d · LOST 67%): 17% of its oil imports cut off; fuel cost +15% vs pre-war; 25% of its oil imports came from the Gulf; Net importer",
+    "In Jun 2026 prices in Bulgaria were +5.4% on a year earlier, food +3.9%. Before the Hormuz closure, in Feb 2026: +3.3%, food +3.8%. (FAOSTAT)",
+    "Groceries (food prices): +4.6%. By Jun 2027, 100 spent today costs 104.6 (90% range 90.7 to 123.3). Oil's moves since Jun 2026 add +0.72%. Brent at $95 instead of the pre-war $70, over 12 months by itself: our cost-of-living model +0.93%, Bulgaria's own data +0.64%, combined +0.76% (a ridge update of our model on Bulgaria's prices).",
+    "All prices: +6.2%. By Jun 2027, 100 spent today costs 106.2 (90% range 97.1 to 116.6). Oil's moves since Jun 2026 add +0.77%. Brent at $95 instead of the pre-war $70, over 12 months by itself: our cost-of-living model +0.98%, Bulgaria's own data +0.70%, combined +0.81% (a ridge update of our model on Bulgaria's prices).",
+    "Bread euro area model: +2.9%. By Sep 2027, 100 spent today costs 102.9 (90% range 98.1 to 108.9). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Dairy euro area model: +5.0%. By Sep 2027, 100 spent today costs 105.0 (90% range 98.1 to 114.8). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Meat euro area model: +2.5%. By Sep 2027, 100 spent today costs 102.5 (90% range 98.5 to 108.5). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Fruit and vegetables euro area model: +5.1%. By Sep 2027, 100 spent today costs 105.1 (90% range 91.4 to 116.7). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Oils and fats euro area model: +1.6%. By Sep 2027, 100 spent today costs 101.6 (90% range 91.2 to 114.0). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Sugar euro area model: +2.2%. By Sep 2027, 100 spent today costs 102.2 (90% range 96.6 to 109.0). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Electricity euro area model: +7.7%. By Sep 2027, 100 spent today costs 107.7 (90% range 89.3 to 125.5). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Gas euro area model: +11.1%. By Sep 2027, 100 spent today costs 111.1 (90% range 89.2 to 136.0). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Motor fuel euro area model: +10.9%. By Sep 2027, 100 spent today costs 110.9 (90% range 78.0 to 141.3). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Eating out euro area model: +3.1%. By Sep 2027, 100 spent today costs 103.1 (90% range 100.5 to 106.4). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Whole basket euro area model: +3.1%. By Sep 2027, 100 spent today costs 103.1 (90% range 100.5 to 106.5). Seb's cost-of-living model (euro area), with the disruption continuing."
+   ],
+   "model": "gemini-3.5-flash",
+   "generated_at": "2026-10-25T10:09:59+00:00"
   },
   "CHN": {
    "country": "China",
-   "text": "- China is the #1 [3] crude steel exporter (133.6 [3] Mt) and leads global output in steel (52% [2]), primary aluminium (61% [5]), alumina (61% [12]), polyethylene (34% [8]), and nitrogen fertiliser (33% [6]).\n- In other materials, it ranks #2 [4] in jet fuel (17% [4]), #3 [11] in bauxite (20% [11]), #4 [9] in iron ore (11% [9]), #4 [14] in natural gas (6.0% [14]), and #6 [10] in crude oil (5.1% [10]).\n- Key imported inputs come from Australia (64% [16] iron ore, 19% [21] bauxite), Guinea (74% [20] bauxite), Mongolia (51% [17] coking coal), UAE (21% [22] PE), Russia (17% [18] crude), and Saudi Arabia (14% [19] crude, 13% [23] PE).\n- As a net importer [1], its Hormuz exposure score is +26 [1] (scale -40 [1] to +65 [1]), with fuel cost +31% [1] and 33% [1] of oil imported via Hormuz.",
+   "text": "- Main Export & World Role: Ranks 1 [6] in crude steel exports (133.6 [6] Mt). Its largest global output shares are 61% [8] in primary aluminium, 61% [15] in alumina, and 52% [5] in crude steel.\n- Material Rankings: Output ranks are 1 [5] in crude steel, 1 [8] in primary aluminium, 1 [15] in alumina, 1 [11] in polyethylene, 1 [9] in nitrogen fertiliser, 2 [7] in jet fuel, 3 [14] in bauxite, 4 [12] in iron ore, 4 [17] in natural gas, and 6 [13] in crude oil.\n- Key Inputs: Imports provide 64% [19] of iron ore from Australia, 51% [20] of coking coal from Mongolia, 74% [23] of bauxite from Guinea, and crude oil from Russia (17% [21]) and Saudi Arabia (14% [22]).\n- Hormuz Exposure: A net importer [1], 36% [1] of oil imports came from the Gulf. Under the shock model, 24% [1] of oil imports are cut, raising fuel costs 12% [1].",
    "facts": [
-    "China in this page's Hormuz model at the current setting (FLOW 6.6/20 mb/d · LOST 67%): exposure score +26 on a -40 (gains) to +65 (hurt) scale; fuel cost +31% vs pre-war; 33% of its oil came via Hormuz; Net importer",
+    "China in this page's Hormuz model at the current setting (FLOW 6.6/20 mb/d · LOST 67%): 24% of its oil imports cut off; fuel cost +12% vs pre-war; 36% of its oil imports came from the Gulf; Net importer",
+    "In Jun 2026 prices in China were +1.0% on a year earlier, food −1.2%. Before the Hormuz closure, in Feb 2026: +1.3%, food +2.2%. (FAOSTAT)",
+    "Groceries (food prices): −0.9%. By Jun 2027, 100 spent today costs 99.1 (90% range 85.6 to 108.8). Oil's moves since Jun 2026 add +0.22%. Brent at $95 instead of the pre-war $70, over 12 months by itself: our cost-of-living model +0.93%, China's own data −0.27%, combined +0.24% (a ridge update of our model on China's prices).",
+    "All prices: +1.4%. By Jun 2027, 100 spent today costs 101.5 (90% range 98.5 to 103.0). Oil's moves since Jun 2026 add +0.45%. Brent at $95 instead of the pre-war $70, over 12 months by itself: our cost-of-living model +0.98%, China's own data +0.40%, combined +0.47% (a ridge update of our model on China's prices).",
     "Crude steel production: China ranks #1 of 12 listed, 52% of world output (2025; worldsteel.org)",
     "Crude steel exports: China ranks #1 of 6 listed, 133.6 Mt (2025; worldsteel.org)",
     "Jet fuel production: China ranks #2 of 8 listed, 17% of world output (2025; see notes)",
@@ -453,25 +515,246 @@
     "For Polyethylene, 13% of China's Polyethylene (imported) comes from Saudi Arabia (share of China's PE import value, Q3 2025; 2025; chemorbis.com)"
    ],
    "model": "gemini-3.5-flash",
-   "generated_at": "2026-10-25T09:04:31+00:00"
+   "generated_at": "2026-10-25T10:08:46+00:00"
   },
-  "FJI": {
-   "country": "Fiji",
-   "text": "- Fiji is designated as a net importer in the model [1].\n- Regarding key fuel inputs, 0% [1] of its oil came via Hormuz [1].\n- At a Hormuz flow setting of 6.6 [1] out of 20 [1] mb/d (with 67% [1] lost), Fiji has an exposure score of +28 [1].\n- Its exposure score is measured on a scale ranging from -40 [1] (gains) to +65 [1] (hurt).\n- Fiji faces a fuel cost increase of +31% [1] compared to pre-war levels [1].",
+  "CYP": {
+   "country": "Cyprus",
+   "text": "- Cyprus is a net importer of oil [1].\n- For key inputs, 4 [1] % of its oil imports came from the Gulf [1].\n- Under the Hormuz shock, 3 [1] % of its oil imports are cut off [1].\n- The disruption increases its fuel costs by 13 [1] % compared to pre-war levels [1].\n- All-item price growth increased from 0.1 [2] % in Feb 2026 [2] to 3.1 [2] % in Jun 2026 [2], with oil moves since Jun 2026 [4] adding 1.04 [4] % to all prices [4].",
    "facts": [
-    "Fiji in this page's Hormuz model at the current setting (FLOW 6.6/20 mb/d · LOST 67%): exposure score +28 on a -40 (gains) to +65 (hurt) scale; fuel cost +31% vs pre-war; 0% of its oil came via Hormuz; Net importer"
+    "Cyprus in this page's Hormuz model at the current setting (FLOW 6.6/20 mb/d · LOST 67%): 3% of its oil imports cut off; fuel cost +13% vs pre-war; 4% of its oil imports came from the Gulf; Net importer",
+    "In Jun 2026 prices in Cyprus were +3.1% on a year earlier, food +5.1%. Before the Hormuz closure, in Feb 2026: +0.1%, food +2.4%. (FAOSTAT)",
+    "Groceries (food prices): +5.3%. By Jun 2027, 100 spent today costs 105.3 (90% range 97.6 to 114.9). Oil's moves since Jun 2026 add +0.28%. Brent at $95 instead of the pre-war $70, over 12 months by itself: our cost-of-living model +0.93%, Cyprus's own data +0.12%, combined +0.29% (a ridge update of our model on Cyprus's prices).",
+    "All prices: +4.1%. By Jun 2027, 100 spent today costs 104.1 (90% range 97.5 to 110.2). Oil's moves since Jun 2026 add +1.04%. Brent at $95 instead of the pre-war $70, over 12 months by itself: our cost-of-living model +0.98%, Cyprus's own data +1.12%, combined +1.10% (a ridge update of our model on Cyprus's prices).",
+    "Bread euro area model: +2.9%. By Sep 2027, 100 spent today costs 102.9 (90% range 98.1 to 108.9). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Dairy euro area model: +5.0%. By Sep 2027, 100 spent today costs 105.0 (90% range 98.1 to 114.8). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Meat euro area model: +2.5%. By Sep 2027, 100 spent today costs 102.5 (90% range 98.5 to 108.5). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Fruit and vegetables euro area model: +5.1%. By Sep 2027, 100 spent today costs 105.1 (90% range 91.4 to 116.7). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Oils and fats euro area model: +1.6%. By Sep 2027, 100 spent today costs 101.6 (90% range 91.2 to 114.0). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Sugar euro area model: +2.2%. By Sep 2027, 100 spent today costs 102.2 (90% range 96.6 to 109.0). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Electricity euro area model: +7.7%. By Sep 2027, 100 spent today costs 107.7 (90% range 89.3 to 125.5). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Gas euro area model: +11.1%. By Sep 2027, 100 spent today costs 111.1 (90% range 89.2 to 136.0). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Motor fuel euro area model: +10.9%. By Sep 2027, 100 spent today costs 110.9 (90% range 78.0 to 141.3). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Eating out euro area model: +3.1%. By Sep 2027, 100 spent today costs 103.1 (90% range 100.5 to 106.4). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Whole basket euro area model: +3.1%. By Sep 2027, 100 spent today costs 103.1 (90% range 100.5 to 106.5). Seb's cost-of-living model (euro area), with the disruption continuing."
    ],
    "model": "gemini-3.5-flash",
-   "generated_at": "2026-10-25T08:57:48+00:00"
+   "generated_at": "2026-10-25T10:10:53+00:00"
   },
-  "TZA": {
-   "country": "Tanzania",
-   "text": "- Main exports, global production roles, and rankings in oil, steel, or other materials are not provided in the facts, though Tanzania is classified as a net importer [1].\n- Specific origins for key inputs are unstated, except that 0 [1]% of its oil comes via Hormuz.\n- Under the model setting with a flow of 6.6 [1] out of 20 [1] mb/d and 67 [1]% lost, Tanzania receives an exposure score of +28 [1].\n- This score places it on an exposure scale ranging from -40 [1] (gains) to +65 [1] (hurt), with its fuel costs rising +31 [1]% compared to pre-war levels.",
+  "DEU": {
+   "country": "Germany",
+   "text": "- **Trade and World Role:** Germany ranks #4 [17] of 6 [17] listed in crude steel exports with 20.9 [17] Mt, and #8 [16] of 12 [16] listed in crude steel production with 1.8% [16] of world output (overall main export is not specified in the data).\n- **Material Rankings:** It ranks #7 [18] of 7 [18] listed in polyethylene production with 2.0% [18] of world output; an oil production or export ranking is not listed, but it is a net importer [1].\n- **Key Inputs:** 7% [1] of its oil imports came from the Gulf [1].\n- **Hormuz Shock Exposure:** Under the Hormuz model (flow 6.6 [1] / 20 [1] mb/d, 67% [1] lost), 4% [1] of its oil imports are cut off and fuel costs rise +12% [1] versus pre-war [1].",
    "facts": [
-    "Tanzania in this page's Hormuz model at the current setting (FLOW 6.6/20 mb/d · LOST 67%): exposure score +28 on a -40 (gains) to +65 (hurt) scale; fuel cost +31% vs pre-war; 0% of its oil came via Hormuz; Net importer"
+    "Germany in this page's Hormuz model at the current setting (FLOW 6.6/20 mb/d · LOST 67%): 4% of its oil imports cut off; fuel cost +12% vs pre-war; 7% of its oil imports came from the Gulf; Net importer",
+    "In Jun 2026 prices in Germany were +2.3% on a year earlier, food +0.6%. Before the Hormuz closure, in Feb 2026: +1.9%, food +1.5%. (FAOSTAT)",
+    "Groceries (food prices): +1.1%. By Jun 2027, 100 spent today costs 101.1 (90% range 88.5 to 112.6). Oil's moves since Jun 2026 add +0.50%. Brent at $95 instead of the pre-war $70, over 12 months by itself: our cost-of-living model +0.93%, Germany's own data +0.45%, combined +0.53% (a ridge update of our model on Germany's prices).",
+    "All prices: +2.8%. By Jun 2027, 100 spent today costs 102.8 (90% range 98.6 to 107.4). Oil's moves since Jun 2026 add +0.51%. Brent at $95 instead of the pre-war $70, over 12 months by itself: our cost-of-living model +0.98%, Germany's own data +0.50%, combined +0.54% (a ridge update of our model on Germany's prices).",
+    "Bread euro area model: +2.9%. By Sep 2027, 100 spent today costs 102.9 (90% range 98.1 to 108.9). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Dairy euro area model: +5.0%. By Sep 2027, 100 spent today costs 105.0 (90% range 98.1 to 114.8). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Meat euro area model: +2.5%. By Sep 2027, 100 spent today costs 102.5 (90% range 98.5 to 108.5). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Fruit and vegetables euro area model: +5.1%. By Sep 2027, 100 spent today costs 105.1 (90% range 91.4 to 116.7). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Oils and fats euro area model: +1.6%. By Sep 2027, 100 spent today costs 101.6 (90% range 91.2 to 114.0). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Sugar euro area model: +2.2%. By Sep 2027, 100 spent today costs 102.2 (90% range 96.6 to 109.0). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Electricity euro area model: +7.7%. By Sep 2027, 100 spent today costs 107.7 (90% range 89.3 to 125.5). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Gas euro area model: +11.1%. By Sep 2027, 100 spent today costs 111.1 (90% range 89.2 to 136.0). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Motor fuel euro area model: +10.9%. By Sep 2027, 100 spent today costs 110.9 (90% range 78.0 to 141.3). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Eating out euro area model: +3.1%. By Sep 2027, 100 spent today costs 103.1 (90% range 100.5 to 106.4). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Whole basket euro area model: +3.1%. By Sep 2027, 100 spent today costs 103.1 (90% range 100.5 to 106.5). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Crude steel production: Germany ranks #8 of 12 listed, 1.8% of world output (2025; worldsteel.org)",
+    "Crude steel exports: Germany ranks #4 of 6 listed, 20.9 Mt (2025; worldsteel.org)",
+    "Polyethylene production: Germany ranks #7 of 7 listed, 2.0% of world output (2024; malaymail.com)"
    ],
    "model": "gemini-3.5-flash",
-   "generated_at": "2026-10-25T08:58:05+00:00"
+   "generated_at": "2026-10-25T10:09:20+00:00"
+  },
+  "EST": {
+   "country": "Estonia",
+   "text": "- Estonia is a net oil importer [1], receiving 3% [1] of its oil imports from the Gulf [1].\n- Under the Hormuz shock model, 2% [1] of its oil imports are cut off, raising fuel costs by 14% [1] versus pre-war.\n- Prices rose 2.3% [2] in June 2026 [2] (food −0.9% [2]), compared to 3.1% [2] in February 2026 [2] before the closure.\n- Oil moves since June 2026 [4] add 1.14% [4] to overall prices [4], which are projected to increase 3.5% [4] by June 2027 [4].\n- Brent oil at $95 [4] instead of $70 [4] pre-war adds 1.20% [4] to cost of living over 12 [4] months.",
+   "facts": [
+    "Estonia in this page's Hormuz model at the current setting (FLOW 6.6/20 mb/d · LOST 67%): 2% of its oil imports cut off; fuel cost +14% vs pre-war; 3% of its oil imports came from the Gulf; Net importer",
+    "In Jun 2026 prices in Estonia were +2.3% on a year earlier, food −0.9%. Before the Hormuz closure, in Feb 2026: +3.1%, food +5.5%. (FAOSTAT)",
+    "Groceries (food prices): 0.0%. By Jun 2027, 100 spent today costs 100.0 (90% range 79.7 to 120.1). Oil's moves since Jun 2026 add +0.94%. Brent at $95 instead of the pre-war $70, over 12 months by itself: our cost-of-living model +0.93%, Estonia's own data +1.02%, combined +0.99% (a ridge update of our model on Estonia's prices).",
+    "All prices: +3.5%. By Jun 2027, 100 spent today costs 103.5 (90% range 90.6 to 117.7). Oil's moves since Jun 2026 add +1.14%. Brent at $95 instead of the pre-war $70, over 12 months by itself: our cost-of-living model +0.98%, Estonia's own data +1.36%, combined +1.20% (a ridge update of our model on Estonia's prices).",
+    "Bread euro area model: +2.9%. By Sep 2027, 100 spent today costs 102.9 (90% range 98.1 to 108.9). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Dairy euro area model: +5.0%. By Sep 2027, 100 spent today costs 105.0 (90% range 98.1 to 114.8). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Meat euro area model: +2.5%. By Sep 2027, 100 spent today costs 102.5 (90% range 98.5 to 108.5). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Fruit and vegetables euro area model: +5.1%. By Sep 2027, 100 spent today costs 105.1 (90% range 91.4 to 116.7). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Oils and fats euro area model: +1.6%. By Sep 2027, 100 spent today costs 101.6 (90% range 91.2 to 114.0). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Sugar euro area model: +2.2%. By Sep 2027, 100 spent today costs 102.2 (90% range 96.6 to 109.0). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Electricity euro area model: +7.7%. By Sep 2027, 100 spent today costs 107.7 (90% range 89.3 to 125.5). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Gas euro area model: +11.1%. By Sep 2027, 100 spent today costs 111.1 (90% range 89.2 to 136.0). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Motor fuel euro area model: +10.9%. By Sep 2027, 100 spent today costs 110.9 (90% range 78.0 to 141.3). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Eating out euro area model: +3.1%. By Sep 2027, 100 spent today costs 103.1 (90% range 100.5 to 106.4). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Whole basket euro area model: +3.1%. By Sep 2027, 100 spent today costs 103.1 (90% range 100.5 to 106.5). Seb's cost-of-living model (euro area), with the disruption continuing."
+   ],
+   "model": "gemini-3.5-flash",
+   "generated_at": "2026-10-25T10:10:45+00:00"
+  },
+  "GBR": {
+   "country": "United Kingdom",
+   "text": "- Main export details are not provided in the facts; for listed materials, it ranks #3 [16] of 4 [16] listed in steel scrap exports, exporting 6.532 [16] Mt in 2025 [16].\n- For key inputs, 13% [1] of its oil imports came from the Gulf.\n- As a net importer, its exposure to the Hormuz shock includes having 9% [1] of its oil imports cut off and fuel costs rising +12% [1] versus pre-war.\n- Shock impacts from oil moves since June 2026 [3] add +0.51% [4] to all prices, with motor fuel costs projected up +11.3% [13] by September 2027 [13].",
+   "facts": [
+    "United Kingdom in this page's Hormuz model at the current setting (FLOW 6.6/20 mb/d · LOST 67%): 9% of its oil imports cut off; fuel cost +12% vs pre-war; 13% of its oil imports came from the Gulf; Net importer",
+    "In Jun 2026 prices in United Kingdom were +2.8% on a year earlier, food +1.7%. Before the Hormuz closure, in Feb 2026: +3.2%, food +3.3%. (FAOSTAT)",
+    "Groceries (food prices): +2.2%. By Jun 2027, 100 spent today costs 102.2 (90% range 91.6 to 113.1). Oil's moves since Jun 2026 add +0.48%. Brent at $95 instead of the pre-war $70, over 12 months by itself: our cost-of-living model +0.93%, United Kingdom's own data +0.25%, combined +0.50% (a ridge update of our model on United Kingdom's prices).",
+    "All prices: +3.3%. By Jun 2027, 100 spent today costs 103.3 (90% range 98.6 to 108.1). Oil's moves since Jun 2026 add +0.51%. Brent at $95 instead of the pre-war $70, over 12 months by itself: our cost-of-living model +0.98%, United Kingdom's own data +0.48%, combined +0.53% (a ridge update of our model on United Kingdom's prices).",
+    "Bread UK model: +6.2%. By Sep 2027, 100 spent today costs 106.2 (90% range 100.7 to 111.8). Seb's cost-of-living model (UK), with the disruption continuing.",
+    "Dairy UK model: +11.1%. By Sep 2027, 100 spent today costs 111.1 (90% range 102.0 to 121.0). Seb's cost-of-living model (UK), with the disruption continuing.",
+    "Meat UK model: +5.2%. By Sep 2027, 100 spent today costs 105.2 (90% range 99.3 to 111.2). Seb's cost-of-living model (UK), with the disruption continuing.",
+    "Fruit and vegetables UK model: +5.2%. By Sep 2027, 100 spent today costs 105.2 (90% range 96.7 to 115.1). Seb's cost-of-living model (UK), with the disruption continuing.",
+    "Oils and fats UK model: +3.8%. By Sep 2027, 100 spent today costs 103.8 (90% range 90.7 to 117.6). Seb's cost-of-living model (UK), with the disruption continuing.",
+    "Sugar UK model: +6.7%. By Sep 2027, 100 spent today costs 106.7 (90% range 101.1 to 111.9). Seb's cost-of-living model (UK), with the disruption continuing.",
+    "Electricity UK model: +8.4%. By Sep 2027, 100 spent today costs 108.4 (90% range 81.9 to 147.9). Seb's cost-of-living model (UK), with the disruption continuing.",
+    "Gas UK model: +7.6%. By Sep 2027, 100 spent today costs 107.6 (90% range 78.4 to 153.8). Seb's cost-of-living model (UK), with the disruption continuing.",
+    "Motor fuel UK model: +11.3%. By Sep 2027, 100 spent today costs 111.3 (90% range 81.6 to 147.7). Seb's cost-of-living model (UK), with the disruption continuing.",
+    "Eating out UK model: +4.3%. By Sep 2027, 100 spent today costs 104.3 (90% range 100.7 to 111.6). Seb's cost-of-living model (UK), with the disruption continuing.",
+    "Whole basket UK model: +3.9%. By Sep 2027, 100 spent today costs 103.9 (90% range 101.6 to 106.6). Seb's cost-of-living model (UK), with the disruption continuing.",
+    "Steel scrap exports: United Kingdom ranks #3 of 4 listed, 6.532 Mt (2025; steelorbis.com)"
+   ],
+   "model": "gemini-3.5-flash",
+   "generated_at": "2026-10-25T10:09:50+00:00"
+  },
+  "HRV": {
+   "country": "Croatia",
+   "text": "- Croatia is a net oil importer [1], sourcing 2 [1]% of its oil imports from the Gulf [1].\n- Under the Hormuz disruption model, 1 [1]% of its oil imports are cut off [1], causing fuel costs to rise 12 [1]% relative to pre-war levels [1].\n- Prior to the closure in February 2026 [2], price inflation stood at 3.8 [2]%, which increased to 4.6 [2]% by June 2026 [2].\n- Projections for June 2027 [4] show overall prices rising 5.2 [4]%, with grocery prices expected to increase 4.8 [3]%.",
+   "facts": [
+    "Croatia in this page's Hormuz model at the current setting (FLOW 6.6/20 mb/d · LOST 67%): 1% of its oil imports cut off; fuel cost +12% vs pre-war; 2% of its oil imports came from the Gulf; Net importer",
+    "In Jun 2026 prices in Croatia were +4.6% on a year earlier, food +4.4%. Before the Hormuz closure, in Feb 2026: +3.8%, food +5.7%. (FAOSTAT)",
+    "Groceries (food prices): +4.8%. By Jun 2027, 100 spent today costs 104.8 (90% range 92.4 to 117.5). Oil's moves since Jun 2026 add +0.45%. Brent at $95 instead of the pre-war $70, over 12 months by itself: our cost-of-living model +0.93%, Croatia's own data +0.28%, combined +0.47% (a ridge update of our model on Croatia's prices).",
+    "All prices: +5.2%. By Jun 2027, 100 spent today costs 105.2 (90% range 99.2 to 113.4). Oil's moves since Jun 2026 add +0.62%. Brent at $95 instead of the pre-war $70, over 12 months by itself: our cost-of-living model +0.98%, Croatia's own data +0.55%, combined +0.65% (a ridge update of our model on Croatia's prices).",
+    "Bread euro area model: +2.9%. By Sep 2027, 100 spent today costs 102.9 (90% range 98.1 to 108.9). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Dairy euro area model: +5.0%. By Sep 2027, 100 spent today costs 105.0 (90% range 98.1 to 114.8). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Meat euro area model: +2.5%. By Sep 2027, 100 spent today costs 102.5 (90% range 98.5 to 108.5). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Fruit and vegetables euro area model: +5.1%. By Sep 2027, 100 spent today costs 105.1 (90% range 91.4 to 116.7). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Oils and fats euro area model: +1.6%. By Sep 2027, 100 spent today costs 101.6 (90% range 91.2 to 114.0). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Sugar euro area model: +2.2%. By Sep 2027, 100 spent today costs 102.2 (90% range 96.6 to 109.0). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Electricity euro area model: +7.7%. By Sep 2027, 100 spent today costs 107.7 (90% range 89.3 to 125.5). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Gas euro area model: +11.1%. By Sep 2027, 100 spent today costs 111.1 (90% range 89.2 to 136.0). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Motor fuel euro area model: +10.9%. By Sep 2027, 100 spent today costs 110.9 (90% range 78.0 to 141.3). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Eating out euro area model: +3.1%. By Sep 2027, 100 spent today costs 103.1 (90% range 100.5 to 106.4). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Whole basket euro area model: +3.1%. By Sep 2027, 100 spent today costs 103.1 (90% range 100.5 to 106.5). Seb's cost-of-living model (euro area), with the disruption continuing."
+   ],
+   "model": "gemini-3.5-flash",
+   "generated_at": "2026-10-25T10:12:14+00:00"
+  },
+  "IND": {
+   "country": "India",
+   "text": "- Exports & top role: India ranks #5 [11] of 5 [11] in iron ore exports (1.7% [11]); its largest production share is iron ore at 12% [10] (#3 [10] of 8 [10]).\n- Material ranks: It is a net importer [1] of oil, ranking #2 [5] of 12 [5] in crude steel, #2 [7] of 7 [7] in aluminium, #2 [8] of 11 [8] in fertiliser, and #4 [6] of 8 [6] in jet fuel.\n- Key inputs: Coking coal comes from Australia (54% [14]) and Russia (16% [15]); crude oil from Russia (33% [16]) and Iraq (20% [17]); and imported urea from Oman (46% [18]) and Russia (16% [19]).\n- Hormuz shock exposure: 46% [1] of oil imports came from the Gulf [1], causing 31% [1] of oil imports to be cut off and fuel costs to rise 12% [1].",
+   "facts": [
+    "India in this page's Hormuz model at the current setting (FLOW 6.6/20 mb/d · LOST 67%): 31% of its oil imports cut off; fuel cost +12% vs pre-war; 46% of its oil imports came from the Gulf; Net importer",
+    "In Jun 2026 prices in India were +4.4% on a year earlier, food +5.3%. Before the Hormuz closure, in Feb 2026: +3.2%, food +3.5%. (FAOSTAT)",
+    "Groceries (food prices): +5.3%. By Jun 2027, 100 spent today costs 105.3 (90% range 96.9 to 112.9). Oil's moves since Jun 2026 add 0.05%. Brent at $95 instead of the pre-war $70, over 12 months by itself: our cost-of-living model +0.93%, India's own data −0.23%, combined 0.05% (a ridge update of our model on India's prices).",
+    "All prices: +4.8%. By Jun 2027, 100 spent today costs 104.8 (90% range 101.9 to 108.6). Oil's moves since Jun 2026 add +0.41%. Brent at $95 instead of the pre-war $70, over 12 months by itself: our cost-of-living model +0.98%, India's own data +0.26%, combined +0.43% (a ridge update of our model on India's prices).",
+    "Crude steel production: India ranks #2 of 12 listed, 8.9% of world output (2025; worldsteel.org)",
+    "Jet fuel production: India ranks #4 of 8 listed, 4.8% of world output (2025; see notes)",
+    "Primary aluminium production: India ranks #2 of 7 listed, 5.7% of world output (2025; pubs.usgs.gov)",
+    "Nitrogen fertiliser production: India ranks #2 of 11 listed, 10% of world output (2025; worldpopulationreview.com)",
+    "Polyethylene production: India ranks #5 of 7 listed, 4.0% of world output (2024; malaymail.com)",
+    "Iron ore production: India ranks #3 of 8 listed, 12% of world output (2025; statranker.org)",
+    "Iron ore exports: India ranks #5 of 5 listed, 1.7% of world exports (2025; hellenicshippingnews.com)",
+    "Bauxite production: India ranks #5 of 6 listed, 5.7% of world output (2025; pubs.usgs.gov)",
+    "Alumina production: India ranks #4 of 4 listed, 5.2% of world output (2025; sunsirs.com)",
+    "For Crude steel, 54% of India's Coking coal comes from Australia (share of India's coking coal imports (62.6 Mt, excl. PCI); 2025; gmk.center)",
+    "For Crude steel, 16% of India's Coking coal comes from Russia (share of India's coking coal imports; 2025; gmk.center)",
+    "For Jet fuel, 33% of India's Crude oil comes from Russia (share of India's crude imports, calendar 2025; 2025; finance.yahoo.com)",
+    "For Jet fuel, 20% of India's Crude oil comes from Iraq (share of India's crude imports FY2024-25 (secondary); 2025; exporterswork.substack.com)",
+    "For Nitrogen fertiliser, 46% of India's Urea (imported) comes from Oman (share of India's urea imports (5.65 Mt); imports ~20% of use; 2025; india.mongabay.com)",
+    "For Nitrogen fertiliser, 16% of India's Urea (imported) comes from Russia (share of India's urea imports, FY2024-25; 2025; india.mongabay.com)"
+   ],
+   "model": "gemini-3.5-flash",
+   "generated_at": "2026-10-25T10:08:53+00:00"
+  },
+  "ITA": {
+   "country": "Italy",
+   "text": "- In global output, Italy accounts for 1.1% [16] of crude steel production in 2025 [16].\n- In materials rankings, it ranks #12 [16] of 12 [16] listed for crude steel, while acting as a net oil importer [1].\n- For key inputs, 21% [1] of its oil imports come from the Gulf.\n- Hormuz shock exposure cuts off 14% [1] of its oil imports and raises fuel costs 10% [1] over pre-war levels.\n- Price exposure includes a 3.0% [2] year-over-year price increase in June 2026 [2], with overall prices projected to rise 3.5% [4].",
+   "facts": [
+    "Italy in this page's Hormuz model at the current setting (FLOW 6.6/20 mb/d · LOST 67%): 14% of its oil imports cut off; fuel cost +10% vs pre-war; 21% of its oil imports came from the Gulf; Net importer",
+    "In Jun 2026 prices in Italy were +3.0% on a year earlier, food +2.4%. Before the Hormuz closure, in Feb 2026: +1.5%, food +3.1%. (FAOSTAT)",
+    "Groceries (food prices): +2.5%. By Jun 2027, 100 spent today costs 102.5 (90% range 94.6 to 112.2). Oil's moves since Jun 2026 add +0.08%. Brent at $95 instead of the pre-war $70, over 12 months by itself: our cost-of-living model +0.93%, Italy's own data 0.02%, combined +0.08% (a ridge update of our model on Italy's prices).",
+    "All prices: +3.5%. By Jun 2027, 100 spent today costs 103.5 (90% range 96.6 to 110.5). Oil's moves since Jun 2026 add +0.53%. Brent at $95 instead of the pre-war $70, over 12 months by itself: our cost-of-living model +0.98%, Italy's own data +0.51%, combined +0.56% (a ridge update of our model on Italy's prices).",
+    "Bread euro area model: +2.9%. By Sep 2027, 100 spent today costs 102.9 (90% range 98.1 to 108.9). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Dairy euro area model: +5.0%. By Sep 2027, 100 spent today costs 105.0 (90% range 98.1 to 114.8). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Meat euro area model: +2.5%. By Sep 2027, 100 spent today costs 102.5 (90% range 98.5 to 108.5). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Fruit and vegetables euro area model: +5.1%. By Sep 2027, 100 spent today costs 105.1 (90% range 91.4 to 116.7). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Oils and fats euro area model: +1.6%. By Sep 2027, 100 spent today costs 101.6 (90% range 91.2 to 114.0). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Sugar euro area model: +2.2%. By Sep 2027, 100 spent today costs 102.2 (90% range 96.6 to 109.0). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Electricity euro area model: +7.7%. By Sep 2027, 100 spent today costs 107.7 (90% range 89.3 to 125.5). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Gas euro area model: +11.1%. By Sep 2027, 100 spent today costs 111.1 (90% range 89.2 to 136.0). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Motor fuel euro area model: +10.9%. By Sep 2027, 100 spent today costs 110.9 (90% range 78.0 to 141.3). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Eating out euro area model: +3.1%. By Sep 2027, 100 spent today costs 103.1 (90% range 100.5 to 106.4). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Whole basket euro area model: +3.1%. By Sep 2027, 100 spent today costs 103.1 (90% range 100.5 to 106.5). Seb's cost-of-living model (euro area), with the disruption continuing.",
+    "Crude steel production: Italy ranks #12 of 12 listed, 1.1% of world output (2025; worldsteel.org)"
+   ],
+   "model": "gemini-3.5-flash",
+   "generated_at": "2026-10-25T10:09:16+00:00"
+  },
+  "RUS": {
+   "country": "Russia",
+   "text": "- Russia's biggest export role is in nitrogen fertiliser, ranking #1 [11] in exports (10.8 [11] Mt urea) and #3 [10] in production (10% [10] of world output).\n- In energy and steel, it ranks #2 [15] in crude oil production (12% [15]) and #2 [16] in crude oil exports (243.1 [16] Mt), #2 [17] in natural gas output (15% [17]), and #5 [5] in crude steel output (3.7% [5]).\n- Among other materials, it ranks #3 [8] in primary aluminium output (5.3% [8]), #4 [13] in coking coal output (11% [13]), #6 [12] in iron ore output (3.4% [12]), and #6 [7] in jet fuel output (3.4% [7]).\n- For key inputs, 25% [21] of its alumina needs for primary aluminium come from China [21].\n- Under the Hormuz shock model, as a net exporter [1], Russia sees +36% [1] in oil export earnings and a +12% [1] increase in fuel costs.",
+   "facts": [
+    "Russia in this page's Hormuz model at the current setting (FLOW 6.6/20 mb/d · LOST 67%): +36% oil export earnings; fuel cost +12% vs pre-war; – of its oil imports came from the Gulf; Net exporter",
+    "In Jun 2026 prices in Russia were +6.0% on a year earlier, food +3.4%. Before the Hormuz closure, in Feb 2026: +5.9%, food +4.2%. (FAOSTAT)",
+    "Groceries (food prices): +3.6%. By Jun 2027, 100 spent today costs 103.6 (90% range 94.5 to 114.2). Oil's moves since Jun 2026 add +0.19%. Brent at $95 instead of the pre-war $70, over 12 months by itself: our cost-of-living model +0.93%, Russia's own data −0.84%, combined +0.20% (a ridge update of our model on Russia's prices).",
+    "All prices: +6.3%. By Jun 2027, 100 spent today costs 106.3 (90% range 99.7 to 112.6). Oil's moves since Jun 2026 add +0.21%. Brent at $95 instead of the pre-war $70, over 12 months by itself: our cost-of-living model +0.98%, Russia's own data −0.60%, combined +0.22% (a ridge update of our model on Russia's prices).",
+    "Crude steel production: Russia ranks #5 of 12 listed, 3.7% of world output (2025; worldsteel.org)",
+    "Crude steel exports: Russia ranks #6 of 6 listed, 15.2 Mt (2025; worldsteel.org)",
+    "Jet fuel production: Russia ranks #6 of 8 listed, 3.4% of world output (2025; see notes)",
+    "Primary aluminium production: Russia ranks #3 of 7 listed, 5.3% of world output (2025; pubs.usgs.gov)",
+    "Primary aluminium exports: Russia ranks #3 of 3 listed, 7.26 USD bn (2024; oec.world)",
+    "Nitrogen fertiliser production: Russia ranks #3 of 11 listed, 10% of world output (2025; worldpopulationreview.com)",
+    "Nitrogen fertiliser exports: Russia ranks #1 of 2 listed, 10.8 Mt urea exported (2025; t.me)",
+    "Iron ore production: Russia ranks #6 of 8 listed, 3.4% of world output (2025; statranker.org)",
+    "Coking coal production: Russia ranks #4 of 4 listed, 11% of world output (2024; steelorbis.com)",
+    "Coking coal exports: Russia ranks #4 of 5 listed, 13% of world exports (2024; iea.org)",
+    "Crude oil production: Russia ranks #2 of 10 listed, 12% of world output (2025; eia.gov)",
+    "Crude oil exports: Russia ranks #2 of 6 listed, 243.1 Mt (2024; statbase.org)",
+    "Natural gas production: Russia ranks #2 of 8 listed, 15% of world output (2024; raw.githubusercontent.com)",
+    "Natural gas exports: Russia ranks #4 of 4 listed, 7.0% of world exports (2025; igu.org)",
+    "Urea (imported) exports: Russia ranks #1 of 2 listed, 10.8 Mt urea exported (2025; t.me)",
+    "Naphtha exports: Russia ranks #2 of 3 listed, 450 kb/d (2026; argusmedia.com)",
+    "For Primary aluminium, 25% of Russia's Alumina comes from China (approx. share of Rusal alumina needs (1.68 Mt Jan-Oct 2025 annualised; derived); 2025; news.metal.com)"
+   ],
+   "model": "gemini-3.5-flash",
+   "generated_at": "2026-10-25T10:08:55+00:00"
+  },
+  "USA": {
+   "country": "United States",
+   "text": "- In world production and trade, the US ranks #1 [26] of 8 [26] in natural gas output (25% [26]), #1 [27] of 4 [27] in natural gas exports (25% [27]), and #1 [28] of 1 [28] in ethane exports (579 [28] kb/d).\n- Ranks in listed materials: #1 [24] of 10 [24] in crude oil output; #3 [16] of 12 [16] in crude steel; #1 [17] of 8 [17] in jet fuel; #2 [20] of 7 [20] in polyethylene; #2 [21] of 4 [21] in coking coal; and #4 [19] of 11 [19] in nitrogen fertiliser.\n- Key inputs: Canada (63% [29]) and Mexico (6% [30]) supply crude oil; Russia (36% [31]) and Qatar (22% [32]) supply imported urea.\n- Hormuz exposure: As a net exporter [1], oil export earnings rise +36% [1], while fuel costs increase +24% [1].",
+   "facts": [
+    "United States in this page's Hormuz model at the current setting (FLOW 6.6/20 mb/d · LOST 67%): +36% oil export earnings; fuel cost +24% vs pre-war; – of its oil imports came from the Gulf; Net exporter",
+    "In Jun 2026 prices in the United States were +3.5% on a year earlier, food +2.7%. Before the Hormuz closure, in Feb 2026: +2.4%, food +2.4%. (FAOSTAT)",
+    "Groceries (food prices): +3.1%. By Jun 2027, 100 spent today costs 103.1 (90% range 94.7 to 110.0). Oil's moves since Jun 2026 add +0.35%. Brent at $95 instead of the pre-war $70, over 12 months by itself: our cost-of-living model +0.93%, the United States's own data +0.23%, combined +0.37% (a ridge update of our model on the United States's prices).",
+    "All prices: +4.5%. By Jun 2027, 100 spent today costs 104.5 (90% range 100.6 to 109.4). Oil's moves since Jun 2026 add +0.92%. Brent at $95 instead of the pre-war $70, over 12 months by itself: our cost-of-living model +0.98%, the United States's own data +0.96%, combined +0.97% (a ridge update of our model on the United States's prices).",
+    "Bread US model: +4.6%. By Sep 2027, 100 spent today costs 104.6 (90% range 100.5 to 109.7). Seb's cost-of-living model (US), with the disruption continuing.",
+    "Dairy US model: +4.3%. By Sep 2027, 100 spent today costs 104.3 (90% range 96.7 to 113.3). Seb's cost-of-living model (US), with the disruption continuing.",
+    "Meat US model: +3.8%. By Sep 2027, 100 spent today costs 103.8 (90% range 98.5 to 109.6). Seb's cost-of-living model (US), with the disruption continuing.",
+    "Fruit and vegetables US model: +2.9%. By Sep 2027, 100 spent today costs 102.9 (90% range 98.9 to 106.9). Seb's cost-of-living model (US), with the disruption continuing.",
+    "Oils and fats US model: +3.2%. By Sep 2027, 100 spent today costs 103.2 (90% range 94.0 to 111.7). Seb's cost-of-living model (US), with the disruption continuing.",
+    "Sugar US model: +3.4%. By Sep 2027, 100 spent today costs 103.4 (90% range 98.1 to 108.6). Seb's cost-of-living model (US), with the disruption continuing.",
+    "Electricity US model: +3.5%. By Sep 2027, 100 spent today costs 103.5 (90% range 96.8 to 111.1). Seb's cost-of-living model (US), with the disruption continuing.",
+    "Gas US model: +4.2%. By Sep 2027, 100 spent today costs 104.2 (90% range 77.4 to 134.4). Seb's cost-of-living model (US), with the disruption continuing.",
+    "Motor fuel US model: +16.1%. By Sep 2027, 100 spent today costs 116.1 (90% range 63.5 to 173.4). Seb's cost-of-living model (US), with the disruption continuing.",
+    "Eating out US model: +3.5%. By Sep 2027, 100 spent today costs 103.5 (90% range 101.2 to 105.9). Seb's cost-of-living model (US), with the disruption continuing.",
+    "Whole basket US model: +3.4%. By Sep 2027, 100 spent today costs 103.4 (90% range 100.6 to 106.6). Seb's cost-of-living model (US), with the disruption continuing.",
+    "Crude steel production: United States ranks #3 of 12 listed, 4.4% of world output (2025; worldsteel.org)",
+    "Jet fuel production: United States ranks #1 of 8 listed, 24% of world output (2025; see notes)",
+    "Jet fuel exports: United States ranks #3 of 5 listed, ≈12% of world exports (2025; windward.ai)",
+    "Nitrogen fertiliser production: United States ranks #4 of 11 listed, 9.3% of world output (2025; worldpopulationreview.com)",
+    "Polyethylene production: United States ranks #2 of 7 listed, 13% of world output (2024; malaymail.com)",
+    "Coking coal production: United States ranks #2 of 4 listed, 15% of world output (2024; steelorbis.com)",
+    "Coking coal exports: United States ranks #3 of 5 listed, 14% of world exports (2024; iea.org)",
+    "Steel scrap exports: United States ranks #1 of 4 listed, 11.767 Mt (2025; steelorbis.com)",
+    "Crude oil production: United States ranks #1 of 10 listed, 16% of world output (2025; eia.gov)",
+    "Crude oil exports: United States ranks #4 of 6 listed, 198.3 Mt (2024; statbase.org)",
+    "Natural gas production: United States ranks #1 of 8 listed, 25% of world output (2024; raw.githubusercontent.com)",
+    "Natural gas exports: United States ranks #1 of 4 listed, 25% of world exports (2025; igu.org)",
+    "Ethane exports: United States ranks #1 of 1 listed, 579 kb/d (2025; eia.gov)",
+    "For Jet fuel, 63% of United States's Crude oil comes from Canada (share of US crude imports; 2025; neb-one.gc.ca)",
+    "For Jet fuel, 6% of United States's Crude oil comes from Mexico (share of US crude imports (unconfirmed, from early-2025 monthly EIA); 2025; eia.gov)",
+    "For Nitrogen fertiliser, 36% of United States's Urea (imported) comes from Russia (share of US urea import volume (5.23 Mt); 2025; wits.worldbank.org)",
+    "For Nitrogen fertiliser, 22% of United States's Urea (imported) comes from Qatar (share of US urea import volume; 2025; wits.worldbank.org)"
+   ],
+   "model": "gemini-3.5-flash",
+   "generated_at": "2026-10-25T10:08:51+00:00"
   }
  }
 }
