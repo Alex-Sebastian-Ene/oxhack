@@ -62,9 +62,9 @@ window.HZShell = (() => {
     const b = e.target.closest("button, [data-c], #world .ctry, #world .dot");
     if (!b || b.disabled || b.closest("#hz-landing") || b.id === "hz-snd") return;
     const d = b.dataset || {};
-    const kind = d.mode != null ? "clank" : d.lost != null ? "clank" : d.mat != null || d.pick != null || d.goto != null ? "select"
+    const kind = d.mode != null || d.hmode != null || d.hgo != null ? "clank" : d.lost != null || d.hdrop != null || d.hsev != null ? "clank" : d.mat != null || d.pick != null || d.goto != null ? "select"
       : b.matches("#world .ctry, #world .dot") || d.c != null ? "select"
-      : d.wview != null || d.mmode != null || d.eco != null || d.ctab != null || d.view != null || b.id === "hz-mus" ? "toggle"
+      : d.wview != null || d.mmode != null || d.eco != null || d.ctab != null || d.view != null || d.hh != null || d.hgh != null || d.hout != null || d.hgt != null || b.id === "hz-mus" ? "toggle"
       : d.info != null || d.winfo != null ? "paper" : "blip";
     window.HZSound.play(kind);
   }, true);

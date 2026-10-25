@@ -1,9 +1,10 @@
 # Hormuz Flow: the app
 
 One page that holds everything: the World view (exposure map, flat or 3D globe, the five materials),
-the Strait view (simulated ships, real IMF PortWatch counts) and the stats (Seb's chain, the Economy and Trends tabs).
-It opens on a pixel-art landing page and keeps one night-shift theme throughout. Open `index.html` in a
-browser; it needs no server and no network. `#app` at the end of the address skips the landing page.
+the Strait view (simulated ships, real IMF PortWatch counts), the stats (Seb's chain, the Economy and Trends tabs)
+and the Households view (Seb's household cost-of-living data). It opens on a pixel-art landing page and keeps one
+night-shift theme throughout. Open `index.html` in a browser; it needs no server and no network. `#app`,
+`#mandeb` or `#households` at the end of the address skips the landing page.
 
 The page is built from Eileen's integrated industry view (`ui/industry/index.html`), unchanged except
 for the colours, with these layers added (`src/`):
@@ -21,6 +22,8 @@ for the colours, with these layers added (`src/`):
 | `copy_text.py` | Shorter copy for the panels; same facts and sources |
 | `gas.py` | Gas on the World view: LNG lanes (dashed violet, beside the oil lanes) and pipelines, from `ui/app/data/gas.json` (`uv run experiments/gas_routes.py`) |
 | `mandeb.py`, `mandeb.js` | Bab el-Mandeb in the Strait view: the Hormuz / Bab el-Mandeb switch reloads on `#mandeb`; data from `ui/strait/data/mandeb-scenarios.js` (`uv run experiments/strait_flow.py --strait mandeb`) |
+| `households.py`, `households.js` | The Households view (OXH-8): real pay against 2019 by region, essentials against pay, UK household costs by group, and two model-output cards (real pay by lost flow, each UK group's costs under a closure) that follow the lost-flow slider; also a households step in "The shock" card. Data cut at build time from `notes/household-*.csv` (`uv run experiments/household.py report`); every real series shows its source, code and fetch date |
+| `flags.py`, `flags_extra.py` | A flag beside every country title (Most exposed, the country card, the economy picks). `flags_extra.py` draws the flags the page leaves out for size (Spain, Sri Lanka and 20 more) into `ui/app/data/flags-extra.json`; the EU flag stands for the euro area |
 
 ```bash
 python ui/app/src/build.py                      # writes ui/app/index.html
