@@ -4,9 +4,10 @@
 # 1. Import dependence and the Gulf share of oil imports from UN Comtrade (HS 2709 + 2710, by value). The hand-entered
 #    table (EIA, Energy Institute) fills in where Comtrade has nothing (Taiwan, Iran); a country in neither says
 #    "not in our data" and is grey on the map.
-# 2. Fuel cost from the country's own Brent -> pump-price pass-through (Europe, Türkiye, the US). Other countries
-#    show no fuel estimate: a pooled median would be the same number for all of them. The Industries tab and the
-#    fuel-cost path use the same pass-through.
+# 2. Fuel cost from the country's own Brent -> pump-price pass-through, fitted on its monthly motor-fuel consumer
+#    prices (Eurostat, the BLS, the OECD's national CPIs, Statistics Canada, SingStat), with the series, its months
+#    and when it was collected. Other countries show no fuel estimate: a pooled median would be the same number for
+#    all of them. The Industries tab and the fuel-cost path use the same pass-through.
 # 3. The hand-set exposure score is gone. The map, the ranking and the cards show how much oil the shock cuts off:
 #    an importer's Gulf share of oil imports × the share of Hormuz flow lost, a Gulf producer's exports trapped,
 #    another exporter's change in oil earnings.
@@ -57,7 +58,7 @@ assert COL and all(len(v) == len(H) for reg in COL.values() for v in reg.values(
 
 COIL = {
     "generated": src["generated"],
-    "fuel": {iso: {k: v[k] for k in ("e", "lo", "hi", "series", "from", "to")} for iso, v in fuel["countries"].items()},
+    "fuel": {iso: {k: v[k] for k in ("e", "lo", "hi", "series", "from", "to", "collected")} for iso, v in fuel["countries"].items()},
     "trade": {iso: {"m": v["m"], "gs": v["gulf_share"], "year": v["year"], "top": next(iter(v["by"]), None)}
               for iso, v in trade["countries"].items()},
     "tradeSrc": f'{trade["source"]}, collected {trade["collected"]}' if trade.get("source") else "",
@@ -65,6 +66,13 @@ COIL = {
     "pricesSrc": prices["source"], "prior": prices["prior"],
     "col": COL, "colFrom": col_from, "colGen": fans[0]["generated"],
 }
+# who publishes the motor-fuel prices behind the pass-through, for the "no estimate" text
+FUEL_BY = {"Eurostat": "Eurostat", "BLS": "the BLS", "OECD": "the OECD", "Statistics Canada": "Statistics Canada", "SingStat": "SingStat"}
+unnamed = {v["source"] for v in fuel["countries"].values() if not any(v["source"].startswith(k) for k in FUEL_BY)}
+assert not unnamed, f"add these fuel sources to FUEL_BY: {unnamed}"
+fuel_by = [name for k, name in FUEL_BY.items() if any(v["source"].startswith(k) for v in fuel["countries"].values())]
+NOFUEL = (f"No fuel price estimate: we only estimate pump prices for the {len(fuel['countries'])} countries whose monthly "
+          f"motor-fuel consumer prices we have ({', '.join(fuel_by[:-1])} and {fuel_by[-1]}), and this is not one of them.")
 
 # 1. one profile per country: hand-entered table for routes and volumes, data for dependence, Gulf share, pass-through
 sub('''  function info(name) {
@@ -74,7 +82,7 @@ sub('''  function info(name) {
   // (notes/cost-of-living-fans.csv), read at build time
   const COIL = ''' + json.dumps(COIL, ensure_ascii=False, separators=(",", ":")) + ''';
   const NODATA = "#eceff3";
-  const NOFUEL = "No fuel price estimate: we only estimate pump prices where there are motor-fuel consumer prices (Europe, Türkiye and the US).";
+  const NOFUEL = ''' + json.dumps(NOFUEL, ensure_ascii=False) + ''';
   function info(name) {
     const iso = isoOf[name], t = COIL.trade[iso], f = COIL.fuel[iso], hand = C[name];
     const d = Object.assign({ c: 0, h: 0, m: null }, hand || {});
@@ -121,7 +129,7 @@ sub("  function renderChart(name) {\n", r'''  function renderChart(name) {
 ''')
 sub("      if (i.v == null && i.sec) {", r'''      if (i.v == null && i.nofuel) return `<li><span class="nm">${i.label}</span>`
         + (i.sec ? `<span class="lv mono ${i.sec.v > 0.05 ? "hurt" : i.sec.v < -0.05 ? "gain" : ""}">${pct(i.sec.v / 100, 1)} its prices</span>` : `<span class="lv">no estimate</span>`)
-        + `<span class="why">${i.why}. Cost share: ${escH(i.src)}. No cost change is shown because there is no pump-price estimate for this country (we only have motor-fuel consumer prices for Europe, Türkiye and the US).${i.sec ? ` ${secLine(i.sec)}` : ""}</span></li>`;
+        + `<span class="why">${i.why}. Cost share: ${escH(i.src)}. No cost change is shown because there is no pump-price estimate for this country (we have no monthly motor-fuel consumer prices for it).${i.sec ? ` ${secLine(i.sec)}` : ""}</span></li>`;
       if (i.v == null && i.sec) {''')
 
 # 2. map, legend, ranking, tooltips: oil cut off, grey for no data
@@ -164,7 +172,7 @@ sub('''<div><b id="c-score">–</b><span>Exposure score <i class="illus" title="
 sub('    $("c-dep").textContent = k.kind === "imp" ? `${(k.hz * 100).toFixed(0)}%` : "–";',
     '    $("c-dep").textContent = k.kind === "imp" && k.hz != null ? `${(k.hz * 100).toFixed(0)}%` : "–";\n'
     '    if (k.fuel == null) $("c-fuel").textContent = "–";\n'
-    '    $("c-fuel").title = k.d.pt ? `Pass-through ${k.d.pt.e.toFixed(2)} (${k.d.pt.series}${k.d.pt.from ? `, ${k.d.pt.from} to ${k.d.pt.to}` : ""}) × 1.49 in a disruption` : NOFUEL;')
+    '    $("c-fuel").title = k.d.pt ? `Pass-through ${k.d.pt.e.toFixed(2)} (${k.d.pt.series}, ${k.d.pt.from} to ${k.d.pt.to}, collected ${k.d.pt.collected}) × 1.49 in a disruption` : NOFUEL;')
 sub('<div><b id="c-dep">–</b><span>Oil use sourced via Hormuz</span></div>', '<div><b id="c-dep">–</b><span>Oil imports from the Gulf</span></div>')
 
 # 4. Cost of living tab, first in the panel
@@ -222,7 +230,7 @@ COL_JS = r'''  // ------------------------------------------------------------ C
     if (!rows.some((r) => r.key === colPick && r.q)) colPick = (rows.find((r) => r.q) || {}).key;
     const fuelRow = k.fuel == null ? `<li><span class="nm">Fuel at the pump</span><span class="lv">no estimate</span><span class="why">${NOFUEL}</span></li>`
       : `<li><span class="nm">Fuel at the pump</span><span class="lv mono ${k.fuel > 0.005 ? "hurt" : ""}">${pct(k.fuel)}</span>
-        <span class="why">Against pre-war, at Brent $${st.brent}: ${escH(nm)}'s own pass-through of ${k.d.pt.e.toFixed(2)} (${escH(k.d.pt.series)})${inDisruption(k.s) ? ", times 1.49 in a supply disruption" : ""}. Pump prices follow oil within weeks.</span></li>`;
+        <span class="why">Against pre-war, at Brent $${st.brent}: ${escH(nm)}'s own pass-through of ${k.d.pt.e.toFixed(2)} (${escH(k.d.pt.series)}, ${k.d.pt.from} to ${k.d.pt.to}, collected ${k.d.pt.collected})${inDisruption(k.s) ? ", times 1.49 in a supply disruption" : ""}. Pump prices follow oil within weeks.</span></li>`;
     $("col-list").innerHTML = rows.map((r) => {
       if (!r.q) return `<li><span class="nm">${r.name}</span><span class="lv">${r.none}</span></li>`;
       const q = r.q[colH], cls = q[1] > 0.05 ? "hurt" : q[1] < -0.05 ? "gain" : "", w = Math.min(100, Math.abs(q[1]) / 20 * 100);
@@ -291,8 +299,8 @@ sub('''    out.push(`${nmIso(iso)} exposure score ${fmtS(k.score)} on a -40 (gai
     '''    out.push(k.cut ? `${nmIso(iso)}: ${k.cut.txt} ${k.cut.lab} at ${Math.round(k.s * 100)}% of Hormuz flow lost (${k.d.depSrc || "this page's country table"})` : `${nmIso(iso)} has no oil trade in our data`);''')
 sub('''    out.push(`Fuel cost ${pct(k.fuel)} vs pre-war: Brent to retail fuel link validated on FRED (fitted 1991-2008, tested 2009-2026) times 1.49 in a supply disruption (Seb's cost-of-living model: 90% range 1.08 to 1.89, fitted on the US, UK and euro area, an assumption elsewhere)`);
     if (k.d.c) out.push(`About ${(k.hz * 100).toFixed(0)}% of ${nmIso(iso)}'s oil use comes through Hormuz (this page's country table)`);''',
-    '''    out.push(k.fuel == null ? `No fuel price estimate for ${nmIso(iso)}: pump-price pass-through is only estimated where there are motor-fuel consumer prices (Europe, Türkiye, the US)`
-      : `Fuel cost ${pct(k.fuel)} vs pre-war: ${nmIso(iso)}'s own Brent to pump-price pass-through of ${k.d.pt.e.toFixed(2)} (${k.d.pt.series}; country_oil.py) times 1.49 in a supply disruption (Seb's cost-of-living model: 90% range 1.08 to 1.89, fitted on the US, UK and euro area, an assumption elsewhere)`);
+    '''    out.push(k.fuel == null ? `No fuel price estimate for ${nmIso(iso)}: pump-price pass-through is only estimated for the ${Object.keys(COIL.fuel).length} countries whose monthly motor-fuel consumer prices we have`
+      : `Fuel cost ${pct(k.fuel)} vs pre-war: ${nmIso(iso)}'s own Brent to pump-price pass-through of ${k.d.pt.e.toFixed(2)} (${k.d.pt.series}, ${k.d.pt.from} to ${k.d.pt.to}, collected ${k.d.pt.collected}; country_oil.py) times 1.49 in a supply disruption (Seb's cost-of-living model: 90% range 1.08 to 1.89, fitted on the US, UK and euro area, an assumption elsewhere)`);
     if (k.hz != null) out.push(`About ${(k.hz * 100).toFixed(0)}% of ${nmIso(iso)}'s oil imports came from the Gulf producers before the war (${k.d.depSrc}; an upper bound for oil through the strait)`);
     { const pr = COIL.prices[iso], al = pr && pr.all, fd = pr && pr.food;
       if (al && al.now) out.push(`Consumer prices in ${nmIso(iso)} ${pctP(al.now.v)} on a year earlier, food ${fd && fd.now ? pctP(fd.now.v) : "n/a"}, in ${ymLabel(al.now.month)} (FAOSTAT)`);
