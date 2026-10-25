@@ -20,6 +20,25 @@ Click a country on the materials globe, then **More**. A sheet opens with:
    facts to start from, and uses Google Search grounding for anything else. The cited pages are shown
    under the text.
 
+## In the app (ui/app)
+
+The same service also answers two more requests from `ui/app/index.html`. They use Gemini's newer
+Interactions API (`POST /v1beta/interactions`).
+- **`/resource`: "What is it?"**, from the Sources key in the app's header.
+  - A short description of a material or ingredient (steel, naphtha, urea and so on). It explains what
+    the thing is, what it is used for and why oil matters to it. Any number must come from our facts,
+    cited as [n].
+  - A pixel-art picture in the app's night-shift style, from the image model (`GEMINI_IMAGE_MODEL`,
+    default `gemini-nano-banana-2.1`, per Google's gemini-api-dev skill).
+  - The picture is captioned "AI-made picture", and the text carries the model name and time.
+- **`/country`: Profile.**
+  - The page builds the facts itself: main export and production role, its rank in every table we hold,
+    exposure score, fuel cost, Hormuz share, and key input origins.
+  - Gemini only turns them into a few lines. Every number must cite its fact. A citation to a fact that
+    doesn't exist shows as `[n?]`.
+- **Test mode.** `BRIEF_FAKE=1` answers both with clearly labelled test text and a striped test picture,
+  so the panels can be tried without a key.
+
 ## Why an LLM, and why Gemini
 
 - **Coverage.** Our tables cover about 40 countries and five materials. A judge will click a country
@@ -47,20 +66,29 @@ Click a country on the materials globe, then **More**. A sheet opens with:
 ## Run it
 
 ```sh
-GEMINI_API_KEY=... uv run experiments/country_brief.py   # serves http://127.0.0.1:8787
+echo 'GEMINI_API_KEY=<your key>' >> .env   # repo root; .env is git-ignored
+uv run experiments/country_brief.py      # serves http://127.0.0.1:8787
 # then open ui/globe/index.html?brief=1
 ```
 
+A `GEMINI_API_KEY` already set in the environment wins over `.env`.
+
 Without `?brief=1` the page shows no AI button, so the published demo is unchanged. Optional
-settings: `GEMINI_MODEL` (default `gemini-2.5-flash`) and `BRIEF_PORT`. `?brief=<url>` points the
+settings: `GEMINI_MODEL` (default `gemini-3.8-flash`; Google's `gemini-api-dev` skill lists
+`gemini-2.5-*` as deprecated) and `BRIEF_PORT`. `?brief=<url>` points the
 page at another proxy.
 
 ## Not done yet / open questions
 
+- **The Interactions request shape is from the skill, not tested live.** The service sends
+  `{"model", "input"}` and reads `model_output` steps, plus a `generateContent`-style answer in case one
+  comes back. The first live run should confirm both models and the image output.
 - **Untested against the live API.** Our sandbox can't reach `generativelanguage.googleapis.com`,
   and no one has shared a key yet. The tests cover the prompt, the response parsing, the cache and
-  the origin check offline. The first live run should confirm that `gemini-2.5-flash` still accepts
-  the `google_search` tool, or set `GEMINI_MODEL` to a current model.
+  the origin check offline. The first live run should confirm that `generateContent` with the
+  `google_search` tool still answers for `gemini-3.8-flash`. Google now steers new code to the
+  Interactions API (`POST /v1beta/interactions`), where search results arrive as
+  `google_search_result` steps; moving there is the fallback if `generateContent` is refused.
 - **Event rules on AI use.** AGENTS.md still has a TODO for the hackathon's AI-use and provenance
   rules. If they restrict generated content in the demo, keep the button off.
 - **The published artifact** is a page on claude.ai, so it can't reach a localhost proxy. If we

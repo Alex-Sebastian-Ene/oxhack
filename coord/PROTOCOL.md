@@ -6,11 +6,15 @@ code lands. Nothing else is shared state. The team list lives in `coord/team.tom
 
 | Human | Agent marker | Label | Lane | Owns these paths |
 |---|---|---|---|---|
-| Seb | `[seb-claude]` | `agent:seb` | TODO | TODO |
-| Eileen | `[eileen-claude]` | `agent:eileen` | TODO | TODO |
+| Seb | `[seb-claude]` | `agent:seb` | **Knock-on model**: the oil-price distribution, flow → Brent, the oil → petrol → CPI → Fed → mortgage links by region, and the cost of living by basket item | `experiments/{non_gaussian,levy_fourier,validate_links,oil_chain,macro_data,macro_nn,macro_bayes,flow_price,hdi_link,cost_of_living,cost_of_living_report}.py`, `cluster/`, `scripts/`, their tests in `tests/`, `notes/` (except `notes/industry/`), `docs/{oil-price-model,knock-on-validation,iridis,macro-ensemble,cost-of-living}.md` |
+| Eileen | `[eileen-claude]` | `agent:eileen` | **Industry impact** (proposed): Brent → fuel, freight and materials → business costs and actions | `notes/industry/` |
+| Edward | `[edward-claude]` | `agent:edward` | **Flow estimate, UI and research desk** (proposed): the strait map, oil leaving Hormuz in mb/d with hidden ships, pitch | `experiments/strait_flow.py`, `ui/`, `docs/ui.md`, `docs/pitch.md`, `docs/ideas.md` |
 | Yasmin | `[yasmin-claude]` | `agent:yasmin` | TODO | TODO |
-| Yasmin | `[yasmin-claude]` | `agent:yasmin` | TODO | TODO |
-| TODO | `[<handle>-claude]` | `agent:<handle>` | TODO | TODO |
+
+Rows marked "proposed" are read off each person's commits so far; confirm or swap them in Linear.
+Handoff between lanes: Edward's flow estimate (share of normal flow) feeds Seb's flow → Brent link
+(`notes/flow-price-link.md`), whose Brent path feeds both Seb's household chain and Eileen's
+industry chain.
 
 Shared files (`README.md`, `AGENTS.md`, `CLAUDE.md`, `coord/`, `docs/design.md`, project
 config such as `pyproject.toml`) change only through a PR that says why. Lanes follow
