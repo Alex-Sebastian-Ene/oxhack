@@ -3,7 +3,7 @@
 Edward's strait page with his materials globe built in, aimed at industry users: which products an
 oil shock reaches, which countries make and ship them, and what it does to their price.
 Open `index.html` in a browser; it needs no server. It is the same page as the shared artifact
-<https://claude.ai/artifact/84rJe1aD8Vpe7KvAnq8a39> (version 24).
+<https://claude.ai/artifact/84rJe1aD8Vpe7KvAnq8a39> (version 25).
 
 ## What it shows
 
@@ -57,6 +57,20 @@ Then open `ui/industry/index.html?explain=1`, or `?explain=<url>` for a service 
 - **Port:** the service refuses to start if its port (8789, or `EXPLAIN_PORT`) is taken.
 
 Offline tests: `uv run --no-project --with pytest pytest -q tests/test_explain_server.py`.
+
+## The model behind the numbers
+
+The page runs on Seb's recommended chain (`docs/chain.md`). **You set the lost Hormuz flow** (0 to 100 points of the
+pre-war 20 mb/d) in The shock card; the scenario menu sets its starting value. Everything else follows:
+
+- **Brent:** pre-war $70 times Seb's flow-premium curve (`notes/flow-premium.csv`), averaged over the next 252
+  trading days, with its 90% band. At 82 points (the 2026 closure) that is about $99 ($75 to $151).
+- **Jet fuel, nitrogen fertiliser, plastics resin, diesel at the pump, CPI and unemployment (US, UK, euro area):**
+  the chain's scenario table (`notes/chain-scenarios-3m-margins.csv`: bayes_own + global_lin + global, with the
+  margin member on fuels), straight lines between its 0/25/50/82/100-point rows. Shown as the extra change against
+  no disruption, with the table's 90% range of outcomes. Unemployment is shown grey: Seb marks it forecast only.
+- **Steel and aluminium, energy bills, country fuel costs:** Seb's linear Brent links (OXH-5, `notes/oil-chain-links.md`),
+  at the Brent price above.
 
 ## Where the numbers come from
 

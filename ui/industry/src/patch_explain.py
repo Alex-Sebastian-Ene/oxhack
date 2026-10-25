@@ -46,7 +46,7 @@ EXPLAIN_JS = r'''  // ----------------------------------------------------------
       out.innerHTML = ""; btn.disabled = false;
     }
   }
-  const scenFact = () => `Scenario: ${st.key}, simulated on this page. Brent $${st.brent} vs $${BRENT0} pre-war (slider), Hormuz flow ${st.flow.toFixed(1)} mb/d vs about ${PREWAR} mb/d pre-war`;
+  const scenFact = () => `Scenario: ${st.lost} points of normal Hormuz flow lost (the reader's choice), so ${st.flow.toFixed(1)} of about ${PREWAR} mb/d get through. Brent averages about $${st.brent} over the next 12 months vs $${BRENT0} pre-war (Seb's flow-premium curve, fitted to the 2026 closure)`;
   // what the page shows for a country, each with where it comes from
   function countryFacts(name) {
     const iso = isoOf[name], k = calc(name), out = [scenFact()];
@@ -65,7 +65,8 @@ EXPLAIN_JS = r'''  // ----------------------------------------------------------
   // what the page shows for a product
   function productFacts(m) {
     const out = [scenFact()], pm = priceMoveM(m), d = shockRangeM(m);
-    out.push(pm ? `${m.name} price ${pctP(pm.mean)} in 12 months at this Brent; average-effect band ${pctP(pm.lo)} to ${pctP(pm.hi)}, single moves vary more (${m.oil.series}; ${String(m.oil.source).slice(0, 120)})`
+    out.push(pm && pm.chain ? `${m.name} price ${pctP(pm.mean)} after 12 months against no disruption; 90% range of outcomes ${pctP(pm.lo)} to ${pctP(pm.hi)} (Seb's recommended chain, notes/chain-scenarios-3m-margins.csv)`
+      : pm ? `${m.name} price ${pctP(pm.mean)} in 12 months at this Brent; average-effect band ${pctP(pm.lo)} to ${pctP(pm.hi)}, single moves vary more (${m.oil.series}; ${String(m.oil.source).slice(0, 120)})`
       : `${m.name}: no fitted oil price link yet`);
     if (d) out.push(`Past supply shocks moved it ${pctP(d.lo)} to ${pctP(d.hi)}`);
     if (m.oil && m.oil.extra) out.push(m.oil.extra);

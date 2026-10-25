@@ -17,6 +17,7 @@ STEPS = [
     "patch_panel.py",    # roomier right panel, country card in tabs (Overview, Industries, Trade)
     "patch_shock.py",    # country card first; "The shock" card in three steps with quick prices and a plain-English line
     "patch_economy.py",  # Economy tab: prices and unemployment for the US, UK or euro area (Seb's Bayesian responses)
+    "patch_chain.py",    # Seb's recommended chain: lost Hormuz flow drives Brent, products, diesel, CPI
     "patch_explain.py",  # optional "Why these numbers?": Gemini explains the shown numbers, checked against them
 ]
 for step in STEPS:

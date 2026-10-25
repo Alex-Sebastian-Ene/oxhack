@@ -564,7 +564,7 @@ select { padding: 0 8px; }
             <div class="chartbox" id="e-un-chart"></div>
             <p class="sub" id="e-un-note"></p>
           </div>
-          <div class="legend2"><span><i style="background:var(--oil)"></i>Average effect</span><span><i style="background:rgba(242,107,0,0.22)"></i>90% range</span><span><i class="eco-sc"></i>Months 13 to 36: scenario, not tested</span></div>
+          <div class="legend2"><span><i style="background:var(--oil)"></i>Average effect</span><span><i style="background:rgba(242,107,0,0.22)"></i>90% range</span></div>
           <p class="faint" id="e-src"></p>
         </div>
       </section>
@@ -575,41 +575,45 @@ select { padding: 0 8px; }
           <button type="button" class="ib" data-winfo="model" aria-label="About the model"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><path d="M12 7.5v.5"/></svg></button>
         </div>
         <div class="step">
-          <div class="stephead"><span class="num">1</span> How much oil is getting through <span class="hint">set by the scenario menu</span></div>
+          <div class="stephead you"><span class="num">1</span> You choose: how much Hormuz oil is lost <span class="hint">drag the slider</span></div>
+          <div class="pricebig"><b id="lost-v">69</b><span>points of normal flow lost</span></div>
+          <div class="slidewrap">
+            <label for="lost" class="sr">Lost Hormuz flow, points of the pre-war 20 million barrels a day</label>
+            <input id="lost" type="range" min="0" max="100" step="1" value="69" aria-describedby="shock-explain">
+            <input id="brent" type="hidden" value="104">
+            <div class="marks" aria-hidden="true">
+              <span style="left:0%">0<br>normal</span>
+              <span style="left:50%">50<br>half</span>
+              <span style="left:82%">82<br>2026</span>
+              <span class="last" style="left:100%">100<br>shut</span>
+            </div>
+          </div>
+          <div class="presets" role="group" aria-label="Quick choices">
+            <button type="button" data-lost="0" aria-pressed="false">Normal · 0</button>
+            <button type="button" data-lost="50" aria-pressed="false">Half · 50</button>
+            <button type="button" data-lost="82" aria-pressed="false">2026 closure · 82</button>
+            <button type="button" data-lost="100" aria-pressed="false">Shut · 100</button>
+          </div>
           <div class="kpis kpis2">
-            <div><b id="w-flow" class="hurt">–</b><span>million barrels a day through Hormuz now (est.)</span></div>
+            <div><b id="w-flow" class="hurt">–</b><span>million barrels a day still getting through</span></div>
             <div><b id="w-miss" class="hurt">–</b><span>million barrels a day missing vs the pre-war 20</span></div>
           </div>
         </div>
         <div class="step">
-          <div class="stephead you"><span class="num">2</span> You choose: the price of oil <span class="hint">drag the slider</span></div>
-          <p class="ask">What if a barrel of Brent crude cost…</p>
-          <div class="pricebig"><b id="brent-v">$104</b><span class="delta" id="w-brent">–</span><span>a barrel</span></div>
-          <div class="slidewrap">
-            <label for="brent" class="sr">Brent crude price, dollars a barrel</label>
-            <input id="brent" type="range" min="60" max="150" step="1" value="104" aria-describedby="shock-explain">
-            <div class="marks" aria-hidden="true">
-              <span style="left:11.1%">$70<br>pre-war</span>
-              <span style="left:54.4%">$109<br>18 Oct</span>
-              <span class="last" style="left:100%">$150</span>
-            </div>
-          </div>
-          <div class="presets" role="group" aria-label="Quick prices">
-            <button type="button" data-brent="70" aria-pressed="false">Pre-war · $70</button>
-            <button type="button" data-brent="109" aria-pressed="false">18 Oct · $109</button>
-            <button type="button" data-brent="140" aria-pressed="false">Severe · $140</button>
-          </div>
+          <div class="stephead"><span class="num">2</span> What that does to the oil price <span class="hint">Seb's flow-premium curve</span></div>
+          <div class="pricebig"><b id="brent-v">$104</b><span class="delta" id="w-brent">–</span><span>a barrel, average over the next 12 months</span></div>
+          <p class="sub" id="w-brent-r"></p>
         </div>
         <div class="step">
           <div class="stephead"><span class="num">3</span> What that does over the next 12 months <span class="hint">follows the slider</span></div>
           <div class="kpis">
-            <div><b id="w-petrol">–</b><span id="w-petrol-r">Petrol and diesel at the pump</span></div>
+            <div><b id="w-petrol">–</b><span id="w-petrol-r">Diesel at the pump</span></div>
             <div><b id="w-ecpi">–</b><span id="w-ecpi-r">Energy bills</span></div>
             <div><b id="w-cpi">–</b><span id="w-cpi-r">Overall inflation, in points</span></div>
           </div>
           <p class="explain" id="shock-explain" aria-live="polite"></p>
         </div>
-        <p class="faint">US figures (FRED): fitted on 1991–2008, tested on 2009–2026. The range under each number is the gap between those two fits. Core inflation, interest rates and mortgages barely move, so they aren't shown. Brent on 18 Oct 2026: about $109.</p>
+        <p class="faint" id="w-src"></p>
       </section>
 
       <section class="card" id="prod-card" hidden>
@@ -1595,7 +1599,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
   };
 
   // ------------------------------------------------------------ model
-  const st = { key: "aug2026", brent: 104, sel: null, flow: 6.2, mat: null, mode: "production", wview: "flat", q: "", qOpen: false, pop: null };
+  const st = { key: "aug2026", lost: 69, brent: 104, sel: null, flow: 6.2, mat: null, mode: "production", wview: "flat", q: "", qOpen: false, pop: null };
 
   // ------------------------------------------------------------ materials layer (Edward's materials globe)
   // Data: ui/globe/data (notes/materials/*.json via experiments/globe_data.py; search-result snippets, 24 Oct 2026).
@@ -1667,7 +1671,40 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
   }
   function fillFor(name) { return st.mat ? matShade(name) : color(calc(name).score); }
   // 12-month price change (%) for the current Brent vs pre-war, with the 90% interval of the average effect
+  // Seb's recommended chain (docs/chain.md): scenario table, notes/chain-scenarios-3m-margins.csv, as
+  // series -> lost-flow points -> months ahead -> [mean, q05, q95], in 100 x log change (pp for unemployment)
+  const CHAIN = {"us_cpi":{"unit":"100 x log change (about %)","validated":"yes","pts":{"0":{"1":[0.234,-0.017,0.433],"3":[0.64,0.043,1.249],"6":[1.265,0.178,2.473],"12":[2.451,0.632,4.828]},"25":{"1":[0.399,0.135,0.669],"3":[0.99,0.193,2.051],"6":[1.654,0.323,3.353],"12":[2.979,0.573,5.886]},"50":{"1":[0.547,0.179,1.017],"3":[1.318,0.222,2.773],"6":[2.021,0.397,4.36],"12":[3.412,0.66,7.383]},"82":{"1":[0.709,0.221,1.288],"3":[1.724,0.187,4.015],"6":[2.507,-0.116,6.281],"12":[4.319,0.096,11.325]},"100":{"1":[0.81,0.279,1.468],"3":[1.943,0.154,4.508],"6":[2.78,-0.155,7.07],"12":[4.577,0.051,11.102]}}},"us_unemp":{"unit":"pp","validated":"no (no causal oil link; forecast only)","pts":{"0":{"1":[-0.022,-0.275,0.256],"3":[-0.017,-0.499,0.45],"6":[-0.084,-0.807,0.779],"12":[-0.195,-1.467,1.31]},"25":{"1":[-0.014,-0.32,0.3],"3":[-0.031,-0.665,0.538],"6":[-0.063,-0.99,0.939],"12":[-0.115,-1.73,2.176]},"50":{"1":[-0.019,-0.369,0.332],"3":[0.013,-0.741,0.911],"6":[0.046,-1.047,1.232],"12":[0.012,-1.989,2.798]},"82":{"1":[0.054,-0.469,0.762],"3":[0.139,-0.947,1.506],"6":[0.263,-1.439,2.419],"12":[0.412,-2.528,4.479]},"100":{"1":[0.135,-0.446,1.024],"3":[0.315,-1.056,2.409],"6":[0.584,-1.556,4.034],"12":[0.921,-2.92,6.937]}}},"uk_cpi":{"unit":"100 x log change (about %)","validated":"yes","pts":{"0":{"1":[0.206,-0.21,0.668],"3":[0.766,-0.092,1.659],"6":[1.256,0.066,2.516],"12":[2.336,0.363,4.551]},"25":{"1":[0.292,-0.272,0.878],"3":[0.957,-0.162,2.017],"6":[1.564,0.169,2.99],"12":[2.838,0.592,5.344]},"50":{"1":[0.423,-0.206,1.123],"3":[1.223,-0.091,2.684],"6":[1.84,-0.04,4.097],"12":[3.415,0.45,6.943]},"82":{"1":[0.524,-0.087,1.199],"3":[1.513,0.032,3.318],"6":[2.204,0.013,4.891],"12":[4.172,0.279,9.521]},"100":{"1":[0.636,-0.063,1.425],"3":[1.692,0.14,3.731],"6":[2.408,-0.044,5.569],"12":[4.53,0.286,11.028]}}},"uk_unemp":{"unit":"pp","validated":"no (no causal oil link; forecast only)","pts":{"0":{"1":[0.018,-0.151,0.193],"3":[0.023,-0.335,0.41],"6":[-0.013,-0.642,0.661],"12":[-0.007,-1.047,1.013]},"25":{"1":[0.028,-0.154,0.212],"3":[0.045,-0.323,0.453],"6":[0.017,-0.649,0.735],"12":[0.045,-1.093,1.234]},"50":{"1":[0.05,-0.149,0.291],"3":[0.128,-0.373,0.721],"6":[0.135,-0.645,1.166],"12":[0.232,-1.024,1.788]},"82":{"1":[0.063,-0.15,0.332],"3":[0.165,-0.311,0.779],"6":[0.167,-0.589,1.234],"12":[0.332,-1.003,2.095]},"100":{"1":[0.075,-0.158,0.342],"3":[0.201,-0.339,0.896],"6":[0.237,-0.628,1.282],"12":[0.523,-1.14,2.837]}}},"ea_cpi":{"unit":"100 x log change (about %)","validated":"yes","pts":{"0":{"1":[0.306,-0.224,0.796],"3":[0.67,-0.306,1.697],"6":[1.036,-0.249,2.385],"12":[1.83,-0.297,3.965]},"25":{"1":[0.467,-0.101,1.057],"3":[0.953,-0.225,2.146],"6":[1.355,-0.156,3.134],"12":[2.384,0.07,5.201]},"50":{"1":[0.621,-0.049,1.305],"3":[1.263,-0.083,2.953],"6":[1.729,-0.144,3.852],"12":[3.092,0.017,6.935]},"82":{"1":[0.853,0.031,1.908],"3":[1.729,-0.118,4.343],"6":[2.285,-0.261,5.706],"12":[4.027,-0.446,10.459]},"100":{"1":[0.929,0.036,1.9],"3":[1.895,-0.096,4.953],"6":[2.53,-0.191,6.327],"12":[4.538,-0.026,11.468]}}},"ea_unemp":{"unit":"pp","validated":"no (no causal oil link; forecast only)","pts":{"0":{"1":[0.0,-0.09,0.103],"3":[-0.021,-0.222,0.184],"6":[-0.062,-0.385,0.318],"12":[-0.129,-0.774,0.575]},"25":{"1":[0.009,-0.086,0.104],"3":[-0.005,-0.207,0.262],"6":[-0.034,-0.446,0.483],"12":[-0.087,-0.848,0.878]},"50":{"1":[0.022,-0.095,0.156],"3":[0.021,-0.261,0.362],"6":[-0.01,-0.461,0.548],"12":[-0.002,-0.841,1.286]},"82":{"1":[0.049,-0.09,0.222],"3":[0.068,-0.257,0.567],"6":[0.055,-0.521,0.866],"12":[0.139,-1.028,1.707]},"100":{"1":[0.064,-0.091,0.277],"3":[0.098,-0.253,0.637],"6":[0.093,-0.534,1.014],"12":[0.229,-1.024,2.33]}}},"ind_gasdesw":{"unit":"100 x log change (about %)","validated":"yes","pts":{"0":{"1":[1.911,-2.485,6.756],"3":[2.434,-10.501,15.818],"6":[3.465,-19.08,22.872],"12":[4.555,-27.823,39.382]},"25":{"1":[5.557,-0.548,11.866],"3":[8.995,-7.493,27.768],"6":[9.248,-17.131,35.182],"12":[11.554,-28.554,50.966]},"50":{"1":[9.234,0.532,18.905],"3":[15.87,-7.653,46.693],"6":[17.11,-17.608,61.149],"12":[22.306,-23.495,86.356]},"82":{"1":[14.21,2.598,28.454],"3":[25.987,-9.101,72.089],"6":[27.504,-25.593,92.202],"12":[34.819,-33.371,124.241]},"100":{"1":[16.814,3.149,33.813],"3":[29.941,-9.53,81.615],"6":[31.976,-28.294,107.636],"12":[40.779,-37.581,159.905]}}},"ind_djfuelusgulf":{"unit":"100 x log change (about %)","validated":"yes","pts":{"0":{"1":[0.661,-9.492,10.773],"3":[-0.461,-25.033,23.811],"6":[2.399,-38.084,39.955],"12":[4.365,-52.299,75.069]},"25":{"1":[10.589,-2.482,25.353],"3":[11.056,-15.467,44.179],"6":[14.369,-30.223,53.237],"12":[16.576,-57.626,80.759]},"50":{"1":[19.716,0.928,40.328],"3":[22.209,-21.562,72.748],"6":[24.086,-40.44,87.433],"12":[27.091,-62.867,116.171]},"82":{"1":[31.98,4.025,64.611],"3":[37.146,-25.525,108.446],"6":[41.004,-47.287,140.908],"12":[44.986,-77.822,194.611]},"100":{"1":[38.931,6.475,78.957],"3":[43.905,-25.622,124.024],"6":[46.666,-63.516,155.857],"12":[54.591,-99.538,219.19]}}},"ind_pcu325211325211":{"unit":"100 x log change (about %)","validated":"yes","pts":{"0":{"1":[0.349,-1.536,2.145],"3":[0.826,-2.799,5.114],"6":[1.56,-4.79,8.782],"12":[2.637,-8.726,17.167]},"25":{"1":[0.819,-1.233,3.055],"3":[2.317,-2.204,7.252],"6":[3.237,-4.312,13.112],"12":[4.513,-10.666,22.353]},"50":{"1":[1.215,-1.287,4.306],"3":[3.81,-2.117,12.075],"6":[5.601,-5.932,20.712],"12":[7.788,-10.842,32.477]},"82":{"1":[1.817,-1.404,5.452],"3":[6.049,-2.064,17.624],"6":[8.523,-6.605,27.474],"12":[12.011,-11.007,46.428]},"100":{"1":[2.133,-1.335,6.558],"3":[6.889,-2.182,19.664],"6":[9.753,-9.195,31.806],"12":[13.909,-16.343,53.93]}}},"ind_pcu325311325311":{"unit":"100 x log change (about %)","validated":"yes","pts":{"0":{"1":[1.187,-3.727,5.724],"3":[2.546,-9.073,14.329],"6":[3.561,-14.785,23.848],"12":[9.045,-24.614,47.706]},"25":{"1":[1.724,-3.497,6.774],"3":[4.878,-7.303,17.974],"6":[7.376,-13.784,32.916],"12":[14.517,-23.566,59.733]},"50":{"1":[2.064,-3.943,7.714],"3":[7.548,-5.732,24.733],"6":[12.233,-13.183,49.258],"12":[24.117,-22.997,92.284]},"82":{"1":[3.476,-3.408,12.289],"3":[11.367,-6.859,34.507],"6":[19.363,-15.494,69.513],"12":[35.605,-32.699,133.041]},"100":{"1":[3.699,-3.839,11.896],"3":[13.026,-7.517,37.908],"6":[22.738,-18.0,74.056],"12":[42.77,-37.277,160.418]}}}};
+  const CHAIN_META = {"origin": "2026-02", "fitted_to": "2026-01", "generated": "2026-10-24", "source": "experiments/macro_chain.py replay (oil: GARCH-CGMY + notes/flow-premium.csv premium sampled in its band; models: bayes_own+global_lin+global+margins)"};
+  // flow-premium curve, notes/flow-premium.csv: average log Brent premium per point of lost flow over the next
+  // 252 trading days (about 12 months), with its 90% band
+  const PREM = {"low": 0.00081, "mid": 0.004199, "high": 0.009335, "days": 252, "generated": "2026-10-24"};
+  const LOSTPTS = [0, 25, 50, 82, 100];
+  const CHAIN_PROD = { jet_fuel: "ind_djfuelusgulf", fertiliser: "ind_pcu325311325311", polyethylene: "ind_pcu325211325211" };
+  // the table's [mean, q05, q95] at any lost-flow level, straight lines between its five points
+  function chainAt(series, lost, month) {
+    const t = CHAIN[series].pts, v = Math.max(0, Math.min(100, lost));
+    let i = 1; while (i < LOSTPTS.length - 1 && LOSTPTS[i] < v) i++;
+    const a = LOSTPTS[i - 1], b = LOSTPTS[i], w = (v - a) / (b - a), A = t[a][month], B = t[b][month];
+    return A.map((x, k) => x + w * (B[k] - x));
+  }
+  // what the shock adds against no disruption: in % for prices, in points for CPI (already about %) and unemployment
+  function chainEffect(series, month = 12, lost = st.lost) {
+    const a = chainAt(series, lost, month), z = chainAt(series, 0, month)[0];
+    const asPct = !/cpi|unemp/.test(series), f = (x) => (asPct ? (Math.exp((x - z) / 100) - 1) * 100 : x - z);
+    return { mean: f(a[0]), lo: f(a[1]), hi: f(a[2]) };
+  }
+  const brentFor = (lost, e = PREM.mid) => BRENT0 * Math.exp(e * lost);
+  const lostOfFlow = (flow) => Math.round(Math.max(0, Math.min(100, (1 - flow / PREWAR) * 100)));
+  function setLost(v) {
+    st.lost = Math.max(0, Math.min(100, Math.round(v)));
+    st.flow = PREWAR * (1 - st.lost / 100);
+    st.brent = Math.round(brentFor(st.lost));
+    $("brent").value = st.brent;
+    if ($("lost")) $("lost").value = st.lost;
+  }
+  const chainSrc = () => `Seb's recommended chain (bayes_own + global_lin + global, with the margin member on fuels), notes/chain-scenarios-3m-margins.csv: fitted to ${CHAIN_META.fitted_to}, started ${CHAIN_META.origin}, generated ${CHAIN_META.generated}`;
   function priceMoveM(m) {
+    if (m && CHAIN_PROD[m.id]) return { ...chainEffect(CHAIN_PROD[m.id]), chain: true };
     const oil = m && m.oil;
     if (!oil || !oil.up) return null;
     const x = st.brent / BRENT0 - 1;
@@ -1676,6 +1713,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
     return { mean: row[0] * f, lo: Math.min(a, b), hi: Math.max(a, b) };
   }
   function shockRangeM(m) {
+    if (m && CHAIN_PROD[m.id]) return null;   // the chain's range already covers supply shocks
     const d = m && m.oil && m.oil.disruption, x = st.brent / BRENT0 - 1;
     if (!d || x <= 0) return null;
     const f = Math.log(1 + x) / Math.log(1.1);
@@ -2116,7 +2154,19 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
   const ecoOf = (n) => (n === "United States of America" ? "us" : n === "United Kingdom" ? "uk" : EURO.has(n) ? "ea" : null);
   let ecoPick = "us";
   // path of [mean, lo, hi] for months 0..36 at the current Brent, scaled like the product prices
+  // months 0 to 12 from the chain (straight lines between its 1, 3, 6 and 12-month points), against no disruption
   function ecoPath(series) {
+    const at = { 0: { mean: 0, lo: 0, hi: 0 } };
+    for (const m of [1, 3, 6, 12]) at[m] = chainEffect(series, m);
+    const ks = [0, 1, 3, 6, 12], out = [];
+    for (let i = 0; i <= 12; i++) {
+      let j = 1; while (ks[j] < i) j++;
+      const A = at[ks[j - 1]], B = at[ks[j]], w = (i - ks[j - 1]) / (ks[j] - ks[j - 1]);
+      out.push([A.mean + w * (B.mean - A.mean), A.lo + w * (B.lo - A.lo), A.hi + w * (B.hi - A.hi)]);
+    }
+    return out;
+  }
+  function ecoPathBayes(series) {
     const x = st.brent / BRENT0 - 1;
     if (Math.abs(x) < 1e-9) return Array.from({ length: 37 }, () => [0, 0, 0]);
     const [rowsM, base] = x >= 0 ? [MACRO[series].up, 1.1] : [MACRO[series].down, 0.9];
@@ -2129,24 +2179,23 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
     let lo = Math.min(...all), hi = Math.max(...all);
     const pad = Math.max((hi - lo) * 0.12, unit === "%" ? 0.1 : 0.02);
     lo -= pad; hi += pad;
-    const x = (i) => L + i / 36 * (W - L - Rr), y = (v) => T + (hi - v) / (hi - lo) * (H - T - B);
+    const N = pts.length - 1, x = (i) => L + i / N * (W - L - Rr), y = (v) => T + (hi - v) / (hi - lo) * (H - T - B);
     const step = [0.01, 0.02, 0.05, 0.1, 0.2, 0.25, 0.5, 1, 2, 5].find((st_) => (hi - lo) / st_ <= 5) || 10;
     const fmt = (v) => `${v > 0.0001 ? "+" : v < -0.0001 ? "−" : ""}${Math.abs(v).toFixed(step < 0.1 ? 2 : 1)}`;
     let g = "";
     for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-9; v += step) g += `<line class="gl" x1="${L}" x2="${W - Rr}" y1="${y(v)}" y2="${y(v)}"/><text class="ax" x="${L - 6}" y="${y(v) + 3.5}" text-anchor="end">${fmt(v)}</text>`;
-    [[0, "now"], [12, "12 mo"], [24, "24"], [36, "36"]].forEach(([i, t]) => (g += `<text class="ax" x="${x(i)}" y="${H - 6}" text-anchor="middle">${t}</text>`));
+    (N > 12 ? [[0, "now"], [12, "12 mo"], [24, "24"], [36, "36"]] : [[0, "start"], [3, "3"], [6, "6"], [12, "12 mo"]]).forEach(([i, t]) => (g += `<text class="ax" x="${x(i)}" y="${H - 6}" text-anchor="middle">${t}</text>`));
     const band = `M${pts.map((p, i) => `${x(i)},${y(p[2])}`).join("L")}L${pts.map((p, i) => [i, p[1]]).reverse().map(([i, v]) => `${x(i)},${y(v)}`).join("L")}Z`;
     const line = `M${pts.map((p, i) => `${x(i)},${y(p[0])}`).join("L")}`;
-    const m12 = pts[12][0], m36 = pts[36][0];
+    const m12 = pts[12][0], m36 = pts[N][0];
     box.innerHTML = `<svg class="chart${grey ? " eco-grey" : ""}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${unit === "%" ? "Price level" : "Unemployment rate"} change: ${fmt(m12)}${unit} after 12 months, ${fmt(m36)}${unit} after 36 months">
-      <rect class="eco-scen" x="${x(12)}" y="${T}" width="${x(36) - x(12)}" height="${H - T - B}"/>
+      ${N > 12 ? `<rect class="eco-scen" x="${x(12)}" y="${T}" width="${x(N) - x(12)}" height="${H - T - B}"/>` : ""}
       ${g}<line class="ref" x1="${L}" x2="${W - Rr}" y1="${y(0)}" y2="${y(0)}"/>
       <text class="reflab" x="${W - Rr + 6}" y="${y(0) + 3.5}">${grey ? "what-if: 0" : "no change"}</text>
       <path class="band" d="${band}"/><path class="base" d="${line}"/>
       <circle class="end" cx="${x(12)}" cy="${y(m12)}" r="3.5"/>
       <text class="endlab" x="${x(12)}" y="${y(m12) + (m12 >= 0 ? -8 : 15)}" text-anchor="middle">${fmt(m12)}${unit}</text>
-      <circle class="end" cx="${x(36)}" cy="${y(m36)}" r="3.5"/>
-      <text class="endlab" x="${x(36) + 7}" y="${y(m36) + 4}">${fmt(m36)}${unit}</text></svg>`;
+      ${N > 12 ? `<circle class="end" cx="${x(N)}" cy="${y(m36)}" r="3.5"/><text class="endlab" x="${x(N) + 7}" y="${y(m36) + 4}">${fmt(m36)}${unit}</text>` : ""}</svg>`;
   }
   function renderEcon() {
     if (!st.sel || !$("e-sec")) return;
@@ -2156,20 +2205,18 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
       : `The model covers only the US, the UK and the euro area, not ${nm}. Showing <b>${ECO_NAME[eco]}</b> for comparison.`;
     document.querySelectorAll("[data-eco]").forEach((b) => { const on = b.dataset.eco === eco; b.setAttribute("aria-pressed", String(on)); b.disabled = !!own && !on; });
     const cpi = ecoPath(`${eco}_cpi`), un = ecoPath(`${eco}_unemp`);
-    const pct = (st.brent / BRENT0 - 1) * 100, sg = (v) => (v > 0.005 ? "+" : v < -0.005 ? "−" : ""), a = Math.abs;
+    const sg = (v) => (v > 0.005 ? "+" : v < -0.005 ? "−" : ""), a = Math.abs;
     const c12 = cpi[12];
-    $("e-cpi-head").innerHTML = a(pct) < 0.5
-      ? `At $${st.brent}, oil is at its pre-war price, so there is no knock-on to prices.`
-      : `At <b>$${st.brent}</b> a barrel, prices in ${ECO_NAME[eco]} end up about <b>${a(c12[0]).toFixed(1)}% ${c12[0] >= 0 ? "higher" : "lower"}</b> after 12 months than they would otherwise be (range ${sg(c12[1])}${a(c12[1]).toFixed(1)} to ${sg(c12[2])}${a(c12[2]).toFixed(1)}%). That adds roughly that much to the year's inflation rate.`;
+    $("e-cpi-head").innerHTML = !st.lost
+      ? "With Hormuz flowing normally, the chain adds nothing to prices."
+      : `With <b>${st.lost}%</b> of Hormuz oil lost, prices in ${ECO_NAME[eco]} end up about <b>${a(c12[0]).toFixed(1)}% ${c12[0] >= 0 ? "higher" : "lower"}</b> after 12 months than with no disruption (90% range ${sg(c12[1])}${a(c12[1]).toFixed(1)} to ${sg(c12[2])}${a(c12[2]).toFixed(1)}%). That adds roughly that much to the year's inflation.`;
     ecoChart($("e-cpi-chart"), cpi, { unit: "%" });
     const u12 = un[12];
     $("e-un-head").innerHTML = `<b>No reliable effect.</b> The team's what-if keeps unemployment unchanged.`;
     ecoChart($("e-un-chart"), un, { unit: " pts", grey: true });
-    $("e-un-note").textContent = a(pct) < 0.5 ? "" :
-      `In the historical data, unemployment in ${ECO_NAME[eco]} moved ${u12[0] < 0 ? "down" : "up"} by about ${a(u12[0]).toFixed(2)} points when oil ${pct > 0 ? "rose" : "fell"} this much (grey line). ` +
-      `That's because oil usually rises in booms, when demand is strong: it is demand, not a supply shock like a Hormuz closure, so it isn't used as a forecast (docs/macro-ensemble.md).`;
-    $("e-src").textContent = `Seb's Bayesian model, notes/macro-bayes-responses.csv (${MACRO_META.source}; data to ${MACRO_META.fitted_to}, generated ${MACRO_META.generated}). ` +
-      `Changes against no oil move, at the slider's Brent price. The range is the ${MACRO_META.interval}. Tested up to 12 months; 13 to 36 months is a scenario.`;
+    $("e-un-note").textContent = !st.lost ? "" :
+      `The chain's unemployment path (grey) moves ${u12[0] < 0 ? "down" : "up"} about ${a(u12[0]).toFixed(2)} points against no disruption, but it has no causal oil link: Seb marks it "forecast only", so it isn't used as an effect (docs/chain.md).`;
+    $("e-src").textContent = `${chainSrc()}. Change against no disruption at the chosen lost flow, months 1 to 12 (straight lines between its 1, 3, 6 and 12-month points). The range is 90% of outcomes.`;
   }
   document.querySelectorAll("[data-eco]").forEach((b) => b.addEventListener("click", () => { ecoPick = b.dataset.eco; renderEcon(); }));
   // ------------------------------------------------------------ optional "Why these numbers?" (Gemini explains)
@@ -2200,7 +2247,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
       out.innerHTML = ""; btn.disabled = false;
     }
   }
-  const scenFact = () => `Scenario: ${st.key}, simulated on this page. Brent $${st.brent} vs $${BRENT0} pre-war (slider), Hormuz flow ${st.flow.toFixed(1)} mb/d vs about ${PREWAR} mb/d pre-war`;
+  const scenFact = () => `Scenario: ${st.lost} points of normal Hormuz flow lost (the reader's choice), so ${st.flow.toFixed(1)} of about ${PREWAR} mb/d get through. Brent averages about $${st.brent} over the next 12 months vs $${BRENT0} pre-war (Seb's flow-premium curve, fitted to the 2026 closure)`;
   // what the page shows for a country, each with where it comes from
   function countryFacts(name) {
     const iso = isoOf[name], k = calc(name), out = [scenFact()];
@@ -2219,7 +2266,8 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
   // what the page shows for a product
   function productFacts(m) {
     const out = [scenFact()], pm = priceMoveM(m), d = shockRangeM(m);
-    out.push(pm ? `${m.name} price ${pctP(pm.mean)} in 12 months at this Brent; average-effect band ${pctP(pm.lo)} to ${pctP(pm.hi)}, single moves vary more (${m.oil.series}; ${String(m.oil.source).slice(0, 120)})`
+    out.push(pm && pm.chain ? `${m.name} price ${pctP(pm.mean)} after 12 months against no disruption; 90% range of outcomes ${pctP(pm.lo)} to ${pctP(pm.hi)} (Seb's recommended chain, notes/chain-scenarios-3m-margins.csv)`
+      : pm ? `${m.name} price ${pctP(pm.mean)} in 12 months at this Brent; average-effect band ${pctP(pm.lo)} to ${pctP(pm.hi)}, single moves vary more (${m.oil.series}; ${String(m.oil.source).slice(0, 120)})`
       : `${m.name}: no fitted oil price link yet`);
     if (d) out.push(`Past supply shocks moved it ${pctP(d.lo)} to ${pctP(d.hi)}`);
     if (m.oil && m.oil.extra) out.push(m.oil.extra);
@@ -2348,37 +2396,35 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
     $("w-miss").textContent = miss < 0.05 ? "0" : `−${miss.toFixed(1)}`;
     $("w-miss").className = miss > 0.05 ? "hurt" : "";
     $("w-flow").className = miss > 0.05 ? "hurt" : "";
-    const pct = (st.brent / BRENT0 - 1) * 100;
-    $("w-brent").textContent = Math.abs(pct) < 0.5 ? "same as pre-war" : `${pct > 0 ? "+" : "−"}${Math.abs(pct).toFixed(0)}% vs pre-war`;
+    const pct = (st.brent / BRENT0 - 1) * 100, sign = (x) => (x > 0.05 ? "+" : x < -0.05 ? "−" : ""), a = Math.abs;
+    $("lost-v").textContent = st.lost;
+    $("w-brent").textContent = a(pct) < 0.5 ? "same as pre-war" : `${pct > 0 ? "+" : "−"}${a(pct).toFixed(0)}% vs pre-war`;
     $("w-brent").className = "delta " + (pct > 2 ? "hurt" : pct < -2 ? "gain" : "");
-    const dl = Math.log(st.brent / BRENT0);
-    const sign = (x) => (x > 0.05 ? "+" : x < -0.05 ? "−" : "");
-    const show = (id, key, unit, label) => {
-      const [lo, hi] = rangeOf(key, dl), v = viaLink(key, dl, 0);
-      const txt = `${sign(v)}${Math.abs(v).toFixed(1)}${unit}`;
+    $("brent-v").textContent = `$${st.brent}`;
+    $("w-brent-r").textContent = st.lost ? `90% range $${Math.round(brentFor(st.lost, PREM.low))} to $${Math.round(brentFor(st.lost, PREM.high))}. The curve is fitted to the 2026 closure; the Bab el-Mandeb disruption of 2023–24 checks it out of sample.` : "No lost flow: Brent stays at its pre-war $70 in this curve.";
+    const put = (id, v, txt, label) => {
       if ($(id).textContent !== txt && $(id).textContent !== "–") shockFlash($(id).parentElement);
       $(id).textContent = txt;
       $(id).className = v > 0.05 ? "hurt" : v < -0.05 ? "gain" : "";
-      $(`${id}-r`).textContent = Math.abs(hi - lo) < 0.05 ? label : `${label} · range ${sign(lo)}${Math.abs(lo).toFixed(1)} to ${sign(hi)}${Math.abs(hi).toFixed(1)}${unit}`;
+      $(`${id}-r`).textContent = label;
     };
-    show("w-petrol", "petrol", "%", "Petrol and diesel at the pump");
-    show("w-ecpi", "ecpi", "%", "Energy bills");
-    show("w-cpi", "cpi12", "", "Overall inflation, in points");
-    $("brent-v").textContent = `$${st.brent}`;
-    document.querySelectorAll("[data-brent]").forEach((b) => b.setAttribute("aria-pressed", String(Number(b.dataset.brent) === st.brent)));
+    const dsl = chainEffect("ind_gasdesw"), cpi = chainEffect("us_cpi");
+    const dl = Math.log(st.brent / BRENT0), ec = viaLink("ecpi", dl, 0), [elo, ehi] = rangeOf("ecpi", dl);
+    put("w-petrol", dsl.mean, `${sign(dsl.mean)}${a(dsl.mean).toFixed(0)}%`, `Diesel at the pump · range ${sign(dsl.lo)}${a(dsl.lo).toFixed(0)} to ${sign(dsl.hi)}${a(dsl.hi).toFixed(0)}%`);
+    put("w-ecpi", ec, `${sign(ec)}${a(ec).toFixed(1)}%`, `Energy bills · range ${sign(elo)}${a(elo).toFixed(1)} to ${sign(ehi)}${a(ehi).toFixed(1)}%`);
+    put("w-cpi", cpi.mean, `${sign(cpi.mean)}${a(cpi.mean).toFixed(1)}`, `Overall inflation, in points · range ${sign(cpi.lo)}${a(cpi.lo).toFixed(1)} to ${sign(cpi.hi)}${a(cpi.hi).toFixed(1)}`);
+    $("w-src").textContent = `Diesel and inflation (US): ${chainSrc()}. Extra change against no disruption, 12 months on. Energy bills: the linear Brent link in notes/oil-chain-links.md, at that Brent. Ranges are 90% of outcomes.`;
+    document.querySelectorAll("[data-lost]").forEach((b) => b.setAttribute("aria-pressed", String(Number(b.dataset.lost) === st.lost)));
     renderShockExplain();
   }
   // The same numbers in one plain-English sentence, plus the selected country when there is one.
   function renderShockExplain() {
-    const dl = Math.log(st.brent / BRENT0), pct = (st.brent / BRENT0 - 1) * 100;
-    const petrol = viaLink("petrol", dl, 0), ecpi = viaLink("ecpi", dl, 0), cpi = viaLink("cpi12", dl, 0);
-    const a = Math.abs, f0 = (x) => a(x).toFixed(0), f1 = (x) => a(x).toFixed(1);
-    const out = [];
-    if (a(pct) < 0.5) out.push(`At <b>$${st.brent}</b> a barrel, oil costs about what it did before the war, so pump prices, energy bills and inflation barely move from the price alone.`);
+    const pct = (st.brent / BRENT0 - 1) * 100, a = Math.abs, f0 = (x) => a(x).toFixed(0), f1 = (x) => a(x).toFixed(1);
+    const dsl = chainEffect("ind_gasdesw").mean, cpi = chainEffect("us_cpi").mean, out = [];
+    if (!st.lost) out.push("With Hormuz flowing normally, Seb's chain adds nothing to oil, diesel or inflation.");
     else {
-      const up = pct > 0, rise = up ? "up" : "down";
-      out.push(`At <b>$${st.brent}</b> a barrel, oil costs <b>${f0(pct)}% ${up ? "more" : "less"}</b> than before the war.`);
-      out.push(`Within a year that pushes petrol and diesel <b>${rise} about ${f0(petrol)}%</b>, energy bills <b>${rise} about ${f0(ecpi)}%</b>, and overall inflation <b>${rise} about ${f1(cpi)} points</b> (US figures).`);
+      out.push(`With <b>${st.lost}%</b> of Hormuz oil lost, Brent averages about <b>$${st.brent}</b> over the next year, <b>${f0(pct)}% more</b> than before the war.`);
+      out.push(`Within a year that pushes diesel at the pump <b>up about ${f0(dsl)}%</b> and overall inflation <b>up about ${f1(cpi)} points</b> (US figures, against no disruption).`);
     }
     if (st.sel) {
       const k = calc(st.sel), nm = st.sel === "United States of America" ? "the United States" : st.sel;
@@ -2394,16 +2440,12 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
   function loadScenario(key) {
     if (!D.scenarios[key]) return;
     st.key = key;
-    st.flow = Math.min(D.scenarios[key].estimate.total.p50, PREWAR);
-    st.brent = BRENT_DEFAULT[key] || 90;
-    $("brent").value = st.brent;
+    setLost(lostOfFlow(Math.min(D.scenarios[key].estimate.total.p50, PREWAR)));
     update();
   }
   $("scenario").addEventListener("change", (e) => loadScenario(e.target.value));
-  $("brent").addEventListener("input", (e) => { st.brent = Number(e.target.value); update(); });
-  document.querySelectorAll("[data-brent]").forEach((b) => b.addEventListener("click", () => {
-    st.brent = Number(b.dataset.brent); $("brent").value = st.brent; update();
-  }));
+  $("lost").addEventListener("input", (e) => { setLost(Number(e.target.value)); update(); });
+  document.querySelectorAll("[data-lost]").forEach((b) => b.addEventListener("click", () => { setLost(Number(b.dataset.lost)); update(); }));
 
   // ------------------------------------------------------------ materials: rail, search, product pane, country trade
   // the clicked point on the flat map, as [lng, lat]
@@ -2511,7 +2553,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
     const p = priceMoveM(m), d = shockRangeM(m);
     $("m-price").textContent = p ? pctP(p.mean) : "?";
     $("m-price").className = "pprice " + (p ? (p.mean > 0.05 ? "hurt" : p.mean < -0.05 ? "gain" : "") : "");
-    $("m-band").textContent = p ? `Brent $${st.brent} vs $${BRENT0} pre-war. Average-effect band ${pctP(p.lo)} to ${pctP(p.hi)}; single moves vary more.${d ? ` Past supply shocks: ${pctP(d.lo)} to ${pctP(d.hi)}.` : ""} ${m.oil.series}.${m.oil.extra ? ` ${m.oil.extra}` : ""}`
+    $("m-band").textContent = p && p.chain ? `${st.lost} points of Hormuz flow lost (Brent about $${st.brent}). Extra change against no disruption after 12 months; 90% range of outcomes ${pctP(p.lo)} to ${pctP(p.hi)}. ${chainSrc()}.` : p ? `Brent $${st.brent} vs $${BRENT0} pre-war. Average-effect band ${pctP(p.lo)} to ${pctP(p.hi)}; single moves vary more.${d ? ` Past supply shocks: ${pctP(d.lo)} to ${pctP(d.hi)}.` : ""} ${m.oil.series}.${m.oil.extra ? ` ${m.oil.extra}` : ""}`
       : `No fitted oil link yet${m.oil && m.oil.note ? ` (${m.oil.note})` : ""}.`;
     document.querySelectorAll("[data-mmode]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mmode === st.mode)));
     const rows = tableOf(m, st.mode), max = Math.max(...rows.map((r) => r.w), 0.01);
@@ -2573,6 +2615,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
       <li><b>Price, 12 months:</b> Seb's Bayesian pass-through model (<code>notes/macro-bayes-responses.csv</code>), using the +10% response for rises and the −10% one for falls, scaled to the Brent setting. The band is the 90% interval of the average effect only; single moves vary more. Steel and aluminium use Seb's linear links instead (OXH-5, <code>notes/steel-aluminium-responses.csv</code>): US PPI steel mill products +3.7 ± 1.0 and aluminium mill shapes +2.0 ± 0.5 after 12 months per 10% Brent, the same size up or down; validated in 7/8 and 8/8 forward folds. These are US mill-product prices and the upper end for a supply shock.</li>
       <li><b>What it costs buyers:</b> the product's share of a buyer industry's costs × its price change. Shares are sourced for airlines (IATA) and farming (CIBC); others show "no data".</li>
       <li><b>Colours, one job each:</b> amber = oil and Hormuz (routes, the strait, Gulf producers that ship through it) · red = harm (exposure, cost rises) · teal = gain · each product its own colour (steel blue, jet-fuel orange, aluminium cyan, fertiliser green, plastic magenta) · yellow = every line: oil routes out of Hormuz, or where ingredients and trade go, blinking where they land · dark outline = what you selected · grey = no data.</li>
+      <li><b>The model:</b> Seb's recommended chain (<code>docs/chain.md</code>). You set the lost Hormuz flow; Brent follows from the flow-premium curve (<code>notes/flow-premium.csv</code>, fitted to the 2026 closure, checked on Bab el-Mandeb 2023–24); jet fuel, fertiliser, plastics resin, diesel, CPI and unemployment come from its scenario table (<code>notes/chain-scenarios-3m-margins.csv</code>), as the change against no disruption with the 90% range of outcomes. Steel and aluminium use Seb's linear links (OXH-5) at that Brent.</li>
       <li><b>Why these numbers? (off by default):</b> with <code>?explain=1</code> and <code>ui/industry/explain_server.py</code> running, Gemini explains a country's or a product's numbers in a few bullets. It gets only the numbers shown here, with their sources; each bullet cites the facts it uses, and any number not in them is flagged. It is labelled AI-written and not checked by the team.</li>
       <li><b>Bundled:</b> globe.gl 2.41.4 (MIT), flag-icons 7.6.0 (MIT), Natural Earth 1:110m (public domain). Nothing here is live.</li></ul>` },
     model: { title: "How the world view works", html: `<p>The Hormuz flow comes from the estimator in the Strait view for the chosen scenario. Brent is a scenario assumption you can change. For reference, Brent traded around $109 on 18 October 2026.</p>
