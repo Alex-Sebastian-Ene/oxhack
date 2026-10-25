@@ -174,6 +174,10 @@ NUTS (2 chains, 500 warm-up, 1,000 draws per chain):
     - Against a monthly GARCH-t: −1.94 ± 1.09 at 12 months.
     - At 1 month it is level with Student-t and well ahead of the monthly model (CRPS 4.01 against
       5.28).
+  - **About the 2026 test:** it is a what-if. It is given the oil and gas that happened, and it is
+    told the months from 2026-03 are a disruption (D = 1, from the calendar). So it shows what the
+    model gets right given the scenario, not what it would have foreseen. The forecast mode only
+    carries D forward from the origin, and the scenario fans switch D on from the closure severity.
   - **2026 test (fitted to Feb 2026), basket:** the bands hold 44 of 44 outcomes, against 39
     without the supply-shock terms and 37 for the average link. The median miss is 2.7 pp, against
     3.4 and 3.3.
