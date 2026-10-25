@@ -705,107 +705,107 @@ Data to 2026-09; supply-disruption months in the fit: 17. Sampler: R-hat 1.013, 
 
 ## Supply-disruption multiplier for every metric
 
-In a supply-disruption month each series' energy-cost pass-through is multiplied by 1 + kappa. These are the fitted multipliers from the all-data fit, median and 90% interval. Pooled is the kind's mean across regions; a series' own value is shrunk towards it.
+In a supply-disruption month each series' energy-cost pass-through is multiplied by 1 + kappa. These are the fitted multipliers from the all-data fit (17 disruption months, 2022 and 2026), median and 90% interval. Pooled is the kind's mean across regions; a series' own value is shrunk towards it. The last column is the 2026 test's fit, which has only 2022's 10 disruption months to learn from: what a model would have carried into the 2026 closure.
 
-| Kind | Pooled multiplier | Reading |
-|---|---|---|
-| Bread and cereals | ×0.65 (-0.19 to 1.58) | within noise |
-| Meat | ×0.77 (0.14 to 1.35) | within noise |
-| Dairy | ×1.92 (1.14 to 2.79) | clearly above 1 |
-| Oils and fats | ×0.01 (-0.53 to 0.53) | clearly below 1 |
-| Fruit and vegetables | ×0.44 (0.18 to 0.74) | clearly below 1 |
-| Sugar and sweets | ×0.99 (0.15 to 1.88) | within noise |
-| Electricity | ×1.24 (0.47 to 1.98) | within noise |
-| Household gas | ×1.04 (0.54 to 1.62) | within noise |
-| Motor fuel | ×1.50 (1.18 to 1.79) | clearly above 1 |
-| Air fares | ×0.56 (-0.12 to 1.22) | within noise |
-| Restaurants | ×0.86 (-0.13 to 1.75) | within noise |
-| Housing (rent, and owners' equivalent rent in the US) | ×0.47 (0.01 to 1.13) | within noise |
-| Core goods (non-energy industrial goods) | ×0.28 (-0.26 to 0.80) | clearly below 1 |
-| Other services | ×-0.18 (-0.60 to 0.30) | clearly below 1 |
-| Rest of the basket | ×1.52 (0.86 to 2.19) | within noise |
-| Headline (direct) | ×1.54 (1.07 to 2.07) | clearly above 1 |
-| Industry fuel (US) | ×1.22 (0.97 to 1.56) | within noise |
-| Freight and air transport (US) | ×1.50 (0.53 to 2.47) | within noise |
-| Materials (US) | ×1.11 (0.77 to 1.50) | within noise |
-| Unemployment | ×-0.23 (-0.62 to 0.18) | clearly below 1 |
-| Policy rate | ×1.41 (-0.11 to 2.46) | within noise |
-
-| Series | Multiplier | Reading | 12-month response to +10% Brent, normal → disruption |
+| Kind | Pooled multiplier | Reading | From 2022 only (fit to 2026-02) |
 |---|---|---|---|
-| US CPI cereals and bakery products (BLS) | ×0.68 (-0.24 to 1.63) | within noise | +0.01 → +0.02 % |
-| US CPI meats, poultry, fish and eggs (BLS) | ×0.73 (0.10 to 1.38) | within noise | +0.36 → +0.24 % |
-| US CPI dairy and related products (BLS) | ×1.87 (1.14 to 2.82) | clearly above 1 | +0.40 → +0.70 % |
-| US CPI fats and oils (BLS) | ×0.08 (-0.56 to 0.64) | clearly below 1 | +0.68 → +0.04 % |
-| US CPI fruits and vegetables (BLS) | ×0.44 (0.15 to 0.80) | clearly below 1 | +0.43 → +0.17 % |
-| US CPI sugar and sweets (BLS) | ×0.94 (0.13 to 1.80) | within noise | +0.12 → +0.11 % |
-| US CPI electricity (BLS) | ×1.32 (0.53 to 2.16) | within noise | +0.19 → +0.22 % |
-| US CPI utility (piped) gas service (BLS) | ×1.01 (0.57 to 1.51) | within noise | +0.44 → +0.40 % |
-| US CPI gasoline, all types (BLS) | ×1.49 (1.17 to 1.79) | clearly above 1 | +4.78 → +7.08 % |
-| US CPI airline fares (BLS) | ×0.56 (-0.09 to 1.27) | within noise | +1.04 → +0.63 % |
-| US CPI food away from home (BLS) | ×0.82 (-0.23 to 1.76) | within noise | +0.09 → +0.07 % |
-| UK CPI 01.1.1 bread and cereals (ONS D7D5) | ×0.70 (-0.11 to 1.60) | within noise | +0.30 → +0.22 % |
-| UK CPI 01.1.2 meat (ONS D7D6) | ×0.79 (0.23 to 1.39) | within noise | +0.45 → +0.36 % |
-| UK CPI 01.1.4 milk, cheese and eggs (ONS D7D8) | ×1.95 (1.13 to 2.89) | clearly above 1 | +0.53 → +1.05 % |
-| UK CPI 01.1.5 oils and fats (ONS D7D9) | ×-0.04 (-0.63 to 0.48) | clearly below 1 | +0.56 → -0.04 % |
-| UK CPI 01.1.6 fruit (ONS D7DA) | ×0.33 (-0.00 to 0.71) | clearly below 1 | +0.41 → +0.12 % |
-| UK CPI 01.1.7 vegetables (ONS D7DB) | ×0.50 (0.15 to 0.94) | clearly below 1 | +0.70 → +0.34 % |
-| UK CPI 01.1.8 sugar, jam, chocolate and confectionery (ONS D7DC) | ×1.07 (0.26 to 1.91) | within noise | +0.45 → +0.44 % |
-| UK CPI 04.5.1 electricity (ONS D7DT) | ×1.15 (0.16 to 2.03) | within noise | +0.26 → +0.28 % |
-| UK CPI 04.5.2 gas (ONS D7DU) | ×0.97 (0.35 to 1.64) | within noise | +0.51 → +0.47 % |
-| UK CPI 07.2.2 fuels and lubricants (ONS D7EC) | ×1.55 (1.24 to 1.94) | clearly above 1 | +2.61 → +4.07 % |
-| UK CPI 07.3.3 passenger transport by air (ONS D7EH) | ×0.55 (-0.10 to 1.18) | within noise | -0.81 → -0.44 % |
-| UK CPI 11.1.1 restaurants and cafes (ONS D7EW) | ×0.88 (-0.08 to 1.85) | within noise | +0.14 → +0.14 % |
-| Euro-area HICP bread and cereals (Eurostat via FRED) | ×0.61 (-0.26 to 1.61) | within noise | -0.01 → +0.01 % |
-| Euro-area HICP meat (Eurostat via FRED) | ×0.68 (-0.05 to 1.35) | within noise | +0.15 → +0.09 % |
-| Euro-area HICP milk, cheese and eggs (Eurostat via FRED) | ×1.92 (1.10 to 2.86) | clearly above 1 | +0.06 → +0.09 % |
-| Euro-area HICP oils and fats (Eurostat via FRED) | ×-0.01 (-0.61 to 0.52) | clearly below 1 | +0.12 → -0.03 % |
-| Euro-area HICP fruit (Eurostat via FRED) | ×0.42 (0.17 to 0.81) | clearly below 1 | -0.05 → +0.01 % |
-| Euro-area HICP vegetables (Eurostat via FRED) | ×0.47 (0.16 to 0.86) | clearly below 1 | +0.21 → +0.08 % |
-| Euro-area HICP sugar, jam, honey, chocolate and confectionery (Eurostat via FRED) | ×0.94 (0.09 to 1.89) | within noise | +0.10 → +0.08 % |
-| Euro-area HICP electricity (Eurostat via FRED) | ×1.24 (0.43 to 2.02) | within noise | -0.01 → -0.02 % |
-| Euro-area HICP gas (Eurostat via FRED) | ×1.14 (0.57 to 2.01) | within noise | +0.31 → +0.47 % |
-| Euro-area HICP fuels and lubricants for personal transport (Eurostat via FRED) | ×1.50 (1.19 to 1.81) | clearly above 1 | +2.60 → +3.86 % |
-| Euro-area HICP passenger transport by air (Eurostat via FRED) | ×0.53 (-0.16 to 1.22) | within noise | -0.34 → -0.14 % |
-| Euro-area HICP restaurants, cafés and the like (Eurostat via FRED) | ×0.84 (-0.10 to 1.87) | within noise | +0.06 → +0.05 % |
-| US CPI rent of primary residence (BLS) | ×0.51 (0.04 to 1.36) | within noise | +0.07 → +0.02 % |
-| US CPI owners' equivalent rent of residences (BLS) | ×0.46 (-0.13 to 1.15) | within noise | +0.04 → +0.02 % |
-| US CPI commodities less food and energy commodities (BLS) | ×0.25 (-0.38 to 0.84) | clearly below 1 | +0.03 → +0.01 % |
-| UK CPI 04.1 actual rents for housing (ONS D7CE) | ×0.42 (-0.09 to 1.14) | within noise | -0.01 → -0.00 % |
-| UK CPI non-energy industrial goods (ONS DK9J) | ×0.26 (-0.16 to 0.80) | clearly below 1 | +0.05 → +0.01 % |
-| Euro-area HICP actual rentals for housing (Eurostat via FRED) | ×0.46 (0.03 to 1.01) | within noise | +0.06 → +0.03 % |
-| Euro-area HICP non-energy industrial goods (Eurostat prc_hicp_minr, EA19) | ×0.28 (-0.25 to 0.94) | clearly below 1 | +0.04 → +0.01 % |
-| US other services (US CPI services less energy services less the service items above) | ×-0.14 (-0.62 to 0.35) | clearly below 1 | +0.07 → -0.01 % |
-| UK other services (UK CPI services less the service items above) | ×-0.19 (-0.60 to 0.31) | clearly below 1 | +0.18 → -0.03 % |
-| Euro area other services (Euro-area HICP services less the service items above) | ×-0.21 (-0.69 to 0.29) | clearly below 1 | +0.07 → -0.02 % |
-| US rest of basket (remainder: other food, other fuels, aggregation residual) | ×1.55 (0.92 to 2.19) | within noise | +2.95 → +4.39 % |
-| UK rest of basket (remainder: other food, other fuels, aggregation residual) | ×1.54 (0.73 to 2.27) | within noise | +0.80 → +1.13 % |
-| Euro area rest of basket (remainder: other food, other fuels, aggregation residual) | ×1.52 (0.78 to 2.22) | within noise | +0.95 → +1.40 % |
-| US CPI, all items (BLS) | ×1.51 (1.02 to 2.07) | clearly above 1 | +0.34 → +0.49 % |
-| UK CPI, all items (ONS D7BT) | ×1.50 (1.02 to 2.09) | clearly above 1 | +0.31 → +0.46 % |
-| Euro-area HICP, all items (Eurostat via FRED) | ×1.58 (1.12 to 2.15) | clearly above 1 | +0.27 → +0.42 % |
-| US retail diesel (EIA) | ×1.31 (1.02 to 1.72) | clearly above 1 | +5.42 → +6.78 % |
-| US Gulf Coast jet fuel (EIA) | ×1.20 (0.91 to 1.45) | within noise | +8.50 → +10.08 % |
-| US PPI petroleum refineries (BLS) | ×1.19 (0.92 to 1.45) | within noise | +7.79 → +9.27 % |
-| US PPI long-distance truckload (BLS) | ×1.52 (0.49 to 2.55) | within noise | +0.60 → +0.96 % |
-| US PPI long-distance trucking (BLS) | ×1.54 (0.43 to 2.53) | within noise | +0.58 → +0.80 % |
-| US PPI deep-sea freight (BLS) | ×1.48 (0.38 to 2.51) | within noise | +0.51 → +0.66 % |
-| US PPI scheduled air freight (BLS) | ×1.53 (0.46 to 2.52) | within noise | +0.54 → +0.78 % |
-| US PPI scheduled passenger air (BLS) | ×1.52 (0.45 to 2.52) | within noise | +0.69 → +0.84 % |
-| US PPI plastics resin (BLS) | ×1.12 (0.67 to 1.56) | within noise | +1.80 → +2.12 % |
-| US PPI plastic film and bags (BLS) | ×1.13 (0.72 to 1.62) | within noise | +1.16 → +1.30 % |
-| US PPI plastic bottles (BLS) | ×1.14 (0.78 to 1.48) | within noise | +1.33 → +1.58 % |
-| US PPI converted paper and paperboard (BLS) | ×1.13 (0.70 to 1.53) | within noise | +0.37 → +0.44 % |
-| US PPI nitrogen fertiliser (BLS) | ×1.05 (0.47 to 1.51) | within noise | +4.22 → +4.29 % |
-| US unemployment rate (BLS) | ×-0.22 (-0.60 to 0.19) | clearly below 1 | -0.08 → +0.02 pp |
-| UK unemployment rate (OECD via FRED) | ×-0.25 (-0.68 to 0.25) | clearly below 1 | -0.03 → +0.01 pp |
-| Euro-area unemployment rate, EA21 (Eurostat) | ×-0.28 (-0.62 to 0.14) | clearly below 1 | -0.05 → +0.01 pp |
-| Effective fed funds rate (Fed) | ×1.38 (-0.14 to 2.54) | within noise | +0.03 → +0.04 pp |
-| SONIA overnight rate (Bank of England via FRED) | ×1.35 (-0.17 to 2.45) | within noise | +0.04 → +0.05 pp |
-| ECB deposit facility rate (ECB via FRED) | ×1.42 (-0.13 to 2.52) | within noise | +0.02 → +0.04 pp |
-| US composite (weighted items + rest) | ×1.20 (ratio of medians) | | +0.31 → +0.37 % |
-| UK composite (weighted items + rest) | ×0.91 (ratio of medians) | | +0.24 → +0.22 % |
-| Euro area composite (weighted items + rest) | ×1.25 (ratio of medians) | | +0.23 → +0.28 % |
+| Bread and cereals | ×0.65 (-0.19 to 1.58) | within noise | ×1.18 (-0.04 to 2.46) |
+| Meat | ×0.77 (0.14 to 1.35) | within noise | ×1.06 (0.20 to 1.94) |
+| Dairy | ×1.92 (1.14 to 2.79) | clearly above 1 | ×2.68 (1.47 to 3.80) |
+| Oils and fats | ×0.01 (-0.53 to 0.53) | clearly below 1 | ×0.67 (-0.25 to 1.61) |
+| Fruit and vegetables | ×0.44 (0.18 to 0.74) | clearly below 1 | ×0.44 (0.02 to 0.89) |
+| Sugar and sweets | ×0.99 (0.15 to 1.88) | within noise | ×1.29 (0.21 to 2.27) |
+| Electricity | ×1.24 (0.47 to 1.98) | within noise | ×1.24 (0.34 to 2.28) |
+| Household gas | ×1.04 (0.54 to 1.62) | within noise | ×1.13 (0.46 to 1.84) |
+| Motor fuel | ×1.50 (1.18 to 1.79) | clearly above 1 | ×2.07 (1.48 to 2.62) |
+| Air fares | ×0.56 (-0.12 to 1.22) | within noise | ×0.68 (-0.19 to 1.70) |
+| Restaurants | ×0.86 (-0.13 to 1.75) | within noise | ×1.29 (0.17 to 2.48) |
+| Housing (rent, and owners' equivalent rent in the US) | ×0.47 (0.01 to 1.13) | within noise | ×0.31 (-0.35 to 1.00) |
+| Core goods (non-energy industrial goods) | ×0.28 (-0.26 to 0.80) | clearly below 1 | ×0.49 (-0.21 to 1.39) |
+| Other services | ×-0.18 (-0.60 to 0.30) | clearly below 1 | ×-0.09 (-0.72 to 0.64) |
+| Rest of the basket | ×1.52 (0.86 to 2.19) | within noise | ×2.60 (1.49 to 3.50) |
+| Headline (direct) | ×1.54 (1.07 to 2.07) | clearly above 1 | ×1.98 (1.12 to 2.80) |
+| Industry fuel (US) | ×1.22 (0.97 to 1.56) | within noise | ×1.31 (0.80 to 1.81) |
+| Freight and air transport (US) | ×1.50 (0.53 to 2.47) | within noise | ×0.77 (-0.27 to 1.70) |
+| Materials (US) | ×1.11 (0.77 to 1.50) | within noise | ×0.91 (0.47 to 1.46) |
+| Unemployment | ×-0.23 (-0.62 to 0.18) | clearly below 1 | ×-0.24 (-0.88 to 0.42) |
+| Policy rate | ×1.41 (-0.11 to 2.46) | within noise | ×1.74 (0.02 to 3.30) |
+
+| Series | Multiplier | Reading | 12-month response to +10% Brent, normal → disruption | From 2022 only (fit to 2026-02) |
+|---|---|---|---|---|
+| US CPI cereals and bakery products (BLS) | ×0.68 (-0.24 to 1.63) | within noise | +0.01 → +0.02 % | ×1.16 (-0.29 to 2.54) |
+| US CPI meats, poultry, fish and eggs (BLS) | ×0.73 (0.10 to 1.38) | within noise | +0.36 → +0.24 % | ×0.98 (0.17 to 1.86) |
+| US CPI dairy and related products (BLS) | ×1.87 (1.14 to 2.82) | clearly above 1 | +0.40 → +0.70 % | ×2.72 (1.35 to 3.87) |
+| US CPI fats and oils (BLS) | ×0.08 (-0.56 to 0.64) | clearly below 1 | +0.68 → +0.04 % | ×0.85 (-0.20 to 2.25) |
+| US CPI fruits and vegetables (BLS) | ×0.44 (0.15 to 0.80) | clearly below 1 | +0.43 → +0.17 % | ×0.31 (-0.40 to 0.87) |
+| US CPI sugar and sweets (BLS) | ×0.94 (0.13 to 1.80) | within noise | +0.12 → +0.11 % | ×1.18 (-0.02 to 2.34) |
+| US CPI electricity (BLS) | ×1.32 (0.53 to 2.16) | within noise | +0.19 → +0.22 % | ×1.66 (0.52 to 2.65) |
+| US CPI utility (piped) gas service (BLS) | ×1.01 (0.57 to 1.51) | within noise | +0.44 → +0.40 % | ×1.29 (0.74 to 1.79) |
+| US CPI gasoline, all types (BLS) | ×1.49 (1.17 to 1.79) | clearly above 1 | +4.78 → +7.08 % | ×2.05 (1.49 to 2.56) |
+| US CPI airline fares (BLS) | ×0.56 (-0.09 to 1.27) | within noise | +1.04 → +0.63 % | ×0.71 (-0.34 to 2.01) |
+| US CPI food away from home (BLS) | ×0.82 (-0.23 to 1.76) | within noise | +0.09 → +0.07 % | ×1.25 (0.00 to 2.51) |
+| UK CPI 01.1.1 bread and cereals (ONS D7D5) | ×0.70 (-0.11 to 1.60) | within noise | +0.30 → +0.22 % | ×1.30 (0.03 to 2.47) |
+| UK CPI 01.1.2 meat (ONS D7D6) | ×0.79 (0.23 to 1.39) | within noise | +0.45 → +0.36 % | ×1.21 (0.28 to 2.25) |
+| UK CPI 01.1.4 milk, cheese and eggs (ONS D7D8) | ×1.95 (1.13 to 2.89) | clearly above 1 | +0.53 → +1.05 % | ×2.80 (1.53 to 3.90) |
+| UK CPI 01.1.5 oils and fats (ONS D7D9) | ×-0.04 (-0.63 to 0.48) | clearly below 1 | +0.56 → -0.04 % | ×0.48 (-0.58 to 1.62) |
+| UK CPI 01.1.6 fruit (ONS D7DA) | ×0.33 (-0.00 to 0.71) | clearly below 1 | +0.41 → +0.12 % | ×0.25 (-0.15 to 0.67) |
+| UK CPI 01.1.7 vegetables (ONS D7DB) | ×0.50 (0.15 to 0.94) | clearly below 1 | +0.70 → +0.34 % | ×0.56 (-0.02 to 1.35) |
+| UK CPI 01.1.8 sugar, jam, chocolate and confectionery (ONS D7DC) | ×1.07 (0.26 to 1.91) | within noise | +0.45 → +0.44 % | ×1.48 (0.35 to 2.34) |
+| UK CPI 04.5.1 electricity (ONS D7DT) | ×1.15 (0.16 to 2.03) | within noise | +0.26 → +0.28 % | ×0.81 (-0.14 to 2.29) |
+| UK CPI 04.5.2 gas (ONS D7DU) | ×0.97 (0.35 to 1.64) | within noise | +0.51 → +0.47 % | ×0.78 (-0.11 to 1.70) |
+| UK CPI 07.2.2 fuels and lubricants (ONS D7EC) | ×1.55 (1.24 to 1.94) | clearly above 1 | +2.61 → +4.07 % | ×2.15 (1.60 to 2.81) |
+| UK CPI 07.3.3 passenger transport by air (ONS D7EH) | ×0.55 (-0.10 to 1.18) | within noise | -0.81 → -0.44 % | ×0.73 (-0.24 to 1.94) |
+| UK CPI 11.1.1 restaurants and cafes (ONS D7EW) | ×0.88 (-0.08 to 1.85) | within noise | +0.14 → +0.14 % | ×1.32 (0.19 to 2.52) |
+| Euro-area HICP bread and cereals (Eurostat via FRED) | ×0.61 (-0.26 to 1.61) | within noise | -0.01 → +0.01 % | ×1.12 (-0.32 to 2.54) |
+| Euro-area HICP meat (Eurostat via FRED) | ×0.68 (-0.05 to 1.35) | within noise | +0.15 → +0.09 % | ×0.98 (-0.10 to 2.12) |
+| Euro-area HICP milk, cheese and eggs (Eurostat via FRED) | ×1.92 (1.10 to 2.86) | clearly above 1 | +0.06 → +0.09 % | ×2.88 (1.44 to 4.33) |
+| Euro-area HICP oils and fats (Eurostat via FRED) | ×-0.01 (-0.61 to 0.52) | clearly below 1 | +0.12 → -0.03 % | ×0.44 (-0.31 to 1.41) |
+| Euro-area HICP fruit (Eurostat via FRED) | ×0.42 (0.17 to 0.81) | clearly below 1 | -0.05 → +0.01 % | ×0.47 (0.14 to 1.03) |
+| Euro-area HICP vegetables (Eurostat via FRED) | ×0.47 (0.16 to 0.86) | clearly below 1 | +0.21 → +0.08 % | ×0.47 (0.02 to 1.03) |
+| Euro-area HICP sugar, jam, honey, chocolate and confectionery (Eurostat via FRED) | ×0.94 (0.09 to 1.89) | within noise | +0.10 → +0.08 % | ×1.22 (0.05 to 2.49) |
+| Euro-area HICP electricity (Eurostat via FRED) | ×1.24 (0.43 to 2.02) | within noise | -0.01 → -0.02 % | ×1.29 (0.28 to 2.54) |
+| Euro-area HICP gas (Eurostat via FRED) | ×1.14 (0.57 to 2.01) | within noise | +0.31 → +0.47 % | ×1.33 (0.53 to 2.63) |
+| Euro-area HICP fuels and lubricants for personal transport (Eurostat via FRED) | ×1.50 (1.19 to 1.81) | clearly above 1 | +2.60 → +3.86 % | ×2.10 (1.54 to 2.76) |
+| Euro-area HICP passenger transport by air (Eurostat via FRED) | ×0.53 (-0.16 to 1.22) | within noise | -0.34 → -0.14 % | ×0.67 (-0.46 to 1.71) |
+| Euro-area HICP restaurants, cafés and the like (Eurostat via FRED) | ×0.84 (-0.10 to 1.87) | within noise | +0.06 → +0.05 % | ×1.35 (0.03 to 2.59) |
+| US CPI rent of primary residence (BLS) | ×0.51 (0.04 to 1.36) | within noise | +0.07 → +0.02 % | ×0.45 (-0.28 to 1.60) |
+| US CPI owners' equivalent rent of residences (BLS) | ×0.46 (-0.13 to 1.15) | within noise | +0.04 → +0.02 % | ×0.26 (-0.68 to 1.08) |
+| US CPI commodities less food and energy commodities (BLS) | ×0.25 (-0.38 to 0.84) | clearly below 1 | +0.03 → +0.01 % | ×0.55 (-0.54 to 1.76) |
+| UK CPI 04.1 actual rents for housing (ONS D7CE) | ×0.42 (-0.09 to 1.14) | within noise | -0.01 → -0.00 % | ×0.14 (-0.85 to 0.87) |
+| UK CPI non-energy industrial goods (ONS DK9J) | ×0.26 (-0.16 to 0.80) | clearly below 1 | +0.05 → +0.01 % | ×0.49 (-0.06 to 1.23) |
+| Euro-area HICP actual rentals for housing (Eurostat via FRED) | ×0.46 (0.03 to 1.01) | within noise | +0.06 → +0.03 % | ×0.30 (-0.18 to 0.81) |
+| Euro-area HICP non-energy industrial goods (Eurostat prc_hicp_minr, EA19) | ×0.28 (-0.25 to 0.94) | clearly below 1 | +0.04 → +0.01 % | ×0.56 (-0.37 to 1.50) |
+| US other services (US CPI services less energy services less the service items above) | ×-0.14 (-0.62 to 0.35) | clearly below 1 | +0.07 → -0.01 % | ×-0.17 (-1.12 to 0.58) |
+| UK other services (UK CPI services less the service items above) | ×-0.19 (-0.60 to 0.31) | clearly below 1 | +0.18 → -0.03 % | ×-0.13 (-0.78 to 0.64) |
+| Euro area other services (Euro-area HICP services less the service items above) | ×-0.21 (-0.69 to 0.29) | clearly below 1 | +0.07 → -0.02 % | ×-0.11 (-0.77 to 0.60) |
+| US rest of basket (remainder: other food, other fuels, aggregation residual) | ×1.55 (0.92 to 2.19) | within noise | +2.95 → +4.39 % | ×2.65 (1.59 to 3.61) |
+| UK rest of basket (remainder: other food, other fuels, aggregation residual) | ×1.54 (0.73 to 2.27) | within noise | +0.80 → +1.13 % | ×2.66 (1.50 to 3.88) |
+| Euro area rest of basket (remainder: other food, other fuels, aggregation residual) | ×1.52 (0.78 to 2.22) | within noise | +0.95 → +1.40 % | ×2.57 (1.56 to 3.70) |
+| US CPI, all items (BLS) | ×1.51 (1.02 to 2.07) | clearly above 1 | +0.34 → +0.49 % | ×2.07 (1.04 to 3.16) |
+| UK CPI, all items (ONS D7BT) | ×1.50 (1.02 to 2.09) | clearly above 1 | +0.31 → +0.46 % | ×1.99 (0.96 to 2.85) |
+| Euro-area HICP, all items (Eurostat via FRED) | ×1.58 (1.12 to 2.15) | clearly above 1 | +0.27 → +0.42 % | ×2.04 (1.19 to 3.01) |
+| US retail diesel (EIA) | ×1.31 (1.02 to 1.72) | clearly above 1 | +5.42 → +6.78 % | ×1.47 (0.87 to 2.13) |
+| US Gulf Coast jet fuel (EIA) | ×1.20 (0.91 to 1.45) | within noise | +8.50 → +10.08 % | ×1.12 (0.63 to 1.62) |
+| US PPI petroleum refineries (BLS) | ×1.19 (0.92 to 1.45) | within noise | +7.79 → +9.27 % | ×1.28 (0.85 to 1.79) |
+| US PPI long-distance truckload (BLS) | ×1.52 (0.49 to 2.55) | within noise | +0.60 → +0.96 % | ×0.63 (-0.41 to 1.64) |
+| US PPI long-distance trucking (BLS) | ×1.54 (0.43 to 2.53) | within noise | +0.58 → +0.80 % | ×0.73 (-0.29 to 1.72) |
+| US PPI deep-sea freight (BLS) | ×1.48 (0.38 to 2.51) | within noise | +0.51 → +0.66 % | ×0.63 (-0.49 to 1.74) |
+| US PPI scheduled air freight (BLS) | ×1.53 (0.46 to 2.52) | within noise | +0.54 → +0.78 % | ×0.72 (-0.37 to 1.93) |
+| US PPI scheduled passenger air (BLS) | ×1.52 (0.45 to 2.52) | within noise | +0.69 → +0.84 % | ×0.83 (-0.38 to 2.05) |
+| US PPI plastics resin (BLS) | ×1.12 (0.67 to 1.56) | within noise | +1.80 → +2.12 % | ×0.91 (0.31 to 1.47) |
+| US PPI plastic film and bags (BLS) | ×1.13 (0.72 to 1.62) | within noise | +1.16 → +1.30 % | ×0.94 (0.51 to 1.42) |
+| US PPI plastic bottles (BLS) | ×1.14 (0.78 to 1.48) | within noise | +1.33 → +1.58 % | ×1.06 (0.47 to 1.62) |
+| US PPI converted paper and paperboard (BLS) | ×1.13 (0.70 to 1.53) | within noise | +0.37 → +0.44 % | ×1.09 (0.42 to 1.90) |
+| US PPI nitrogen fertiliser (BLS) | ×1.05 (0.47 to 1.51) | within noise | +4.22 → +4.29 % | ×0.70 (-0.23 to 1.35) |
+| US unemployment rate (BLS) | ×-0.22 (-0.60 to 0.19) | clearly below 1 | -0.08 → +0.02 pp | ×-0.21 (-0.92 to 0.53) |
+| UK unemployment rate (OECD via FRED) | ×-0.25 (-0.68 to 0.25) | clearly below 1 | -0.03 → +0.01 pp | ×-0.32 (-1.04 to 0.31) |
+| Euro-area unemployment rate, EA21 (Eurostat) | ×-0.28 (-0.62 to 0.14) | clearly below 1 | -0.05 → +0.01 pp | ×-0.38 (-0.92 to 0.43) |
+| Effective fed funds rate (Fed) | ×1.38 (-0.14 to 2.54) | within noise | +0.03 → +0.04 pp | ×1.77 (-0.24 to 3.25) |
+| SONIA overnight rate (Bank of England via FRED) | ×1.35 (-0.17 to 2.45) | within noise | +0.04 → +0.05 pp | ×1.72 (-0.23 to 3.35) |
+| ECB deposit facility rate (ECB via FRED) | ×1.42 (-0.13 to 2.52) | within noise | +0.02 → +0.04 pp | ×1.77 (0.02 to 3.48) |
+| US composite (weighted items + rest) | ×1.20 (ratio of medians) | | +0.31 → +0.37 % | |
+| UK composite (weighted items + rest) | ×0.91 (ratio of medians) | | +0.24 → +0.22 % | |
+| Euro area composite (weighted items + rest) | ×1.25 (ratio of medians) | | +0.23 → +0.28 % | |
 
 ## Why the main model gives bread grain prices: against the oil-and-gas-only base
 

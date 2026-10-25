@@ -263,6 +263,14 @@ NUTS (2 chains, 500 warm-up, 1,000 draws per chain):
     - Short horizons favour us: Cleveland and Michigan are 1-year rates scaled down, and the SPF is
       quarterly. The surveys used data as first published; we score on revised CPI. Our 90% bands
       hold 82–88% of outcomes. US only: no UK or euro-area institutional forecasts are scored yet.
+    - **Read it as level with the SPF at 1 year, not as beating the Fed.**
+      - None of these is the FOMC's own projection.
+      - The Cleveland number is a model of expected inflation from yields, swaps and surveys, risk
+        premia included. Michigan is households' expectations.
+      - The benchmarks get a fixed-width band from their own past errors, while ours widens with
+        oil volatility, which helps us in 2008 and 2020–22.
+      - The fair short-horizon competitor is a monthly nowcast (the Cleveland Fed's, with daily oil
+        and weekly petrol), which isn't scored here.
   - **Brent paths: Lévy is best at 3–12 months.**
     - Against daily Student-t paths: −0.80 ± 0.51 at 12 months.
     - Against a monthly GARCH-t: −1.98 ± 1.08 at 12 months.
@@ -321,6 +329,17 @@ NUTS (2 chains, 500 warm-up, 1,000 draws per chain):
   - **One multiplier for everything would be wrong.** Use each metric's own: ×1.5 suits motor fuel
     and headline inflation, but it would overstate the composites, freight and materials, and get
     oils, fruit and vegetables, housing and services the wrong way round.
+  - **Learned from 2022 alone they are larger** (the 2026 test's fit, to Feb 2026; the last column
+    of the table and the `multiplier_2022only_*` columns of the CSV).
+    - Headline is ×2.07 (US, 1.04 to 3.16), ×1.99 (UK) and ×2.04 (euro area), and motor fuel
+      ×2.05–2.15. Adding 2026's months brings both down to about ×1.5, so 2022 overstates how much
+      more of an oil move reached prices in 2026.
+    - The US cost series move less: diesel ×1.47, jet ×1.12, refineries ×1.28.
+    - Housing, core goods and other services stay below 1, as in the all-data fit: rents ×0.14–0.45,
+      core goods ×0.49–0.56 and other services ×−0.11 to −0.17. Their intervals are wide.
+    - The chain's regime test (`docs/chain.md`, also learned from 2022 only) gets diesel ×1.54, jet
+      ×1.14 and refineries ×1.31, but CPI ×2.8–2.9. Its model has no gas input, so its oil
+      multiplier likely also takes up 2022's gas-driven inflation.
 - **History:** the runs below led to the main model.
 - **First full run (Iridis job 1972141): discarded.**
   - The fits that contain supply-disruption months did not converge: the 2026 test fit had R-hat
