@@ -1211,6 +1211,34 @@ a.hz-src:hover { background: #163257; }
 [aria-expanded="true"]:is(.hz-i, .ib[data-info], .ib[data-winfo], .info-map) { background: #2b74dd !important; outline: 2px solid var(--seen-soft); outline-offset: 2px; }
 .sheet.hz-placed { position: fixed; box-shadow: var(--frame), 6px 6px 0 rgba(0, 0, 0, .55) !important; animation: hz-pop .14s steps(3) both; }
 @media (max-width: 480px) { .sheet .hz-srcl li { display: flex; flex-direction: column; align-items: stretch; gap: 2px; } }
+
+/* A picked country (focus.js): the map becomes a band across the top, zoomed to the country, and the detail opens large
+   below it, the country card wide on the left and the shock and product cards on the right. */
+#world-stage.hz-focus { flex-direction: column; flex-wrap: nowrap; overflow-y: auto; }
+#world-stage.hz-focus .mapwrap { flex: 0 0 auto; height: 46vh; min-height: 300px; }
+#world-stage.hz-focus .hud {
+  flex: none !important; width: auto !important; max-width: none !important; overflow: visible;
+  display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); align-items: start; gap: 14px;
+  animation: hz-rise .5s cubic-bezier(.2, .8, .2, 1) both;
+}
+#world-stage.hz-focus .hud > * { min-width: 0; }
+#world-stage.hz-focus .hud > #country-card { grid-column: 1; grid-row: 1 / span 9; }
+#world-stage.hz-focus .hud > :not(#country-card) { grid-column: 2; }
+/* with the room, the country card's tabs go back on one row and its numbers get bigger */
+#world-stage.hz-focus #ctabs { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; }
+#world-stage.hz-focus #ctabs button { min-width: 0; padding: 0 6px; border-left-width: 2px !important; white-space: normal; line-height: 1.15; }
+#world-stage.hz-focus #country-card .ctitle h2 { font-size: 26px; }
+#world-stage.hz-focus #country-card .kpis b { font-size: 30px; }
+@keyframes hz-rise { from { opacity: 0; transform: translateY(28px); } to { opacity: 1; transform: none; } }
+@media (max-width: 860px) {
+  #world-stage.hz-focus .hud { grid-template-columns: minmax(0, 1fr); }
+  #world-stage.hz-focus .hud > #country-card, #world-stage.hz-focus .hud > :not(#country-card) { grid-column: 1; grid-row: auto; }
+  #world-stage.hz-focus .mapwrap { height: 40vh; min-height: 240px; }
+  #world-stage.hz-focus #ctabs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  /* the band is short on a phone: the legend keeps its title and colour bar, not its line keys */
+  #world-stage.hz-focus .legendbar .flowkey, #world-stage.hz-focus .legendbar .ticks .viarow { display: none !important; }
+}
+@media (prefers-reduced-motion: reduce) { #world-stage.hz-focus .hud { animation: none; } }
 </style>
 <script>/* gas routes: ui/app/data/gas.json */
 window.GAS = {
@@ -5564,6 +5592,19 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
   }
   const zoom = d3.zoom().scaleExtent([1, 10]).on("zoom", (e) => { cur = e.transform; root.attr("transform", cur); rescale(); placePop(); });
   svgEl.call(zoom).on("dblclick.zoom", null);
+  window.HZZoomTo = (name) => {
+    if (st.wview === "3d") {
+      const w = name && isoOf[name] && where[isoOf[name]];
+      if (G3) G3.pointOfView(w ? { lat: w.lat, lng: w.lng, altitude: 1.3 } : { lat: 24, lng: 58, altitude: 2.2 }, 900);
+      return;
+    }
+    const box = svgEl.node().getBoundingClientRect(), f = name && countries.find((c) => c.properties.name === name);
+    if (!f || !box.width) { svgEl.transition().duration(700).call(zoom.transform, d3.zoomIdentity); return; }
+    const [[x0, y0], [x1, y1]] = gpath.bounds(f), w = box.width, h = box.height;
+    const k = Math.max(1, Math.min(8, 0.7 / Math.max((x1 - x0) / w, (y1 - y0) / h)));
+    const t = d3.zoomIdentity.translate(w / 2, h / 2).scale(k).translate(-(x0 + x1) / 2, -(y0 + y1) / 2);
+    svgEl.transition().duration(900).ease(d3.easeCubicInOut).call(zoom.transform, t);
+  };
   $("wzin").addEventListener("click", () => (st.wview === "3d" ? zoom3d(0.7) : svgEl.transition().duration(300).call(zoom.scaleBy, 1.6)));
   $("wzout").addEventListener("click", () => (st.wview === "3d" ? zoom3d(1.4) : svgEl.transition().duration(300).call(zoom.scaleBy, 1 / 1.6)));
   $("wzreset").addEventListener("click", () => (st.wview === "3d" ? G3 && G3.pointOfView({ lat: 24, lng: 58, altitude: 2.2 }, 600) : svgEl.transition().duration(400).call(zoom.transform, d3.zoomIdentity)));
@@ -5837,6 +5878,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
     renderCountry();
     renderRank();
     renderMat();
+    document.dispatchEvent(new CustomEvent("hz-select", { detail: { name: st.sel } }));
   }
   // country card: three tabs instead of one long column (the sections keep their ids; render code is unchanged)
   const CTABS = [["col", "Cost of living"], ["overview", "Overview"], ["inds", "Industries"], ["trade", "Trade"], ["econ", "Economy"], ["trends", "Trends"]];
@@ -7770,6 +7812,55 @@ window.HZModels = (() => {
   try { saved = localStorage.getItem(KEY) || ""; } catch (e) {}
   if (location.hash === "#models" || (saved === "models" && !["#mandeb", "#households"].includes(location.hash))) show(true, true);
   return { show };
+})();
+
+</script>
+<script>
+// Picking a country focuses on it: the map eases up into a shorter band and zooms to the country, and its detail opens
+// large below, the country card beside the shock and product cards. Closing the card (or clicking the country again)
+// eases back to the whole map. The page's select() sends "hz-select"; HZZoomTo (world.py) does the zoom.
+(() => {
+  const stage = document.getElementById("world-stage");
+  const map = stage && stage.querySelector(".mapwrap");
+  if (!stage || !map) return;
+  const still = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let seq = 0;
+
+  function focus(name) {
+    const on = !!name, was = stage.classList.contains("hz-focus"), my = ++seq;
+    let settled = Promise.resolve();
+    if (on !== was) {
+      // ease the map's height from where it is to where the new layout puts it (an animation, not inline styles,
+      // which the page rewrites for the map's background)
+      const from = map.getBoundingClientRect().height;
+      stage.classList.toggle("hz-focus", on);
+      const to = map.getBoundingClientRect().height;
+      if (!still() && Math.abs(to - from) > 4 && map.animate)
+        settled = map.animate([{ height: `${from}px` }, { height: `${to}px` }], { duration: 500, easing: "cubic-bezier(.2,.8,.2,1)" }).finished.catch(() => {});
+      if (on) {
+        stage.scrollTop = 0;
+        const top = map.getBoundingClientRect().top;
+        if (top < 0 || top > window.innerHeight / 3) window.scrollTo({ top: window.scrollY + top - 8, behavior: still() ? "auto" : "smooth" });
+      }
+    }
+    // zoom once the map has settled at its new size: the page refits the map when its box changes, so a zoom made
+    // earlier would land in the wrong place
+    settled.then(() => requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (my === seq && window.HZZoomTo) window.HZZoomTo(name);
+    })));
+  }
+  let current = null, again = 0;
+  document.addEventListener("hz-select", (e) => { current = e.detail && e.detail.name; focus(current); });
+  // the page refits the map whenever its box changes (a window resize, the phone's address bar), which leaves a zoom
+  // behind: frame the picked country again once the size settles
+  let last = "";
+  new ResizeObserver(() => {
+    const r = map.getBoundingClientRect(), key = `${Math.round(r.width)}x${Math.round(r.height)}`;
+    if (key === last) return;
+    last = key;
+    clearTimeout(again);
+    if (current && !map.getAnimations().length) again = setTimeout(() => window.HZZoomTo && current && window.HZZoomTo(current), 200);
+  }).observe(map);
 })();
 
 </script>

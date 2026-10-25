@@ -1,0 +1,27 @@
+/* A picked country (focus.js): the map becomes a band across the top, zoomed to the country, and the detail opens large
+   below it, the country card wide on the left and the shock and product cards on the right. */
+#world-stage.hz-focus { flex-direction: column; flex-wrap: nowrap; overflow-y: auto; }
+#world-stage.hz-focus .mapwrap { flex: 0 0 auto; height: 46vh; min-height: 300px; }
+#world-stage.hz-focus .hud {
+  flex: none !important; width: auto !important; max-width: none !important; overflow: visible;
+  display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); align-items: start; gap: 14px;
+  animation: hz-rise .5s cubic-bezier(.2, .8, .2, 1) both;
+}
+#world-stage.hz-focus .hud > * { min-width: 0; }
+#world-stage.hz-focus .hud > #country-card { grid-column: 1; grid-row: 1 / span 9; }
+#world-stage.hz-focus .hud > :not(#country-card) { grid-column: 2; }
+/* with the room, the country card's tabs go back on one row and its numbers get bigger */
+#world-stage.hz-focus #ctabs { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; }
+#world-stage.hz-focus #ctabs button { min-width: 0; padding: 0 6px; border-left-width: 2px !important; white-space: normal; line-height: 1.15; }
+#world-stage.hz-focus #country-card .ctitle h2 { font-size: 26px; }
+#world-stage.hz-focus #country-card .kpis b { font-size: 30px; }
+@keyframes hz-rise { from { opacity: 0; transform: translateY(28px); } to { opacity: 1; transform: none; } }
+@media (max-width: 860px) {
+  #world-stage.hz-focus .hud { grid-template-columns: minmax(0, 1fr); }
+  #world-stage.hz-focus .hud > #country-card, #world-stage.hz-focus .hud > :not(#country-card) { grid-column: 1; grid-row: auto; }
+  #world-stage.hz-focus .mapwrap { height: 40vh; min-height: 240px; }
+  #world-stage.hz-focus #ctabs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  /* the band is short on a phone: the legend keeps its title and colour bar, not its line keys */
+  #world-stage.hz-focus .legendbar .flowkey, #world-stage.hz-focus .legendbar .ticks .viarow { display: none !important; }
+}
+@media (prefers-reduced-motion: reduce) { #world-stage.hz-focus .hud { animation: none; } }
