@@ -312,6 +312,52 @@ Our rows are the forecast mode with Lévy Brent paths: nothing after the origin 
 | SPF median, latest survey at every month-end | 16% lower (t -3.4, n 212) | 2% lower (t -0.5, n 210) | 1% higher (t +0.3, n 207) | 3% higher (t +0.8, n 201) |
 | Random walk: last 12-month pace carries on | 22% lower (t -3.7, n 212) | 12% lower (t -1.6, n 210) | 14% lower (t -1.3, n 207) | 23% lower (t -1.9, n 201) |
 
+## Against the Cleveland Fed's nowcast: US CPI at 1-3 months, as first published
+
+_Nowcasts from the Cleveland Fed's inflation-nowcasting chart data (`data/raw/macro/cleveland_nowcast_{month,quarter}.json`, fetched 2026-10-25); our forecasts are the main model's Lévy forecast draws, saved by the 8 folds (`COL_DRAWS=us_composite,us_all`, `runs/col-food-bread/fold-*-draws.npz`)._
+
+This lines up what each forecast knows. Ours from month t starts from month t's CPI, so it can only be made once that is published, about two weeks into month t+1. The nowcast is taken on the first business day after that release. So it knows the same CPI, plus two weeks of daily oil and weekly petrol prices that our model doesn't use. Both are scored on CPI as first published, which is the actual on each Cleveland chart; for the 52 months that can be checked, 51 match the Philadelphia Fed's real-time vintages to 0.005 pp. The nowcast is a point, so it gets three bands, each from its own earlier errors only:
+
+- **Fixed:** the spread of those errors.
+- **EWMA:** an exponentially weighted average of their squares (decay 0.9 a month).
+- **Oil volatility:** log sd linear in the log volatility of Brent over the 21 trading days before the nowcast, fitted to the errors by maximum likelihood.
+
+Scoring starts once a band has 12 months (8 quarters) of errors. The CRPS is in percentage points. t is the Diebold-Mariano statistic of ours minus theirs (Newey-West, 3 lags for months, 1 for quarters; negative = ours better).
+
+**Next month's CPI change**: 135 origins, targets 2014-09 to 2026-01
+
+| Forecast | CRPS | 90% band holds | Our composite against it | Our headline against it |
+|---|---|---|---|---|
+| Our US composite (items + rest) | 0.123 | 90% |  |  |
+| Our US headline, forecast directly | 0.137 | 88% |  |  |
+| Cleveland nowcast, fixed band (spread of its earlier errors) | 0.090 | 87% | 37% higher (t +3.8) | 53% higher (t +5.0) |
+| Cleveland nowcast, EWMA band (recent errors weigh more) | 0.087 | 87% | 41% higher (t +4.2) | 57% higher (t +5.4) |
+| Cleveland nowcast, band that scales with Brent's volatility | 0.090 | 82% | 37% higher (t +3.7) | 52% higher (t +4.9) |
+| Cleveland nowcast, first nowcast of the month, made at its start (not yet last month's CPI), EWMA band | 0.124 | 87% | 1% lower (t -0.1) | 10% higher (t +1.4) |
+| Cleveland nowcast, last nowcast before the release (knows the whole month), EWMA band | 0.075 | 90% | 63% higher (t +4.9) | 82% higher (t +5.8) |
+
+Scored on today's revised CPI instead, our composite's CRPS is 0.113 against 0.123 on first-published CPI (135 origins with both).
+
+**This quarter's CPI, annualised q/q, with all 3 of its months still to come** (origins at a quarter's end): 42 origins, targets 2015-10 to 2026-01
+
+| Forecast | CRPS | 90% band holds | Our composite against it | Our headline against it |
+|---|---|---|---|---|
+| Our US composite (items + rest) | 0.921 | 93% |  |  |
+| Our US headline, forecast directly | 0.948 | 93% |  |  |
+| Cleveland nowcast, fixed band (spread of its earlier errors) | 0.809 | 83% | 14% higher (t +1.1) | 17% higher (t +1.2) |
+| Cleveland nowcast, EWMA band (recent errors weigh more) | 0.776 | 88% | 19% higher (t +1.4) | 22% higher (t +1.5) |
+| Cleveland nowcast, band that scales with Brent's volatility | 0.799 | 86% | 15% higher (t +1.2) | 19% higher (t +1.4) |
+
+**The same with 2 of its months still to come** (origins at a quarter's first month): 40 origins, targets 2015-10 to 2025-07
+
+| Forecast | CRPS | 90% band holds | Our composite against it | Our headline against it |
+|---|---|---|---|---|
+| Our US composite (items + rest) | 0.491 | 88% |  |  |
+| Our US headline, forecast directly | 0.512 | 90% |  |  |
+| Cleveland nowcast, fixed band (spread of its earlier errors) | 0.419 | 85% | 17% higher (t +1.1) | 22% higher (t +1.4) |
+| Cleveland nowcast, EWMA band (recent errors weigh more) | 0.413 | 82% | 19% higher (t +1.1) | 24% higher (t +1.4) |
+| Cleveland nowcast, band that scales with Brent's volatility | 0.421 | 82% | 17% higher (t +1.0) | 22% higher (t +1.3) |
+
 ## The 2026 Hormuz closure as a test: fitted to 2026-02, scored 7 months on
 
 Supply-disruption months in the fit: 10. Each cell is the median change since the base month and its 90% interval, in % of the price level; ✓ marks an actual inside it.

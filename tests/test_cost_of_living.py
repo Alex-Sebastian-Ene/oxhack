@@ -5,6 +5,7 @@ Synthetic data only, apart from the daily Lévy paths, which need the cached Bre
 Lévy fits (skipped otherwise). No MCMC. Needs jax and numpyro (skipped otherwise).
 """
 
+import json
 from types import SimpleNamespace
 
 import numpy as np
@@ -193,3 +194,39 @@ def test_benchmarks_are_matched_by_origin_month():
     out = rep.bench_by_origin(bench, ["2020-02", "2020-03", "2020-04"], "spf", 12)
     assert out[:2].tolist() == pytest.approx([2.3, 5.3])  # second origin of fold 0, first of fold 1, at h=12
     assert np.isnan(out[2])  # no survey for that month
+
+
+def test_nowcasts_skip_release_lines_and_run_into_the_next_year(tmp_path, monkeypatch):
+    rep = pytest.importorskip("cost_of_living_report")
+    monkeypatch.setattr(col.md, "RAW", tmp_path)  # a cached file, so nothing is downloaded
+    cats = [{"label": "12/30"}, {"label": "CPI Nov", "vline": "true"}, {"label": "01/03"}, {"label": "01/12"}]
+    entry = {"chart": {"subcaption": "2021-12"}, "categories": [{"category": cats}],
+             "dataset": [{"seriesname": "CPI Inflation", "data": [{"value": "0.4"}, {"value": "0.5"}, {"value": ""}]},
+                         {"seriesname": "Actual CPI Inflation", "data": [{"value": ""}, {"value": ""}, {"value": "0.6"}]}]}
+    (tmp_path / "cleveland_nowcast_month.json").write_text(json.dumps([entry]))
+    row = rep.nowcasts("month").loc[pd.Timestamp("2021-12-01")]
+    assert row["nowcasts"].to_dict() == {pd.Timestamp("2021-12-30"): 0.4, pd.Timestamp("2022-01-03"): 0.5}
+    assert row["released"] == pd.Timestamp("2022-01-12")
+    assert row["actual"] == pytest.approx(0.6)
+
+
+def test_benchmark_bands_use_only_earlier_errors():
+    rep = pytest.importorskip("cost_of_living_report")
+    rng = np.random.default_rng(7)
+    vol = rng.normal(0, 1, 60)
+    err = np.exp(0.5 * vol) * rng.normal(0, 1, 60)  # errors that grow with oil volatility
+    a = rep.bands(err, vol, 12, 0.9)
+    later = err.copy()
+    later[40:] *= 10  # changing later errors must leave every band up to target 40 alone
+    b = rep.bands(later, vol, 12, 0.9)
+    for k in a:
+        assert np.isnan(a[k][:12]).all()
+        assert np.allclose(a[k][12:41], b[k][12:41])
+    assert a["fixed"][20] == pytest.approx(err[:20].std(ddof=1))
+    assert np.corrcoef(np.log(a["oil"][40:]), vol[40:])[0, 1] > 0.9  # the oil band widens with volatility
+
+
+def test_quarter_rate_annualises_the_quarterly_average():
+    rep = pytest.importorskip("cost_of_living_report")
+    g = 0.25  # the same log change (x100) every month
+    assert rep.quarter_rate(g * np.arange(6.0)) == pytest.approx(100 * (np.exp(12 * g / 100) - 1))

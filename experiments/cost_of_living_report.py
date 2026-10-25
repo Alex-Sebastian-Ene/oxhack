@@ -53,6 +53,11 @@ NOWCAST_LAG = {"month": 3, "quarter": 1}  # Newey-West lags of the nowcast compa
 EWMA = 0.9  # monthly decay of a benchmark's EWMA error variance (half-life 6.6 months)
 BANDS = (("fixed", "fixed band (spread of its earlier errors)"), ("ewma", "EWMA band (recent errors weigh more)"),
          ("oil", "band that scales with Brent's volatility"))
+# Two more of its monthly nowcasts, each with an EWMA band, to bracket the matched one: the first of the month, made
+# at its start (it knows oil to the month before, as ours does, but not last month's CPI), and the last before the
+# release (it knows the whole month's oil and petrol)
+OTHER_NOWCASTS = (("first", "first nowcast of the month, made at its start (not yet last month's CPI), EWMA band"),
+                  ("last", "last nowcast before the release (knows the whole month), EWMA band"))
 
 
 def converged(d: dict) -> bool:
@@ -356,7 +361,8 @@ def nowcast_section(data: dict) -> list[str]:
         nc = mon.loc[m, "nowcasts"]
         last = nc[nc.index < rel] if pd.notna(rel) else nc.iloc[:0]
         rows.append({"target": m, "origin": nxt(m, -1), "info": info, "y": first[m], "rev": revised.get(m, np.nan),
-                     "mu": lg(after(nc, info)), "mu_last": lg(last.iloc[-1]) if len(last) else np.nan})
+                     "mu": lg(after(nc, info)), "mu_last": lg(last.iloc[-1]) if len(last) else np.nan,
+                     "mu_first": lg(nc.iloc[0]) if len(nc) and pd.notna(info) and nc.index[0] < info else np.nan})
     tests["month"] = pd.DataFrame(rows)
     for p in (0, 1):  # the quarter's first or second month comes next: 3 or 2 of its months still to come
         rows = []
@@ -373,12 +379,12 @@ def nowcast_section(data: dict) -> list[str]:
         df["err"] = df["y"] - df["mu"]
         df["vol"] = [vol(d) if pd.notna(d) else np.nan for d in df["info"]]
         sd = bands(df["err"].values, df["vol"].values, NOWCAST_MIN[freq], EWMA ** (1 if freq == "month" else 3))
-        if freq == "month":
-            e2 = (df["y"] - df["mu_last"]).values
-            sd["last"] = bands(e2, df["vol"].values, NOWCAST_MIN[freq], EWMA)["ewma"]
+        others = OTHER_NOWCASTS if freq == "month" else ()
+        for b, _ in others:
+            sd[b] = bands((df["y"] - df[f"mu_{b}"]).values, df["vol"].values, NOWCAST_MIN[freq], EWMA)["ewma"]
         ok = np.isfinite(df["y"].values) & np.isfinite(df["mu"].values) & np.isfinite(np.c_[tuple(sd.values())]).all(1)
-        if freq == "month":
-            ok &= np.isfinite(df["mu_last"].values)
+        for b, _ in others:
+            ok &= np.isfinite(df[f"mu_{b}"].values)
         S = {}
         for k, _ in ours:
             if freq == "month":
@@ -393,18 +399,16 @@ def nowcast_section(data: dict) -> list[str]:
                 S[k] = quarter_rate(np.stack(lv, 1))  # [draws, targets]
             ok &= np.all(np.isfinite(S[k]), 0)
         y = df["y"].values[ok]
-        res = {"n": int(ok.sum()), "first": df["target"][ok].min(), "last": df["target"][ok].max(), "rows": []}
+        res = {"n": int(ok.sum()), "from": df["target"][ok].min(), "to": df["target"][ok].max(), "rows": []}
         for k, lab in ours:
             s = S[k][:, ok]
             lo, hi = np.quantile(s, 0.05, 0), np.quantile(s, 0.95, 0)
             res[k] = col.crps_samples(s, y)
             res["rows"].append((lab, res[k], np.mean((y >= lo) & (y <= hi))))
-        for b, lab in BANDS + ((("last", "last nowcast before the release (knows the whole month), EWMA band"),)
-                               if freq == "month" else ()):
-            mu = (df["mu_last"] if b == "last" else df["mu"]).values[ok]
-            s_ = sd[b][ok]
-            res[b] = crps_ok = col.crps_normal(mu, s_, y)
-            res["rows"].append((f"Cleveland nowcast, {lab}", crps_ok, np.mean(np.abs(y - mu) <= 1.645 * s_)))
+        for b, lab in BANDS + others:
+            mu, s_ = df[f"mu_{b}" if b in dict(others) else "mu"].values[ok], sd[b][ok]
+            res[b] = col.crps_normal(mu, s_, y)
+            res["rows"].append((f"Cleveland nowcast, {lab}", res[b], np.mean(np.abs(y - mu) <= 1.645 * s_)))
         if freq == "month":
             rv_ = df["rev"].values[ok]
             okr = np.isfinite(rv_)
@@ -443,7 +447,7 @@ def nowcast_section(data: dict) -> list[str]:
         freq = "month" if name == "month" else "quarter"
         res = score(df, freq, 1 if name == "month" else int(name[-1]))
         lag = NOWCAST_LAG[freq]
-        out += [f"{titles[name]}: {res['n']} origins, targets {res['first']:%Y-%m} to {res['last']:%Y-%m}", "",
+        out += [f"{titles[name]}: {res['n']} origins, targets {res['from']:%Y-%m} to {res['to']:%Y-%m}", "",
                 "| Forecast | CRPS | 90% band holds | Our composite against it | Our headline against it |",
                 "|---|---|---|---|---|"]
         for i, (lab, c, cov) in enumerate(res["rows"]):

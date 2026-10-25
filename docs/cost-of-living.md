@@ -6,10 +6,10 @@ in [macro-ensemble.md](macro-ensemble.md) and the Brent model in [oil-price-mode
 
 | Code | What it does | Output |
 |---|---|---|
-| `experiments/cost_of_living.py` | Basket data and weights, the event misses, the Bayesian item model, Brent and gas paths, folds, event tests, scenario fans | `runs/col/*.json` (git-ignored) |
+| `experiments/cost_of_living.py` | Basket data and weights, the event misses, the Bayesian item model, Brent and gas paths, folds, event tests, scenario fans | `runs/col/*.json`, and with `COL_DRAWS` the folds' 1–3 month forecast draws, `runs/col*/fold-*-draws.npz` (git-ignored) |
 | `experiments/cost_of_living_report.py` | Tables from the runs; leaves out any fit whose chains did not converge; the disruption multiplier for every metric; compares the other versions | `notes/cost-of-living.md`, `notes/cost-of-living-fans.csv`, `notes/cost-of-living-responses.csv`, `notes/cost-of-living-contributions.csv`, `notes/cost-of-living-multipliers.csv` |
 | `cluster/iridis/cost_of_living{_env.sh,.slurm}` | Iridis environment and the 33-task array (11 fits for each of three versions) | |
-| `tests/test_cost_of_living.py` | Rest of basket, average link, simulation terms, driver contributions, CRPS, Brent paths, the World Bank file | |
+| `tests/test_cost_of_living.py` | Rest of basket, average link, simulation terms, driver contributions, CRPS, Brent paths, the World Bank file, the Cleveland nowcast file, the benchmark bands, the quarterly rate | |
 
 ## Why item by item
 
@@ -175,6 +175,7 @@ NUTS (2 chains, 500 warm-up, 1,000 draws per chain):
 | 2022 event test | Fitted to Feb 2022 with no supply-disruption months at all |
 | Scenario fans | From Feb 2026: no closure against 25%, 50% and a full 2026-sized closure. How far the band shifts and widens |
 | Against the Fed and the SPF | US CPI in forecast mode against the Cleveland Fed, Michigan and SPF forecasts and the random walk, from `runs/macro/global-benchmarks.json` (the chain's, same folds, matched by origin month; Diebold–Mariano tests with 12 Newey–West lags) |
+| Against the Cleveland Fed's nowcast | US CPI next month and this quarter, on CPI as first published, with the nowcast taken just after our origin month's CPI is published; the nowcast gets fixed, EWMA and oil-volatility bands from its own earlier errors (Diebold–Mariano tests with 3 Newey–West lags for months, 1 for quarters) |
 | Sampler health | Fits with R-hat above 1.05 or ESS below 100 are left out of every table |
 
 ## Status (2026-10-25)
@@ -234,7 +235,7 @@ NUTS (2 chains, 500 warm-up, 1,000 draws per chain):
   - Data for 70 series (the basket, split into housing, core goods and other services, and the
     chain's other metrics), the weights, and the event analysis.
   - The model, the report and the Iridis scripts.
-  - 14 tests (all passing in all three versions).
+  - 17 tests (all passing in all three versions).
 - **Main model (adopted 2026-10-25): oil and gas for every series, plus grain prices for bread
   and cereals,** with the chain's other metrics fitted alongside. Out of sample:
   - **Against the average link:**
@@ -272,8 +273,45 @@ NUTS (2 chains, 500 warm-up, 1,000 draws per chain):
         premia included. Michigan is households' expectations.
       - The benchmarks get a fixed-width band from their own past errors, while ours widens with
         oil volatility, which helps us in 2008 and 2020–22.
-      - The fair short-horizon competitor is a monthly nowcast (the Cleveland Fed's, with daily oil
-        and weekly petrol), which isn't scored here.
+      - At 1–3 months the fair competitor is the Cleveland Fed's monthly nowcast, and against it
+        the lead doesn't survive (next bullet).
+  - **Against the Cleveland Fed's nowcast (US CPI at 1–3 months, as first published): the lead
+    doesn't survive.**
+    - **The test lines up the information.**
+      - Our forecast from month t can be made once month t's CPI is published, about two weeks
+        into t+1. The nowcast is taken on the first business day after that release.
+      - Both are scored on CPI as first published, the actual on the Cleveland charts. For the 52
+        months that can be checked, 51 match the Philadelphia Fed's real-time vintages to 0.005 pp.
+      - The nowcast is a point. It gets three bands from its own earlier errors only: fixed, EWMA,
+        and one that scales with Brent's volatility. The table gives it the best of the three.
+      - Ours are the same 8 folds' forecasts with Lévy Brent paths, refitted to save their draws
+        (`COL_DRAWS`, Iridis job 1973944). The refit reproduces the published fold scores exactly.
+
+    | US CPI (CRPS, pp) | Origins | Our composite | Cleveland, best band (EWMA) | Ours against it |
+    |---|---|---|---|---|
+    | Next month | 135 | 0.123 | 0.087 | 41% higher (t +4.2) |
+    | This quarter (annualised q/q), all 3 months to come | 42 | 0.921 | 0.776 | 19% higher (t +1.4) |
+    | This quarter, 2 months to come | 40 | 0.491 | 0.413 | 19% higher (t +1.1) |
+
+    - The nowcast is clearly better at 1 month and ahead on the quarter, though the quarter's gap is
+      within noise. Our direct headline forecast does worse still: 57% higher at 1 month.
+    - **Why: the month's energy prices as they come in.**
+      - Cleveland's first nowcast of each month, made at its start, doesn't yet have last month's
+        CPI, and its oil runs to the month before, as ours does. It is level with our composite
+        (0.124 against 0.123, t −0.1).
+      - Two weeks later, with that CPI plus daily oil and weekly petrol, it is at 0.087, and at
+        0.075 just before the release.
+      - Our model uses monthly Brent only, so it can't see energy moves inside the month it is
+        forecasting.
+    - **Our bands are calibrated on first-published CPI:** 90% of next-month outcomes fall inside
+      them, and 88–93% on the quarter. Scoring on revised CPI flatters us a little (CRPS 0.113
+      against 0.123).
+    - **So the earlier lead at 1–3 months came from the benchmark and the timing, not a better
+      short-term model.** That benchmark was a 1-year expectation scaled down, taken before the
+      origin month's CPI. For next month's CPI use the Cleveland nowcast. Our model's value is the
+      item detail, the scenarios and the horizons beyond a quarter.
+    - Closing the gap would need intra-month energy prices: daily Brent and weekly petrol, as a
+      part-month input for month t+1.
   - **Brent paths: Lévy is best at 3–12 months.**
     - Against daily Student-t paths: −0.80 ± 0.51 at 12 months.
     - Against a monthly GARCH-t: −1.98 ± 1.08 at 12 months.
@@ -448,6 +486,7 @@ uv run experiments/cost_of_living.py report            # notes/cost-of-living.md
 COL_FOOD=0 uv run experiments/cost_of_living.py fit fold-3  # the oil-and-gas-only base
 COL_FOOD=1 uv run experiments/cost_of_living.py fit fold-3  # grain and urea for every food item (rejected)
 uv run experiments/macro_global.py benchmarks          # Fed and SPF forecasts for the report (skipped if absent)
+COL_DRAWS=us_composite,us_all uv run experiments/cost_of_living.py fit fold-3  # also save the fold's 1-3 month draws
 ```
 
 Fit on Iridis rather than the laptop: a fold takes about a minute there. Copy up `experiments/`,
@@ -459,7 +498,15 @@ sbatch --array=0-21 cluster/iridis/cost_of_living.slurm
 ```
 
 Tasks 0–10 are the base model, 11–21 the food-driver version (`COL_FOOD=1`) and 22–32 the main,
-bread-only version (`COL_FOOD=bread`). All use 1,000 draws per chain (`COL_SAMPLES`).
+bread-only version (`COL_FOOD=bread`). All use 1,000 draws per chain (`COL_SAMPLES`). The nowcast
+test needs the main model's folds with their draws saved:
+
+```bash
+COL_DRAWS=us_composite,us_all sbatch --array=25-32 cluster/iridis/cost_of_living.slurm
+```
+
+Then copy `runs/col-food-bread/fold-*-draws.npz` back and run the report. It fetches the Cleveland
+nowcasts into `data/raw/macro/` and skips the section if the draws are missing.
 
 ## Outputs for the UI
 
@@ -496,6 +543,10 @@ bread-only version (`COL_FOOD=bread`). All use 1,000 draws per chain (`COL_SAMPL
   - US fruit and vegetables is one index.
   - Euro-area weights are for the current euro area, while the indices are the 19-country series.
 - **Yearly Lévy fits.** An origin in October uses a fit that ends the previous December.
+- **No energy prices inside the month.** The model takes monthly Brent and gas averages, so at 1–3
+  months it trails the Cleveland Fed's nowcast, which reads daily oil and weekly petrol as they come in.
+- **Trained on revised data.** The nowcast test scores on CPI as first published, but the fits and the
+  starting values use today's revised series (CPI is revised only through its seasonal factors).
 - **Unemployment and rates have no validated oil link.** Their multipliers scale effects of a few
   hundredths of a point, so the app should keep showing 0 or a labelled range.
 - **Industry costs are US only.** Their multipliers are pooled within each group (fuel, transport,
