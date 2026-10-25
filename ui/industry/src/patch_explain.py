@@ -50,8 +50,8 @@ EXPLAIN_JS = r'''  // ----------------------------------------------------------
   // what the page shows for a country, each with where it comes from
   function countryFacts(name) {
     const iso = isoOf[name], k = calc(name), out = [scenFact()];
-    out.push(`${nmIso(iso)} exposure score ${fmtS(k.score)} on a -40 (gains) to +65 (hurt) scale (this page's model, from the simulated scenario)`);
-    out.push(`Fuel cost ${pct(k.fuel)} vs pre-war: Brent to retail fuel link validated on FRED (fitted 1991-2008, tested 2009-2026) plus an assumed shortage premium`);
+    out.push(`${nmIso(iso)} exposure score ${fmtS(k.score)} on a -40 (gains) to +65 (hurt) scale (an illustrative index: its weights are hand-set, not from a model; inputs from the scenario)`);
+    out.push(`Fuel cost ${pct(k.fuel)} vs pre-war: Brent to retail fuel link validated on FRED (fitted 1991-2008, tested 2009-2026) plus a hand-set shortage premium (0.8, not fitted to data)`);
     if (k.d.c) out.push(`About ${(k.hz * 100).toFixed(0)}% of ${nmIso(iso)}'s oil use comes through Hormuz (this page's country table)`);
     if (VIA[name]) out.push(`${nmIso(iso)} exports oil: ${VIA[name]}`);
     for (const r of industries(name).slice(0, 4)) out.push(`${r.label}: ${r.v == null ? "no sourced cost share" : `costs ${pct(r.lo / 100, 1)} to ${pct(r.hi / 100, 1)} (${r.src || "sourced share"})`}; ${String(r.why || "").slice(0, 120)}`);
