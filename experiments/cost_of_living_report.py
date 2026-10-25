@@ -44,10 +44,7 @@ INSTITUTIONS = (("cleveland", "Cleveland Fed 1-year expected inflation (FRED EXP
                 ("spf_latest", "SPF median, latest survey at every month-end"),
                 ("rw", "Random walk: last 12-month pace carries on"))
 BENCH_LAG = 12  # Newey-West lags of the comparison, as in the chain's Diebold-Mariano tests
-# The Cleveland Fed's inflation nowcasts: the chart data behind clevelandfed.org/indicators-and-data/inflation-nowcasting.
-# For each month (or quarter) since 2013-07, the CPI nowcast on every business day up to the release, and CPI as
-# first published on release day.
-NOWCAST_URL = "https://www.clevelandfed.org/-/media/files/webcharts/inflationnowcasting/nowcast_{}.json?sc_lang=en"
+# The Cleveland Fed's inflation nowcasts (col.nowcasts): how they are scored.
 NOWCAST_MIN = {"month": 12, "quarter": 8}  # earlier errors a benchmark band needs before it is scored
 NOWCAST_LAG = {"month": 3, "quarter": 1}  # Newey-West lags of the nowcast comparison
 EWMA = 0.9  # monthly decay of a benchmark's EWMA error variance (half-life 6.6 months)
@@ -58,6 +55,13 @@ BANDS = (("fixed", "fixed band (spread of its earlier errors)"), ("ewma", "EWMA 
 # release (it knows the whole month's oil and petrol)
 OTHER_NOWCASTS = (("first", "first nowcast of the month, made at its start (not yet last month's CPI), EWMA band"),
                   ("last", "last nowcast before the release (knows the whole month), EWMA band"))
+# Our forecasts made the same day with the next month's prices published so far (col.month_to_date_modes), and the
+# version with retail petrol as a driver (COL_PETROL=1): (runs folder, draws tag, label). Each is scored when all 8
+# folds saved its draws.
+MTD_VARIANTS = ((col.RUNS_MAIN, "mtd_brent", "Main model, with the month's Brent so far"),
+                (col.RUNS_PETROL, "", "With petrol as a driver"),
+                (col.RUNS_PETROL, "mtd_brent", "With petrol as a driver and the month's Brent so far"),
+                (col.RUNS_PETROL, "mtd", "With petrol as a driver and the month's Brent and pump prices so far"))
 
 
 def converged(d: dict) -> bool:
@@ -320,28 +324,6 @@ def institutions_section(folds: list[dict], bench: dict, lagged: list[dict] | No
     return out + tables(folds, "forecast_GARCH-CGMY")
 
 
-def nowcasts(freq: str) -> pd.DataFrame:
-    """One row per target month or quarter (freq "month" or "quarter"): the CPI nowcasts by business day,
-    the release date and CPI as first published (month: % change; quarter: annualised % change; both
-    seasonally adjusted)."""
-    path = col.md._get(NOWCAST_URL.format(freq), col.md.RAW / f"cleveland_nowcast_{freq}.json")
-    rows = []
-    for e in json.loads(path.read_text(encoding="utf-8")):
-        cap = e["chart"]["subcaption"]  # "2013-7" or "2013:Q3"
-        y, m = (int(cap[:4]), 3 * int(cap[-1]) - 2) if ":" in cap else map(int, cap.split("-"))
-        days = []
-        for c in e["categories"][0]["category"]:
-            if not c.get("vline"):  # the vertical lines mark releases and carry no data
-                mm, dd = map(int, c["label"].split("/"))
-                days.append(pd.Timestamp(y + (mm < m), mm, dd))  # the labels run on past December
-        ser = {s["seriesname"]: [d.get("value", "") for d in s["data"]] for s in e["dataset"]}
-        now = pd.Series({d: float(v) for d, v in zip(days, ser.get("CPI Inflation", [])) if v not in ("", None)}, dtype=float)
-        act = [(d, float(v)) for d, v in zip(days, ser.get("Actual CPI Inflation", [])) if v not in ("", None)]
-        rows.append({"period": pd.Timestamp(y, m, 1), "nowcasts": now, "released": act[0][0] if act else pd.NaT,
-                     "actual": act[0][1] if act else np.nan})
-    return pd.DataFrame(rows).set_index("period").sort_index()
-
-
 def bands(err: np.ndarray, vol: np.ndarray, n_min: int, lam: float) -> dict:
     """The sd of a point forecast's band for each target, from its earlier errors only (NaN until there
     are n_min): fixed (their spread), ewma (an EWMA of their squares, decay lam per target) and oil (log
@@ -370,10 +352,16 @@ def quarter_rate(levels: np.ndarray) -> np.ndarray:
     return 100 * ((lv[..., 3:].mean(-1) / lv[..., :3].mean(-1)) ** 4 - 1)
 
 
-def nowcast_draws() -> dict | None:
-    """Our saved 1-3 month Lévy forecasts by origin month: {origin: {key: [draws, 3]}}, or None."""
-    files = [col.RUNS_MAIN / f"fold-{j}-draws.npz" for j in range(8)]
-    if not all(f.exists() for f in files):
+def nowcast_draws(folder=None, tag: str = "") -> dict | None:
+    """Our saved 1-3 month Lévy forecasts by origin month, {origin: {key: [draws, 3]}}, from the 8 folds'
+    fold-<j>[-tag]-draws.npz in a runs folder (the main model's by default), or None."""
+    folder = folder or col.RUNS_MAIN
+    files = [folder / f"fold-{j}{'-' + tag if tag else ''}-draws.npz" for j in range(8)]
+    if tag:  # the part-month modes skip a fold whose origins all come before Cleveland's first release date
+        early = lambda j: (folder / f"fold-{j}.json").exists() and max(  # noqa: E731
+            json.loads((folder / f"fold-{j}.json").read_text())["origins"]) < "2013-08"
+        files = [f for j, f in enumerate(files) if f.exists() or not early(j)]
+    if not files or not all(f.exists() for f in files):
         return None
     out = {}
     for f in files:
@@ -388,7 +376,8 @@ def nowcast_section(data: dict) -> list[str]:
     draws = nowcast_draws()
     if draws is None:
         return []
-    mon, qtr = nowcasts("month"), nowcasts("quarter")
+    variants = [(lab, d) for folder, tag, lab in MTD_VARIANTS if (d := nowcast_draws(folder, tag)) is not None]
+    mon, qtr = col.nowcasts("month"), col.nowcasts("quarter")
     lg = lambda p: float(100 * np.log1p(p / 100))  # noqa: E731  # % change -> log change x100
     first = 100 * np.log1p(mon["actual"] / 100)  # CPI as first published, by month
     N = len(next(iter(draws.values()))["us_composite"])
@@ -435,18 +424,20 @@ def nowcast_section(data: dict) -> list[str]:
         ok = np.isfinite(df["y"].values) & np.isfinite(df["mu"].values) & np.isfinite(np.c_[tuple(sd.values())]).all(1)
         for b, _ in others:
             ok &= np.isfinite(df[f"mu_{b}"].values)
-        S = {}
-        for k, _ in ours:
+        def paths(dr: dict, k: str) -> np.ndarray:
+            """[draws, targets]: next month's change, or the quarter's annualised rate."""
             if freq == "month":
-                S[k] = np.stack([draws[o][k][:, 0] if o in draws else np.full(N, np.nan) for o in df["origin"]], 1)
-            else:
-                lv = []
-                for o, kn in zip(df["origin"], df["known"]):
-                    # log levels relative to month t: the known months from q-3 to t, then our paths
-                    known = -np.r_[np.cumsum(np.asarray(kn)[::-1])[::-1], 0.0]
-                    lv.append(np.c_[np.repeat(known[None], N, 0), draws[o][k][:, :ahead]] if o in draws
-                              else np.full((N, 6), np.nan))
-                S[k] = quarter_rate(np.stack(lv, 1))  # [draws, targets]
+                return np.stack([dr[o][k][:, 0] if o in dr else np.full(N, np.nan) for o in df["origin"]], 1)
+            lv = []
+            for o, kn in zip(df["origin"], df["known"]):
+                # log levels relative to month t: the known months from q-3 to t, then our paths
+                known = -np.r_[np.cumsum(np.asarray(kn)[::-1])[::-1], 0.0]
+                lv.append(np.c_[np.repeat(known[None], N, 0), dr[o][k][:, :ahead]] if o in dr and np.isfinite(dr[o][k]).all()
+                          else np.full((N, 6), np.nan))
+            return quarter_rate(np.stack(lv, 1))
+
+        S = {k: paths(draws, k) for k, _ in ours}
+        for k in S:
             ok &= np.all(np.isfinite(S[k]), 0)
         y = df["y"].values[ok]
         res = {"n": int(ok.sum()), "from": df["target"][ok].min(), "to": df["target"][ok].max(), "rows": []}
@@ -464,6 +455,24 @@ def nowcast_section(data: dict) -> list[str]:
             okr = np.isfinite(rv_)
             res["revised"] = (col.crps_samples(S["us_composite"][:, ok][:, okr], rv_[okr]).mean(),
                               col.crps_samples(S["us_composite"][:, ok][:, okr], y[okr]).mean(), int(okr.sum()))
+        # the variants, on the origins every one of them has, against Cleveland's best band there
+        V = [("Main model, as above", S)] + [(lab, {k: paths(dr, k) for k, _ in ours}) for lab, dr in variants]
+        okv = ok.copy()
+        for _, Sv in V:
+            for k in Sv:
+                okv &= np.all(np.isfinite(Sv[k]), 0)
+        yv = df["y"].values[okv]
+        cle = {b: col.crps_normal(df["mu"].values[okv], sd[b][okv], yv) for b, _ in BANDS}
+        best = min(cle, key=lambda b: cle[b].mean())
+        rows_v = []
+        for lab, Sv in V:
+            cells = {}
+            for k, _ in ours:
+                sv = Sv[k][:, okv]
+                lo, hi = np.quantile(sv, 0.05, 0), np.quantile(sv, 0.95, 0)
+                cells[k] = (col.crps_samples(sv, yv), np.mean((yv >= lo) & (yv <= hi)))
+            rows_v.append((lab, cells))
+        res["variants"] = {"n": int(okv.sum()), "best": best, "cle": cle[best], "rows": rows_v}
         return res
 
     def vs(a: np.ndarray, b: np.ndarray, lag: int) -> str:
@@ -508,7 +517,56 @@ def nowcast_section(data: dict) -> list[str]:
             out += ["", f"Scored on today's revised CPI instead, our composite's CRPS is {rv_:.3f} against {fp:.3f} on "
                     f"first-published CPI ({n} origins with both)."]
         out.append("")
+        v = res["variants"]
+        if len(v["rows"]) > 1:
+            out += [f"With the next month's prices published by the same day ({v['n']} origins), against the Cleveland "
+                    f"nowcast with its best band here, {dict(BANDS)[v['best']].split(' (')[0]} (CRPS {v['cle'].mean():.3f}):", "",
+                    "| Our forecast | Composite CRPS | 90% band holds | Composite against Cleveland | Headline CRPS | "
+                    "Headline against Cleveland |", "|---|---|---|---|---|---|"]
+            for lab, cells in v["rows"]:
+                (cc, cov), (hc, _) = cells["us_composite"], cells["us_all"]
+                out.append(f"| {lab} | {cc.mean():.3f} | {pct(cov)} | {vs(cc, v['cle'], lag)} | {hc.mean():.3f} | "
+                           f"{vs(hc, v['cle'], lag)} |")
+            out.append("")
+    if variants:
+        out += ["The month's prices so far: Brent's trading days before the forecast day are fixed and the rest of the month "
+                "comes from the daily Lévy model, run on from them; a week's pump price counts as published "
+                f"{col.PETROL_WEEK_LAG} days after its Monday, and the month's other weeks follow a random walk from the "
+                "latest. With petrol as a driver, it enters US motor fuel and the direct US headline at lags "
+                f"0-{col.PETROL_LAGS}, and beyond the month the pump follows simulated Brent over lags 0-{col.PETROL_LAGS} "
+                "(`COL_PETROL=1`, `runs/col-petrol/`).", ""]
     return out
+
+
+def petrol_section(main: dict, petrol: dict) -> list[str]:
+    """US retail petrol as a driver (COL_PETROL=1) against the main model, on the same 8 folds."""
+    mf = [main.get(f"fold-{j}") for j in range(8)]
+    pf = [petrol.get(f"fold-{j}") for j in range(8)]
+    if not (all(mf) and all(pf)):
+        return []
+    assert [f["origins"] for f in mf] == [f["origins"] for f in pf], "petrol runs: origins differ"
+    clim = stack(mf, "climatology")
+    out = ["## US retail petrol as a driver, against the main model", "",
+           f"`COL_PETROL=1`: the EIA's weekly US regular retail gasoline price (FRED `GASREGW`, monthly average) drives "
+           f"US motor fuel and the direct US headline at lags 0-{col.PETROL_LAGS}; nothing else changes. In forecasts the "
+           f"pump follows simulated Brent over lags 0-{col.PETROL_LAGS} plus its own GARCH-t noise, so beyond the "
+           "forecast month it adds no information, only a different route from crude. Same folds and seeds; difference in "
+           "CRPS in units of the main model's climatology (negative = petrol better), * beyond 2 Newey-West errors.", "",
+           "| Series | Mode | " + " | ".join(f"h={h}" for h in col.HS) + " |", "|---|---|" + "---|" * len(col.HS)]
+    for key in ("us_fuel", "us_all", "us_composite"):
+        c = cols([key])
+        for mode, lab in (("whatif", "given oil, gas and petrol as they happened"),
+                          ("forecast_GARCH-CGMY", "forecast, Lévy Brent paths"),
+                          ("forecast_mtd_brent", "forecast with the month's Brent so far")):
+            if mode not in pf[0]["modes"] or mode not in mf[0]["modes"]:
+                continue
+            A, B = stack(pf, mode), stack(mf, mode)
+            cells = []
+            for h in col.HS:
+                d, se = diff(A, B, clim, c, H_IDX[h])
+                cells.append(f"{d:+.3f} ± {se:.3f}{' *' if abs(d) > 2 * se else ''}")
+            out.append(f"| {NAME[key]} | {lab} | " + " | ".join(cells) + " |")
+    return out + [""]
 
 
 def event_test(ev: dict, label: str) -> list[str]:
@@ -947,6 +1005,7 @@ def write() -> None:
     data = col.load()
     runs, failed = load_runs(col.RUNS_MAIN)  # the main model: oil and gas, plus grain for bread and cereals
     base_runs, base_failed = load_runs(col.RUNS_BASE)
+    petrol_runs, petrol_failed = load_runs(col.RUNS_PETROL)
     food_runs, food_failed = load_runs(col.RUNS_FOOD)
     folds = [runs[f"fold-{j}"] for j in range(8) if f"fold-{j}" in runs]
     today = datetime.now(UTC).date().isoformat()
@@ -964,7 +1023,8 @@ def write() -> None:
            "version that scored worse, are at the end.", "",
            "Method: `docs/cost-of-living.md`. Skill is 1 − CRPS / CRPS of climatology, with each series weighted equally "
            "in a group; 0 is no better than climatology.", ""]
-    for lab, fl in (("", failed), (" (base runs)", base_failed), (" (grain-and-urea runs)", food_failed)):
+    for lab, fl in (("", failed), (" (base runs)", base_failed), (" (grain-and-urea runs)", food_failed),
+                     (" (petrol runs)", petrol_failed)):
         if fl:
             out += [f"**Left out{lab}, chains not converged** (needs R-hat ≤ {R_HAT_MAX} and ESS ≥ {ESS_MIN}): " + "; ".join(
                 f"{n} (R-hat {r['diagnostics']['max_r_hat']}, ESS {r['diagnostics']['min_ess']})" for n, r in fl.items()), ""]
@@ -988,6 +1048,8 @@ def write() -> None:
         out += multipliers_section(runs["final"], runs.get("event-2026"))[0]
     if base_runs:
         out += bread_section(base_runs, runs)
+    if petrol_runs:
+        out += petrol_section(runs, petrol_runs)
     if base_runs and food_runs:
         out += food_section(base_runs, food_runs, data)
     out += data_section(data)

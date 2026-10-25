@@ -26,6 +26,10 @@ MODES=(0 1 bread)
 export COL_FOOD=${MODES[$((TASK / 11))]}
 # COL_LAGGED=1: task j is fold j of the main model, forecast from a month earlier for the Fed/SPF comparison
 #   sbatch --array=0-7 --export=ALL,COL_LAGGED=1 cluster/iridis/cost_of_living.slurm
+# COL_PETROL=1 (tasks 25-32): the main model's folds with US retail petrol as a driver, into runs/col-petrol;
+# with COL_DRAWS=us_composite,us_all every fold also saves its 1-3 month draws, the part-month ones included
+#   COL_PETROL=1 COL_DRAWS=us_composite,us_all sbatch --array=25-32 cluster/iridis/cost_of_living.slurm
+# (set COL_DRAWS in the environment: sbatch --export splits on commas and would drop us_all)
 if [ "${COL_LAGGED:-0}" = 1 ]; then NAME=fold-$TASK-lagged; export COL_FOOD=bread; fi
 export COL_SAMPLES=${COL_SAMPLES:-1000}  # draws per chain; 500 left one fold just under ESS 100
 
