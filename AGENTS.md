@@ -1,7 +1,8 @@
 # OxHack26: notes for the coding sessions
 
-OxHack 2026. **TODO:** track, dates and the hard submission lock (copy them from the event brief
-into `Context/event-rules.md`, then put the lock time here).
+OxHack 2026: 24–25 Oct 2026 in Oxford (a third-party listing; `Context/event-rules.md`). The track and the
+hard submission lock were not in anything published we found: get them from the organisers into
+`Context/event-rules.md`, then put the lock time here.
 
 Read in this order at the start of every session:
 
@@ -21,7 +22,8 @@ Ground rules:
 - Stay in your lane's paths (see PROTOCOL.md). Shared files change through a PR.
 - Commits carry only the human's name: no `Co-Authored-By` lines for an AI model, no AI session
   links, and never an AI tool as author or committer.
-- **TODO:** add the event's rules on AI use and provenance once we have them.
+- The event's rules on AI use and provenance were not published; until they are, ours are in
+  `Context/event-rules.md`: AI-written text is labelled with its model and date and never feeds a number.
 
 Commands (oil-price and knock-on experiments; see `docs/oil-price-model.md`):
 
