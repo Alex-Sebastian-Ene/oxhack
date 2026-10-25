@@ -310,6 +310,50 @@ window.HZHouseholds = (() => {
     $("hh-mini-src").innerHTML = "Model output: the team's household model, nearest modelled case.";
   }
 
+  // ------------------------------------------------------------ short source notes for the info sheets
+  const fetchedRange = (() => {
+    const ds = [...new Set(Object.values(D.meta || {}).map((m) => String(m[3] || "")).filter(Boolean))].sort();
+    const fmt = (x) => { const [y, m, dd] = x.split("-"); return `${+dd} ${MON[+m - 1]} ${y}`; };
+    return !ds.length ? "" : ds.length === 1 ? fmt(ds[0]) : `${fmt(ds[0])} to ${fmt(ds[ds.length - 1])}`;
+  })();
+  const li = (xs) => `<ul class="hz-short">${xs.filter(Boolean).map((x) => `<li>${x}</li>`).join("")}</ul>`;
+  const SHORT = {
+    "hh-pay-src": () => li([
+      "Real pay = pay ÷ consumer prices, 2019 = 100.",
+      "<b>US:</b> BLS pay and prices (via FRED). <b>UK:</b> ONS. <b>Euro area:</b> Eurostat, quarterly from 2009.",
+      fetchedRange && `Fetched ${fetchedRange}.`]),
+    "hh-scen-src": () => li([
+      "The team's household model: prices follow the oil-shock model's path for each closure size; pay keeps its pace from before Feb 2026.",
+      "“What happened” uses the same data as step 1."]),
+    "hh-gs-src": () => li([
+      `The team's household model: item price ranges weighted by what each UK group spends (${esc(D.weights_year)} weights, ONS).`,
+      "Mortgage interest is held flat."]),
+    "hh-who-src": () => li([
+      `ONS Household Costs Indices; spending shares are the ${esc(D.weights_year)} weights.`,
+      D.groups_fetched ? `Fetched ${esc(D.groups_fetched)}. Official statistics in development.` : "Official statistics in development."]),
+    "hh-ess-src": () => li([
+      "Each item's price ÷ pay, 2019 = 100.",
+      "<b>US:</b> BLS (via FRED). <b>UK:</b> ONS. <b>Euro area:</b> Eurostat (via FRED). UK rent is housing, water and fuels.",
+      fetchedRange && `Fetched ${fetchedRange}.`]),
+  };
+  // open the info sheet beside the button that opened it, kept inside the window
+  function placeSheet(sh, b) {
+    const r = b.getBoundingClientRect(), W = innerWidth, H = innerHeight, pad = 12;
+    const w = Math.min(380, W - 2 * pad);
+    sh.style.width = `${w}px`; sh.style.right = "auto"; sh.style.bottom = "auto";
+    sh.style.maxHeight = `${Math.min(H * 0.7, 520)}px`;
+    const h = sh.getBoundingClientRect().height;
+    let left = r.right - w, top = r.bottom + 8;                 // below the button, right-aligned to it
+    if (top + h > H - pad) top = Math.max(pad, r.top - h - 8);   // or above it, if there's no room below
+    sh.style.left = `${Math.max(pad, Math.min(left, W - w - pad))}px`;
+    sh.style.top = `${top}px`;
+    sh.dataset.hzPlaced = "1";
+  }
+  // any other info sheet (map key, model notes) opens in its usual corner
+  const resetSheet = () => { const sh = $("sheet"); if (sh && sh.dataset.hzPlaced) { ["width", "right", "bottom", "left", "top", "maxHeight"].forEach((k) => (sh.style[k] = "")); delete sh.dataset.hzPlaced; } };
+  document.addEventListener("click", (e) => { const t = e.target.closest("[data-info], [data-winfo], #sheet-close"); if (t) resetSheet(); }, true);
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") resetSheet(); });
+
   // ------------------------------------------------------------ show / hide, and drawing
   const KEY = "hz-page";
   function show(on, quiet) {
@@ -365,8 +409,12 @@ window.HZHouseholds = (() => {
       const card = b.closest(".card"), q = card.querySelector("h3").textContent;
       const tag = card.querySelector(".tagr, .tagm");
       $("sheet-title").textContent = q;
-      $("sheet-body").innerHTML = `${tag ? `<div class="hz-tagline">${tag.outerHTML}</div>` : ""}${$(d.hsrc).innerHTML}`;
-      $("sheet").hidden = false; $("sheet-close").focus();
+      $("sheet-body").innerHTML = `${tag ? `<div class="hz-tagline">${tag.outerHTML}</div>` : ""}${SHORT[d.hsrc] ? SHORT[d.hsrc]() : ""}
+        <details class="hz-codes"><summary>Series codes</summary><p>${$(d.hsrc).innerHTML}</p></details>`;
+      const sh = $("sheet");
+      sh.hidden = false;
+      placeSheet(sh, b);
+      $("sheet-close").focus();
       return;
     }
     if (d.hdrop === "iea") { pathBtn.click(); return; }

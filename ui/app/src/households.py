@@ -170,6 +170,11 @@ CSS = """/* Households page (households.py, households.js) */
 .hz-hh .hz-ch .hz-i { position: absolute; top: 0; right: 0; width: 32px; min-height: 32px; }
 .hz-hh .tagr { font: 400 15px var(--mono); padding: 0 6px; border: 2px dashed #3f9a6e; color: #7ee0b0; letter-spacing: 1px; }
 .hz-hh .hz-keys-c { justify-content: center; margin-top: -4px; }
+/* short source notes in the info sheet, full series codes folded underneath */
+.sheet .hz-short { margin: 6px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; line-height: 1.5; color: var(--text); }
+.sheet .hz-codes { margin-top: 10px; }
+.sheet .hz-codes summary { cursor: pointer; font-size: 12.5px; color: var(--muted); min-height: 28px; display: flex; align-items: center; }
+.sheet .hz-codes p { font-size: 12px; line-height: 1.5; color: var(--faint); overflow-wrap: anywhere; }
 /* step 3: each value on one line, so its rows sit at the same spacing as the table beside it */
 .hz-hh #hh-gs-rows { gap: 0; }
 .hz-hh #hh-gs-rows .rrow { grid-template-columns: 130px minmax(0, 1fr) 200px; min-height: 30px; border-top: 1px solid var(--line); }
