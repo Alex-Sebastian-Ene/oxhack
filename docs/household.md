@@ -10,6 +10,7 @@ would do to their pay.
 |---|---|---|
 | `experiments/household.py fetch` | Downloads and caches every series (`data/raw/macro/`, git-ignored) | |
 | `experiments/household.py report` | Builds the panel, the measures, the UK household-group tables and the scenario table | `notes/household-costs.md`, `notes/household-panel.csv`, `notes/household-measures.csv`, `notes/household-groups.csv`, `notes/household-group-weights.csv`, `notes/household-scenarios.csv` |
+| `experiments/household_dash.py` | Cuts the notes above into the dashboard's ten files, with a table of every series' source, code, period and fetch date, and wraps the page `experiments/household_dash.html` | `runs/dash/*.csv`, `runs/dash/page.json` (git-ignored) |
 | `tests/test_household.py` | Mortgage arithmetic, real pay and work-minutes, squeezes, the HCI parser, the scenarios, and a check of the cached ONS file against its bulletin | |
 
 ## Data
@@ -101,10 +102,19 @@ Once `seb/cost-of-living` is merged, `notes/cost-of-living-fans.csv` is found wi
 - **Euro-area pay is quarterly and starts in 2009** for the EA20 aggregate.
 - **The scenarios hold nominal pay at its prior pace;** pay's response to a shock isn't modelled.
 
+## Dashboard
+
+A claude.ai dashboard shows these files as charts: real pay and inflation, the squeezes, essentials in
+units of pay, US minutes of work, UK household groups and their spending shares, mortgage costs, the
+Hormuz scenarios, and the sources table. Its data are saved snapshots of the notes, not live feeds;
+model outputs are labelled as such on the page. To refresh it, re-run `report`, then
+`household_dash.py`, and upload the files again.
+
 ## Reproduce
 
 ```bash
 uv run experiments/household.py fetch
 uv run experiments/household.py report
+uv run --no-project --with numpy --with pandas --with scipy --with openpyxl python experiments/household_dash.py
 uv run --no-project --with pytest --with numpy --with scipy --with pandas --with xlrd --with openpyxl pytest -q tests/test_household.py
 ```
