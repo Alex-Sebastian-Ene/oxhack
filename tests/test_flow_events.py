@@ -1,5 +1,9 @@
 """experiments/flow_events.py: the event rule, per-point scaling, the placebo and the premium curve (synthetic data),
-and the IEA lost-flow path (synthetic, plus the sourced table's own consistency)."""
+and the IEA lost-flow path (synthetic, plus the sourced table's own consistency), and Bab el-Mandeb in Hormuz points
+(synthetic, plus notes/mandeb-link.json against notes/flow-events.md)."""
+
+import json
+import re
 
 import numpy as np
 import pandas as pd
@@ -241,3 +245,57 @@ def test_the_fit_keeps_the_tail_a_decay():
     # a path that already decays gets the same fit either way
     z = fe.curve_shape(d, 0.002, 0.007, 20, 15.0, 0.003)
     assert fe.fit_curve(z, decay_only=False) == fe.fit_curve(z)
+
+
+# --- Bab el-Mandeb in Hormuz points (`mandeb`, notes/mandeb-link.json) ---
+
+def test_shortfall_over_a_later_window():
+    s = share(drops=[("2020-02-01", 60, 0.6)])  # to 2020-03-31
+    # the pre-level at day 0, the mean over 11 days of the drop and 9 after it
+    assert fe.shortfall(s, "2020-02-01", "2020-04-09", a="2020-03-21") == pytest.approx(100 * (1 - (11 * 0.6 + 9) / 20))
+    assert fe.shortfall(s, "2020-02-01", "2020-02-20", a=None) == fe.shortfall(s, "2020-02-01", "2020-02-20")
+
+
+def test_bypass_lost():
+    byp = pd.Series(0.2, index=DAYS)
+    byp.loc["2020-03-01":] = 0.6  # a closure: the bypass port gains 0.4
+    byp.loc["2020-08-01":] = 0.3  # a later disruption takes 0.3 of that gain
+    assert fe.bypass_lost(byp, "2020-03-01", "2020-08-01", "2020-09-01", "2020-09-30") == pytest.approx(0.75)
+    byp.loc["2020-08-01":] = 0.05  # below its level before the closure: all of the gain, no more
+    assert fe.bypass_lost(byp, "2020-03-01", "2020-08-01", "2020-09-01", "2020-09-30") == 1.0
+    assert np.isnan(fe.bypass_lost(pd.Series(0.2, index=DAYS), "2020-03-01", "2020-08-01", "2020-09-01", "2020-09-30"))
+
+
+def test_hormuz_equivalent():
+    per, rer, byp = 0.4, 0.75, 0.2
+    assert fe.hormuz_equivalent(50, 0, per, rer, byp) == {"red": 0, "bypass": 0, "raw": 50, "eq": 50, "capped": False}
+    # Bab el-Mandeb alone: its tonnage in Hormuz points, net of the rerouted share; no Hormuz closure, no bypass to lose
+    q = fe.hormuz_equivalent(0, 50, per, rer, byp)
+    assert (q["red"], q["bypass"], q["eq"]) == pytest.approx((5.0, 0.0, 5.0))
+    # both: the bypass is lost in the same share as the strait's flow, unless measured
+    assert fe.hormuz_equivalent(60, 50, per, rer, byp)["raw"] == pytest.approx(60 + 5 + 60 * byp * 0.5)
+    assert fe.hormuz_equivalent(60, 50, per, rer, byp, bypass_lost=1.0)["raw"] == pytest.approx(60 + 5 + 60 * byp)
+    # the chain's tables stop at Hormuz shut
+    q = fe.hormuz_equivalent(100, 50, per, rer, byp)
+    assert q["raw"] == pytest.approx(115) and q["eq"] == 100 and q["capped"]
+
+
+def test_the_mandeb_link_note():
+    link = json.loads((fe.md.ROOT / "notes" / fe.MANDEB_OUT).read_text(encoding="utf-8"))
+    note = (fe.md.ROOT / "notes" / "flow-events.md").read_text(encoding="utf-8")
+    # the same study as notes/flow-events.md: its conversion and the 2023-24 event's +120-day row
+    assert f"one Bab el-Mandeb point = {link['hormuz_per_mandeb_point']:.3f} Hormuz points" in note
+    d = link["diversion_2024"]
+    section = note[note.index(f"### Bab el-Mandeb, day 0 {d['day0']}"):]
+    row = re.search(r"\| \+120 \| (\S+) \| (\d+) \| (\d+) \| (\d+) \|", section)
+    assert row.group(1) == d["to"] and [int(x) for x in row.groups()[1:]] == [round(d["lost"]), round(d["rerouted"]), round(d["net"])]
+    assert d["rerouted_share"] == pytest.approx(d["rerouted"] / d["lost"], abs=1e-3)
+    b, y = link["blockade_2026"], link["yanbu_bypass"]
+    assert 0 < b["lost"] <= 100 * b["pre_level"] and 0 <= b["yanbu_lost"] <= 1 and b["month"] > b["declared"][:7]
+    assert 0 < y["share"] < y["share_before_blockade"] < 1  # the bypass ran before the blockade, not after
+    assert all(k in link and link[k] for k in ("generated", "source", "per_src", "combined"))
+    # the worked examples are hormuz_equivalent with the file's own numbers (the app checks its copy against them)
+    for e in link["examples"]:
+        q = fe.hormuz_equivalent(e["lost"], e["bab"], link["hormuz_per_mandeb_point"], d["rerouted_share"], y["share"], e["bypass_lost"])
+        assert q["capped"] == e["capped"] and [q[k] for k in ("red", "bypass", "raw", "eq")] == pytest.approx(
+            [e[k] for k in ("red", "bypass", "raw", "eq")], abs=1e-3)

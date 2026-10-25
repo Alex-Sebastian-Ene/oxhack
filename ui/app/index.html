@@ -453,6 +453,14 @@ select { padding: 0 8px; }
 .marks span.last { transform: translateX(-100%); align-items: flex-end; }
 .presets { display: flex; flex-wrap: wrap; gap: 6px; }
 .resv { display: grid; gap: 6px; margin-top: 10px; }
+.babv { display: grid; gap: 6px; margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--line2); }
+.babv .sub { margin: 0; }
+.babv .sub b { color: var(--text); }
+.babhead { display: flex; align-items: baseline; gap: 8px; }
+.babhead b { font: 500 26px/1 var(--mono); color: #d6337a; }
+.babhead span { font-size: 13px; color: var(--muted); }
+.babv input { width: 100%; margin: 0; accent-color: #d6337a; min-height: 28px; display: block; }
+.babv .tagm { font-style: normal; font-size: 11px; color: var(--muted); }
 .resv .sub { margin: 0; }
 .presets button { min-height: 34px; font-size: 13px; padding: 0 12px; border-radius: 999px; background: var(--panel); }
 .presets button[aria-pressed="true"] { background: var(--text); border-color: var(--text); color: #fff; }
@@ -547,6 +555,21 @@ select { padding: 0 8px; }
 .ichip b { font-weight: 600; }
 .ichip.x-un { border-style: dashed; color: var(--muted); }
 .x-cached { display: inline-block; margin-left: 4px; padding: 0 6px; border-radius: 999px; border: 1px dashed var(--line2); font: 600 10.5px/1.6 var(--sans); font-style: normal; color: var(--muted); text-transform: none; letter-spacing: 0; white-space: nowrap; }
+
+/* Bab el-Mandeb on the World map (patch_straits.py) */
+#world .babl path { fill: none; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+#world .babl .bcase { stroke: rgba(20,32,46,.55); pointer-events: none; }
+#world .babl .blane { stroke: #ff4f9a; stroke-dasharray: 6 5; animation: oilflow 1.8s linear infinite; pointer-events: stroke; opacity: .95; }
+#world .babl .blane.solid { stroke-dasharray: none; animation: none; }
+#world .babl .blane.cape { stroke-dasharray: 2 6; }
+#world .babl .idle { opacity: .3; }
+#world .babl .bcase.idle { opacity: .15; }
+#world .bab-pt { fill: #ff4f9a; stroke: #14202e; stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+#world .bab-pulse { fill: none; stroke: #ff4f9a; vector-effect: non-scaling-stroke; animation: pulse 2.4s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+#world .bablabel { fill: #d6337a; font: 600 12px var(--mono); letter-spacing: .6px; paint-order: stroke; stroke: var(--bg); stroke-width: 3px; }
+.legendbar .babkey i { border-top: 3px dashed #ff4f9a !important; filter: drop-shadow(0 0 1px rgba(20,32,46,.9)); }
+.legendbar .babkey[hidden] { display: none; }
+@media (prefers-reduced-motion: reduce) { #world .babl .blane { animation: none; } #world .bab-pulse { display: none; } }
 </style>
 <style>
 /* Pixelify Sans and VT323, SIL Open Font License 1.1 (ui/app/vendor/fonts), bundled so the app works offline */
@@ -3822,6 +3845,7 @@ window.HZIcons = {
         <div class="ticks" id="wticks"></div>
         <div class="flowkey"><i></i><span id="wflowkey">Oil leaving Hormuz, width = volume</span></div>
         <div class="flowkey gaskey" id="wgaskey"><i></i><span>Gas: LNG lanes, and pipelines (solid)</span></div>
+        <div class="flowkey babkey" id="wbabkey"><i></i><span id="wbabtxt">Through Bab el-Mandeb (pink)</span></div>
       </div>
       <div class="cpop" id="cpop" role="dialog" aria-labelledby="cp-name" hidden>
         <div class="ph"><span id="cp-flag"></span><b id="cp-name"></b><span class="tag" id="cp-tag"></span>
@@ -3946,6 +3970,18 @@ window.HZIcons = {
             <div><b id="w-miss" class="hurt">–</b><span>million barrels a day missing vs the pre-war 20</span></div>
           </div>
           <p class="sub west" id="w-est"></p>
+          <div class="babv">
+            <span class="label">And Bab el-Mandeb, the Red Sea's southern gate <i class="illus" title="Our model: one point of Bab el-Mandeb's normal tanker tonnage is 0.369 Hormuz points (PortWatch, 2019-2024 means); in the 2024 diversion 63% of the lost flow went round the Cape; Yanbu made up 18% of the Gulf's lost exports over the 2026 closure. Assumed: any Red Sea loss reroutes as in 2024; Yanbu's extra crude all sails through Bab el-Mandeb; losing a share of the strait's flow loses the same share of Yanbu's bypass unless measured (Sep 2026). Bab el-Mandeb: experiments/flow_events.py mandeb (notes/mandeb-link.json, generated 2026-10-25), IMF PortWatch tanker flows and port exports, as notes/flow-events.md">model + assumptions</i></span>
+            <div class="babhead"><b id="bab-v">0</b><span id="bab-u">points of its normal flow lost</span></div>
+            <label for="bab" class="sr">Lost Bab el-Mandeb flow, points of its normal tanker flow</label>
+            <input id="bab" type="range" min="0" max="100" step="1" value="0">
+            <div class="presets" role="group" aria-label="Bab el-Mandeb quick choices">
+              <button type="button" data-bab="0" aria-pressed="true">Normal · 0</button>
+              <button type="button" data-bab="71" aria-pressed="false" title="The 2023-24 Houthi attacks: 71 points of Bab el-Mandeb's flow lost by 2024-06-24 (from 2023-12-31, against the flow before), 63% of it rerouted round the Cape (PortWatch, notes/flow-events.md)">2024 diversion · 71</button>
+              <button type="button" data-bab="46" data-babf="1.0" aria-pressed="false" title="After the Houthis declared a blockade of Saudi shipping on 2026-07-20 (news reports): 46 points of the strait's flow lost in 2026-09 against the flow before, and Yanbu's extra exports gone (100%; PortWatch). The Cape gained nothing (-5 points)">Sep 2026 blockade · 46</button>
+            </div>
+            <p class="sub" id="w-bab"></p>
+          </div>
           <div class="resv">
             <span class="label">Emergency oil stocks <i class="illus" title="Assumption: Brent's premium scales with the barrels still missing after releases (one closure cannot test it). Stocks and the 2026 releases are sourced: notes/reserves.md">assumed</i></span>
             <div class="presets" role="group" aria-label="Emergency stock release">
@@ -4992,7 +5028,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
   };
 
   // ------------------------------------------------------------ model
-  const st = { key: "aug2026", path26: false, rel: "2026", lost: 82, brent: 99, est: null, sel: null, flow: 6.2, mat: null, mode: "production", wview: "flat", q: "", qOpen: false, pop: null };
+  const st = { key: "aug2026", path26: false, bab: 0, babF: 0, eq: 82, eqP: 82, babQ: null, rel: "2026", lost: 82, brent: 99, est: null, sel: null, flow: 6.2, mat: null, mode: "production", wview: "flat", q: "", qOpen: false, pop: null };
 
   // ------------------------------------------------------------ materials layer (Edward's materials globe)
   // Data: ui/globe/data (notes/materials/*.json via experiments/globe_data.py; search-result snippets, 24 Oct 2026).
@@ -5085,12 +5121,42 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
     return A.map((x, k) => x + dA[k] + w * (B[k] + dB[k] - x - dA[k]));
   }
   // what the shock adds against no disruption: in % for prices, in points for CPI (already about %) and unemployment
-  function chainEffect(series, month = 12, lost = st.lost, pol = st.rel) {
-    const a = st.path26 && lost === st.lost && pol === "2026" ? CHAIN26[series][month] : chainAt(series, lost, month, pol), z = chainAt(series, 0, month, pol)[0];
+  function chainEffect(series, month = 12, lost = st.eq, pol = st.rel) {
+    const a = st.path26 && lost === st.eq && pol === "2026" ? CHAIN26[series][month] : chainAt(series, lost, month, pol), z = chainAt(series, 0, month, pol)[0];
     const asPct = !/cpi|unemp/.test(series), f = (x) => (asPct ? (Math.exp((x - z) / 100) - 1) * 100 : x - z);
     return { mean: f(a[0]), lo: f(a[1]), hi: f(a[2]) };
   }
   const brentFor = (lost, e = PREM.mid) => BRENT0 * Math.exp(e * lost);
+  // Bab el-Mandeb in Hormuz points (patch_straits.py), notes/mandeb-link.json from experiments/flow_events.py mandeb:
+  // per: Hormuz points per Bab el-Mandeb point (tonnage); rerouted: share round the Cape in 2024; bypass: Yanbu's share
+  // of the Gulf's lost exports over the 2026 closure (built into the per-point curve, and lost with the Red Sea)
+  const BAB = {"per":0.3687,"rerouted":0.631,"bypass":0.179,"generated":"2026-10-25","y2024":{"lost":71,"from":"2023-12-31","to":"2024-06-24","rerouted":0.631},"b2026":{"lost":46,"f":1.0,"declared":"2026-07-20","month":"2026-09","cape":-5.4},"yanbu":{"share":0.179,"before":0.338,"from":"2026-03-04","to":"2026-10-20"}};
+  const BAB_SRC = "Bab el-Mandeb: experiments/flow_events.py mandeb (notes/mandeb-link.json, generated 2026-10-25), IMF PortWatch tanker flows and port exports, as notes/flow-events.md";
+  function eqOf(lost = st.lost, bab = st.bab, f = st.babF) {
+    const red = bab * BAB.per * (1 - BAB.rerouted), byp = lost * BAB.bypass * f, raw = lost + red + byp;
+    return { red, byp, raw, eq: Math.min(100, raw), capped: raw > 100 };
+  }
+  // the loss that drives Brent and the chain; the 2026 replay already holds what happened in the Red Sea
+  function syncEq() {
+    st.babQ = st.path26 ? { red: 0, byp: 0, raw: st.lost, eq: st.lost, capped: false } : eqOf();
+    st.eq = st.babQ.eq;   // the chain's tables stop at 100 points
+    st.eqP = st.babQ.raw; // Brent's premium is per point lost, so it takes the whole loss
+  }
+  function setBab(v, f) {
+    st.bab = Math.max(0, Math.min(100, Math.round(v)));
+    st.babF = f == null ? st.bab / 100 : f;
+    if ($("bab")) $("bab").value = st.bab;
+    if (st.path26 && st.bab) setLost(st.lost);
+    else { syncEq(); st.brent = Math.round(brentRes()); $("brent").value = st.brent; }
+  }
+  // "With 67% of Hormuz oil lost", naming Bab el-Mandeb when it adds something
+  function lostWords(html) {
+    const b = (x) => (html ? `<b>${x}</b>` : x), q = st.babQ;
+    if (!st.bab || st.path26) return `With ${b(`${st.lost}%`)} of Hormuz oil lost`;
+    const eq = `${Math.round(q.raw)} Hormuz-equivalent points${q.capped ? "; the chain's tables stop at 100" : ""}`;
+    return st.lost ? `With ${b(`${st.lost}%`)} of Hormuz oil and ${b(`${st.bab}%`)} of Bab el-Mandeb's flow lost (${eq})`
+      : `With ${b(`${st.bab}%`)} of Bab el-Mandeb's flow lost and Hormuz normal (${eq})`;
+  }
   // the 2026 closure as the IEA counts it (OXH-9): notes/chain-scenarios-2026-3m-margins.csv as series -> months ahead ->
   // [mean, q05, q95], and its Brent: the mean log premium per day over 252 trading days of the path (notes/flow-premium-iea.csv)
   const CHAIN26 = {"us_cpi":{"1":[0.713,0.249,1.362],"3":[1.866,0.203,4.19],"6":[2.71,-0.424,6.797],"12":[4.396,-0.92,12.674]},"us_unemp":{"1":[0.08,-0.425,0.854],"3":[0.246,-0.881,1.829],"6":[0.394,-1.552,2.959],"12":[1.014,-3.151,7.741]},"uk_cpi":{"1":[0.581,-0.14,1.428],"3":[1.708,0.079,4.025],"6":[2.405,-0.55,5.98],"12":[4.314,-0.426,10.744]},"uk_unemp":{"1":[0.05,-0.171,0.311],"3":[0.173,-0.341,0.833],"6":[0.254,-0.693,1.441],"12":[0.621,-1.117,3.308]},"ea_cpi":{"1":[0.816,-0.073,1.752],"3":[1.822,0.045,4.324],"6":[2.391,-0.234,6.536],"12":[4.217,-0.821,11.715]},"ea_unemp":{"1":[0.042,-0.1,0.235],"3":[0.073,-0.291,0.598],"6":[0.059,-0.641,0.896],"12":[0.159,-1.281,2.027]},"ind_gasdesw":{"1":[14.775,2.518,28.815],"3":[30.216,-5.938,78.027],"6":[33.168,-29.939,124.175],"12":[35.916,-59.129,166.589]},"ind_djfuelusgulf":{"1":[33.076,5.517,68.117],"3":[43.806,-19.66,121.051],"6":[43.137,-56.759,170.287],"12":[45.142,-96.904,237.478]},"ind_pcu481112481112":{"1":[1.754,-1.221,5.331],"3":[4.7,-4.073,15.352],"6":[6.255,-8.143,25.843],"12":[9.603,-13.22,43.767]},"ind_pcu325211325211":{"1":[1.934,-1.33,5.447],"3":[6.81,-1.314,17.293],"6":[10.099,-7.137,34.316],"12":[13.151,-18.524,64.242]},"ind_pcu325311325311":{"1":[3.823,-2.457,12.551],"3":[12.342,-6.308,36.916],"6":[21.878,-14.812,71.539],"12":[38.901,-37.813,161.143]},"ind_pcu324110324110":{"1":[21.893,3.599,43.787],"3":[40.686,-13.798,109.759],"6":[39.995,-51.039,151.803],"12":[41.294,-74.191,213.836]},"ind_pcu481111481111":{"1":[2.689,-4.258,10.231],"3":[5.321,-5.893,24.1],"6":[7.928,-11.081,33.509],"12":[13.289,-20.388,61.521]}};
@@ -5098,8 +5164,10 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
   const P26 = {"low": 0.067187, "mid": 0.307762, "high": 0.730818, "path": [89, 84, 85, 55, 62, 65, 47], "start": "2026-03", "avg": 67, "days": 252};
   const pathTxt = () => `${P26.path[0]} points lost in March, ${P26.path[P26.path.length - 1]} by September`;
   function setPath26() {
-    st.path26 = true; st.rel = "2026";
+    st.path26 = true; st.rel = "2026"; st.bab = 0; st.babF = 0;
+    if ($("bab")) $("bab").value = 0;
     st.lost = P26.avg; st.flow = PREWAR * (1 - st.lost / 100);
+    syncEq();
     st.brent = Math.round(brentRes());
     $("brent").value = st.brent;
     if ($("lost")) $("lost").value = st.lost;
@@ -5114,10 +5182,10 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
   const RES_DELTA = {"none":{"us_cpi":{"0":{"1":[0.0,0.0,0.0],"3":[0.0,0.0,0.0],"6":[0.0,0.0,0.0],"12":[0.0,0.0,0.0]},"25":{"1":[0.026,0.007,0.042],"3":[0.035,0.028,0.06],"6":[0.004,-0.056,0.071],"12":[0.022,-0.057,0.158]},"50":{"1":[0.039,0.013,0.053],"3":[0.105,0.054,0.175],"6":[0.04,-0.004,0.291],"12":[0.014,-0.005,0.037]},"82":{"1":[0.084,0.078,0.159],"3":[0.184,0.013,0.399],"6":[0.113,-0.098,0.606],"12":[0.116,-0.199,0.288]},"100":{"1":[0.079,-0.023,0.163],"3":[0.243,0.121,0.764],"6":[0.162,-0.061,0.673],"12":[0.228,-0.011,1.475]}},"us_unemp":{"0":{"1":[0.0,0.0,0.0],"3":[0.0,0.0,0.0],"6":[0.0,0.0,0.0],"12":[0.0,0.0,0.0]},"25":{"1":[-0.005,-0.013,-0.016],"3":[-0.015,-0.044,0.026],"6":[-0.024,-0.057,0.08],"12":[-0.063,-0.047,-0.209]},"50":{"1":[0.015,-0.014,0.054],"3":[0.035,-0.005,0.129],"6":[0.048,-0.02,0.105],"12":[0.129,-0.025,0.299]},"82":{"1":[0.033,-0.04,0.082],"3":[0.066,-0.063,0.187],"6":[0.098,-0.162,0.429],"12":[0.148,-0.329,1.154]},"100":{"1":[0.036,-0.071,0.213],"3":[0.1,-0.13,0.578],"6":[0.137,-0.022,0.559],"12":[0.216,-0.256,0.762]}},"uk_cpi":{"0":{"1":[0.0,0.0,0.0],"3":[0.0,0.0,0.0],"6":[0.0,0.0,0.0],"12":[0.0,0.0,0.0]},"25":{"1":[0.028,0.052,0.037],"3":[0.028,-0.009,0.024],"6":[0.02,0.035,0.125],"12":[-0.022,-0.07,0.126]},"50":{"1":[0.032,0.045,0.057],"3":[0.065,0.028,0.144],"6":[0.02,-0.06,0.141],"12":[0.044,-0.021,0.215]},"82":{"1":[0.076,0.045,0.165],"3":[0.13,0.079,0.373],"6":[0.081,-0.131,0.304],"12":[0.151,0.282,0.379]},"100":{"1":[0.082,0.025,0.165],"3":[0.143,0.067,0.167],"6":[0.108,0.065,0.128],"12":[0.242,-0.122,0.957]}},"uk_unemp":{"0":{"1":[0.0,0.0,0.0],"3":[0.0,0.0,0.0],"6":[0.0,0.0,0.0],"12":[0.0,0.0,0.0]},"25":{"1":[-0.002,-0.01,0.002],"3":[0.01,0.018,0.018],"6":[0.009,-0.027,0.122],"12":[0.033,0.025,0.091]},"50":{"1":[0.009,0.006,0.016],"3":[0.027,0.019,0.037],"6":[0.016,0.038,0.037],"12":[0.011,-0.012,0.016]},"82":{"1":[0.007,0.001,0.043],"3":[0.023,0.019,0.123],"6":[0.03,0.002,0.146],"12":[0.052,-0.014,0.185]},"100":{"1":[0.008,-0.006,0.017],"3":[0.019,-0.014,0.099],"6":[0.024,-0.026,0.031],"12":[0.0,-0.011,0.022]}},"ea_cpi":{"0":{"1":[0.0,0.0,0.0],"3":[0.0,0.0,0.0],"6":[0.0,0.0,0.0],"12":[0.0,0.0,0.0]},"25":{"1":[0.021,-0.014,0.049],"3":[0.043,0.005,0.058],"6":[0.0,-0.045,0.178],"12":[0.051,0.023,0.047]},"50":{"1":[0.055,0.033,0.107],"3":[0.13,0.04,0.375],"6":[0.081,-0.043,0.417],"12":[0.134,0.066,0.453]},"82":{"1":[0.068,-0.003,0.079],"3":[0.152,0.024,0.377],"6":[0.085,-0.083,0.219],"12":[0.153,-0.105,0.278]},"100":{"1":[0.096,0.019,0.188],"3":[0.182,-0.046,0.387],"6":[0.131,-0.102,0.608],"12":[0.262,0.022,0.421]}},"ea_unemp":{"0":{"1":[0.0,0.0,0.0],"3":[0.0,0.0,0.0],"6":[0.0,0.0,0.0],"12":[0.0,0.0,0.0]},"25":{"1":[0.002,-0.007,0.009],"3":[0.006,0.003,0.023],"6":[-0.005,-0.023,-0.004],"12":[0.006,-0.013,0.023]},"50":{"1":[0.005,-0.005,0.013],"3":[0.006,-0.016,0.045],"6":[0.002,-0.025,0.039],"12":[0.015,-0.028,0.073]},"82":{"1":[0.006,0.006,0.022],"3":[0.019,0.002,0.036],"6":[0.034,0.009,0.103],"12":[0.05,-0.061,0.261]},"100":{"1":[0.011,-0.009,0.035],"3":[0.006,-0.017,0.034],"6":[-0.015,-0.072,0.014],"12":[0.014,-0.037,0.414]}},"ind_gasdesw":{"0":{"1":[0.0,0.0,0.0],"3":[0.0,0.0,0.0],"6":[0.0,0.0,0.0],"12":[0.0,0.0,0.0]},"25":{"1":[0.682,0.478,1.093],"3":[1.368,1.03,3.528],"6":[0.806,0.969,1.466],"12":[1.187,1.043,4.418]},"50":{"1":[1.104,0.736,1.612],"3":[2.258,-0.086,5.051],"6":[1.24,-0.343,5.642],"12":[1.147,-4.739,8.526]},"82":{"1":[1.775,1.131,3.282],"3":[3.075,2.04,9.211],"6":[1.467,-1.085,3.649],"12":[1.75,-3.379,7.158]},"100":{"1":[2.268,0.73,4.062],"3":[4.649,2.122,11.456],"6":[2.102,-3.016,11.348],"12":[1.186,-5.82,10.366]}},"ind_djfuelusgulf":{"0":{"1":[0.0,0.0,0.0],"3":[0.0,0.0,0.0],"6":[0.0,0.0,0.0],"12":[0.0,0.0,0.0]},"25":{"1":[1.394,0.552,2.714],"3":[1.512,0.725,4.009],"6":[0.317,-0.277,4.45],"12":[-0.626,1.005,-3.846]},"50":{"1":[2.721,0.716,4.741],"3":[2.997,0.716,5.019],"6":[0.7,-6.383,9.39],"12":[0.327,-7.164,8.649]},"82":{"1":[4.644,2.27,7.465],"3":[5.709,7.192,10.467],"6":[2.483,-3.424,12.681],"12":[3.947,-3.846,18.414]},"100":{"1":[5.629,2.188,9.404],"3":[6.479,1.598,12.056],"6":[1.942,-5.731,6.274],"12":[2.176,-11.347,17.029]}},"ind_pcu481112481112":{"0":{"1":[0.0,0.0,0.0],"3":[0.0,0.0,0.0],"6":[0.0,0.0,0.0],"12":[0.0,0.0,0.0]},"25":{"1":[0.098,-0.054,0.059],"3":[0.382,0.315,0.869],"6":[0.187,0.252,0.63],"12":[0.127,0.581,0.155]},"50":{"1":[0.134,0.059,0.308],"3":[0.252,-0.333,0.308],"6":[0.206,0.043,1.022],"12":[0.295,-0.026,2.664]},"82":{"1":[0.224,0.132,0.489],"3":[0.564,0.398,1.021],"6":[0.539,0.004,-0.034],"12":[0.409,0.508,1.656]},"100":{"1":[0.269,0.08,0.658],"3":[0.739,0.281,2.181],"6":[0.307,-0.305,1.59],"12":[-0.345,0.179,2.082]}},"ind_pcu325211325211":{"0":{"1":[0.0,0.0,0.0],"3":[0.0,0.0,0.0],"6":[0.0,0.0,0.0],"12":[0.0,0.0,0.0]},"25":{"1":[0.074,0.12,0.098],"3":[0.311,0.443,0.427],"6":[0.235,0.576,0.079],"12":[0.023,0.28,-0.238]},"50":{"1":[0.087,0.053,0.171],"3":[0.42,0.147,0.496],"6":[0.419,-0.011,1.531],"12":[0.374,-0.613,1.817]},"82":{"1":[0.287,0.089,0.672],"3":[0.812,0.253,1.66],"6":[0.675,0.081,1.736],"12":[0.522,-1.608,3.386]},"100":{"1":[0.367,-0.118,0.847],"3":[1.108,0.353,2.135],"6":[1.393,1.074,2.551],"12":[1.177,-1.006,2.035]}},"ind_pcu325311325311":{"0":{"1":[0.0,0.0,0.0],"3":[0.0,0.0,0.0],"6":[0.0,0.0,0.0],"12":[0.0,0.0,0.0]},"25":{"1":[0.03,-0.313,-0.257],"3":[0.238,-0.971,0.869],"6":[0.061,-1.532,-0.529],"12":[0.599,-2.131,2.103]},"50":{"1":[0.164,-0.121,0.339],"3":[0.659,0.468,1.969],"6":[0.731,0.276,2.511],"12":[0.878,-0.109,6.132]},"82":{"1":[0.419,-0.112,0.985],"3":[1.422,0.362,3.902],"6":[2.354,-0.547,5.397],"12":[3.077,-0.284,9.459]},"100":{"1":[0.42,0.212,1.193],"3":[1.656,0.965,0.946],"6":[2.77,1.588,4.477],"12":[3.155,-0.994,10.173]}},"ind_pcu324110324110":{"0":{"1":[0.0,0.0,0.0],"3":[0.0,0.0,0.0],"6":[0.0,0.0,0.0],"12":[0.0,0.0,0.0]},"25":{"1":[1.081,0.654,1.928],"3":[1.632,0.386,2.693],"6":[0.402,-0.98,1.553],"12":[0.029,-2.889,0.284]},"50":{"1":[1.74,0.801,2.84],"3":[3.148,0.96,5.086],"6":[0.753,0.042,-0.379],"12":[1.154,-5.47,5.849]},"82":{"1":[2.759,2.234,4.442],"3":[4.649,2.056,7.46],"6":[1.384,-1.435,13.079],"12":[1.702,-4.626,10.105]},"100":{"1":[3.773,1.122,6.144],"3":[6.385,0.188,11.957],"6":[2.473,-8.244,11.974],"12":[0.888,-11.594,8.203]}},"ind_pcu481111481111":{"0":{"1":[0.0,0.0,0.0],"3":[0.0,0.0,0.0],"6":[0.0,0.0,0.0],"12":[0.0,0.0,0.0]},"25":{"1":[0.268,0.218,0.206],"3":[0.135,-0.18,0.41],"6":[0.073,-0.225,0.611],"12":[0.091,0.418,-1.193]},"50":{"1":[0.171,0.002,0.401],"3":[0.139,-0.075,0.838],"6":[0.151,-0.57,1.689],"12":[0.244,-0.775,3.218]},"82":{"1":[0.394,-0.227,0.678],"3":[0.475,-0.282,2.24],"6":[0.144,-1.971,1.157],"12":[0.007,-1.081,5.409]},"100":{"1":[0.629,0.351,1.574],"3":[1.01,0.112,5.059],"6":[0.941,1.441,3.26],"12":[0.939,1.664,3.954]}}},"max":{"us_cpi":{"0":{"1":[0.0,0.0,0.0],"3":[0.0,0.0,0.0],"6":[0.0,0.0,0.0],"12":[0.0,0.0,0.0]},"25":{"1":[-0.139,-0.084,-0.205],"3":[-0.315,-0.108,-0.639],"6":[-0.282,0.014,-0.755],"12":[-0.107,0.201,-0.45]},"50":{"1":[-0.288,-0.152,-0.507],"3":[-0.639,-0.07,-1.498],"6":[-0.513,0.324,-1.764],"12":[-0.354,0.571,-2.118]},"82":{"1":[-0.464,-0.217,-0.84],"3":[-1.068,-0.006,-2.743],"6":[-0.292,0.571,-1.364],"12":[-0.087,-0.176,-0.475]},"100":{"1":[-0.567,-0.264,-1.07],"3":[-1.212,0.107,-3.01],"6":[-0.174,0.639,-0.819],"12":[-0.109,-0.235,0.53]}},"us_unemp":{"0":{"1":[0.0,0.0,0.0],"3":[0.0,0.0,0.0],"6":[0.0,0.0,0.0],"12":[0.0,0.0,0.0]},"25":{"1":[-0.006,0.037,-0.054],"3":[-0.029,0.007,-0.06],"6":[-0.042,0.048,-0.155],"12":[-0.096,0.026,-0.538]},"50":{"1":[-0.017,0.093,-0.192],"3":[-0.071,0.168,-0.407],"6":[-0.109,0.295,-0.688],"12":[-0.185,0.355,-1.037]},"82":{"1":[-0.093,0.132,-0.51],"3":[-0.256,0.339,-1.34],"6":[-0.181,0.338,-0.984],"12":[-0.036,0.005,0.163]},"100":{"1":[-0.151,0.175,-0.684],"3":[-0.373,0.452,-1.69],"6":[-0.209,0.345,-0.931],"12":[-0.2,-0.163,-0.449]}},"uk_cpi":{"0":{"1":[0.0,0.0,0.0],"3":[0.0,0.0,0.0],"6":[0.0,0.0,0.0],"12":[0.0,0.0,0.0]},"25":{"1":[-0.089,-0.052,-0.122],"3":[-0.208,-0.09,-0.417],"6":[-0.209,-0.067,-0.462],"12":[-0.206,-0.035,-0.395]},"50":{"1":[-0.204,-0.117,-0.291],"3":[-0.432,-0.149,-0.937],"6":[-0.378,0.017,-1.096],"12":[-0.438,0.364,-1.577]},"82":{"1":[-0.348,-0.231,-0.551],"3":[-0.753,-0.183,-1.715],"6":[-0.235,0.188,-0.696],"12":[-0.251,0.111,0.286]},"100":{"1":[-0.442,-0.252,-0.77],"3":[-0.933,-0.251,-2.355],"6":[-0.222,0.241,-0.87],"12":[-0.32,-0.32,-0.166]}},"uk_unemp":{"0":{"1":[0.0,0.0,0.0],"3":[0.0,0.0,0.0],"6":[0.0,0.0,0.0],"12":[0.0,0.0,0.0]},"25":{"1":[-0.019,-0.005,-0.042],"3":[-0.042,0.017,-0.122],"6":[-0.037,0.03,-0.067],"12":[-0.039,0.034,-0.122]},"50":{"1":[-0.028,0.007,-0.079],"3":[-0.085,0.017,-0.264],"6":[-0.109,0.03,-0.386],"12":[-0.187,-0.04,-0.593]},"82":{"1":[-0.053,0.007,-0.143],"3":[-0.15,0.018,-0.447],"6":[-0.087,0.087,-0.362],"12":[-0.144,-0.046,-0.445]},"100":{"1":[-0.063,0.006,-0.182],"3":[-0.173,0.021,-0.534],"6":[-0.091,0.064,-0.431],"12":[-0.17,-0.089,-0.416]}},"ea_cpi":{"0":{"1":[0.0,0.0,0.0],"3":[0.0,0.0,0.0],"6":[0.0,0.0,0.0],"12":[0.0,0.0,0.0]},"25":{"1":[-0.159,-0.102,-0.227],"3":[-0.288,-0.136,-0.619],"6":[-0.256,-0.054,-0.563],"12":[-0.266,0.063,-0.59]},"50":{"1":[-0.311,-0.198,-0.528],"3":[-0.577,-0.197,-1.282],"6":[-0.455,0.127,-1.23],"12":[-0.575,0.32,-1.729]},"82":{"1":[-0.545,-0.267,-1.026],"3":[-1.056,-0.285,-2.562],"6":[-0.302,0.282,-1.009],"12":[-0.352,-0.197,-0.054]},"100":{"1":[-0.656,-0.31,-1.23],"3":[-1.192,-0.266,-3.044],"6":[-0.185,0.174,-0.526],"12":[-0.328,-0.489,-0.084]}},"ea_unemp":{"0":{"1":[0.0,0.0,0.0],"3":[0.0,0.0,0.0],"6":[0.0,0.0,0.0],"12":[0.0,0.0,0.0]},"25":{"1":[-0.015,-0.007,-0.037],"3":[-0.019,0.027,-0.072],"6":[-0.017,0.027,-0.08],"12":[-0.025,0.05,-0.142]},"50":{"1":[-0.033,-0.009,-0.085],"3":[-0.062,0.029,-0.216],"6":[-0.056,0.073,-0.311],"12":[-0.111,0.092,-0.553]},"82":{"1":[-0.055,0.0,-0.152],"3":[-0.105,0.057,-0.422],"6":[-0.042,0.144,-0.333],"12":[-0.095,-0.02,-0.233]},"100":{"1":[-0.069,-0.006,-0.193],"3":[-0.136,0.069,-0.516],"6":[-0.076,0.111,-0.403],"12":[-0.118,-0.001,-0.175]}},"ind_gasdesw":{"0":{"1":[0.0,0.0,0.0],"3":[0.0,0.0,0.0],"6":[0.0,0.0,0.0],"12":[0.0,0.0,0.0]},"25":{"1":[-3.506,-1.893,-5.256],"3":[-6.247,-2.744,-11.893],"6":[-5.024,-0.084,-12.887],"12":[-0.643,5.344,-5.25]},"50":{"1":[-7.049,-3.472,-11.719],"3":[-13.199,-3.205,-27.987],"6":[-9.061,6.091,-30.431],"12":[-2.594,11.278,-23.145]},"82":{"1":[-11.686,-4.647,-20.291],"3":[-22.448,-2.011,-47.887],"6":[-2.903,11.27,-15.449],"12":[2.716,-4.416,14.354]},"100":{"1":[-14.155,-5.894,-25.583],"3":[-25.921,0.094,-59.877],"6":[-3.277,7.046,-8.013],"12":[0.809,-9.023,19.96]}},"ind_djfuelusgulf":{"0":{"1":[0.0,0.0,0.0],"3":[0.0,0.0,0.0],"6":[0.0,0.0,0.0],"12":[0.0,0.0,0.0]},"25":{"1":[-9.026,-6.433,-12.803],"3":[-9.373,-2.412,-19.903],"6":[-6.022,3.025,-16.626],"12":[-0.905,8.236,-14.06]},"50":{"1":[-18.046,-10.326,-29.827],"3":[-19.31,-0.381,-45.607],"6":[-8.901,15.913,-42.308],"12":[-2.332,20.164,-30.167]},"82":{"1":[-29.12,-12.598,-51.931],"3":[-31.607,9.458,-79.808],"6":[-0.312,16.359,-6.117],"12":[5.672,-1.557,49.56]},"100":{"1":[-35.596,-14.082,-66.123],"3":[-35.28,12.624,-93.76],"6":[-0.495,12.814,0.52],"12":[2.935,-8.005,39.321]}},"ind_pcu481112481112":{"0":{"1":[0.0,0.0,0.0],"3":[0.0,0.0,0.0],"6":[0.0,0.0,0.0],"12":[0.0,0.0,0.0]},"25":{"1":[-0.517,-0.387,-0.967],"3":[-1.113,-0.421,-2.389],"6":[-1.199,-0.231,-2.644],"12":[-0.97,0.437,-4.592]},"50":{"1":[-0.992,-0.32,-1.77],"3":[-2.455,-1.022,-5.691],"6":[-2.325,0.353,-7.159],"12":[-1.421,2.045,-5.766]},"82":{"1":[-1.503,-0.534,-2.573],"3":[-3.834,-0.967,-8.592],"6":[-1.494,2.327,-6.254],"12":[-0.976,-0.447,0.14]},"100":{"1":[-1.904,-0.827,-3.279],"3":[-4.485,-1.069,-10.233],"6":[-1.356,1.934,-5.575],"12":[-1.349,0.23,-1.351]}},"ind_pcu325211325211":{"0":{"1":[0.0,0.0,0.0],"3":[0.0,0.0,0.0],"6":[0.0,0.0,0.0],"12":[0.0,0.0,0.0]},"25":{"1":[-0.41,-0.057,-0.689],"3":[-1.427,-0.604,-2.592],"6":[-1.832,-0.029,-4.606],"12":[-0.589,2.038,-3.055]},"50":{"1":[-0.903,-0.192,-1.754],"3":[-3.114,-1.178,-6.836],"6":[-3.568,0.652,-10.46],"12":[-1.11,3.995,-8.716]},"82":{"1":[-1.416,-0.177,-3.173],"3":[-5.138,-1.024,-11.687],"6":[-3.18,3.074,-11.265],"12":[0.473,0.101,6.075]},"100":{"1":[-1.827,-0.356,-4.399],"3":[-6.239,-0.72,-14.646],"6":[-2.75,3.808,-10.849],"12":[0.574,-0.169,3.736]}},"ind_pcu325311325311":{"0":{"1":[0.0,0.0,0.0],"3":[0.0,0.0,0.0],"6":[0.0,0.0,0.0],"12":[0.0,0.0,0.0]},"25":{"1":[-0.514,-0.21,-1.625],"3":[-2.262,-1.333,-4.718],"6":[-4.237,-1.137,-9.936],"12":[-3.144,1.076,-10.076]},"50":{"1":[-1.128,-0.185,-3.234],"3":[-5.158,-1.135,-11.662],"6":[-8.742,-0.128,-20.387],"12":[-6.368,7.73,-30.259]},"82":{"1":[-2.15,-0.026,-6.027],"3":[-8.97,-1.795,-21.244],"6":[-9.531,5.516,-31.268],"12":[-3.792,5.796,-11.168]},"100":{"1":[-2.719,0.148,-7.098],"3":[-10.495,-1.236,-26.359],"6":[-8.642,7.362,-30.646],"12":[-2.772,5.632,-9.448]}},"ind_pcu324110324110":{"0":{"1":[0.0,0.0,0.0],"3":[0.0,0.0,0.0],"6":[0.0,0.0,0.0],"12":[0.0,0.0,0.0]},"25":{"1":[-5.827,-4.386,-8.273],"3":[-9.375,-4.301,-17.71],"6":[-6.851,-0.323,-17.565],"12":[-1.495,5.606,-9.683]},"50":{"1":[-11.964,-6.687,-19.561],"3":[-19.559,-2.328,-45.31],"6":[-10.72,14.661,-44.173],"12":[-1.576,18.195,-24.454]},"82":{"1":[-19.488,-9.064,-33.764],"3":[-32.215,-0.232,-79.241],"6":[-1.899,12.496,-7.48],"12":[3.109,-3.509,38.514]},"100":{"1":[-23.51,-10.813,-43.05],"3":[-36.254,3.136,-90.058],"6":[-0.031,5.785,3.942],"12":[4.133,-11.16,45.038]}},"ind_pcu481111481111":{"0":{"1":[0.0,0.0,0.0],"3":[0.0,0.0,0.0],"6":[0.0,0.0,0.0],"12":[0.0,0.0,0.0]},"25":{"1":[-0.936,-0.772,-1.26],"3":[-1.5,-0.63,-3.451],"6":[-1.583,-0.355,-3.454],"12":[-1.242,0.632,-4.675]},"50":{"1":[-1.922,-0.993,-2.913],"3":[-3.099,-0.578,-7.75],"6":[-2.945,0.599,-7.338],"12":[-2.642,2.454,-11.635]},"82":{"1":[-3.117,-1.599,-5.239],"3":[-5.182,-0.53,-14.303],"6":[-2.715,0.494,-9.214],"12":[-1.751,-0.854,-2.594]},"100":{"1":[-3.673,-1.374,-6.325],"3":[-6.001,-0.458,-15.54],"6":[-3.534,0.948,-10.546],"12":[-3.122,-2.125,-8.306]}}}};
   // stocks by country in their source's own unit, notes/reserves/country-cover.csv
   const COVER = {"Japan":{"v":178.0,"unit":"days of net imports","asof":"2026-07","basis":"IEA","src":"IEA Oil Stocks of IEA Countries (API netimports/monthly)","url":"https://www.iea.org/data-and-statistics/data-tools/oil-stocks-of-iea-countries"},"South Korea":{"v":214.0,"unit":"days of net imports","asof":"2026-07","basis":"IEA","src":"IEA Oil Stocks of IEA Countries (API netimports/monthly)","url":"https://www.iea.org/data-and-statistics/data-tools/oil-stocks-of-iea-countries"},"Australia":{"v":50.0,"unit":"days of net imports","asof":"2026-07","basis":"IEA","src":"IEA Oil Stocks of IEA Countries (API netimports/monthly)","url":"https://www.iea.org/data-and-statistics/data-tools/oil-stocks-of-iea-countries"},"New Zealand":{"v":86.0,"unit":"days of net imports","asof":"2026-07","basis":"IEA","src":"IEA Oil Stocks of IEA Countries (API netimports/monthly)","url":"https://www.iea.org/data-and-statistics/data-tools/oil-stocks-of-iea-countries"},"Italy":{"v":122.0,"unit":"days of net imports","asof":"2026-07","basis":"IEA","src":"IEA Oil Stocks of IEA Countries (API netimports/monthly)","url":"https://www.iea.org/data-and-statistics/data-tools/oil-stocks-of-iea-countries"},"Greece":{"v":149.0,"unit":"days of net imports","asof":"2026-07","basis":"IEA","src":"IEA Oil Stocks of IEA Countries (API netimports/monthly)","url":"https://www.iea.org/data-and-statistics/data-tools/oil-stocks-of-iea-countries"},"Turkey":{"v":92.0,"unit":"days of net imports","asof":"2026-07","basis":"IEA","src":"IEA Oil Stocks of IEA Countries (API netimports/monthly)","url":"https://www.iea.org/data-and-statistics/data-tools/oil-stocks-of-iea-countries"},"France":{"v":123.0,"unit":"days of net imports","asof":"2026-07","basis":"IEA","src":"IEA Oil Stocks of IEA Countries (API netimports/monthly)","url":"https://www.iea.org/data-and-statistics/data-tools/oil-stocks-of-iea-countries"},"Spain":{"v":103.0,"unit":"days of net imports","asof":"2026-07","basis":"IEA","src":"IEA Oil Stocks of IEA Countries (API netimports/monthly)","url":"https://www.iea.org/data-and-statistics/data-tools/oil-stocks-of-iea-countries"},"Netherlands":{"v":627.0,"unit":"days of net imports","asof":"2026-07","basis":"IEA","src":"IEA Oil Stocks of IEA Countries (API netimports/monthly)","url":"https://www.iea.org/data-and-statistics/data-tools/oil-stocks-of-iea-countries"},"United Kingdom":{"v":112.0,"unit":"days of net imports","asof":"2026-07","basis":"IEA","src":"IEA Oil Stocks of IEA Countries (API netimports/monthly)","url":"https://www.iea.org/data-and-statistics/data-tools/oil-stocks-of-iea-countries"},"Germany":{"v":124.0,"unit":"days of net imports","asof":"2026-07","basis":"IEA","src":"IEA Oil Stocks of IEA Countries (API netimports/monthly)","url":"https://www.iea.org/data-and-statistics/data-tools/oil-stocks-of-iea-countries"},"Poland":{"v":119.0,"unit":"days of net imports","asof":"2026-07","basis":"IEA","src":"IEA Oil Stocks of IEA Countries (API netimports/monthly)","url":"https://www.iea.org/data-and-statistics/data-tools/oil-stocks-of-iea-countries"},"Taiwan":{"v":79.0,"unit":"days of demand","asof":"2026-08","basis":"JODI, our calculation","src":"JODI Oil World Database (primary and secondary 2026 CSVs)","url":"https://www.jodidata.org/oil/"},"Thailand":{"v":42.0,"unit":"days of demand","asof":"2026-07","basis":"JODI, our calculation","src":"JODI Oil World Database (primary and secondary 2026 CSVs)","url":"https://www.jodidata.org/oil/"},"India":{"v":25.0,"unit":"days of demand","asof":"2026-03","basis":"JODI, our calculation","src":"JODI Oil World Database (primary and secondary 2026 CSVs)","url":"https://www.jodidata.org/oil/"},"Philippines":{"v":34.0,"unit":"days of demand","asof":"2026-03","basis":"JODI, our calculation","src":"JODI Oil World Database (primary and secondary 2026 CSVs)","url":"https://www.jodidata.org/oil/"},"China":{"v":1400.0,"unit":"million barrels","asof":"2025-12","basis":"EIA estimate","src":"EIA Today in Energy: China, the United States, and Japan hold most strategic oil inventories in 2025","url":"https://www.eia.gov/todayinenergy/detail.php?id=67504"},"Pakistan":{"v":28.0,"unit":"days (official claim)","asof":"2026-03","basis":"official claim","src":"Asia Media Centre: The Hormuz buffer: Asian oil security amid prolonged Middle East conflict","url":"https://www.asiamediacentre.org.nz/the-hormuz-buffer-asian-oil-security-amid-prolonged-middle-east-conflict"}};
-  const resAt = (lost = st.lost, pol = st.rel) => RES[pol][Math.max(0, Math.min(100, Math.round(lost)))];
+  const resAt = (lost = st.eq, pol = st.rel) => RES[pol][Math.max(0, Math.min(100, Math.round(lost)))];
   // "2026" is the flow-premium curve as it is (factor 1), so it keeps the chain's own Brent to the dollar
   const brentRes = (k = 1) => {
-    const iea = [PREM.low, PREM.mid, PREM.high][k] * st.lost, base = resAt(st.lost, "2026")[k];
+    const iea = [PREM.low, PREM.mid, PREM.high][k] * st.eqP, base = resAt(st.eq, "2026")[k];
     if (st.path26) return BRENT0 * Math.exp([P26.low, P26.mid, P26.high][k]);
     return BRENT0 * Math.exp(st.rel === "2026" || !base ? iea : iea * resAt()[k] / base);
   };
@@ -5137,6 +5205,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
     st.path26 = false;
     st.lost = Math.max(0, Math.min(100, Math.round(v)));
     st.flow = PREWAR * (1 - st.lost / 100);
+    syncEq();
     st.brent = Math.round(brentRes());
     $("brent").value = st.brent;
     if ($("lost")) $("lost").value = st.lost;
@@ -5255,6 +5324,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
       .pathPoints("pts").pathPointAlt((d) => (d.gas ? 0.006 : 0.004)).pathStroke((d) => (d.gas ? d.w : d.on ? 1.6 : 0.6)).pathLabel((d) => (d.label ? escH(d.label) : ""))
       .pathColor((d) => (d.gas ? (d.pipe ? ["#b58cff", "#b58cff"] : ["rgba(181,140,255,0.35)", "#b58cff"]) : d.on ? ["rgba(255,214,10,0.45)", "#ffd60a"] : ["rgba(255,214,10,0.15)", "rgba(255,214,10,0.3)"]))
       .pathDashLength(0.06).pathDashGap(0.02).pathDashAnimateTime(9000).pathTransitionDuration(0);
+    babGlobe();
     const tagIso = st.sel && isoOf[st.sel];
     G3.htmlElementsData(w ? [{ lat: w.lat, lng: w.lng, iso: tagIso, name: st.sel === "United States of America" ? "United States" : st.sel }] : [])
       .htmlLat((d) => d.lat).htmlLng((d) => d.lng).htmlAltitude(0.1)
@@ -5410,6 +5480,8 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
   const gRB = root.append("g"), gR = root.append("g"), gGas = root.append("g").attr("class", "gasl"), gArc = root.append("g"), gP = root.append("g"), gH = root.append("g");
   const gFl = root.append("g").attr("aria-hidden", "true");
   const gPulse = root.append("g").attr("aria-hidden", "true").style("pointer-events", "none");
+  // Bab el-Mandeb lines sit just above the oil routes (patch_straits.py)
+  const gBab = d3.select(gR.node().parentNode.insertBefore(document.createElementNS("http://www.w3.org/2000/svg", "g"), gR.node().nextSibling)).attr("class", "babl");
   let cur = d3.zoomIdentity;
 
   const ctryPaths = gC.selectAll("path").data(countries).join("path").attr("class", "ctry")
@@ -5436,9 +5508,11 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
     gH.append("circle").attr("class", "pulse").attr("cx", hz[0]).attr("cy", hz[1]).attr("r", 4);
     gH.append("circle").attr("class", "hz").attr("cx", hz[0]).attr("cy", hz[1]).attr("r", 4.5);
     gH.append("text").attr("class", "hzlabel").attr("x", hz[0] - 8).attr("y", hz[1] - 10).attr("text-anchor", "end").text("HORMUZ");
+    babMarker();
     gRB.selectAll("path").data(routes).join("path").attr("class", "route-base").attr("d", ([, d]) => line(d.r.map((p) => proj(p))));
     gR.selectAll("path").data(routes).join("path").attr("class", "route").attr("d", ([, d]) => line(d.r.map((p) => proj(p))));
     layoutGas();
+    layoutBab();
     gP.selectAll("circle.port").data(routes).join("circle").attr("class", "port")
       .attr("cx", ([, d]) => proj(d.r[d.r.length - 1])[0]).attr("cy", ([, d]) => proj(d.r[d.r.length - 1])[1]);
     gP.selectAll("circle.src").data(Object.entries(C).filter(([n, d]) => d.gulf && !d.dot)).join("circle").attr("class", "src")
@@ -5473,6 +5547,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
     placeCols(k);
     const hz = proj([56.4, 26.5]);
     gH.select("text").attr("x", hz[0] - 8 / k).attr("y", hz[1] - 10 / k);
+    rescaleBab(k);
   }
   const zoom = d3.zoom().scaleExtent([1, 10]).on("zoom", (e) => { cur = e.transform; root.attr("transform", cur); rescale(); placePop(); });
   svgEl.call(zoom).on("dblclick.zoom", null);
@@ -5504,6 +5579,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
     paintGas();
     drawLift();
     drawPulses();
+    paintBab();
     paint3d();
   }
   // Flat map: the selected country lifts off the map (its place turns slate) and a flag name tag floats over it
@@ -5531,6 +5607,80 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
       n.select(".blink-ring").datum({ r: 3.2 }).attr("cx", x).attr("cy", y).attr("r", 3.2 / k).attr("stroke", d.color).style("animation-delay", `${(i % 5) * 0.28}s`);
       n.select(".blink-core").datum({ r: 2.6 }).attr("cx", x).attr("cy", y).attr("r", 2.6 / k).attr("fill", d.color);
     });
+  }
+  // ---- Bab el-Mandeb on the map (patch_straits.py): the strait, the Red Sea route to Europe, Yanbu's crude to Asia
+  // and the Cape route rerouted ships take. Paths are approximate; widths follow the shock card.
+  const BAB_PT = [43.4, 12.6], BAB_LANES = {"red":[[57,14.6],[52,13.3],[45,12.2],[43.3,12.7],[40,17],[36,23],[33.8,27.6],[32.6,29.9],[32.4,31.5],[28,33.5],[21,35]],"yanbu":[[38.06,24.09],[38.7,21.5],[40,17],[42.4,14],[43.3,12.7],[45,12.2],[52,13.3],[60,13.5],[66,15.5],[73,9.5],[77.5,5.8],[81,5.3],[88,5.7],[94.5,6.3],[98,4.6],[100.6,2.9],[103.6,1.15]],"pipe":[[49.68,25.94],[47.6,25.0],[45.3,24.6],[42.5,24.4],[40,24.2],[38.06,24.09]],"cape":[[57,14.6],[56,0],[46,-15],[41,-25],[33,-33],[20,-36],[12,-30],[8,-15],[2,-2],[-12,4],[-19,15],[-18,27],[-11,36],[-9.8,43],[-5.5,48.3],[-2,49.9]]};
+  // move a projected line a few pixels to its right, so a lane sits beside the oil route it shares
+  function babBeside(pts, px) {
+    return pts.map((p, i) => { const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)], dx = b[0] - a[0], dy = b[1] - a[1], n = Math.hypot(dx, dy) || 1;
+      return [p[0] - (dy / n) * px, p[1] + (dx / n) * px]; });
+  }
+  // what each line carries now, 0 to 1 (drawn width), and what it says on hover
+  function babLines() {
+    const pass = st.path26 ? 1 - BAB.b2026.lost / 100 : 1 - st.bab / 100, f = st.path26 ? BAB.b2026.f : st.babF;
+    const run = st.lost / 100 * (1 - f), cape = st.path26 ? 0 : st.bab / 100 * BAB.rerouted;
+    const pc = (x) => `${Math.round(x * 100)}%`;
+    return [
+      { k: "pipe", v: st.lost ? 0.5 : 0.2, solid: true, idle: !st.lost,
+        tip: "East–West pipeline (Petroline), Abqaiq to Yanbu: the Saudi way round Hormuz. Path approximate." },
+      { k: "cape", v: cape, dash: "cape", idle: !cape, hide: !cape,
+        tip: `Round the Cape of Good Hope: ${pc(BAB.rerouted)} of the Red Sea flow lost in 2024 went this way (PortWatch, our model). That the same share reroutes now is an assumption; these cargoes still arrive, two to three weeks later. Path approximate.` },
+      { k: "red", v: pass, off: 4,
+        tip: `Bab el-Mandeb and the Red Sea route to Europe through Suez: ${pc(pass)} of its normal flow passing${st.path26 ? ` (${ymLabel(BAB.b2026.month)})` : ", as set on the shock card"}. One point of its flow is ${BAB.per} Hormuz points of tanker tonnage (PortWatch, our model). Path approximate.` },
+      { k: "yanbu", v: run, idle: run < 0.005, off: -4,
+        tip: st.lost ? `Yanbu bypass: Saudi crude piped to Yanbu on the Red Sea, then south through Bab el-Mandeb to Asia. It made up ${pc(BAB.bypass)} of the Gulf's lost exports over the 2026 closure (PortWatch, our model); ${pc(1 - f)} of it sails now${st.path26 ? " (stopped by the blockade)" : ""}. That it all goes through Bab el-Mandeb is an assumption. Path approximate.`
+          : "Yanbu bypass to Asia: used while Hormuz is shut (none lost now). Path approximate." },
+    ];
+  }
+  function layoutBab() {
+    const ls = babLines();
+    gBab.selectAll("path.bcase").data(ls, (d) => d.k).join("path").attr("class", "bcase")
+      .attr("d", (d) => line(babBeside(BAB_LANES[d.k].map((q) => proj(q)), d.off || 0)));
+    gBab.selectAll("path.blane").data(ls, (d) => d.k).join("path").attr("class", "blane")
+      .attr("d", (d) => line(babBeside(BAB_LANES[d.k].map((q) => proj(q)), d.off || 0)))
+      .selectAll("title").data((d) => [d]).join("title").text((d) => d.tip);
+  }
+  function babMarker() {
+    const b = proj(BAB_PT);
+    gH.append("circle").attr("class", "bab-pulse").attr("cx", b[0]).attr("cy", b[1]).attr("r", 4);
+    gH.append("circle").attr("class", "bab-pt").attr("cx", b[0]).attr("cy", b[1]).attr("r", 4.5)
+      .append("title").text("Bab el-Mandeb: the strait between Yemen and Djibouti, the Red Sea's southern gate");
+    gH.append("text").attr("class", "bablabel").attr("x", b[0] - 8).attr("y", b[1] + 16).attr("text-anchor", "end").text("BAB EL-MANDEB");
+  }
+  function rescaleBab(k) {
+    const b = proj(BAB_PT);
+    gH.select("text.bablabel").attr("x", b[0] - 8 / k).attr("y", b[1] + 16 / k);
+    // the labels' CSS font size beats the font-size attribute, so set it as a style or they grow with the zoom
+    gH.selectAll("text.hzlabel, text.bablabel").style("font-size", `${12 / k}px`);
+  }
+  function paintBab() {
+    const ls = babLines(), key = document.getElementById("wbabkey");
+    gBab.style("display", st.mat ? "none" : null);
+    if (key) key.hidden = !!st.mat;
+    const wd = (d) => (d.solid ? 1.4 + 1.4 * d.v : 0.9 + 4.2 * Math.sqrt(Math.max(d.v, 0)));
+    gBab.selectAll("path.blane").data(ls, (d) => d.k).attr("stroke-width", wd)
+      .attr("class", (d) => `blane${d.solid ? " solid" : ""}${d.dash ? " cape" : ""}${d.idle ? " idle" : ""}`)
+      .style("animation-duration", (d) => `${(1.8 / Math.max(d.v, 0.15)).toFixed(2)}s`).style("display", (d) => (d.hide ? "none" : null))
+      .selectAll("title").data((d) => [d]).join("title").text((d) => d.tip);
+    gBab.selectAll("path.bcase").data(ls, (d) => d.k).attr("stroke-width", (d) => wd(d) + 2.2).attr("class", (d) => `bcase${d.idle ? " idle" : ""}`)
+      .style("display", (d) => (d.hide ? "none" : null));
+    const pass = st.path26 ? 100 - BAB.b2026.lost : 100 - st.bab;
+    const t = document.getElementById("wbabtxt");
+    if (t) t.textContent = `Through Bab el-Mandeb (pink): the Red Sea route to Europe, ${pass}% of normal${st.lost ? "; Yanbu's crude to Asia" : ""}${!st.path26 && st.bab ? "; dashed: round the Cape" : ""}`;
+  }
+  // the 3D globe: the same lines and a point for the strait, added to what paint3d set
+  function babGlobe() {
+    if (!G3 || st.mat) return;
+    const ls = babLines().filter((d) => !d.idle);
+    const base = (G3.pathsData() || []).filter((d) => !d.bab);
+    const pc = G3.pathColor(), pw = G3.pathStroke(), pl = G3.pathLabel();
+    const call = (fn, d, dflt) => (typeof fn === "function" ? fn(d) : fn == null ? dflt : fn);
+    G3.pathsData([...base, ...ls.map((d) => ({ bab: true, pts: BAB_LANES[d.k].map(([lng, lat]) => [lat, lng + (d.off || 0) * 0.08]), w: 0.8 + 1.8 * Math.sqrt(d.v), tip: d.tip }))])
+      .pathColor((d) => (d.bab ? ["#ff4f9a", "#ff4f9a"] : call(pc, d, "#ffd60a")))
+      .pathStroke((d) => (d.bab ? d.w : call(pw, d, 1)))
+      .pathLabel((d) => (d.bab ? escH(d.tip) : typeof pl === "function" ? pl(d) : ""));
+    G3.pointsData([...(G3.pointsData() || []).filter((d) => !d.bab), { bab: true, name: "Bab el-Mandeb", lat: BAB_PT[1], lng: BAB_PT[0], alt: 0.02, r: 0.4, color: "#ff4f9a" }]);
   }
   function drawLift() {
     const f = st.sel && countries.find((c) => c.properties.name === st.sel);
@@ -5774,14 +5924,14 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
     const cpi = ecoPath(`${eco}_cpi`), un = ecoPath(`${eco}_unemp`);
     const sg = (v) => (v > 0.005 ? "+" : v < -0.005 ? "−" : ""), a = Math.abs;
     const c12 = cpi[12];
-    $("e-cpi-head").innerHTML = !st.lost
+    $("e-cpi-head").innerHTML = !st.eq
       ? "With Hormuz flowing normally, the chain adds nothing to prices."
-      : `${st.path26 ? "In the 2026 closure as the IEA counts it" : `With <b>${st.lost}%</b> of Hormuz oil lost`}, prices in ${ECO_NAME[eco]} end up about <b>${a(c12[0]).toFixed(1)}% ${c12[0] >= 0 ? "higher" : "lower"}</b> after 12 months than with no disruption (90% range ${sg(c12[1])}${a(c12[1]).toFixed(1)} to ${sg(c12[2])}${a(c12[2]).toFixed(1)}%). That adds roughly that much to the year's inflation.`;
+      : `${st.path26 ? "In the 2026 closure as the IEA counts it" : lostWords(true)}, prices in ${ECO_NAME[eco]} end up about <b>${a(c12[0]).toFixed(1)}% ${c12[0] >= 0 ? "higher" : "lower"}</b> after 12 months than with no disruption (90% range ${sg(c12[1])}${a(c12[1]).toFixed(1)} to ${sg(c12[2])}${a(c12[2]).toFixed(1)}%). That adds roughly that much to the year's inflation.`;
     ecoChart($("e-cpi-chart"), cpi, { unit: "%" });
     const u12 = un[12];
     $("e-un-head").innerHTML = `<b>No reliable effect.</b> The team's what-if keeps unemployment unchanged.`;
     ecoChart($("e-un-chart"), un, { unit: " pts", grey: true });
-    $("e-un-note").textContent = !st.lost ? "" :
+    $("e-un-note").textContent = !st.eq ? "" :
       `The grey line moves ${u12[0] < 0 ? "down" : "up"} about ${a(u12[0]).toFixed(2)} points, but the model finds no proven link from oil to jobs, so it's shown for reference only.`;
     $("e-src").textContent = `Vs no disruption. 90% range. ${chainSrc()}.`;
   }
@@ -5814,7 +5964,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
       out.innerHTML = ""; btn.disabled = false;
     }
   }
-  const scenFact = () => `Scenario: ${st.path26 ? `the 2026 closure as the IEA counts it (${pathTxt()}; ${st.lost} on average)` : `${st.lost} points of normal Hormuz flow lost as the IEA counts it, held for 12 months (the reader's choice)`}, so ${st.flow.toFixed(1)} of about ${PREWAR} mb/d get through. Brent averages about $${st.brent} over the next 12 months vs $${BRENT0} pre-war (Seb's flow-premium curve, fitted to the 2026 closure)`;
+  const scenFact = () => `Scenario: ${st.path26 ? `the 2026 closure as the IEA counts it (${pathTxt()}; ${st.lost} on average)` : `${st.lost} points of normal Hormuz flow lost as the IEA counts it, held for 12 months (the reader's choice)${st.bab ? `, and ${st.bab} points of Bab el-Mandeb's normal flow lost, which with the rerouting round the Cape and the Yanbu bypass makes ${st.babQ.raw.toFixed(0)} Hormuz-equivalent points${st.babQ.capped ? ' (Brent on the per-point curve takes all of them; the chain tables stop at 100)' : ''} (flow_events.py: one Bab el-Mandeb point is ${BAB.per} Hormuz points of tanker tonnage, ${Math.round(BAB.rerouted * 100)}% rerouted in 2024)` : ''}`}, so ${st.flow.toFixed(1)} of about ${PREWAR} mb/d get through. Brent averages about $${st.brent} over the next 12 months vs $${BRENT0} pre-war (Seb's flow-premium curve, fitted to the 2026 closure)`;
   // what the page shows for a country, each with where it comes from
   function countryFacts(name) {
     const iso = isoOf[name], k = calc(name), out = [scenFact()];
@@ -6279,7 +6429,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
     $("w-brent").textContent = a(pct) < 0.5 ? "same as pre-war" : `${pct > 0 ? "+" : "−"}${a(pct).toFixed(0)}% vs pre-war`;
     $("w-brent").className = "delta " + (pct > 2 ? "hurt" : pct < -2 ? "gain" : "");
     $("brent-v").textContent = `$${st.brent}`;
-    $("w-brent-r").textContent = st.lost ? `90% range $${Math.round(brentRes(0))} to $${Math.round(brentRes(2))}.` : "No lost flow: Brent stays at its pre-war $70.";
+    $("w-brent-r").textContent = st.eq ? `90% range $${Math.round(brentRes(0))} to $${Math.round(brentRes(2))}.${st.bab && !st.path26 ? ` From ${Math.round(st.babQ.raw)} Hormuz-equivalent points: Hormuz and Bab el-Mandeb together${st.babQ.capped ? `, past the 2026 peak of ${Math.max(...P26.path)}: the per-point curve applied beyond what was seen` : ""}.` : ""}` : "No lost flow: Brent stays at its pre-war $70.";
     const put = (id, v, txt, label) => {
       if ($(id).textContent !== txt && $(id).textContent !== "–") shockFlash($(id).parentElement);
       $(id).textContent = txt;
@@ -6296,8 +6446,29 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
     document.querySelectorAll("[data-path]").forEach((b) => b.setAttribute("aria-pressed", String(st.path26)));
     document.querySelectorAll("[data-rel]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.rel === st.rel)));
     $("w-res").textContent = resLine();
-    $("w-src").textContent += " Emergency stocks: IEA (the 2026 releases to 15 Oct 2026; stocks held for release as of March 2026).";
+    renderBab();
+    $("w-src").textContent += " Emergency stocks: IEA (the 2026 releases to 15 Oct 2026; stocks held for release as of March 2026)." + (st.bab && !st.path26 ? ` ${BAB_SRC}.` : "");
     renderShockExplain();
+  }
+  // the Bab el-Mandeb control: what it adds, which parts are our model and which are assumed
+  function renderBab() {
+    const q = st.babQ || eqOf(), f1 = (x) => x.toFixed(1), M = '<i class="tagm">(our model)</i>', A = '<i class="tagm">(assumption)</i>';
+    $("bab-v").textContent = st.path26 ? "2026" : st.bab;
+    $("bab-u").textContent = st.path26 ? "as it happened, inside the 2026 replay" : "points of its normal flow lost";
+    document.querySelectorAll("[data-bab]").forEach((b) => b.setAttribute("aria-pressed", String(!st.path26 && Number(b.dataset.bab) === st.bab
+      && (b.dataset.babf == null || Number(b.dataset.babf) === st.babF))));
+    let t;
+    if (st.path26) t = `The 2026 closure replays what happened, the Red Sea included: after the Houthis declared a blockade of Saudi shipping (${ymLabel(BAB.b2026.declared.slice(0, 7))}), Bab el-Mandeb lost ${BAB.b2026.lost} points of its flow and Yanbu's bypass to Asia stopped. Pick a level here to set your own; Hormuz is then held at ${st.lost}.`;
+    else if (!st.bab) t = `Normal: nothing added. Bab el-Mandeb carries about ${BAB.per.toFixed(2)} times Hormuz's tanker tonnage ${M}${st.lost ? `, and while Hormuz is shut it also carries the Saudi crude piped across Arabia to Yanbu and shipped on to Asia` : ""}.`;
+    else {
+      const share = st.babF >= 0.995 ? "all of it" : `${Math.round(st.babF * 100)}% of it`;
+      const via = st.babF === BAB.b2026.f && st.bab === BAB.b2026.lost ? `${share}, as measured in ${ymLabel(BAB.b2026.month)},` : `${share}, the same share as the strait's flow ${A},`;
+      t = `<b>${st.bab}</b> points of its flow are ${f1(st.bab * BAB.per)} Hormuz points of tanker tonnage ${M}. ${Math.round(BAB.rerouted * 100)}% of that goes round the Cape and still arrives, as in 2024 ${A}, so <b>${f1(q.red)}</b> count.`;
+      if (st.lost) t += ` With Hormuz down ${st.lost} points, Yanbu's bypass sails through Bab el-Mandeb too: it made up ${Math.round(BAB.bypass * 100)}% of the Gulf's lost exports in 2026 ${M}, and losing ${via} adds <b>${f1(q.byp)}</b>.`;
+      t += ` Brent and every number below follow <b>${st.lost} + ${f1(q.red)}${st.lost ? ` + ${f1(q.byp)}` : ""} = ${f1(q.raw)}</b> Hormuz-equivalent points.`;
+      if (q.capped) t += ` <b>That is above 100</b>, where the chain's tables stop (Hormuz shut). Brent takes all ${f1(q.raw)} points on the flow-premium curve, which is a premium per point lost, though no loss this large has been seen (2026 peaked at ${Math.max(...P26.path)} as the IEA counts it); so do the fuel costs and everything else that follows Brent. The chain's own numbers (US diesel, inflation, jet fuel, fertiliser, plastics) are shown at 100 and understate it.`;
+    }
+    $("w-bab").innerHTML = t;
   }
   // What the chosen release does, in one line
   function resLine() {
@@ -6305,9 +6476,9 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
     const left = out ? `The stocks held for release (${mb(RES_META.stock_mb)}) run out after ${out} days; then those barrels go missing too.`
       : st.rel === "max" && end ? `The release tapers to nothing after ${end} days, as the IEA expects of a maximum drawdown.` : "";
     if (st.path26) return "As it happened: the 2026 path already includes the emergency stocks released in 2026.";
-    if (!st.lost) return "No lost flow, so no stocks are needed.";
+    if (!st.eq) return "No lost flow, so no stocks are needed.";
     // releases act early, so say what the chain gives after 3 months next to the 2026 releases
-    const e3 = (sr, pol) => chainEffect(sr, 3, st.lost, pol).mean, f0 = (x) => `${x >= 0 ? "+" : "−"}${Math.abs(x).toFixed(0)}%`, f1 = (x) => `${x >= 0 ? "+" : "−"}${Math.abs(x).toFixed(1)}`;
+    const e3 = (sr, pol) => chainEffect(sr, 3, st.eq, pol).mean, f0 = (x) => `${x >= 0 ? "+" : "−"}${Math.abs(x).toFixed(0)}%`, f1 = (x) => `${x >= 0 ? "+" : "−"}${Math.abs(x).toFixed(1)}`;
     const early = ` After 3 months: diesel ${f0(e3("ind_gasdesw", st.rel))} (${f0(e3("ind_gasdesw", "2026"))} with the 2026 releases), US prices ${f1(e3("us_cpi", st.rel))} points (${f1(e3("us_cpi", "2026"))}).`;
     if (st.rel === "none") return "No stocks released: every lost barrel is missing from the market, so Brent rises more than it did in 2026." + early;
     if (st.rel === "2026") return `Stocks replace the same share of the lost barrels as the 2026 releases did: about ${mean.toFixed(1)} mb/d on average over the year, ${mb(total)} in total. ${left}`.trim();
@@ -6320,6 +6491,11 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
     if (st.path26) {
       out.push(`2026 as the IEA counts it (${pathTxt()}): Brent about <b>$${st.brent}</b> over the 12 months from March (<b>+${f0(pct)}%</b>).`);
       out.push(`Diesel <b>${dsl >= 0 ? "+" : "−"}${f0(dsl)}%</b>, inflation <b>${cpi >= 0 ? "+" : "−"}${f1(cpi)} pts</b> within a year (US, vs no disruption).`);
+    }
+    else if (st.bab) {
+      out.push(`${lostWords(true)}, Brent averages about <b>$${st.brent}</b> over the next year, <b>${f0(pct)}% more</b> than before the war.`);
+      out.push(`Within a year that pushes diesel at the pump <b>up about ${f0(dsl)}%</b> and overall inflation <b>up about ${f1(cpi)} points</b> (US figures, against no disruption).`);
+      if (st.rel !== "2026") out.push(st.rel === "none" ? "That assumes no emergency stocks are released." : "That assumes emergency stocks are released as fast as the IEA says its members could.");
     }
     else if (!st.lost) out.push("Hormuz flowing normally: no change to oil, diesel or inflation.");
     else {
@@ -6351,6 +6527,11 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
   $("lost").addEventListener("input", (e) => { setLost(Number(e.target.value)); update(); });
   document.querySelectorAll("[data-lost]").forEach((b) => b.addEventListener("click", () => { setLost(Number(b.dataset.lost)); update(); }));
   document.querySelectorAll("[data-path]").forEach((b) => b.addEventListener("click", () => { setPath26(); update(); }));
+  $("bab").addEventListener("input", (e) => { setBab(Number(e.target.value)); update(); });
+  document.querySelectorAll("[data-bab]").forEach((b) => b.addEventListener("click", () => {
+    if (st.path26 && !Number(b.dataset.bab)) return;
+    setBab(Number(b.dataset.bab), b.dataset.babf == null ? null : Number(b.dataset.babf)); update();
+  }));
   document.querySelectorAll("[data-rel]").forEach((b) => b.addEventListener("click", () => { st.rel = b.dataset.rel; setLost(st.lost); update(); }));
 
   // ------------------------------------------------------------ materials: rail, search, product pane, country trade
@@ -6471,7 +6652,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
     const p = priceMoveM(m), d = shockRangeM(m);
     $("m-price").textContent = p ? pctP(p.mean) : "?";
     $("m-price").className = "pprice " + (p ? (p.mean > 0.05 ? "hurt" : p.mean < -0.05 ? "gain" : "") : "");
-    $("m-band").textContent = p && p.chain ? `${st.path26 ? "In the 2026 closure as the IEA counts it" : `With ${st.lost}% of Hormuz flow lost`} (Brent about $${st.brent}), 12 months on. 90% of outcomes: ${pctP(p.lo, 0)} to ${pctP(p.hi, 0)}. ${chainSrc()}.` : p ? `Brent $${st.brent} vs $${BRENT0} pre-war, 12 months on. Range ${pctP(p.lo)} to ${pctP(p.hi)}.${d ? ` Past supply shocks: ${pctP(d.lo)} to ${pctP(d.hi)}.` : ""} Source: past US price moves (FRED, 2001–2026).${m.oil.extra ? " In the 2026 closure, prices rose faster than this." : ""}`
+    $("m-band").textContent = p && p.chain ? `${st.path26 ? "In the 2026 closure as the IEA counts it" : st.bab ? lostWords(false) : `With ${st.lost}% of Hormuz flow lost`} (Brent about $${st.brent}), 12 months on. 90% of outcomes: ${pctP(p.lo, 0)} to ${pctP(p.hi, 0)}. ${chainSrc()}.` : p ? `Brent $${st.brent} vs $${BRENT0} pre-war, 12 months on. Range ${pctP(p.lo)} to ${pctP(p.hi)}.${d ? ` Past supply shocks: ${pctP(d.lo)} to ${pctP(d.hi)}.` : ""} Source: past US price moves (FRED, 2001–2026).${m.oil.extra ? " In the 2026 closure, prices rose faster than this." : ""}`
       : `No fitted oil link yet${m.oil && m.oil.note ? ` (${m.oil.note})` : ""}.`;
     document.querySelectorAll("[data-mmode]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mmode === st.mode)));
     const rows = tableOf(m, st.mode), max = Math.max(...rows.map((r) => r.w), 0.01);
@@ -6606,6 +6787,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
       <p class="faint">Map: globe.gl and flag-icons (MIT licence), Natural Earth. Nothing here is live.</p>` },
     model: { title: "How the world view works", html: `<p>You choose how much of the normal Hormuz flow is lost. The oil price follows from a curve fitted to the 2026 closure and checked against the 2023–24 Red Sea disruption; the knock-ons come from the team's oil-shock model, fitted to data up to early 2026.</p>
       <ul><li><b>Lines:</b> tanker routes from the strait. Faint lines show pre-war volume, bright lines today's estimated flow.</li>
+      <li><b>Bab el-Mandeb</b> (pink): the Red Sea's southern gate, on the route to Europe and for the Saudi crude piped to Yanbu while Hormuz is shut. Its lost flow is added in Hormuz points: our flow model gives the conversion by tanker tonnage and the share rerouted round the Cape in 2024 (PortWatch); that the same share reroutes again is an assumption. Paths are approximate.</li>
       <li><b>Fuel cost:</b> the US link from oil to pump prices (about 5–7% per 10% oil rise), plus an extra premium for countries that got their oil through Hormuz. That premium is set by hand, not fitted.</li>
       <li><b>Industries:</b> fuel's share of costs × the fuel price change. Airlines 25% (IATA), shipping 22% (Maersk), trucking 21% (ATRI).</li>
       <li><b>Forecast chart:</b> the base case closes the gap over the year; the band runs from a quick reopening to a year-long closure.</li></ul>
