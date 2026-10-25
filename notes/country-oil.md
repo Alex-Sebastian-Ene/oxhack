@@ -47,3 +47,56 @@ Pooled (for countries without a series): 0.27, middle half 0.25 to 0.31 over 37 
 | NOR | 0.19 | 0.14 to 0.24 | 0.55 | 204 |
 | ISL | 0.18 | 0.12 to 0.24 | 0.43 | 109 |
 | MLT | 0.07 | 0.02 to 0.12 | 0.16 | 204 |
+
+## Oil trade
+
+UN Comtrade, public preview API (HS 2709 crude and HS 2710 refined products, imports CIF and exports FOB as each country reports them, US$), collected 2026-10-25. gulf_share: imports from the seven Gulf producers / all oil imports, an upper bound for oil through the strait (Yanbu and Fujairah bypass it); m: net oil imports / oil imports.
+
+167 countries report oil trade; 147 for 2024, the rest for 2023. 27 are net exporters by value.
+
+Most Gulf-dependent importers:
+
+| Country | Year | Gulf share of oil imports | m |
+|---|---|---|---|
+| COM | 2023 | 99% | 1.00 |
+| SYC | 2024 | 99% | 0.28 |
+| YEM | 2024 | 98% | 1.00 |
+| ETH | 2023 | 97% | 1.00 |
+| BDI | 2023 | 93% | 0.99 |
+| JOR | 2024 | 90% | 1.00 |
+| JPN | 2024 | 85% | 0.91 |
+| DJI | 2023 | 82% | 0.95 |
+| PAK | 2024 | 80% | 0.95 |
+| EGY | 2024 | 72% | 0.51 |
+| KEN | 2024 | 68% | 0.74 |
+| BHR | 2024 | 66% | 0.89 |
+| KOR | 2024 | 65% | 0.55 |
+| UGA | 2024 | 62% | 0.93 |
+| COD | 2024 | 60% | 0.72 |
+| THA | 2024 | 59% | 0.76 |
+| MUS | 2024 | 58% | 1.00 |
+| TZA | 2024 | 56% | 0.97 |
+| RWA | 2024 | 47% | 0.73 |
+| IND | 2024 | 46% | 0.54 |
+| ZMB | 2024 | 45% | 1.00 |
+| MDV | 2024 | 43% | 1.00 |
+| MRT | 2024 | 43% | 0.99 |
+| LTU | 2024 | 38% | 0.31 |
+| NAM | 2024 | 38% | 0.77 |
+
+## Cost of living
+
+FAOSTAT consumer price indices (general and food, 2015 = 100, monthly), fetched 2026-10-25. Oil links: h-month log change in the price index on the h-month log change in Brent (FRED MCOILBRENTEU, US$), 2009-01 to 2025-12, Newey-West errors over h months; each country's slope is ridge-updated towards our cost-of-living model's link (US, UK and euro-area average, normal regime) by its noise, the penalty set by how far the countries' true slopes spread around the model; inflation is the 12-month change in the index, at the latest month and in Feb 2026 before the closure.
+
+206 countries; too unstable to fit (very high inflation): LBN food, LBN all, SDN food, SDN all, SSD food, SSD all, SYR food, SYR all, VEN food, VEN all, ZWE food, ZWE all.
+
+Pooled link (% price change per 1% Brent move over the same months, and the spread of the true slopes):
+
+| Prices | 1 mo | 2 mo | 3 mo | 6 mo | 12 mo |
+|---|---|---|---|---|---|
+| food | +0.0010 (±0.0001) | +0.0002 (±0.0001) | +0.0018 (±0.0001) | +0.0080 (±0.0065) | +0.0304 (±0.0271) |
+| all | +0.0095 (±0.0075) | +0.0167 (±0.0129) | +0.0190 (±0.0132) | +0.0241 (±0.0161) | +0.0321 (±0.0204) |
+
+Outlook: the latest 12 months' inflation continues, plus the country's oil link applied to Brent's known move since the latest price month; 90% band from this country's past misses of that rule (12-month forecasts from every 6 months, 2015-2024), scaled by the square root of the horizon.
+
+A per-country time-series model (its own last month, month of year, Brent's last three months) was tried first and lost to the naive rule in the same backtest: skill against naive food -0.16 over 3093 forecasts, all -1.21 over 3132 forecasts. So the outlook uses the naive rule plus the oil link.

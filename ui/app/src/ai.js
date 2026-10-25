@@ -153,7 +153,9 @@ window.HZAI = (() => {
     const card = $("c-name") && $("c-name").textContent === (where[iso] && where[iso].name) ? $("country-card") : null;
     if (card) {
       const t = (id) => ($(id) ? $(id).textContent.trim() : "");
-      out.push(`${name} in this page's Hormuz model at the current setting (${$("hz-read") ? $("hz-read").textContent : ""}): exposure score ${t("c-score")} on a -40 (gains) to +65 (hurt) scale; fuel cost ${t("c-fuel")} vs pre-war; ${t("c-dep")} of its oil came via Hormuz; ${t("c-tag")}`);
+      out.push(`${name} in this page's Hormuz model at the current setting (${$("hz-read") ? $("hz-read").textContent : ""}): ${t("c-score")} ${t("c-score-l")}; fuel cost ${t("c-fuel")} vs pre-war; ${t("c-dep")} of its oil imports came from the Gulf; ${t("c-tag")}`);
+      if (t("col-now")) out.push(`${t("col-now")} (FAOSTAT)`);
+      for (const li of document.querySelectorAll("#col-list li[data-colitem]")) out.push(`${li.querySelector(".nm").textContent.trim()}: ${li.querySelector(".lv").textContent.trim()}. ${li.querySelector(".why").textContent.trim()}`);
     }
     for (const x of rows) out.push(`${x.it.name} ${x.mode === "exports" ? "exports" : "production"}: ${name} ranks #${x.rank} of ${x.of} listed, ${share(x.r)}${x.r.share != null ? (x.mode === "exports" ? " of world exports" : " of world output") : ` ${x.unit || ""}`} (${x.year || ""}; ${firstHost(x.source)})`);
     for (const m of M.materials) for (const l of m.links.filter((l) => l.to === iso && l.from !== iso).sort((a, b) => b.share - a.share).slice(0, 2))
@@ -166,6 +168,7 @@ window.HZAI = (() => {
     const card = $("c-name") && $("c-name").textContent === (where[iso] && where[iso].name);
     const t = (id) => esc($(id) ? $(id).textContent : "–");
     const tile = (v, l, cls = "") => `<div><b class="${cls}">${v}</b><span>${l}</span></div>`;
+    const colLv = (k) => { const li = document.querySelector(`#col-list li[data-colitem="${k}"] .lv`); return esc(li ? li.textContent : "–"); };
     const bars = rows.map((x) => {
       const w = Math.max(6, Math.round((x.r.share != null ? Math.min(1, x.r.share / 0.6) : (x.of - x.rank + 1) / x.of) * 100));
       return `<div class="hz-rk ${x.mode}"><span class="hz-rk-n">${esc(x.it.name)} <small>${x.mode === "exports" ? "shipped" : "made"}</small></span><span class="hz-rk-b"><i style="width:${w}%"></i></span><span class="hz-rk-v">#${x.rank}<small>/${x.of}</small> ${share(x.r)}</span></div>`;
@@ -174,7 +177,7 @@ window.HZAI = (() => {
     for (const m of M.materials) for (const l of m.links.filter((l) => l.to === iso && l.from !== iso).sort((a, b) => b.share - a.share).slice(0, 3))
       into.push(`<span class="hz-chip" title="${esc(l.basis)} · ${esc(l.year)}">${esc((M.inputs[l.input] || {}).name || l.input)} ← ${flag(l.from)}<b>${Math.round(l.share * 100)}%</b></span>`);
     return `<div class="hz-prof-hero">${flag(iso, "huge")}<div><b>${esc(nameOf(iso))}</b><span>${rows.length ? `In ${rows.length} of our production and export tables` : "Not in our sourced tables yet"}</span></div></div>
-      ${card ? `<div class="hz-tiles">${tile(t("c-score"), "exposure score", "hot")}${tile(t("c-fuel"), "fuel cost vs pre-war", "hot")}${tile(t("c-dep"), "of its oil via Hormuz")}${tile(t("c-tag"), "role")}</div>` : ""}
+      ${card ? `<div class="hz-tiles">${tile(colLv("food"), "groceries in 12 months", "hot")}${tile(t("c-fuel"), "fuel cost vs pre-war", "hot")}${tile(t("c-score"), t("c-score-l"))}${tile(t("c-dep"), "of its oil imports from the Gulf")}</div><p class="hz-note">${t("col-now")}</p>` : ""}
       <div class="hz-bests">${best(ex[0], "Main export in our tables")}${best(mk[0], "Biggest role in production")}</div>
       ${rows.length ? `<h3 class="hz-h3">Where it ranks</h3><div class="hz-rks">${bars}</div>` : ""}
       ${into.length ? `<h3 class="hz-h3">Key inputs come from</h3><div class="hz-chips">${into.join("")}</div>` : ""}
