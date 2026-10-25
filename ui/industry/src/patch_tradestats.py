@@ -35,7 +35,8 @@ for iso, c in data["countries"].items():
     e = {"s": {k: [round(v["value"]) if abs(v["value"]) > 1e5 else round(v["value"], 2), v["year"]] for k, v in c["stats"].items()}} if c["stats"] else {}
     if c["partners"]:
         e["p"] = {f: [x["year"], round(x["total"]), x["collected"],
-                         [[t["iso3"] or "", t["name"], t["share"], round(t["value"]), int(t["on_map"])] for t in x["top"]]]
+                         [[t["iso3"] or "", t["name"], t["share"], round(t["value"]), int(t["on_map"]), int(t["named"])] for t in x["top"]],
+                         x["unnamed_share"]]
                   for f, x in c["partners"].items()}
     if c.get("too_old"):
         e["o"] = c["too_old"]
@@ -48,7 +49,7 @@ TRADE_JS = (
     "  // Exports and imports for every map country (notes/trade-stats.json, experiments/trade_stats.py). c[iso3]:\n"
     "  //  s: World Bank WDI figures by indicator, [value, year] (each country's latest year)\n"
     "  //  o: indicators whose latest figure is more than 10 years old (not shown), by year\n"
-    "  //  p: UN Comtrade goods partners by flow, [year, total with the world, collected, [[iso3, name, share, value, on map]]]\n"
+    "  //  p: UN Comtrade goods partners by flow, [year, total with the world, collected, [[iso3, name, share, value, on map, named]], share with no named partner]\n"
     "  //  note: why there are no figures\n"
     f"  const TRADE = {json.dumps(TRADE, ensure_ascii=False, separators=(',', ':')).replace('</', '<' + chr(92) + '/')};\n"
 )
@@ -95,14 +96,14 @@ JS = TRADE_JS + r'''  const xUsd = (v) => { const a = Math.abs(v);
     for (const [f, [lab, verb]] of Object.entries(X_FLOW)) {
       const x = p[f];
       if (!x) continue;
-      const [yr, tot, , top] = x;
-      h += `<div class="x-tl"><span>${lab}, ${yr}</span><div class="ichips">${top.map(([pi, pn, sh, v, onMap]) => {
+      const [yr, tot, , top, un] = x;
+      h += `<div class="x-tl"><span>${lab}, ${yr}</span><div class="ichips">${top.map(([pi, pn, sh, v, onMap, named]) => {
         const t = escH(`${xUsd(v)} of ${xUsd(tot)} in goods ${verb} the world in ${yr}, as ${nm} reports it (UN Comtrade)` +
-          (pn === "Other Asia, nes" ? `. "Other Asia, nes" is how most countries record trade with Taiwan.` : ""));
-        const show = pn === "United States of America" ? "United States" : pn, inner = `${pi ? flagImg(pi) : ""}${escH(show)} <b>${xPct(sh * 100)}</b>`;
+          (named ? "" : `. UN Comtrade's "${pn}": trade the report doesn't assign to a named country` + (pn === "Other Asia, nes" ? " (for many countries, mostly Taiwan)" : "")));
+        const show = !named ? pn.replace(/, nes$/, ", not named") : pn === "United States of America" ? "United States" : pn, inner = `${pi ? flagImg(pi) : ""}${escH(show)} <b>${xPct(sh * 100)}</b>`;
         return onMap ? `<button type="button" class="ichip x-p" data-xsel="${escH(pn)}" title="${t}. Click to open ${escH(show)}.">${inner}</button>`
-          : `<span class="ichip" title="${t}">${inner}</span>`;
-      }).join("")}</div></div>`;
+          : `<span class="ichip${named ? "" : " x-un"}" title="${t}">${inner}</span>`;
+      }).join("")}</div>${un >= 0.2 ? `<p class="faint">${escH(nm)} names no partner country for ${xPct(un * 100)} of these in its ${yr} report.</p>` : ""}</div>`;
     }
     const codes = Object.keys(s).map((k) => I[k].code), days = [...new Set(Object.keys(s).map((k) => I[k].collected))];
     const pdays = [...new Set(Object.values(p).map((x) => x[2]))];
@@ -140,6 +141,7 @@ CSS = """
 .ichip.x-p { min-height: 0; cursor: pointer; color: var(--text); }
 .ichip.x-p:hover { border-color: var(--text); }
 .ichip b { font-weight: 600; }
+.ichip.x-un { border-style: dashed; color: var(--muted); }
 .x-cached { display: inline-block; margin-left: 4px; padding: 0 6px; border-radius: 999px; border: 1px dashed var(--line2); font: 600 10.5px/1.6 var(--sans); font-style: normal; color: var(--muted); text-transform: none; letter-spacing: 0; white-space: nowrap; }
 """
 sub('</style>\n<div class="app">', CSS + '</style>\n<div class="app">')

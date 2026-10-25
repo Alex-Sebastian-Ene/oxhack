@@ -22,6 +22,8 @@ def test_every_number_has_its_source_indicator_year_and_date():
             assert flow in ("exports", "imports") and x["source"] == "UN Comtrade" and len(x["collected"]) == 10, (iso, flow)
             assert 0 < len(x["top"]) <= ts.TOP and all(0 < t["share"] <= 1 for t in x["top"]), (iso, flow)
             assert [t["value"] for t in x["top"]] == sorted((t["value"] for t in x["top"]), reverse=True), (iso, flow)
+            assert all(t["named"] or t["iso3"] is None for t in x["top"]), (iso, flow)  # no flag for "..., nes" areas
+            assert 0 <= x["unnamed_share"] <= 1, (iso, flow)
 
 
 def test_countries_without_figures_say_so():
