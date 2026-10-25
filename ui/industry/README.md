@@ -31,6 +31,10 @@ Open `index.html` in a browser; it needs no server. It is the same page as the s
       `notes/industry/industry_exposure.csv`. Outside Europe, Türkiye and the US these say "no data".
     - Added industries stay as you click between countries. Rows with a sector series link to its chart in
       the Trends tab (`src/patch_pickind.py`).
+  - **Trade tab:** every country's exports and imports of goods and services (US$ and % of GDP), the trade
+    balance, goods exports and imports, fuel's share of each, and its five largest buyers and suppliers of goods
+    (a partner on the map opens its own card). Each figure is the latest year published, shown with its year;
+    countries the sources don't cover (Taiwan, Northern Cyprus, Somaliland and a few others) say so.
   - **Economy tab:** how consumer prices and unemployment respond over 36 months at the slider's Brent price,
     for the US, the UK or the euro area (a euro-area country shows euro-area figures; other countries can compare
     the three). Unemployment is drawn in grey and labelled "No reliable effect": its historical link with oil has
@@ -137,6 +141,7 @@ Everything is a cached snapshot bundled into the page. Nothing is fetched live.
 | Petrol, energy CPI, headline CPI steps | `notes/oil-chain-links.md` | FRED, see that note |
 | Economy tab: CPI and unemployment paths, US / UK / euro area | Seb's Bayesian responses, `notes/macro-bayes-responses.csv` (`experiments/macro_bayes.py`), read by `src/patch_economy.py` at build time | FRED/ONS/Eurostat to 2026-10, generated 2026-10-24 |
 | Cost to buyers | `notes/industry/`: airlines 31.4% fuel share (IATA), farming 40% fertiliser share (CIBC) | see that folder |
+| Trade tab: exports and imports, goods, fuel shares, main partners | `notes/trade-stats.json` (`experiments/trade_stats.py`): World Bank WDI (`NE.EXP/IMP.GNFS.CD` and `.ZS`, `TX/TM.VAL.MRCH.CD.WT`, `TX/TM.VAL.FUEL.ZS.UN`), UN Comtrade public preview (partners, all goods). Read by `src/patch_tradestats.py` at build time | 2026-10-25 (WDI updated 2026-10-08) |
 | Trends tab: inflation, industry prices and output, forecast skill, oil effect by industry | `notes/country-trends.json` (`experiments/country_trends.py`): Eurostat HICP, `sts_inppd_m` and `sts_inpr_m`; BLS CPI and PPIs, Fed industrial production and ONS CPI. Skill and oil effects are `global_lin`'s in the sector run (`notes/sector-global-results.md`). Read by `src/patch_trends.py` at build time | Eurostat and FRED, 2026-10-24/25 |
 
 - All price moves are 12 months after the move in Brent from $70 pre-war, scaled by ln(1+x)/ln(1.1).
