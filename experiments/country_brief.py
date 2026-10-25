@@ -14,6 +14,7 @@ limits: docs/country-briefs.md. BRIEF_FAKE=1 serves labelled test answers with n
     uv run experiments/country_brief.py      # serves http://127.0.0.1:8787
     uv run experiments/country_brief.py check  # one tiny live call per model, and the models this key can use
     uv run experiments/country_brief.py bake   # every app panel ahead of time -> ui/app/data/ai-panels.json
+    uv run experiments/country_brief.py bake --images   # ...and a picture for each resource (needs image quota)
 
 The key comes from the GEMINI_API_KEY environment variable, or from a line GEMINI_API_KEY=... in the
 repo's .env (git-ignored). Never put it in git, Linear or the page. The service binds to
@@ -132,8 +133,9 @@ def country_prompt(country: str, facts: list[str]) -> str:
     )
 
 
-def interact(model: str, text: str, key: str) -> dict:
-    req = urllib.request.Request(INTERACTIONS, data=json.dumps({"model": model, "input": text}).encode(), method="POST",
+def interact(model: str, text: str, key: str, response_format: dict | None = None) -> dict:
+    body = {"model": model, "input": text, **({"response_format": response_format} if response_format else {})}
+    req = urllib.request.Request(INTERACTIONS, data=json.dumps(body).encode(), method="POST",
                                  headers={"Content-Type": "application/json", "x-goog-api-key": key})
     with urllib.request.urlopen(req, timeout=120) as r:
         return json.loads(r.read())
@@ -391,7 +393,8 @@ class QuotaOut(Exception):
 
 def _retrying(fn, label: str, tries: int = 6):
     """fn() again after a rate limit (HTTP 429), a server error or a timeout, waiting longer each time. A 429 that
-    asks for a long wait is the daily quota (20 requests per model on the free tier): raise QuotaOut rather than wait."""
+    asks for a long wait is the daily quota (20 requests per model on the free tier), and one that says "limit: 0" means
+    the key has no quota for that model at all (the free tier's image models): raise QuotaOut rather than wait."""
     import time
     for n in range(tries):
         try:
@@ -399,10 +402,10 @@ def _retrying(fn, label: str, tries: int = 6):
         except urllib.error.HTTPError as e:
             if e.code != 429 and e.code < 500 or n == tries - 1:
                 raise
-            wait = int(e.headers.get("Retry-After") or 0) or 15 * (n + 1)
-            if e.code == 429 and wait > 300:
-                raise QuotaOut(_http_error(e)) from None
-            print(f"  {label}: {_http_error(e)[:90]}; waiting {wait}s", file=sys.stderr)
+            wait, msg = int(e.headers.get("Retry-After") or 0) or 15 * (n + 1), _http_error(e)
+            if e.code == 429 and (wait > 300 or "limit: 0" in msg):   # the day's quota is used up, or there is none
+                raise QuotaOut(msg) from None
+            print(f"  {label}: {msg[:90]}; waiting {wait}s", file=sys.stderr)
         except (urllib.error.URLError, TimeoutError) as e:
             if n == tries - 1:
                 raise
@@ -414,7 +417,50 @@ def _retrying(fn, label: str, tries: int = 6):
 STUCK = 4   # failures in a row (after retries) before bake gives up on a model for now
 
 
-def bake(key: str | None, facts_path: Path = FACTS, out_path: Path = BAKED, workers: int = 4) -> int:
+PICTURE = {"type": "image", "mime_type": "image/jpeg", "aspect_ratio": "4:3", "image_size": "1K"}   # the smallest size every image model makes
+
+
+def picture(name: str, key: str | None) -> dict:
+    """A pixel-art picture of a resource from IMAGE_MODEL, as a data URI, through the service's cache."""
+    h = hashlib.sha256(json.dumps([IMAGE_MODEL, image_prompt(name), PICTURE], sort_keys=True).encode()).hexdigest()[:12]
+    path = CACHE / f"pic-{''.join(ch for ch in name.lower() if ch.isalnum())[:40]}-{h}.json"
+    if path.exists():
+        return json.loads(path.read_text())
+    if FAKE:
+        img, served_by = fake_image(), "test (BRIEF_FAKE)"
+    else:
+        if not key:
+            raise PermissionError("GEMINI_API_KEY is not set")
+        resp = interact(IMAGE_MODEL, image_prompt(name), key, PICTURE)
+        _, img = outputs(resp)
+        served_by = str(resp.get("model") or IMAGE_MODEL)
+        if not img:
+            raise ValueError("the image model returned no picture")
+    out = {"image": f"data:{img.get('mime_type') or 'image/jpeg'};base64,{img['data']}", "image_model": served_by}
+    CACHE.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(out))
+    return out
+
+
+def pictures(resources: dict, key: str | None) -> None:
+    """Add a picture to each baked resource that has none (bake --images). Stops at the first sign that the key has no
+    image quota: on the free tier every image model has a limit of 0, so pictures need a key with billing."""
+    for k, b in resources.items():
+        if b.get("image"):
+            continue
+        try:
+            b.update(_retrying(lambda: picture(b.get("name") or k, key), f"picture {k}"))
+            print(f"picture {k}: {len(b['image']) * 3 // 4 // 1024} KB from {b['image_model']}", flush=True)
+        except QuotaOut as e:
+            print(f"  no picture quota for {IMAGE_MODEL} on this key ({str(e)[:110]}): pictures need a key with billing", file=sys.stderr)
+            return
+        except (urllib.error.URLError, TimeoutError, ValueError, PermissionError) as e:
+            print(f"  picture {k}: failed, {_http_error(e)}", file=sys.stderr)
+    kb = sum(len(b["image"]) for b in resources.values() if b.get("image")) // 1024
+    print(f"pictures: {sum(1 for b in resources.values() if b.get('image'))} of {len(resources)} resources, {kb} KB in the page")
+
+
+def bake(key: str | None, facts_path: Path = FACTS, out_path: Path = BAKED, workers: int = 4, images: bool = False) -> int:
     """Every "What is it?" and "Summarise with Gemini" panel ahead of time, for the app build (ui/app/src/build.py
     puts ui/app/data/ai-panels.json in the page as window.HZ_AI_BAKED). The facts file holds exactly what each panel
     would send, read from the built page at the 2026-closure setting by ui/app/src/ai_facts.cjs. An answer already in
@@ -423,7 +469,8 @@ def bake(key: str | None, facts_path: Path = FACTS, out_path: Path = BAKED, work
     order of how many facts we hold on them, so a small daily quota covers the best-documented first. When the quota
     runs out, or the model fails STUCK times in a row (overloaded: 503s or timeouts even after retrying), the rest are
     listed as missing and the file is still written. Text only: pictures would add megabytes
-    to the page. Returns the number of panels still missing."""
+    to the page unless asked for: `bake --images` (images=True) adds a picture from IMAGE_MODEL to each resource that
+    has none. Returns the number of panels still missing."""
     import threading
     from concurrent.futures import ThreadPoolExecutor
     if not key and not FAKE:
@@ -462,10 +509,14 @@ def bake(key: str | None, facts_path: Path = FACTS, out_path: Path = BAKED, work
             return
         fails[0] = 0
         done[group][k] = {f: b[f] for f in ("name", "country", "text", "facts", "model", "generated_at") if f in b}
+        if prev and prev.get("image"):   # a picture outlives its text: it shows the thing, not the facts
+            done[group][k].update(image=prev["image"], image_model=prev.get("image_model"))
         print(f"{'resource' if group == 'resources' else 'country'} {k}: {'cached' if b['cached'] else 'new'} ({sum(map(len, done.values()))}/{len(jobs)})", flush=True)
 
     with ThreadPoolExecutor(workers) as pool:
         list(pool.map(run, jobs))
+    if images:
+        pictures(done["resources"], key)
     stamps = sorted(b["generated_at"] for g in done.values() for b in g.values())
     out = {"about": "Gemini panels written ahead of time by `uv run experiments/country_brief.py bake`; AI-written, not "
                     "checked by the team. Facts are what each panel sends, read from the built app by ui/app/src/ai_facts.cjs.",
@@ -484,7 +535,7 @@ def main() -> None:
     if sys.argv[1:2] == ["check"]:
         sys.exit(1 if check(os.environ.get("GEMINI_API_KEY")) else 0)
     if sys.argv[1:2] == ["bake"]:
-        sys.exit(1 if bake(os.environ.get("GEMINI_API_KEY")) else 0)
+        sys.exit(1 if bake(os.environ.get("GEMINI_API_KEY"), images="--images" in sys.argv) else 0)
     if FAKE:
         print("BRIEF_FAKE=1: serving labelled test answers, not Gemini", file=sys.stderr)
     elif not os.environ.get("GEMINI_API_KEY"):

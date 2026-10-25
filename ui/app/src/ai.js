@@ -24,6 +24,12 @@ window.HZAI = (() => {
     book: ["KKKKK.KKKKK", "K...KKK...K", "K.KKK.KKK.K", "K...K.K...K", "K.KKK.KKK.K", "K...K.K...K", "K.KKK.KKK.K", "K...K.K...K", "KKKKKKKKKKK"],
     spark: ["....K....", "....K....", "...KKK...", "KKKKKKKKK", "...KKK...", "....K....", "....K...."],
     flag: ["K.......", "KKKKKKK.", "KKKKKKKK", "KKKKKKK.", "K.......", "K.......", "K......."],
+    // topics of Gemini's lines
+    barrel: ["..KKKKK..", ".KGGGGGK.", ".KKKKKKK.", "KK.....KK", "KKKKKKKKK", "KK.....KK", ".KKKKKKK.", ".KGGGGGK.", "..KKKKK.."],
+    ship: ["....K....", "....KK...", "....KKK..", "....K....", "KKKKKKKKK", ".KKKKKKK.", "..KKKKK..", ".........", "GG.GG.GG."],
+    inbound: ["....K....", "....K....", "....K....", "..KKKKK..", "...KKK...", "....K....", "K.......K", "K.......K", "KKKKKKKKK"],
+    tag: ["....KKKKK", "...KKKKKK", "..KKKKGKK", ".KKKKKKKK", "KKKKKKKK.", ".KKKKKK..", "..KKKK...", "...KK...."],
+    bars: ["......KK.", "......KK.", "...KK.KK.", "...KK.KK.", "KK.KK.KK.", "KK.KK.KK.", "KK.KK.KK.", "KKKKKKKKK"],
   };
   const HUE = { steel: "#7f95ff", jet_fuel: "#ff8a3d", aluminium: "#3fd0ee", fertiliser: "#5fd86e", polyethylene: "#ff5cbf" };
   const where = {}, isoOf = {};
@@ -68,10 +74,46 @@ window.HZAI = (() => {
     if (!res.ok) throw new Error(b.error || `HTTP ${res.status}`);
     return b;
   }
-  const bullets = (text, nFacts) => `<ul class="hz-ai-list">${String(text).split(/\n+/).map((l) => l.replace(/^\s*[-*•]\s*/, "").trim()).filter(Boolean)
-    .map((l) => `<li>${esc(l).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/\[(\d+)\]/g, (m, n) => (Number(n) <= nFacts ? `<span class="hz-ref">[${n}]</span>` : `<span class="hz-ref bad" title="No such fact">[${n}?]</span>`))}</li>`).join("")}</ul>`;
+  // Gemini's lines as cards: a pixel icon for what each line is about, its figures picked out, and each [n] a chip
+  // that shows the fact it cites (hover or focus). The first line leads, a size up.
+  const TOPIC = [[/hormuz|strait|gulf|cut off|shock|disrupt|closure/i, "barrel", "#ffa424"], [/export|ship|sells? abroad/i, "ship", "#8fd0f5"],
+    [/import|input|comes? from|supplie|relies/i, "inbound", "#c9b8ff"], [/rank|#\d|produc|output|world|largest|biggest/i, "bars", "#ffd27a"],
+    [/price|inflation|costs?\b|grocer|bills?\b/i, "tag", "#ff8a7a"]];
+  const topicOf = (l) => TOPIC.find(([re]) => re.test(l)) || [null, "spark", "#ffd27a"];
+  const NUM = /(#\d+|[+−-]?\d[\d,]*(?:\.\d+)?\s?(?:%|Mt|kt|mb\/d|kb\/d|million|billion|trillion|points?|pts|cents))/g;
+  const linesOf = (text) => String(text).split(/\n+/).map((l) => l.replace(/^\s*(?:[-*•]\s*)+/, "").trim()).filter(Boolean);
+  const citedOf = (text) => new Set([...String(text).matchAll(/\[(\d+(?:\s*,\s*\d+)*)\]/g)].flatMap((m) => m[1].split(/\s*,\s*/).map(Number)));
+  function bullets(text, facts) {
+    const fx = Array.isArray(facts) ? facts : [];
+    const refs = (list) => list.split(/\s*,\s*/).map((n) => (Number(n) >= 1 && Number(n) <= fx.length
+      ? `<span class="hz-ref" tabindex="0" title="[${n}] ${esc(fx[n - 1])}">${n}</span>` : `<span class="hz-ref bad" title="No such fact">${n}?</span>`)).join("");
+    return `<ul class="hz-ai-list">${linesOf(text).map((l, i) => {
+      const [, ic, col] = topicOf(l);
+      const body = esc(l).replace(/\[(\d+(?:\s*,\s*\d+)*)\]/g, "\u0000$1\u0001").replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")
+        .replace(NUM, '<b class="hz-num">$1</b>').replace(/\u0000([\d,\s]+)\u0001/g, (m, list) => `<span class="hz-refs">${refs(list)}</span>`);
+      return `<li class="hz-ai-card${i ? "" : " lead"}"><span class="hz-ai-ic">${px(ICON[ic], col)}</span><p>${body}</p></li>`;
+    }).join("")}</ul>`;
+  }
+  const chip = (k, v) => `<span class="hz-gl-chip"><small>${k}</small><span>${v}</span></span>`;
+  // what we already know about a resource, before Gemini's lines: its picture (or its own pixel icon, large) and chips
+  function glanceRes(x, img) {
+    const it = x.item, made = it.producers || [], ship = (it.exports && it.exports.list) || [], u = usedIn(x.id);
+    const pic = img ? `<figure class="hz-pic"><img src="${esc(img)}" alt="AI-made pixel-art picture of ${esc(it.name)}"><figcaption>AI-made picture</figcaption></figure>`
+      : `<div class="hz-gl-pic" style="--hue:${x.color}">${px(x.icon, x.color)}</div>`;
+    return `<div class="hz-gl${img ? " withpic" : ""}">${pic}<div class="hz-gl-chips">
+      ${made[0] ? chip("Top maker", `${flag(made[0].iso3)}<b>${share(made[0])}</b>`) : ""}${ship[0] ? chip("Top shipper", `${flag(ship[0].iso3)}<b>${share(ship[0])}</b>`) : ""}
+      ${made.length ? chip("Makers listed", `<b>${made.length}</b>`) : ""}
+      ${u.length ? chip("Goes into", esc(u.join(", "))) : it.inputs ? chip("Made from", esc(it.inputs.map((id) => (M.inputs[id] || {}).name || id).join(", "))) : ""}</div></div>`;
+  }
+  // and about a country: how many of our tables it is in, its best rank, and how many of the facts Gemini cited
+  function glanceCty(iso, text, fx) {
+    const rows = tables(iso), best = rows.slice().sort((a, b) => a.rank / a.of - b.rank / b.of)[0], n = [...citedOf(text)].filter((k) => k >= 1 && k <= fx.length).length;
+    return `<div class="hz-gl"><div class="hz-gl-chips">${chip("In our tables", `<b>${rows.length}</b>`)}
+      ${best ? chip("Best rank", `<b>#${best.rank}</b> of ${best.of}, ${esc(best.it.name.toLowerCase())} ${best.mode === "exports" ? "shipped" : "made"}`) : ""}
+      ${chip("Facts cited", `<b>${n}</b> of ${fx.length}<i class="hz-gl-meter"><i style="width:${fx.length ? Math.round(n / fx.length * 100) : 0}%"></i></i>`)}</div></div>`;
+  }
   const stamp = (b, extra = "") => `<p class="hz-ai-stamp">AI-written by ${esc(b.model)}${b.image_model ? `, picture by ${esc(b.image_model)}` : ""}, ${b.cached ? "cached, written " : ""}${esc(new Date(b.generated_at).toLocaleString())}. Not checked by the team${extra}.</p>`;
-  const bakedStamp = (b, extra = "") => `<p class="hz-ai-stamp"><b>AI-written by Gemini</b> (${esc(b.model)}), ${esc(day(b.generated_at))}. Written ahead and baked into this page, not live${extra}. Not checked by the team.</p>`;
+  const bakedStamp = (b, extra = "") => `<p class="hz-ai-stamp"><b>AI-written by Gemini</b> (${esc(b.model)}${b.image_model ? `; picture by ${esc(b.image_model)}` : ""}), ${esc(day(b.generated_at))}. Written ahead and baked into this page, not live${extra}. Not checked by the team.</p>`;
   const nBaked = Object.keys(bakedRes).length + Object.keys(bakedCty).length;
   const helpLine = (msg) => (nBaked ? `<p class="hz-ai-off">Not written ahead for this one yet: so far Gemini has written ${Object.keys(bakedRes).length} resources and ${Object.keys(bakedCty).length} countries for this page (its free daily quota ran out). The rest follow in a later build.</p>` : "")
     + `<p class="hz-ai-off">No live answer: ${esc(msg)}. Run <code>uv run experiments/country_brief.py</code> with <code>GEMINI_API_KEY</code> in <code>.env</code>.</p>`;
@@ -134,8 +176,8 @@ window.HZAI = (() => {
     const id = box.id.replace("hz-res-", ""), x = items().find((y) => y.id === id), out = box.querySelector(".hz-ai-out"), btn = box.querySelector("button");
     const facts = resourceFacts(x);
     const show = (b, st) => {
-      out.innerHTML = `<div class="hz-ai-res${b.image ? "" : " nopic"}">${b.image ? `<figure class="hz-pic"><img src="${esc(b.image)}" alt="AI-made pixel-art picture of ${esc(x.item.name)}"><figcaption>AI-made picture</figcaption></figure>` : ""}
-        <div>${bullets(b.text, (b.facts || facts).length)}<details class="hz-facts"><summary>The ${(b.facts || facts).length} facts Gemini was given</summary><ol>${(b.facts || facts).map((f) => `<li>${esc(f)}</li>`).join("")}</ol></details></div></div>${st}`;
+      const fx = b.facts || facts;
+      out.innerHTML = `${glanceRes(x, b.image)}<div class="hz-ai-res nopic"><div>${bullets(b.text, fx)}<details class="hz-facts"><summary>The ${fx.length} facts Gemini was given</summary><ol>${fx.map((f) => `<li>${esc(f)}</li>`).join("")}</ol></details></div></div>${st}`;
       play("select");
     };
     btn.disabled = true;
@@ -167,7 +209,9 @@ window.HZAI = (() => {
       const t = (id) => ($(id) ? $(id).textContent.trim() : "");
       out.push(`${name} in this page's Hormuz model at the current setting (${$("hz-read") ? $("hz-read").textContent : ""}): ${t("c-score")} ${t("c-score-l")}; fuel cost ${t("c-fuel")} vs pre-war; ${t("c-dep")} of its oil imports came from the Gulf; ${t("c-tag")}`);
       if (t("col-now")) out.push(`${t("col-now")} (FAOSTAT)`);
-      for (const li of document.querySelectorAll("#col-list li[data-colitem]")) out.push(`${li.querySelector(".nm").textContent.trim()}: ${li.querySelector(".lv").textContent.trim()}. ${li.querySelector(".why").textContent.trim()}`);
+      // a row's "why" is a <details> whose <summary> is the toggle's label ("Why it rises"): the fact is the rest
+      const why = (el) => { if (!el) return ""; const c = el.cloneNode(true); c.querySelectorAll("summary").forEach((x) => x.remove()); return c.textContent.trim(); };
+      for (const li of document.querySelectorAll("#col-list li[data-colitem]")) out.push(`${li.querySelector(".nm").textContent.trim()}: ${li.querySelector(".lv").textContent.trim()}. ${why(li.querySelector(".why"))}`);
     }
     for (const x of rows) out.push(`${x.it.name} ${x.mode === "exports" ? "exports" : "production"}: ${name} ranks #${x.rank} of ${x.of} listed, ${share(x.r)}${x.r.share != null ? (x.mode === "exports" ? " of world exports" : " of world output") : ` ${x.unit || ""}`} (${x.year || ""}; ${firstHost(x.source)})`);
     for (const m of M.materials) for (const l of m.links.filter((l) => l.to === iso && l.from !== iso).sort((a, b) => b.share - a.share).slice(0, 2))
@@ -201,7 +245,7 @@ window.HZAI = (() => {
     const iso = profIso, out = box.querySelector(".hz-ai-out"), btn = box.querySelector("button"), facts = profileFacts(iso, tables(iso));
     const show = (b, st) => {
       const fx = b.facts || facts;
-      out.innerHTML = `${bullets(b.text, fx.length)}<details class="hz-facts"><summary>The ${fx.length} facts Gemini was given</summary><ol>${fx.map((f) => `<li>${esc(f)}</li>`).join("")}</ol></details>${st}`;
+      out.innerHTML = `${glanceCty(iso, b.text, fx)}${bullets(b.text, fx)}<details class="hz-facts"><summary>The ${fx.length} facts Gemini was given</summary><ol>${fx.map((f) => `<li>${esc(f)}</li>`).join("")}</ol></details>${st}`;
       play("select");
     };
     btn.disabled = true;
