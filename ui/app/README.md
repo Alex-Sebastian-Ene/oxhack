@@ -18,6 +18,8 @@ for the colours, with these layers added (`src/`):
 | `sound.js` | Sound, all synthesised in the browser: "Night Shift" (an original chiptune loop), harbour ambience and interface sounds |
 | `shell.js` | The pipe strip under the header (its oil runs at the share of Hormuz flow getting through), the home, sound and music keys |
 | `ai.js`, `ai.css` | Sources (every material and ingredient with its datasets) and country Profiles, each with an optional Gemini panel |
+| `info.css` | The blue info keys on the Households and Strait cards, and the info panel's sections and source rows |
+| `strait.py`, `strait.js` | Strait view: the map fits the window and opens on the strait; each card's dates and notes move into its info panel |
 | `build.py` | Puts it together; each colour swap in Eileen's page must match exactly, so the build stops if her page changes |
 | `world.py` | World view: Made and Shipped together (front layer fills, back layer stands as columns, faint arcs), flags in every tooltip |
 | `copy_text.py` | Shorter copy for the panels; same facts and sources |

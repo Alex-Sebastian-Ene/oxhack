@@ -85,6 +85,42 @@ SWAPS = [
      '      const m = mats[st.mat], iso = isoOf[name];\n'
      '      const row = (md, lab) => { const r = tableOf(m, md).find((x) => x.iso3 === iso); return `<span${md === st.mode ? "" : \' class="faint"\'}>${lab}: <span class="mono">${r ? shareTxt(r) : "not listed"}</span></span>`; };\n'
      '      return `<b>${iso ? flagImg(iso) + " " : ""}${escH(name === "United States of America" ? "United States" : name)}</b>${row("production", "Made")}${row("exports", "Shipped")}', 1),
+<<<<<<< HEAD
     ('return `<b>${escH(name)}</b><span class="mono">${cutTxt(k)}',
      'return `<b>${isoOf[name] ? flagImg(isoOf[name]) + " " : ""}${escH(name === "United States of America" ? "United States" : name)}</b><span class="mono">${cutTxt(k)}', 1),
+=======
+    ('return `<b>${escH(name)}</b><span>Exposure',
+     'return `<b>${isoOf[name] ? flagImg(isoOf[name]) + " " : ""}${escH(name === "United States of America" ? "United States" : name)}</b><span>Exposure', 1),
+
+    # Flat map and globe show the same things. The tooltip is one function for both: the globe's had no "Via Hormuz"
+    # row or harm/gain colour, and the flat one built its own title without the flag.
+    ('<span class="mono">${fmtS(k.score)}</span></span><span>Fuel cost <span class="mono">${pct(k.fuel)}</span></span>`;',
+     '<span class="mono ${k.score > 0.5 ? "hurt" : k.score < -0.5 ? "gain" : ""}">${fmtS(k.score)}</span></span><span>Fuel cost <span class="mono">${pct(k.fuel)}</span></span>'
+     '${k.d.h ? `<span>Via Hormuz <span class="mono">${(k.hz * 100).toFixed(0)}% of use</span></span>` : ""}`;', 1),
+    ('    t.innerHTML = `<b>${name}</b><span>Exposure <span class="mono ${k.score > 0.5 ? "hurt" : k.score < -0.5 ? "gain" : ""}">${fmtS(k.score)}</span></span>\n'
+     '      <span>Fuel cost <span class="mono">${pct(k.fuel)}</span></span>${k.d.h ? `<span>Via Hormuz <span class="mono">${(k.hz * 100).toFixed(0)}% of use</span></span>` : ""}`;\n',
+     '    t.innerHTML = tipHtml(name);\n', 1),
+    # Antarctica (and the French Southern lands) on the flat map too, and the flat map's "Macedonia" under the
+    # globe's name, so it can be selected and found in our tables
+    ('const countries = topojson.feature(topo, topo.objects.countries).features.filter((f) => f.properties.name !== "Antarctica" && f.properties.name !== "Fr. S. Antarctic Lands");',
+     'const countries = topojson.feature(topo, topo.objects.countries).features;\n'
+     '  for (const f of countries) if (f.properties.name === "Macedonia") f.properties.name = "North Macedonia";', 1),
+    ('{ name: "Arctic Ocean", lng: 20, lat: 80, tier: 1, globeOnly: true }', '{ name: "Arctic Ocean", lng: 20, lat: 80, tier: 1 }', 1),
+    ('{ name: "Antarctica", lng: 0, lat: -80, globeOnly: true }', '{ name: "Antarctica", lng: 0, lat: -80 }', 1),
+    # the globe gets the flat map's HORMUZ label, in amber, just up and left of the strait
+    ('G3.labelsData([...SEAS.filter((x) => !x.flatOnly), ...CONTS.map((x) => ({ ...x, cont: true }))])',
+     'G3.labelsData([...SEAS.filter((x) => !x.flatOnly), ...CONTS.map((x) => ({ ...x, cont: true })), { name: "HORMUZ", lng: 54.2, lat: 25.9, hz: true }])', 1),
+    # Antarctica and the French Southern lands have no people and no score: no-data grey on both maps, and a
+    # tooltip that says so (the exposure model would otherwise score them as a generic importer)
+    ('  function fillFor(name) { return st.mat ?',
+     '  const NOSCORE = new Set(["Antarctica", "Fr. S. Antarctic Lands"]);\n'
+     '  function fillFor(name) { return NOSCORE.has(name) ? "#243049" : st.mat ?', 1),
+    ('function tipHtml(name) {\n    if (st.mat) {',
+     'function tipHtml(name) {\n    if (NOSCORE.has(name)) return `<b>${escH(name)}</b><span>No population: not scored</span>`;\n    if (st.mat) {', 1),
+    ('  function select(name, anchor) {\n    st.sel = name && name === st.sel ? null : name;',
+     '  function select(name, anchor) {\n    if (NOSCORE.has(name)) return;\n    st.sel = name && name === st.sel ? null : name;', 1),
+    ('.labelSize((x) => (x.cont ? 2.6 :', '.labelSize((x) => (x.hz ? 1.05 : x.cont ? 2.6 :', 1),
+    ('.labelAltitude((x) => (x.cont ? 0.03 : 0.003))', '.labelAltitude((x) => (x.hz ? 0.02 : x.cont ? 0.03 : 0.003))', 1),
+    ('.labelColor((x) => (x.cont ? "rgba(241,232,210,0.85)"', '.labelColor((x) => (x.hz ? "#ffbf5c" : x.cont ? "rgba(241,232,210,0.85)"', 1),
+>>>>>>> origin/main
 ]
