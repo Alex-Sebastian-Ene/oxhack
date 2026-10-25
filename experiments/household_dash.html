@@ -1,0 +1,1001 @@
+<style>
+#hc { font-family: var(--font-anthropic-sans); color: var(--color-fg); display: flex; flex-direction: column; gap: var(--cds-gap-xl); }
+#hc h1 { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); margin: 0; }
+#hc h2 { font-size: var(--cds-font-size-heading); font-weight: var(--cds-font-weight-medium); margin: 0; }
+#hc h3 { font-size: var(--cds-font-size-heading); font-weight: var(--cds-font-weight-medium); margin: 0; }
+#hc .hc-take { font-size: var(--cds-font-size-body); color: var(--color-fg-muted); margin: var(--cds-gap-xs) 0 0; max-width: 62rem; min-height: 1.4em; }
+#hc .hc-take span { color: var(--color-fg); font-variant-numeric: tabular-nums; }
+#hc .hc-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); gap: var(--cds-gap-md); }
+#hc .hc-tile, #hc .hc-card { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-lg); min-width: 0; }
+#hc .hc-tile { display: flex; flex-direction: column; gap: var(--cds-gap-xs); }
+#hc .lbl { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+#hc .big { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); font-variant-numeric: tabular-nums; }
+#hc .sub { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); font-variant-numeric: tabular-nums; margin: 0; }
+#hc .sub span { color: var(--color-fg); }
+#hc .up { color: var(--color-ok) !important; }
+#hc .down { color: var(--color-bad) !important; }
+#hc .hc-sec { display: flex; flex-direction: column; gap: var(--cds-gap-md); }
+#hc .hc-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: var(--cds-gap-md); }
+#hc .hc-card { display: flex; flex-direction: column; gap: var(--cds-gap-sm); }
+#hc .hc-cardhead { display: flex; flex-wrap: wrap; gap: var(--cds-gap-sm); justify-content: space-between; align-items: center; }
+#hc .hc-controls { display: flex; flex-wrap: wrap; gap: var(--cds-gap-sm); align-items: center; }
+#hc .note { font-size: var(--cds-font-size-body); color: var(--color-fg-muted); margin: 0; }
+#hc .src { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); margin: 0; }
+#hc .model { font-size: var(--cds-font-size-caption); font-weight: var(--cds-font-weight-medium); color: var(--color-warn); margin: 0; }
+#hc .hc-seg { display: inline-flex; flex-wrap: wrap; gap: var(--cds-gap-xs); }
+#hc .hc-seg button, #hc select { font: inherit; font-size: var(--cds-font-size-caption); color: var(--color-fg); background: transparent; border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-xs) var(--cds-pad-sm); cursor: pointer; }
+#hc .hc-seg button[aria-pressed="true"] { background: var(--color-fg); color: var(--color-bg); border-color: var(--color-fg); }
+#hc select { max-width: 100%; }
+#hc .hc-chart { position: relative; min-height: 260px; }
+#hc .hc-chart.short { min-height: 250px; }
+#hc .hc-chart svg { display: block; }
+#hc .hc-tick { font-family: var(--font-anthropic-sans); font-size: var(--cds-font-size-caption); fill: var(--color-fg-muted); font-variant-numeric: tabular-nums; }
+#hc .hc-end { font-family: var(--font-anthropic-sans); font-size: var(--cds-font-size-caption); font-variant-numeric: tabular-nums; }
+#hc .hc-legend { display: flex; flex-wrap: wrap; gap: var(--cds-gap-xs) var(--cds-gap-md); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); min-height: 1em; }
+#hc .hc-legend span.sw, #hc .hc-tip span.sw { display: inline-block; width: 0.625rem; height: 0.625rem; border-radius: 2px; margin-right: var(--cds-gap-xs); vertical-align: -1px; }
+#hc .hc-tip { position: absolute; z-index: 2; top: 8px; left: 0; background: var(--cds-surface-popover); border: 1px solid var(--cds-border); border-radius: var(--cds-radius); box-shadow: var(--cds-shadow-popover); padding: var(--cds-pad-xs) var(--cds-pad-sm); font-size: var(--cds-font-size-caption); pointer-events: none; min-width: 9rem; max-width: 18rem; }
+#hc .hc-tip .hd { color: var(--cds-text-secondary); margin-bottom: 2px; }
+#hc .hc-tip .row { display: flex; align-items: center; gap: var(--cds-gap-xs); white-space: nowrap; }
+#hc .hc-tip .row .v { margin-left: auto; padding-left: var(--cds-gap-sm); font-variant-numeric: tabular-nums; }
+#hc .hc-fail { display: flex; align-items: center; justify-content: center; gap: var(--cds-gap-xs); min-height: inherit; height: 100%; color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); }
+#hc .hc-fail::before { content: ""; width: 0.375rem; height: 0.375rem; border-radius: 50%; background: var(--color-bad); }
+#hc .hc-empty { display: flex; align-items: center; justify-content: center; min-height: inherit; color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); }
+#hc .hc-tablebox { max-height: 28rem; overflow: auto; min-height: 6rem; }
+#hc .hc-table { width: 100%; border-collapse: collapse; font-size: var(--cds-font-size-caption); font-variant-numeric: tabular-nums; }
+#hc .hc-table th { position: sticky; top: 0; z-index: 1; background: var(--color-panel); text-align: left; font-weight: var(--cds-font-weight-medium); color: var(--color-fg-muted); padding: var(--cds-pad-xs) var(--cds-pad-sm); border-bottom: 1px solid var(--color-border-line); vertical-align: bottom; }
+#hc .hc-table td { padding: var(--cds-pad-xs) var(--cds-pad-sm); border-bottom: 1px solid var(--color-border-line); vertical-align: top; }
+#hc .hc-table .num { text-align: right; white-space: nowrap; }
+#hc .hc-table tr.lead td { font-weight: var(--cds-font-weight-medium); }
+#hc .hc-cell { display: inline-flex; align-items: center; gap: var(--cds-gap-xs); justify-content: flex-end; }
+#hc .hc-cell span.bar { display: inline-block; height: 6px; border-radius: 3px; background: var(--cds-chart-muted); }
+#hc .hc-search { font: inherit; font-size: var(--cds-font-size-caption); color: var(--color-fg); background: transparent; border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-xs) var(--cds-pad-sm); min-width: 0; width: min(100%, 16rem); }
+#hc [data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
+#hc [data-dash-source-state=empty] { color: transparent; }
+</style>
+
+<div id="hc">
+  <header id="top">
+    <h1>Household cost of living</h1>
+    <p class="hc-take dash-skeleton" id="takeaway"></p>
+  </header>
+
+  <section class="hc-tiles" id="headline" aria-label="Headline figures">
+    <div class="hc-tile" id="tile-us">
+      <div class="lbl">US real pay (2019 = 100)</div>
+      <div class="big"><span data-source="headline" data-field="latest" data-where="region=US" data-fmt="f1">—</span></div>
+      <p class="sub"><span data-source="headline" data-field="vs_2019" data-where="region=US" data-fmt="s1" data-tone="1">—</span> on 2019, in <span data-source="headline" data-field="latest_month" data-where="region=US" data-fmt="month">—</span></p>
+      <p class="sub">2021–24 low <span data-source="headline" data-field="low" data-where="region=US" data-fmt="f1">—</span> in <span data-source="headline" data-field="low_month" data-where="region=US" data-fmt="month">—</span></p>
+    </div>
+    <div class="hc-tile" id="tile-uk">
+      <div class="lbl">UK real pay (2019 = 100)</div>
+      <div class="big"><span data-source="headline" data-field="latest" data-where="region=UK" data-fmt="f1">—</span></div>
+      <p class="sub"><span data-source="headline" data-field="vs_2019" data-where="region=UK" data-fmt="s1" data-tone="1">—</span> on 2019, in <span data-source="headline" data-field="latest_month" data-where="region=UK" data-fmt="month">—</span></p>
+      <p class="sub">2021–24 low <span data-source="headline" data-field="low" data-where="region=UK" data-fmt="f1">—</span> in <span data-source="headline" data-field="low_month" data-where="region=UK" data-fmt="month">—</span></p>
+    </div>
+    <div class="hc-tile" id="tile-ea">
+      <div class="lbl">Euro-area real pay (2019 = 100)</div>
+      <div class="big"><span data-source="headline" data-field="latest" data-where="region=Euro area" data-fmt="f1">—</span></div>
+      <p class="sub"><span data-source="headline" data-field="vs_2019" data-where="region=Euro area" data-fmt="s1" data-tone="1">—</span> on 2019, in <span data-source="headline" data-field="latest_month" data-where="region=Euro area" data-fmt="quarter">—</span></p>
+      <p class="sub">2021–24 low <span data-source="headline" data-field="low" data-where="region=Euro area" data-fmt="f1">—</span> in <span data-source="headline" data-field="low_month" data-where="region=Euro area" data-fmt="quarter">—</span></p>
+    </div>
+    <div class="hc-tile" id="tile-ukcosts">
+      <div class="lbl">UK household costs since January 2021</div>
+      <div class="big"><span data-source="uk_gap" data-field="rise_since_2021" data-where="group=All Households" data-fmt="spct">—</span></div>
+      <p class="sub">Lowest-income tenth <span data-source="uk_gap" data-field="rise_since_2021" data-where="group=Decile 1" data-fmt="spct">—</span>, highest <span data-source="uk_gap" data-field="rise_since_2021" data-where="group=Decile 10" data-fmt="spct">—</span></p>
+      <p class="sub">To <span data-source="uk_gap" data-field="latest_month" data-where="group=All Households" data-fmt="month">—</span>, ONS Household Costs Indices</p>
+    </div>
+    <div class="hc-tile" id="tile-petrol">
+      <div class="lbl">Minutes of US work for a gallon of petrol</div>
+      <div class="big"><span data-source="minutes_summary" data-field="latest" data-where="item=Gallon of petrol" data-fmt="f1">—</span></div>
+      <p class="sub">2019 average <span data-source="minutes_summary" data-field="avg_2019" data-where="item=Gallon of petrol" data-fmt="f1">—</span>, 2022 peak <span data-source="minutes_summary" data-field="peak_2022" data-where="item=Gallon of petrol" data-fmt="f1">—</span></p>
+      <p class="sub">In <span data-source="minutes_summary" data-field="latest_month" data-where="item=Gallon of petrol" data-fmt="month">—</span></p>
+    </div>
+  </section>
+
+  <section class="hc-sec" id="pay">
+    <h2>Is pay keeping up with prices?</h2>
+    <div class="hc-grid">
+      <div class="hc-card" id="real-pay">
+        <h3>Real pay</h3>
+        <p class="note">Pay ÷ consumer prices, index (2019 = 100). Above 100, a pay packet buys more than in 2019.</p>
+        <div class="hc-chart dash-skeleton" id="ch-real-pay" data-source="real_pay"></div>
+        <div class="hc-legend" id="lg-real-pay" data-source="real_pay"></div>
+        <p class="src">US: average hourly earnings of production and nonsupervisory workers ÷ CPI (BLS via FRED). UK: average weekly earnings ÷ CPI (ONS). Euro area: labour cost index, wages and salaries ÷ HICP, quarterly from 2009 (Eurostat). The US jump in 2020 is a composition effect: low-paid jobs went first.</p>
+      </div>
+      <div class="hc-card" id="inflation">
+        <h3>Inflation</h3>
+        <p class="note">Consumer prices, change over 12 months (%).</p>
+        <div class="hc-chart dash-skeleton" id="ch-inflation" data-source="real_pay"></div>
+        <div class="hc-legend" id="lg-inflation" data-source="real_pay"></div>
+        <p class="src">US CPI (BLS via FRED), UK CPI (ONS), euro-area HICP (Eurostat via FRED); 12-month log changes.</p>
+      </div>
+    </div>
+    <div class="hc-card" id="squeezes">
+      <h3>Squeezes: runs of falling real pay</h3>
+      <p class="note">From a peak in real pay to its lowest point before the peak was regained, where the fall lasted six months or more.</p>
+      <div class="hc-tablebox dash-skeleton">
+        <table class="hc-table" id="tb-squeezes" data-source="squeezes" data-row-key="region,peak">
+          <thead><tr><th data-field="region">Region</th><th data-field="peak">Peak</th><th data-field="trough">Lowest point</th><th data-field="fall_pct" class="num">Fall</th><th data-field="months_falling" class="num">Months falling</th><th data-field="back_at_peak">Back at the peak</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p class="src">Computed from the real-pay series above. The US peak of April 2020 is the composition effect, so its open squeeze overstates the fall.</p>
+    </div>
+  </section>
+
+  <section class="hc-sec" id="essentials-sec">
+    <h2>What essentials cost in work</h2>
+    <div class="hc-card" id="essentials">
+      <div class="hc-cardhead">
+        <h3>Essentials in units of pay</h3>
+        <div class="hc-seg" data-param="ess_region" role="group" aria-label="Region"><button type="button" data-value="US">US</button><button type="button" data-value="UK">UK</button><button type="button" data-value="Euro area">Euro area</button></div>
+      </div>
+      <p class="note">Each essential's price index ÷ pay (2019 = 100). Above 100, it takes more work to buy than in 2019.</p>
+      <div class="hc-chart dash-skeleton" id="ch-essentials" data-source="essentials"></div>
+      <div class="hc-legend" id="lg-essentials" data-source="essentials"></div>
+      <p class="src">Price indices from BLS via FRED (US), ONS (UK) and Eurostat via FRED (euro area); pay as for real pay. Euro-area values are quarterly.</p>
+    </div>
+    <div class="hc-card" id="minutes">
+      <div class="hc-cardhead">
+        <h3>Minutes of work to buy everyday things (US)</h3>
+        <select id="sel-minutes" aria-label="Item" data-source="minutes"></select>
+      </div>
+      <p class="note">Price ÷ average hourly pay, in minutes. The dashed line is the 2019 average.</p>
+      <div class="hc-chart dash-skeleton" id="ch-minutes" data-source="minutes minutes_summary"></div>
+      <p class="sub">2019 average <span id="mn-2019" data-source="minutes_summary" data-field="avg_2019" data-fmt="f1">—</span>, 2022 peak <span id="mn-2022" data-source="minutes_summary" data-field="peak_2022" data-fmt="f1">—</span>, latest <span id="mn-last" data-source="minutes_summary" data-field="latest" data-fmt="f1">—</span> (<span id="mn-month" data-source="minutes_summary" data-field="latest_month" data-fmt="month">—</span>)</p>
+      <p class="src">BLS average prices, US city average (via FRED), ÷ average hourly earnings of production and nonsupervisory workers. Electricity per 100 kWh, gas per 10 therms. The weekly shop is a fixed basket of our own choosing, not an official measure.</p>
+    </div>
+  </section>
+
+  <section class="hc-sec" id="uk-groups-sec">
+    <h2>Who pays more in the UK</h2>
+    <div class="hc-card" id="uk-groups">
+      <div class="hc-cardhead">
+        <h3>Household cost inflation by group</h3>
+        <div class="hc-controls">
+          <div class="hc-seg" data-param="hci_type" role="group" aria-label="Household groups"><button type="button" data-value="income decile">Income</button><button type="button" data-value="tenure">Tenure</button><button type="button" data-value="retirement">Retired or not</button><button type="button" data-value="children">Children</button></div>
+          <select id="sel-hci-cat" aria-label="Spending category" data-source="uk_groups"></select>
+        </div>
+      </div>
+      <p class="note">ONS Household Costs Indices, change over 12 months (%). Unlike CPI they count mortgage interest, and each group's index uses its own spending pattern.</p>
+      <div class="hc-chart dash-skeleton" id="ch-uk-groups" data-source="uk_groups"></div>
+      <div class="hc-legend" id="lg-uk-groups" data-source="uk_groups"></div>
+      <p class="src">ONS, Household Costs Indices for UK household groups, April to June 2026 (official statistics in development, may be revised); the official 12-month rates.</p>
+    </div>
+    <div class="hc-card" id="uk-shares">
+      <h3>Where the money goes</h3>
+      <p class="note">Share of each group's spending (%), ONS weights for <span id="sh-year" data-source="shares_wide" data-field="year" data-where="group=All Households" data-fmt="int">—</span>, for the groups picked above.</p>
+      <div class="hc-tablebox dash-skeleton">
+        <table class="hc-table" id="tb-shares" data-source="shares_wide" data-row-key="group">
+          <thead><tr><th data-field="group">Group</th><th data-field="food" class="num">Food</th><th data-field="energy" class="num">Electricity, gas, fuels</th><th data-field="motor_fuel" class="num">Motor fuel</th><th data-field="private_rent" class="num">Private rent</th><th data-field="social_rent" class="num">Social rent</th><th data-field="mortgage" class="num">Mortgage interest</th><th data-field="restaurants" class="num">Restaurants, hotels</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p class="src">ONS Household Costs Indices spending weights (parts per thousand ÷ 10).</p>
+    </div>
+  </section>
+
+  <section class="hc-sec" id="housing">
+    <h2>The cost of a mortgage</h2>
+    <div class="hc-grid">
+      <div class="hc-card" id="mortgage-100k">
+        <h3>Repayment per 100,000 borrowed</h3>
+        <p class="note">Monthly repayment as a share of a month's average full-time pay (%). US: 30-year fixed; UK: over 25 years at each quoted rate.</p>
+        <div class="hc-chart dash-skeleton" id="ch-mortgage-100k" data-source="mortgage"></div>
+        <div class="hc-legend" id="lg-mortgage-100k" data-source="mortgage"></div>
+        <p class="src">Rates: Freddie Mac 30-year (via FRED); Bank of England quoted 2- and 5-year fixed (75% LTV) and revert-to rates. Pay as for real pay.</p>
+      </div>
+      <div class="hc-card" id="mortgage-home">
+        <h3>Repaying a typical home</h3>
+        <p class="note">Monthly repayment on a typical home as a share of income (%). US: 80% loan on the median price against median household income. UK: 75% loan on the average price against one average earner.</p>
+        <div class="hc-chart dash-skeleton" id="ch-mortgage-home" data-source="mortgage"></div>
+        <div class="hc-legend" id="lg-mortgage-home" data-source="mortgage"></div>
+        <p class="src">US median sales price and median household income (Census via FRED); UK HPI average price (HM Land Registry).</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="hc-sec" id="hormuz">
+    <h2>The 2026 Hormuz closure</h2>
+    <div class="hc-card" id="hormuz-pay">
+      <div class="hc-cardhead">
+        <h3>Real pay under the closure scenarios</h3>
+        <div class="hc-controls">
+          <div class="hc-seg" data-param="hz_region" role="group" aria-label="Region"><button type="button" data-value="US">US</button><button type="button" data-value="UK">UK</button><button type="button" data-value="Euro area">Euro area</button></div>
+          <div class="hc-seg" data-param="hz_h" data-num="1" role="group" aria-label="Months after February 2026"><button type="button" data-value="1">1 month</button><button type="button" data-value="3">3 months</button><button type="button" data-value="6">6 months</button><button type="button" data-value="12">12 months</button></div>
+        </div>
+      </div>
+      <p class="model">Model output, not data</p>
+      <p class="note">Change in real pay (%) from February 2026 for each loss of Hormuz flow (points out of a normal 100). Bars are 90% bands, ticks the medians, the dashed line what happened.</p>
+      <div class="hc-chart short dash-skeleton" id="ch-hormuz-pay" data-source="hormuz_pay"></div>
+      <p class="sub">What happened: <span id="hz-actual" data-source="hormuz_pay" data-field="real_pay_actual" data-fmt="spct">—</span><span id="hz-actual-note"></span></p>
+      <p class="src">Consumer-price fans from the knock-on chain (notes/chain-scenarios-3m.csv: Lévy oil paths with the flow premium, then the Bayes and neural-network ensemble), fitted on data to January 2026. Nominal pay keeps its pace of the year before, so the band is the price band. 82 points is the 2026 closure; the flow link was calibrated on that event, so that bar is in sample.</p>
+    </div>
+    <div class="hc-card" id="hormuz-groups">
+      <h3>What a full closure adds to each UK group's costs</h3>
+      <p class="model">Model output, not data</p>
+      <p class="note">Median change in costs (%), first round only: item price fans weighted by each group's ONS spending shares, with mortgage interest held flat. The last column is the year ahead from September 2026.</p>
+      <div class="hc-tablebox dash-skeleton">
+        <table class="hc-table" id="tb-hormuz-groups" data-source="hz_groups_table" data-row-key="group">
+          <thead><tr><th data-field="group">Group</th><th data-field="energy_share" class="num">Energy share</th><th data-field="motor_fuel_share" class="num">Motor fuel share</th><th data-field="none_6m" class="num">6 months, no closure</th><th data-field="full_6m" class="num">6 months, full closure</th><th data-field="extra_6m" class="num">Extra from the closure</th><th data-field="extra_motor_fuel_6m" class="num">of which motor fuel</th><th data-field="outlook_12m" class="num">Year ahead from Sep 2026</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p class="src">Item fans: the basket-item model (notes/cost-of-living-fans.csv; see docs/cost-of-living.md). Spending shares: ONS Household Costs Indices weights. UK household energy follows the quarterly Ofgem cap, so energy-heavy budgets are cushioned at first.</p>
+    </div>
+  </section>
+
+  <section class="hc-sec" id="sources">
+    <h2>Sources and dates</h2>
+    <div class="hc-card" id="sources-card">
+      <div class="hc-cardhead">
+        <p class="note">Every series behind this page, its publisher and code, the period it covers and when it was fetched. Revised data, not real-time vintages; these are saved snapshots, not live feeds.</p>
+        <input class="hc-search" id="src-search" type="search" placeholder="Search sources" aria-label="Search sources">
+      </div>
+      <div class="hc-tablebox dash-skeleton">
+        <table class="hc-table" id="tb-sources" data-source="sources" data-row-key="series">
+          <thead><tr><th data-field="label">Series</th><th data-field="region">Region</th><th data-field="publisher">Publisher</th><th data-field="code">Code</th><th data-field="first">From</th><th data-field="last">To</th><th data-field="fetched">Fetched</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p class="src">Built by experiments/household.py and experiments/household_dash.py on branch seb/household-costs.</p>
+    </div>
+  </section>
+</div>
+
+<script>
+dash.calc('headline', {
+  title: 'Real pay now and its low',
+  description: 'Per region: the latest real pay (2019 = 100), its month, its gap to 100, and the lowest value from 2021-01 to 2024-12.',
+  inputs: ['real_pay'],
+  fn: (real_pay) => ['US', 'UK', 'Euro area'].map((region) => {
+    const xs = real_pay.filter((r) => r.region === region && r.real_pay !== '' && r.real_pay != null)
+      .sort((a, b) => (a.month < b.month ? -1 : 1));
+    const last = xs[xs.length - 1];
+    const w = xs.filter((r) => r.month >= '2021-01' && r.month <= '2024-12');
+    const low = w.reduce((a, r) => (Number(r.real_pay) < Number(a.real_pay) ? r : a), w[0]);
+    return {
+      region, latest: Number(last.real_pay), latest_month: last.month,
+      vs_2019: Math.round((Number(last.real_pay) - 100) * 100) / 100,
+      low: Number(low.real_pay), low_month: low.month,
+    };
+  }),
+});
+
+dash.calc('uk_gap', {
+  title: 'UK costs since 2021',
+  description: 'All households and the lowest- and highest-income tenths: the rise in the all-items Household Costs Index from 2021-01 to the latest month (%), and the official 12-month rates in 2022-10 and the latest month.',
+  inputs: ['uk_groups'],
+  fn: (uk_groups) => ['All Households', 'Decile 1', 'Decile 10'].map((group) => {
+    const xs = uk_groups.filter((r) => r.group === group && r.category === 'All items' && r.index !== '')
+      .sort((a, b) => (a.month < b.month ? -1 : 1));
+    const at = (m) => xs.find((r) => r.month === m);
+    const last = xs[xs.length - 1];
+    return {
+      group, latest_month: last.month,
+      rise_since_2021: Math.round((Number(last.index) / Number(at('2021-01').index) - 1) * 1000) / 10,
+      rate_2022_10: Number(at('2022-10').rate_12m), rate_latest: Number(last.rate_12m),
+    };
+  }),
+});
+
+dash.calc('minutes_summary', {
+  title: 'Minutes of work per item',
+  description: 'Per item: average minutes of US work in 2019, the 2022 peak, and the latest month.',
+  inputs: ['minutes'],
+  fn: (minutes) => {
+    const by = {};
+    for (const r of minutes) {
+      if (r.minutes === '' || r.minutes == null) continue;
+      (by[r.item] = by[r.item] || []).push(r);
+    }
+    return Object.keys(by).map((item) => {
+      const xs = by[item].sort((a, b) => (a.month < b.month ? -1 : 1));
+      const yr = (y) => xs.filter((r) => r.month.slice(0, 4) === y).map((r) => Number(r.minutes));
+      const y19 = yr('2019');
+      const y22 = yr('2022');
+      const last = xs[xs.length - 1];
+      return {
+        item,
+        avg_2019: y19.length ? Math.round((y19.reduce((a, b) => a + b, 0) / y19.length) * 100) / 100 : null,
+        peak_2022: y22.length ? Math.max(...y22) : null,
+        latest: Number(last.minutes), latest_month: last.month,
+      };
+    });
+  },
+});
+
+dash.calc('shares_wide', {
+  title: 'UK spending shares, wide',
+  description: 'One row per UK household group: its spending share (%) on food, household energy, motor fuel, rents, mortgage interest and restaurants in the latest ONS weights year.',
+  inputs: ['uk_shares'],
+  fn: (uk_shares) => {
+    const key = {
+      'Food': 'food', 'Electricity, gas, fuels': 'energy', 'Motor fuels': 'motor_fuel', 'Private rent': 'private_rent',
+      'Social rent': 'social_rent', 'Mortgage interest': 'mortgage', 'Restaurants and hotels': 'restaurants',
+    };
+    const out = {};
+    for (const r of uk_shares) {
+      const o = out[r.group] || (out[r.group] = { group: r.group, group_type: r.group_type, year: Number(r.year) });
+      o[key[r.category]] = Number(r.share_pct);
+    }
+    return Object.values(out);
+  },
+});
+
+dash.calc('hz_groups_table', {
+  title: 'Full closure cost by group',
+  description: 'Per UK household group: median cost change 6 months after 2026-02 with no closure and a full closure, the extra and its motor-fuel part, energy and motor-fuel shares, and the median change over the 12 months from 2026-09. Model output.',
+  inputs: ['hormuz_groups', 'uk_shares'],
+  fn: (hormuz_groups, uk_shares) => {
+    const pick = (group, scenario, h) => hormuz_groups.find((r) => r.group === group && r.scenario === scenario && Number(r.months_ahead) === h);
+    const share = (group, cat) => {
+      const r = uk_shares.find((x) => x.group === group && x.category === cat);
+      return r ? Number(r.share_pct) : null;
+    };
+    const groups = [...new Set(hormuz_groups.map((r) => r.group))];
+    return groups.map((group) => {
+      const none = pick(group, 'none', 6);
+      const full = pick(group, 'closure_100', 6);
+      const ahead = pick(group, 'outlook', 12);
+      const t = uk_shares.find((x) => x.group === group);
+      return {
+        group, group_type: t ? t.group_type : '',
+        energy_share: share(group, 'Electricity, gas, fuels'), motor_fuel_share: share(group, 'Motor fuels'),
+        none_6m: Number(none.cost_q50), full_6m: Number(full.cost_q50),
+        extra_6m: Math.round((Number(full.cost_q50) - Number(none.cost_q50)) * 1000) / 1000,
+        extra_motor_fuel_6m: Math.round((Number(full.motor_fuel_part) - Number(none.motor_fuel_part)) * 1000) / 1000,
+        outlook_12m: ahead ? Number(ahead.cost_q50) : null,
+      };
+    });
+  },
+});
+
+const C = dash.colors;
+const DAY = 864e5;
+const REGIONS = ['US', 'UK', 'Euro area'];
+const REGION_COLOR = { 'US': C[0], 'UK': C[1], 'Euro area': C[2] };
+const ITEM_COLOR = {
+  'Food': C[0], 'Household energy': C[1], 'Electricity': C[2], 'Gas': C[3], 'Motor fuel': C[4], 'Rent': C[5],
+  'Housing, water and fuels': C[6],
+};
+const SHORT = {
+  'All Households': 'All households', 'Decile 1': 'Lowest-income tenth', 'Decile 10': 'Highest-income tenth',
+  'Mortgagor and other owner occupier': 'Mortgagors', 'Outright owner occupier': 'Outright owners',
+  'Private renter': 'Private renters', 'Social and other renter': 'Social renters', 'Non-Retired': 'Not retired',
+  'Retired': 'Retired', 'With Children': 'With children', 'Without Children': 'Without children',
+};
+const TYPE_ORDER = ['all', 'income decile', 'tenure', 'retirement', 'children'];
+const CAT_ORDER = ['All items', 'Food and non-alcoholic beverages', 'Electricity, gas and other fuels', 'Motor fuels',
+  'Private rentals', 'Social and other rentals', 'Mortgage interest payments'];
+const CLOSURE = new Date(Date.UTC(2026, 2, 1));
+const DEFAULTS = { ess_region: 'UK', hci_type: 'income decile', hci_cat: 'All items', min_item: 'Gallon of petrol', hz_region: 'UK', hz_h: 6 };
+
+const PM = d3.utcParse('%Y-%m');
+const tcache = new Map();
+const tm = (m) => {
+  let t = tcache.get(m);
+  if (!t) { t = PM(m); tcache.set(m, t); }
+  return t;
+};
+const ok = (v) => v !== '' && v != null && Number.isFinite(Number(v));
+const byT = (a, b) => a.t - b.t;
+const f1 = d3.format('.1f');
+const s1 = d3.format('+.1f');
+const s2 = d3.format('+.2f');
+const tick = d3.format('~f');
+const FMT = {
+  f1: (v) => f1(Number(v)),
+  s1: (v) => s1(Number(v)),
+  pct: (v) => f1(Number(v)) + '%',
+  spct: (v) => s1(Number(v)) + '%',
+  int: (v) => String(Math.round(Number(v))),
+  month: (m) => d3.utcFormat('%b %Y')(tm(m)),
+  quarter: (m) => { const t = tm(m); return 'Q' + (Math.floor(t.getUTCMonth() / 3) + 1) + ' ' + t.getUTCFullYear(); },
+};
+const enc = (s) => String(s).replace(/%/g, '%25').replace(/&/g, '%26').replace(/=/g, '%3D').replace(/,/g, '%2C');
+const $ = (id) => document.getElementById(id);
+const param = (name) => {
+  const v = dash.params()[name];
+  return v == null || v === '' ? DEFAULTS[name] : v;
+};
+const groupOrder = (a, b) => {
+  const ta = TYPE_ORDER.indexOf(a.group_type), tb = TYPE_ORDER.indexOf(b.group_type);
+  if (ta !== tb) return ta - tb;
+  const da = /^Decile (\d+)$/.exec(a.group), db = /^Decile (\d+)$/.exec(b.group);
+  if (da && db) return Number(da[1]) - Number(db[1]);
+  return a.group < b.group ? -1 : a.group > b.group ? 1 : 0;
+};
+
+function rowWhere(rows, where) {
+  const conds = where ? where.split('&').map((kv) => {
+    const i = kv.indexOf('=');
+    return [decodeURIComponent(kv.slice(0, i)), decodeURIComponent(kv.slice(i + 1))];
+  }) : [];
+  return rows.find((r) => conds.every(([k, v]) => String(r[k]) === v));
+}
+
+function fillMarks() {
+  document.querySelectorAll('#hc [data-fmt]').forEach((el) => {
+    const d = dash.data(el.getAttribute('data-source'));
+    el.classList.remove('up', 'down');
+    if (d.status !== 'ok') {
+      el.textContent = '—';
+      el.classList.toggle('dash-skeleton', d.status === 'loading');
+      return;
+    }
+    el.classList.remove('dash-skeleton');
+    const fmt = el.dataset.fmt;
+    const r = Array.isArray(d.data) ? rowWhere(d.data, el.getAttribute('data-where')) : null;
+    const v = r ? r[el.getAttribute('data-field')] : null;
+    const isText = fmt === 'month' || fmt === 'quarter';
+    if (v == null || v === '' || (!isText && !Number.isFinite(Number(v)))) { el.textContent = '—'; return; }
+    el.textContent = FMT[fmt](v);
+    if (el.dataset.tone) {
+      el.classList.toggle('up', Number(v) > 0);
+      el.classList.toggle('down', Number(v) < 0);
+    }
+  });
+}
+
+function failBox(box) {
+  box.classList.remove('dash-skeleton');
+  const f = document.createElement('div');
+  f.className = 'hc-fail';
+  f.textContent = 'Failed to load';
+  box.replaceChildren(f);
+}
+
+function withData(box, ids, draw, legend) {
+  const st = ids.map((id) => dash.data(id).status);
+  if (st.every((s) => s === 'ok')) {
+    box.classList.remove('dash-skeleton');
+    draw(...ids.map((id) => dash.data(id).data));
+    return;
+  }
+  if (legend) legend.replaceChildren();
+  if (st.some((s) => s === 'loading')) {
+    box.replaceChildren();
+    box.classList.add('dash-skeleton');
+    return;
+  }
+  failBox(box);
+}
+
+function withTable(table, ids, draw) {
+  const st = ids.map((id) => dash.data(id).status);
+  const holder = table.parentElement;
+  const tb = table.tBodies[0];
+  if (st.every((s) => s === 'ok')) {
+    holder.classList.remove('dash-skeleton');
+    draw(...ids.map((id) => dash.data(id).data));
+    return;
+  }
+  tb.replaceChildren();
+  if (st.some((s) => s === 'loading')) { holder.classList.add('dash-skeleton'); return; }
+  holder.classList.remove('dash-skeleton');
+  const tr = tb.insertRow();
+  const td = tr.insertCell();
+  td.colSpan = table.tHead.rows[0].cells.length;
+  const f = document.createElement('div');
+  f.className = 'hc-fail';
+  f.textContent = 'Failed to load';
+  td.append(f);
+}
+
+function fillRows(table, rows, cols, key, lead) {
+  const tb = table.tBodies[0];
+  tb.replaceChildren(...rows.map((r) => {
+    const tr = document.createElement('tr');
+    tr.dataset.key = key(r);
+    if (lead && lead(r)) tr.className = 'lead';
+    for (const c of cols) {
+      const td = document.createElement('td');
+      if (c.num) td.className = 'num';
+      const v = r[c.field];
+      const txt = c.fmt ? (ok(v) ? c.fmt(v) : '–') : (v == null || v === '' ? '–' : String(v));
+      if (c.bar && ok(v)) {
+        const cell = document.createElement('span');
+        cell.className = 'hc-cell';
+        const bar = document.createElement('span');
+        bar.className = 'bar';
+        bar.style.width = Math.max(1, Math.round((Number(v) / c.bar) * 48)) + 'px';
+        const t = document.createElement('span');
+        t.textContent = txt;
+        cell.append(bar, t);
+        td.append(cell);
+      } else {
+        td.textContent = txt;
+      }
+      tr.append(td);
+    }
+    return tr;
+  }));
+}
+
+function legendOf(el, items, note) {
+  if (!el) return;
+  el.replaceChildren(...items.map((s) => {
+    const it = document.createElement('span');
+    const sw = document.createElement('span');
+    sw.className = 'sw';
+    sw.style.background = s.color;
+    it.append(sw, document.createTextNode(s.name));
+    return it;
+  }));
+  if (note) {
+    const n = document.createElement('span');
+    n.textContent = note;
+    el.append(n);
+  }
+}
+
+function measurer(svg) {
+  const probe = svg.append('text').attr('class', 'hc-tick').attr('x', -9999).attr('y', -9999);
+  return {
+    w: (s, cls) => { probe.attr('class', cls || 'hc-tick').text(s); return probe.node().getComputedTextLength(); },
+    done: () => probe.remove(),
+  };
+}
+
+function lineChart(box, series, o) {
+  box.replaceChildren();
+  const W = Math.max(260, Math.floor(box.clientWidth || 600));
+  const H = o.height || 260;
+  const live = series.filter((s) => s.pts.length);
+  const pts = live.flatMap((s) => s.pts);
+  if (!pts.length) {
+    const p = document.createElement('div');
+    p.className = 'hc-empty';
+    p.textContent = o.empty || 'No values for this choice.';
+    box.append(p);
+    if (o.legend) o.legend.replaceChildren();
+    return;
+  }
+  const svg = d3.select(box).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`)
+    .attr('role', 'img').attr('aria-label', o.aria || '');
+  const m = measurer(svg);
+  let lo = d3.min(pts, (p) => p.v), hi = d3.max(pts, (p) => p.v);
+  if (o.refY != null && Number.isFinite(o.refY)) { lo = Math.min(lo, o.refY); hi = Math.max(hi, o.refY); }
+  if (lo === hi) { lo -= 1; hi += 1; }
+  const top = 14, bottom = 26;
+  const y = d3.scaleLinear([lo, hi], [H - bottom, top]).nice(5);
+  const yt = y.ticks(5);
+  const yFmt = o.yFmt || tick;
+  const left = Math.ceil(d3.max(yt, (t) => m.w(yFmt(t)))) + 10;
+  const ends = live.filter((s) => s.label);
+  const endText = (s) => `${s.short || s.name} ${o.vFmt(s.pts[s.pts.length - 1].v)}`;
+  const endW = ends.length ? d3.max(ends, (s) => m.w(endText(s), 'hc-end')) + 12 : 0;
+  const useEnds = ends.length > 0 && endW <= W * 0.4;
+  const right = useEnds ? Math.ceil(endW) : 16;
+  const [t0, t1] = d3.extent(pts, (p) => p.t);
+  const x = d3.scaleUtc([t0, t1], [left, W - right]);
+  const years = (t1 - t0) / (365.25 * DAY);
+  const maxT = Math.max(2, Math.floor((W - left - right) / 56));
+  const step = [1, 2, 5, 10].find((s) => years / s <= maxT) || 10;
+  const halfYear = m.w('2000') / 2 + 2;
+  const xt = x.ticks(d3.utcYear.every(step)).filter((t) => x(t) - halfYear >= 0 && x(t) + halfYear <= W);
+  m.done();
+
+  const g = svg.append('g');
+  g.selectAll('line.grid').data(yt).join('line').attr('class', 'grid')
+    .attr('x1', left).attr('x2', W - right).attr('y1', (d) => y(d)).attr('y2', (d) => y(d))
+    .style('stroke', 'var(--cds-chart-grid)').attr('stroke-width', 1);
+  g.selectAll('text.ty').data(yt).join('text').attr('class', 'hc-tick ty')
+    .attr('x', left - 8).attr('y', (d) => y(d)).attr('dy', '0.32em').attr('text-anchor', 'end').text((d) => yFmt(d));
+  g.append('line').attr('x1', left).attr('x2', W - right).attr('y1', H - bottom).attr('y2', H - bottom)
+    .style('stroke', 'var(--cds-chart-axis)').attr('stroke-width', 1);
+  g.selectAll('text.tx').data(xt).join('text').attr('class', 'hc-tick tx')
+    .attr('x', (d) => x(d)).attr('y', H - bottom + 17).attr('text-anchor', 'middle').text((d) => d3.utcFormat('%Y')(d));
+  if (o.refY != null && Number.isFinite(o.refY)) {
+    g.append('line').attr('x1', left).attr('x2', W - right).attr('y1', y(o.refY)).attr('y2', y(o.refY))
+      .style('stroke', 'var(--cds-chart-reference)').attr('stroke-width', 1).attr('stroke-dasharray', '4 3');
+  }
+  if (o.refX && o.refX >= t0 && o.refX <= t1) {
+    const xx = x(o.refX);
+    g.append('line').attr('x1', xx).attr('x2', xx).attr('y1', top).attr('y2', H - bottom)
+      .style('stroke', 'var(--cds-chart-reference)').attr('stroke-width', 1).attr('stroke-dasharray', '2 3');
+    g.append('text').attr('class', 'hc-tick').attr('x', xx - 4).attr('y', top + 2).attr('dy', '0.32em')
+      .attr('text-anchor', 'end').text(o.refXLabel || '');
+  }
+  const line = d3.line().x((p) => x(p.t)).y((p) => y(p.v));
+  const order = [...live].sort((a, b) => (a.muted ? 0 : 1) - (b.muted ? 0 : 1));
+  svg.append('g').selectAll('path').data(order).join('path')
+    .attr('d', (s) => line(s.pts)).attr('fill', 'none').style('stroke', (s) => s.color)
+    .attr('stroke-width', (s) => (s.muted ? 1.25 : 2)).attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round')
+    .attr('stroke-dasharray', (s) => s.dash || null);
+
+  if (useEnds) {
+    const L = ends.map((s) => ({ s, y: y(s.pts[s.pts.length - 1].v) })).sort((a, b) => a.y - b.y);
+    const gap = 15;
+    for (let i = 1; i < L.length; i++) L[i].y = Math.max(L[i].y, L[i - 1].y + gap);
+    const maxY = H - bottom - 4;
+    if (L.length && L[L.length - 1].y > maxY) {
+      L[L.length - 1].y = maxY;
+      for (let i = L.length - 2; i >= 0; i--) L[i].y = Math.min(L[i].y, L[i + 1].y - gap);
+    }
+    const lg = svg.append('g');
+    for (const l of L) {
+      lg.append('text').attr('class', 'hc-end').attr('x', W - right + 6).attr('y', l.y).attr('dy', '0.32em')
+        .style('fill', l.s.color).text(endText(l.s));
+    }
+    if (o.legend) legendOf(o.legend, [], o.legendNote);
+  } else if (o.legend) {
+    legendOf(o.legend, live.filter((s) => !s.muted || s.label), o.legendNote);
+  }
+
+  const tip = document.createElement('div');
+  tip.className = 'hc-tip';
+  tip.hidden = true;
+  box.append(tip);
+  const rule = svg.append('line').attr('y1', top).attr('y2', H - bottom).style('stroke', 'var(--cds-chart-axis)')
+    .attr('stroke-width', 1).attr('visibility', 'hidden');
+  const dots = svg.append('g');
+  const bis = d3.bisector((p) => p.t).center;
+  const hide = () => { tip.hidden = true; rule.attr('visibility', 'hidden'); dots.selectAll('circle').remove(); };
+  svg.append('rect').attr('x', left).attr('y', top).attr('width', Math.max(0, W - right - left)).attr('height', H - bottom - top)
+    .attr('fill', 'transparent')
+    .on('pointermove', (ev) => {
+      const [mx] = d3.pointer(ev);
+      const t = x.invert(mx);
+      const hits = live.map((s) => {
+        const p = s.pts[bis(s.pts, t)];
+        return p && Math.abs(p.t - t) <= (o.tol || 40 * DAY) ? { s, p } : null;
+      }).filter(Boolean);
+      if (!hits.length) { hide(); return; }
+      const tt = hits.reduce((a, h) => (Math.abs(h.p.t - t) < Math.abs(a - t) ? h.p.t : a), hits[0].p.t);
+      rule.attr('x1', x(tt)).attr('x2', x(tt)).attr('visibility', 'visible');
+      dots.selectAll('circle').data(hits).join('circle').attr('cx', (h) => x(h.p.t)).attr('cy', (h) => y(h.p.v))
+        .attr('r', (h) => (h.s.muted ? 2.5 : 3.5)).style('fill', (h) => h.s.color);
+      const hd = document.createElement('div');
+      hd.className = 'hd';
+      hd.textContent = (o.tFmt || d3.utcFormat('%b %Y'))(tt);
+      const rows = [...hits].sort((a, b) => b.p.v - a.p.v).map((h) => {
+        const r = document.createElement('div');
+        r.className = 'row';
+        const n = document.createElement('span');
+        if (hits.length > 1) {
+          const sw = document.createElement('span');
+          sw.className = 'sw';
+          sw.style.background = h.s.color;
+          n.append(sw);
+        }
+        n.append(document.createTextNode(h.s.name));
+        const v = document.createElement('span');
+        v.className = 'v';
+        v.textContent = o.vFmt(h.p.v);
+        r.append(n, v);
+        return r;
+      });
+      tip.replaceChildren(hd, ...rows);
+      tip.hidden = false;
+      const bw = box.clientWidth;
+      const px = x(tt) * (bw / W);
+      let lx = px + 12;
+      if (lx + tip.offsetWidth > bw) lx = px - 12 - tip.offsetWidth;
+      tip.style.left = Math.max(0, lx) + 'px';
+    })
+    .on('pointerleave', hide);
+}
+
+function rangeChart(box, rows, o) {
+  box.replaceChildren();
+  const W = Math.max(260, Math.floor(box.clientWidth || 600));
+  const H = 250;
+  if (!rows.length) {
+    const p = document.createElement('div');
+    p.className = 'hc-empty';
+    p.textContent = 'No values for this choice.';
+    box.append(p);
+    return;
+  }
+  const svg = d3.select(box).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`)
+    .attr('role', 'img').attr('aria-label', o.aria || '');
+  const m = measurer(svg);
+  const vals = rows.flatMap((r) => [r.q05, r.q95]).concat([0]);
+  const hasActual = Number.isFinite(o.actual);
+  if (hasActual) vals.push(o.actual);
+  const top = 14, bottom = 48;
+  const y = d3.scaleLinear(d3.extent(vals), [H - bottom, top]).nice(5);
+  const yt = y.ticks(5);
+  const yFmt = (v) => tick(v) + '%';
+  const left = Math.ceil(d3.max(yt, (t) => m.w(yFmt(t)))) + 10;
+  const right = hasActual ? Math.ceil(m.w('What happened')) + 12 : 12;
+  m.done();
+  const x = d3.scaleBand(rows.map((r) => r.label), [left, W - right]).padding(0.3);
+  const bw = Math.min(32, x.bandwidth());
+  const g = svg.append('g');
+  g.selectAll('line.grid').data(yt).join('line').attr('x1', left).attr('x2', W - right)
+    .attr('y1', (d) => y(d)).attr('y2', (d) => y(d)).style('stroke', 'var(--cds-chart-grid)').attr('stroke-width', 1);
+  g.selectAll('text.ty').data(yt).join('text').attr('class', 'hc-tick')
+    .attr('x', left - 8).attr('y', (d) => y(d)).attr('dy', '0.32em').attr('text-anchor', 'end').text((d) => yFmt(d));
+  g.append('line').attr('x1', left).attr('x2', W - right).attr('y1', y(0)).attr('y2', y(0))
+    .style('stroke', 'var(--cds-chart-axis)').attr('stroke-width', 1);
+  const cx = (r) => x(r.label) + x.bandwidth() / 2;
+  g.selectAll('rect.band').data(rows).join('rect').attr('x', (r) => cx(r) - bw / 2).attr('width', bw)
+    .attr('y', (r) => y(r.q95)).attr('height', (r) => Math.max(1, y(r.q05) - y(r.q95))).attr('rx', 4)
+    .style('fill', o.color).attr('fill-opacity', 0.3);
+  g.selectAll('line.med').data(rows).join('line').attr('x1', (r) => cx(r) - bw / 2).attr('x2', (r) => cx(r) + bw / 2)
+    .attr('y1', (r) => y(r.q50)).attr('y2', (r) => y(r.q50)).style('stroke', o.color).attr('stroke-width', 2.5);
+  g.selectAll('text.tx').data(rows).join('text').attr('class', 'hc-tick').attr('x', cx).attr('y', H - bottom + 16)
+    .attr('text-anchor', 'middle').text((r) => r.label);
+  g.selectAll('text.tx2').data(rows.filter((r) => r.sub)).join('text').attr('class', 'hc-tick').attr('x', cx)
+    .attr('y', H - bottom + 29).attr('text-anchor', 'middle').text((r) => r.sub);
+  g.append('text').attr('class', 'hc-tick').attr('x', (left + W - right) / 2).attr('y', H - 4).attr('text-anchor', 'middle')
+    .text('Hormuz flow lost, points out of 100');
+  if (hasActual) {
+    g.append('line').attr('x1', left).attr('x2', W - right).attr('y1', y(o.actual)).attr('y2', y(o.actual))
+      .style('stroke', 'var(--color-fg)').attr('stroke-width', 1.5).attr('stroke-dasharray', '5 3');
+    g.append('text').attr('class', 'hc-tick').attr('x', W - right + 6).attr('y', y(o.actual)).attr('dy', '0.32em')
+      .text('What happened');
+  }
+  const tip = document.createElement('div');
+  tip.className = 'hc-tip';
+  tip.hidden = true;
+  box.append(tip);
+  g.selectAll('rect.hit').data(rows).join('rect').attr('x', (r) => x(r.label)).attr('width', x.bandwidth())
+    .attr('y', top).attr('height', H - bottom - top).attr('fill', 'transparent')
+    .on('pointermove', (ev, r) => {
+      const hd = document.createElement('div');
+      hd.className = 'hd';
+      hd.textContent = r.label === 'None' ? 'No closure' : `${r.label} points lost${r.sub ? ' ' + r.sub : ''}`;
+      const line = (name, v) => {
+        const d = document.createElement('div');
+        d.className = 'row';
+        const n = document.createElement('span');
+        n.textContent = name;
+        const s = document.createElement('span');
+        s.className = 'v';
+        s.textContent = v;
+        d.append(n, s);
+        return d;
+      };
+      tip.replaceChildren(hd, line('Median', s1(r.q50) + '%'), line('90% band', `${s1(r.q05)}% to ${s1(r.q95)}%`));
+      tip.hidden = false;
+      const bwid = box.clientWidth;
+      const px = cx(r) * (bwid / W);
+      let lx = px + bw / 2 + 8;
+      if (lx + tip.offsetWidth > bwid) lx = px - bw / 2 - 8 - tip.offsetWidth;
+      tip.style.left = Math.max(0, lx) + 'px';
+    })
+    .on('pointerleave', () => { tip.hidden = true; });
+}
+
+function syncControls() {
+  document.querySelectorAll('#hc .hc-seg').forEach((seg) => {
+    const v = String(param(seg.dataset.param));
+    seg.querySelectorAll('button[data-value]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.value === v)));
+  });
+}
+
+function fillSelect(sel, data, field, order, current) {
+  if (!data) { sel.replaceChildren(); return; }
+  const vals = [...new Set(data.map((r) => r[field]))];
+  vals.sort((a, b) => {
+    const ia = order ? order.indexOf(a) : -1, ib = order ? order.indexOf(b) : -1;
+    if (ia !== ib) return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+    return a < b ? -1 : 1;
+  });
+  sel.replaceChildren(...vals.map((v) => new Option(v, v)));
+  sel.value = vals.includes(current) ? current : vals[0];
+}
+
+document.querySelectorAll('#hc .hc-seg').forEach((seg) => seg.addEventListener('click', (ev) => {
+  const b = ev.target.closest('button[data-value]');
+  if (!b) return;
+  dash.setParams({ [seg.dataset.param]: seg.dataset.num ? Number(b.dataset.value) : b.dataset.value });
+}));
+$('sel-minutes').addEventListener('change', (ev) => dash.setParams({ min_item: ev.target.value }));
+$('sel-hci-cat').addEventListener('change', (ev) => dash.setParams({ hci_cat: ev.target.value }));
+$('src-search').addEventListener('input', () => filterSources());
+
+function filterSources() {
+  const q = $('src-search').value.trim().toLowerCase();
+  for (const tr of $('tb-sources').tBodies[0].rows) tr.hidden = q !== '' && !tr.textContent.toLowerCase().includes(q);
+}
+
+function drawTakeaway() {
+  const el = $('takeaway');
+  const h = dash.data('headline'), u = dash.data('uk_gap');
+  if (h.status !== 'ok' || u.status !== 'ok') {
+    el.replaceChildren();
+    el.classList.toggle('dash-skeleton', h.status === 'loading' || u.status === 'loading');
+    return;
+  }
+  el.classList.remove('dash-skeleton');
+  const name = { 'US': 'the US', 'UK': 'the UK', 'Euro area': 'the euro area' };
+  const parts = [];
+  const t = (s) => parts.push(document.createTextNode(s));
+  const mark = (src, field, where, fmt) => {
+    const s = document.createElement('span');
+    s.setAttribute('data-source', src);
+    s.setAttribute('data-field', field);
+    s.setAttribute('data-where', where);
+    s.dataset.fmt = fmt;
+    s.textContent = '—';
+    parts.push(s);
+  };
+  const list = (rs) => rs.forEach((r, i) => {
+    if (i) t(i === rs.length - 1 ? ' and ' : ', ');
+    t(name[r.region] + ' (');
+    mark('headline', 'latest', 'region=' + enc(r.region), 'f1');
+    t(')');
+  });
+  const above = h.data.filter((r) => r.latest >= 100), below = h.data.filter((r) => r.latest < 100);
+  t('Real pay (2019 = 100) is ');
+  if (above.length) { t('back above its 2019 level in '); list(above); }
+  if (below.length) { t(above.length ? ' but still below it in ' : 'below its 2019 level in '); list(below); }
+  t('. UK household costs rose ');
+  mark('uk_gap', 'rise_since_2021', 'group=All Households', 'spct');
+  t(' from January 2021 to ');
+  mark('uk_gap', 'latest_month', 'group=All Households', 'month');
+  t(', and the lowest-income tenth was hit first: ');
+  mark('uk_gap', 'rate_2022_10', 'group=Decile 1', 'pct');
+  t(' in the year to October 2022, against ');
+  mark('uk_gap', 'rate_2022_10', 'group=Decile 10', 'pct');
+  t(' for the highest.');
+  el.replaceChildren(...parts);
+}
+
+let linked = false;
+
+dash.onData(() => {
+  syncControls();
+  drawTakeaway();
+
+  // real pay and inflation
+  withData($('ch-real-pay'), ['real_pay'], (rp) => {
+    const S = REGIONS.map((r) => ({
+      name: r, color: REGION_COLOR[r], label: true,
+      pts: rp.filter((x) => x.region === r && ok(x.real_pay)).map((x) => ({ t: tm(x.month), v: Number(x.real_pay) })).sort(byT),
+    }));
+    lineChart($('ch-real-pay'), S, { vFmt: f1, refY: 100, refX: CLOSURE, refXLabel: 'Hormuz closure', tol: 50 * DAY,
+      legend: $('lg-real-pay'), aria: 'Real pay by region, 2019 = 100' });
+  }, $('lg-real-pay'));
+  withData($('ch-inflation'), ['real_pay'], (rp) => {
+    const S = REGIONS.map((r) => ({
+      name: r, color: REGION_COLOR[r], label: true,
+      pts: rp.filter((x) => x.region === r && ok(x.inflation)).map((x) => ({ t: tm(x.month), v: Number(x.inflation) })).sort(byT),
+    }));
+    lineChart($('ch-inflation'), S, { vFmt: (v) => f1(v) + '%', yFmt: (v) => tick(v) + '%', refY: 0, refX: CLOSURE,
+      refXLabel: 'Hormuz closure', legend: $('lg-inflation'), aria: 'Inflation by region, 12-month change' });
+  }, $('lg-inflation'));
+
+  // squeezes
+  withTable($('tb-squeezes'), ['squeezes'], (rows) => {
+    fillRows($('tb-squeezes'), rows, [
+      { field: 'region' }, { field: 'peak' }, { field: 'trough' },
+      { field: 'fall_pct', num: true, fmt: (v) => s1(Number(v)) + '%' }, { field: 'months_falling', num: true, fmt: (v) => String(v) },
+      { field: 'back_at_peak' },
+    ], (r) => enc(r.region) + ',' + enc(r.peak));
+  });
+
+  // essentials
+  const er = param('ess_region');
+  withData($('ch-essentials'), ['essentials'], (es) => {
+    const items = [...new Set(es.filter((x) => x.region === er).map((x) => x.item))];
+    const S = items.map((it) => ({
+      name: it, color: ITEM_COLOR[it] || C[7], label: true,
+      pts: es.filter((x) => x.region === er && x.item === it && ok(x.value)).map((x) => ({ t: tm(x.month), v: Number(x.value) })).sort(byT),
+    }));
+    lineChart($('ch-essentials'), S, { vFmt: f1, refY: 100, refX: CLOSURE, refXLabel: 'Hormuz closure', tol: 50 * DAY,
+      legend: $('lg-essentials'), aria: 'Essentials in units of pay, ' + er });
+  }, $('lg-essentials'));
+
+  // minutes of work
+  const mi = param('min_item');
+  const md = dash.data('minutes');
+  fillSelect($('sel-minutes'), md.status === 'ok' ? md.data : null, 'item', null, mi);
+  for (const id of ['mn-2019', 'mn-2022', 'mn-last', 'mn-month']) $(id).setAttribute('data-where', 'item=' + enc(mi));
+  withData($('ch-minutes'), ['minutes', 'minutes_summary'], (mn, summ) => {
+    const s = summ.find((r) => r.item === mi);
+    const S = [{
+      name: mi, short: 'Latest', color: C[0], label: true,
+      pts: mn.filter((x) => x.item === mi && ok(x.minutes)).map((x) => ({ t: tm(x.month), v: Number(x.minutes) })).sort(byT),
+    }];
+    lineChart($('ch-minutes'), S, { vFmt: f1, refY: s && ok(s.avg_2019) ? Number(s.avg_2019) : null, refX: CLOSURE,
+      refXLabel: 'Hormuz closure', aria: 'Minutes of work for ' + mi });
+  });
+
+  // UK household groups
+  const ht = param('hci_type'), hc = param('hci_cat');
+  const ug = dash.data('uk_groups');
+  fillSelect($('sel-hci-cat'), ug.status === 'ok' ? ug.data : null, 'category', CAT_ORDER, hc);
+  withData($('ch-uk-groups'), ['uk_groups'], (rows) => {
+    const sel = rows.filter((x) => x.category === hc && (x.group_type === ht || x.group === 'All Households') && ok(x.rate_12m));
+    const groups = [...new Set(sel.map((x) => x.group))].map((g) => ({ group: g, group_type: g === 'All Households' ? 'all' : ht }))
+      .sort(groupOrder).map((g) => g.group);
+    let k = 0;
+    const S = groups.map((g) => {
+      const pts = sel.filter((x) => x.group === g).map((x) => ({ t: tm(x.month), v: Number(x.rate_12m) })).sort(byT);
+      const base = { name: SHORT[g] || g, pts };
+      if (g === 'All Households') return { ...base, color: 'var(--color-fg-muted)', dash: '4 3', label: true };
+      if (ht === 'income decile') {
+        if (g === 'Decile 1') return { ...base, color: C[1], label: true };
+        if (g === 'Decile 10') return { ...base, color: C[0], label: true };
+        return { ...base, color: 'var(--cds-chart-muted)', muted: true, label: false };
+      }
+      return { ...base, color: C[k++], label: true };
+    });
+    lineChart($('ch-uk-groups'), S, { vFmt: (v) => f1(v) + '%', yFmt: (v) => tick(v) + '%', refY: 0, legend: $('lg-uk-groups'),
+      legendNote: ht === 'income decile' ? 'Grey lines: the other income tenths' : '',
+      empty: 'No 12-month rates for this group and category.', aria: 'Household cost inflation by group: ' + hc });
+  }, $('lg-uk-groups'));
+
+  withTable($('tb-shares'), ['shares_wide'], (rows) => {
+    const sel = rows.filter((r) => r.group_type === ht || r.group === 'All Households').sort(groupOrder);
+    const fields = ['food', 'energy', 'motor_fuel', 'private_rent', 'social_rent', 'mortgage', 'restaurants'];
+    const top = d3.max(sel, (r) => d3.max(fields, (f) => (ok(r[f]) ? Number(r[f]) : 0))) || 1;
+    fillRows($('tb-shares'), sel.map((r) => ({ ...r, name: SHORT[r.group] || r.group })), [{ field: 'name' }].concat(fields.map((f) => ({ field: f, num: true, bar: top, fmt: (v) => f1(Number(v)) + '%' }))),
+      (r) => enc(r.group), (r) => r.group === 'All Households');
+  });
+
+  // mortgages
+  withData($('ch-mortgage-100k'), ['mortgage'], (rows) => {
+    const def = [['us_payment_share_pay', 'US 30-year', C[0]], ['uk_payment_2y_share_pay', 'UK 2-year fixed', C[1]],
+      ['uk_payment_5y_share_pay', 'UK 5-year fixed', C[3]], ['uk_payment_svr_share_pay', 'UK revert-to rate', C[4]]];
+    const S = def.map(([k, n, c]) => ({ name: n, color: c, label: true,
+      pts: rows.filter((x) => x.measure === k && ok(x.value)).map((x) => ({ t: tm(x.month), v: Number(x.value) })).sort(byT) }));
+    lineChart($('ch-mortgage-100k'), S, { vFmt: (v) => f1(v) + '%', yFmt: (v) => tick(v) + '%', legend: $('lg-mortgage-100k'),
+      aria: 'Mortgage repayment per 100,000 as a share of pay' });
+  }, $('lg-mortgage-100k'));
+  withData($('ch-mortgage-home'), ['mortgage'], (rows) => {
+    const def = [['us_median_house_share_income', 'US median home', C[0]], ['uk_avg_house_share_pay', 'UK average home', C[1]]];
+    const S = def.map(([k, n, c]) => ({ name: n, color: c, label: true,
+      pts: rows.filter((x) => x.measure === k && ok(x.value)).map((x) => ({ t: tm(x.month), v: Number(x.value) })).sort(byT) }));
+    lineChart($('ch-mortgage-home'), S, { vFmt: (v) => f1(v) + '%', yFmt: (v) => tick(v) + '%', legend: $('lg-mortgage-home'),
+      aria: 'Repayment on a typical home as a share of income' });
+  }, $('lg-mortgage-home'));
+
+  // Hormuz: real pay under the scenarios
+  const zr = param('hz_region'), zh = Number(param('hz_h'));
+  $('hz-actual').setAttribute('data-where', `region=${enc(zr)}&months_ahead=${zh}&flow_drop_points=82`);
+  withData($('ch-hormuz-pay'), ['hormuz_pay'], (rows) => {
+    const sel = rows.filter((r) => r.region === zr && Number(r.months_ahead) === zh)
+      .sort((a, b) => Number(a.flow_drop_points) - Number(b.flow_drop_points));
+    const R = sel.map((r) => ({
+      label: Number(r.flow_drop_points) === 0 ? 'None' : String(Number(r.flow_drop_points)),
+      sub: Number(r.flow_drop_points) === 82 ? '(2026)' : '',
+      q05: Number(r.real_pay_q05), q50: Number(r.real_pay_q50), q95: Number(r.real_pay_q95),
+    }));
+    const a = sel.length && ok(sel[0].real_pay_actual) ? Number(sel[0].real_pay_actual) : NaN;
+    $('hz-actual-note').textContent = Number.isFinite(a) ? '' : ' not known yet for this horizon';
+    rangeChart($('ch-hormuz-pay'), R, { actual: a, color: REGION_COLOR[zr] || C[0],
+      aria: `Real pay change after ${zh} months by lost Hormuz flow, ${zr}` });
+  });
+
+  withTable($('tb-hormuz-groups'), ['hz_groups_table'], (rows) => {
+    const sel = [...rows].sort(groupOrder);
+    const pc = (v) => f1(Number(v)) + '%';
+    const sc = (v) => s2(Number(v)) + '%';
+    fillRows($('tb-hormuz-groups'), sel.map((r) => ({ ...r, name: SHORT[r.group] || r.group })), [
+      { field: 'name' }, { field: 'energy_share', num: true, fmt: pc }, { field: 'motor_fuel_share', num: true, fmt: pc },
+      { field: 'none_6m', num: true, fmt: sc }, { field: 'full_6m', num: true, fmt: sc }, { field: 'extra_6m', num: true, fmt: sc },
+      { field: 'extra_motor_fuel_6m', num: true, fmt: sc }, { field: 'outlook_12m', num: true, fmt: sc },
+    ], (r) => enc(r.group), (r) => r.group === 'All Households');
+  });
+
+  // sources
+  withTable($('tb-sources'), ['sources'], (rows) => {
+    fillRows($('tb-sources'), rows, [{ field: 'label' }, { field: 'region' }, { field: 'publisher' }, { field: 'code' },
+      { field: 'first' }, { field: 'last' }, { field: 'fetched' }], (r) => enc(r.series));
+    filterSources();
+  });
+
+  fillMarks();
+
+  if (!linked && dash.data('real_pay').status === 'ok') {
+    linked = true;
+    try {
+      const named = location.hash && document.getElementById(location.hash.slice(1));
+      if (named && $('hc').contains(named)) named.scrollIntoView();
+    } catch (e) { /* no link to follow */ }
+  }
+});
+
+try {
+  const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) dash.setLink(e.target.id); }),
+    { root: document, rootMargin: '-45% 0px -50% 0px' });
+  document.querySelectorAll('#hc .hc-sec').forEach((s) => io.observe(s));
+} catch (e) { /* links stay as they are */ }
+</script>
