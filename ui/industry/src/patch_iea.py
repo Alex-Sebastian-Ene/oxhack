@@ -64,8 +64,11 @@ tip = (f"The 2026 closure as the IEA counts it: {path[0]} points lost in March, 
 sub('            <button type="button" data-lost="82" aria-pressed="false">2026 closure · 82</button>\n',
     f'            <button type="button" data-path="iea2026" data-avg="{P26["avg"]}" data-txt="{path[0]} points lost in March, {path[-1]} by September" '
     f'aria-pressed="false" title="{tip}">2026 closure</button>\n')
-sub('<div class="pricebig"><b id="lost-v">69</b><span>points of normal flow lost</span></div>',
-    '<div class="pricebig"><b id="lost-v">69</b><span id="lost-u">points of normal flow lost</span></div>')
+# the slider's unit line (patch_disruption.py, if present, words it for AIS-visible flow); kept for the held case
+u = re.findall(r'<b id="lost-v">(\d+)</b><span>([^<]*)</span>', s)
+assert len(u) == 1, u
+LOST_U = u[0][1]
+sub(f'<b id="lost-v">{u[0][0]}</b><span>{LOST_U}</span>', f'<b id="lost-v">{u[0][0]}</b><span id="lost-u">{LOST_U}</span>')
 sub('<span>a barrel, average over the next 12 months</span>', '<span id="brent-u">a barrel, average over the next 12 months</span>')
 sub('const st = { key: "aug2026", rel: "2026",', 'const st = { key: "aug2026", path26: false, rel: "2026",')
 
@@ -104,7 +107,7 @@ sub('''  document.querySelectorAll("[data-lost]").forEach((b) => b.addEventListe
 # ---------------------------------------------------------------- what the shock card, the explainers and the sources say
 sub('    $("lost-v").textContent = st.lost;\n',
     '    $("lost-v").textContent = st.lost;\n'
-    '    $("lost-u").textContent = st.path26 ? `points lost on average in 2026 as the IEA counts it (${P26.path[0]} in March, ${P26.path[P26.path.length - 1]} by September)` : "points of normal flow lost";\n'
+    '    $("lost-u").textContent = st.path26 ? `points lost on average in 2026 as the IEA counts it (${P26.path[0]} in March, ${P26.path[P26.path.length - 1]} by September)` : ' + json.dumps(LOST_U) + ';\n'
     '    $("brent-u").textContent = st.path26 ? "a barrel, average over the 12 months from March 2026" : "a barrel, average over the next 12 months";\n')
 sub('''    document.querySelectorAll("[data-lost]").forEach((b) => b.setAttribute("aria-pressed", String(Number(b.dataset.lost) === st.lost)));''',
     '''    document.querySelectorAll("[data-lost]").forEach((b) => b.setAttribute("aria-pressed", String(!st.path26 && Number(b.dataset.lost) === st.lost)));
@@ -123,8 +126,10 @@ sub('      : `With <b>${st.lost}%</b> of Hormuz oil lost, prices in ${ECO_NAME[e
     '      : `${st.path26 ? "In the 2026 closure as the IEA counts it" : `With <b>${st.lost}%</b> of Hormuz oil lost`}, prices in ${ECO_NAME[eco]} end up')
 sub('`With ${st.lost}% of Hormuz flow lost (Brent about $${st.brent}), 12 months on.',
     '`${st.path26 ? "In the 2026 closure as the IEA counts it" : `With ${st.lost}% of Hormuz flow lost`} (Brent about $${st.brent}), 12 months on.')
-sub("  const scenFact = () => `Scenario: ${st.lost} points of normal Hormuz flow lost (the reader's choice),",
-    "  const scenFact = () => `Scenario: ${st.path26 ? `the 2026 closure as the IEA counts it (${pathTxt()}; ${st.lost} on average)` : `${st.lost} points of normal Hormuz flow lost (the reader's choice)`},")
+# the explainer's scenario line (its wording differs once patch_disruption.py has run)
+s, n = re.subn(r"(  const scenFact = \(\) => `Scenario: )(\$\{st\.lost\} points of normal Hormuz flow lost[^`]*?\)), so",
+               lambda g: g.group(1) + "${st.path26 ? `the 2026 closure as the IEA counts it (${pathTxt()}; ${st.lost} on average)` : `" + g.group(2) + "`}, so", s, count=1)
+assert n == 1, "scenFact"
 sub("  const chainSrc = () => `Source: the team's oil-shock model, fitted to data up to ${ymLabel(CHAIN_META.fitted_to)}`;",
     "  const chainSrc = () => `Source: the team's oil-shock model, fitted to data up to ${ymLabel(CHAIN_META.fitted_to)}${st.path26 ? \", replayed on 2026 as the IEA counts it\" : \"\"}`;")
 
