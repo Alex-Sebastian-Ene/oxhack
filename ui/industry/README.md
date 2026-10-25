@@ -30,8 +30,8 @@ Open `index.html` in a browser; it needs no server. It is the same page as the s
       bypass it. Where Comtrade has nothing (Taiwan, Iran), the hand-entered table (EIA, Energy Institute)
       fills in. A country in neither is grey and says "not in our data".
     - **Fuel cost** uses the country's own Brent to pump-price pass-through, fitted on its motor-fuel prices
-      (Europe, Türkiye, the US), or the median of those, marked "pooled". The Industries tab and the fuel-cost
-      path use the same pass-through.
+      (Europe, Türkiye, the US). Other countries show "no estimate" rather than a pooled median, which would be
+      the same number for all of them. The Industries tab and the fuel-cost path use the same pass-through.
     - **Oil cut off** replaces the hand-set exposure score: an importer's Gulf share of oil imports × the share of
       Hormuz flow lost, a Gulf producer's exports trapped, another exporter's oil earnings. It colours the map and
       orders "Most oil cut off". It misses Gulf crude that arrives as fuel refined elsewhere (Australia's petrol
