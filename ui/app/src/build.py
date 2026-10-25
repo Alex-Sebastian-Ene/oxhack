@@ -12,7 +12,7 @@ check, node on PATH.
 import base64, pathlib, re, shutil, subprocess, sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-import copy_text, world  # noqa: E402  (World view behaviour, shorter copy)
+import copy_text, gas, world  # noqa: E402  (World view behaviour, gas lines, shorter copy)
 
 HERE = pathlib.Path(__file__).resolve().parent
 APP = HERE.parent
@@ -74,9 +74,17 @@ def font_css() -> str:
     ])
 
 
+def gas_data() -> str:
+    """window.GAS from ui/app/data/gas.json (experiments/gas_routes.py), or nothing if it isn't there yet."""
+    f = APP / "data" / "gas.json"
+    if not f.exists():
+        return ""
+    return f"<script>/* gas routes: ui/app/data/gas.json */\nwindow.GAS = {f.read_text(encoding='utf-8').strip()};\n</script>\n"
+
+
 def main() -> None:
     page = SRC.read_text(encoding="utf-8")
-    for old, new, n in SWAPS + world.SWAPS + copy_text.SWAPS:
+    for old, new, n in SWAPS + world.SWAPS + gas.SWAPS + copy_text.SWAPS:
         got = page.count(old)
         if got != n:
             sys.exit(f"expected {n} of {old[:70]!r}, found {got}: the industry page changed, update SWAPS")
@@ -94,7 +102,8 @@ def main() -> None:
     first_style_end = body.index("</style>") + len("</style>")
     read = lambda f: (HERE / f).read_text(encoding="utf-8")
     early = (
-        f"\n<style>\n{font_css()}\n{read('theme.css')}\n{read('landing.css')}\n{read('ai.css')}</style>\n"
+        f"\n<style>\n{font_css()}\n{read('theme.css')}\n{gas.CSS}\n{read('landing.css')}\n{read('ai.css')}</style>\n"
+        f"{gas_data()}"
         f"{read('landing.html')}"
         f"<script>\n{read('pixel.js')}\n</script>\n<script>\n{read('sound.js')}\n</script>\n<script>\n{read('landing.js')}\n</script>\n"
     )

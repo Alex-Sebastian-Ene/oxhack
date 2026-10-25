@@ -668,6 +668,15 @@ svg.pxi { stroke: none !important; fill: none; overflow: visible; }
 .colkey { display: inline-block; width: 5px; height: 12px; margin-right: 6px; vertical-align: -1px; background: #8fd0f5; border: 1px solid #04060c; }
 .wtip .faint { color: var(--faint); }
 
+/* gas on the World view (gas.py): violet, beside the yellow oil */
+#world .gasl path { fill: none; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; pointer-events: stroke; }
+#world .glane { stroke: #b58cff; stroke-dasharray: 5 6; opacity: .9; animation: oilflow 2.2s linear infinite; }
+#world .glane.dim { opacity: .25; }
+#world .gpipe-c { stroke: #04060c; }
+#world .gpipe { stroke: #b58cff; }
+.legendbar .gaskey i { border-top: 3px dashed #b58cff !important; filter: none !important; }
+@media (prefers-reduced-motion: reduce) { #world .glane { animation: none; } }
+
 /* Landing page: the night refinery fills the screen; the words sit in the sky on the left (on top on a phone). */
 body.hz-landing-open { overflow: hidden; }
 .hz-landing { position: fixed; inset: 0; z-index: 100; overflow: hidden; background: #05081a; color: var(--text, #f1e8d2); font-family: var(--pix); }
@@ -1494,6 +1503,7 @@ window.HZIcons = {
         <div class="grad" id="wgrad"></div>
         <div class="ticks" id="wticks"></div>
         <div class="flowkey"><i></i><span id="wflowkey">Oil leaving Hormuz, width = volume</span></div>
+        <div class="flowkey gaskey" id="wgaskey"><i></i><span>Gas: LNG lanes, and pipelines (solid)</span></div>
       </div>
       <div class="cpop" id="cpop" role="dialog" aria-labelledby="cp-name" hidden>
         <div class="ph"><span id="cp-flag"></span><b id="cp-name"></b><span class="tag" id="cp-tag"></span>
@@ -2818,9 +2828,9 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
       ...endsOf().map((e) => ({ ...e, max: 2.4 }))];
     G3.ringsData(rings).ringColor((d) => (t) => `rgba(${rgb(d.color)},${1 - t})`).ringMaxRadius((d) => d.max).ringPropagationSpeed(2.2).ringRepeatPeriod(1100);
     const own = st.sel && C[st.sel] && C[st.sel].r;
-    G3.pathsData(st.mat ? [] : Object.entries(C).filter(([, d]) => d.r && d.h).map(([n, d]) => ({ n, pts: d.r.map(([lng, lat]) => [lat, lng]), on: !own || n === st.sel })))
-      .pathPoints("pts").pathPointAlt(0.004).pathStroke((d) => (d.on ? 1.6 : 0.6))
-      .pathColor((d) => (d.on ? ["rgba(255,214,10,0.45)", "#ffd60a"] : ["rgba(255,214,10,0.15)", "rgba(255,214,10,0.3)"]))
+    G3.pathsData(st.mat ? [] : [...Object.entries(C).filter(([, d]) => d.r && d.h).map(([n, d]) => ({ n, pts: d.r.map(([lng, lat]) => [lat, lng]), on: !own || n === st.sel })), ...gas3d()])
+      .pathPoints("pts").pathPointAlt((d) => (d.gas ? 0.006 : 0.004)).pathStroke((d) => (d.gas ? d.w : d.on ? 1.6 : 0.6)).pathLabel((d) => (d.label ? escH(d.label) : ""))
+      .pathColor((d) => (d.gas ? (d.pipe ? ["#b58cff", "#b58cff"] : ["rgba(181,140,255,0.35)", "#b58cff"]) : d.on ? ["rgba(255,214,10,0.45)", "#ffd60a"] : ["rgba(255,214,10,0.15)", "rgba(255,214,10,0.3)"]))
       .pathDashLength(0.06).pathDashGap(0.02).pathDashAnimateTime(9000).pathTransitionDuration(0);
     const tagIso = st.sel && isoOf[st.sel];
     G3.htmlElementsData(w ? [{ lat: w.lat, lng: w.lng, iso: tagIso, name: st.sel === "United States of America" ? "United States" : st.sel }] : [])
@@ -2920,7 +2930,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
   ];
   const gLift = root.append("g").attr("aria-hidden", "true");
   const gSea = root.append("g").attr("aria-hidden", "true"), gCont = root.append("g").attr("aria-hidden", "true");
-  const gRB = root.append("g"), gR = root.append("g"), gArc = root.append("g"), gP = root.append("g"), gH = root.append("g");
+  const gRB = root.append("g"), gR = root.append("g"), gGas = root.append("g").attr("class", "gasl"), gArc = root.append("g"), gP = root.append("g"), gH = root.append("g");
   const gFl = root.append("g").attr("aria-hidden", "true");
   const gPulse = root.append("g").attr("aria-hidden", "true").style("pointer-events", "none");
   let cur = d3.zoomIdentity;
@@ -2951,6 +2961,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
     gH.append("text").attr("class", "hzlabel").attr("x", hz[0] - 8).attr("y", hz[1] - 10).attr("text-anchor", "end").text("HORMUZ");
     gRB.selectAll("path").data(routes).join("path").attr("class", "route-base").attr("d", ([, d]) => line(d.r.map((p) => proj(p))));
     gR.selectAll("path").data(routes).join("path").attr("class", "route").attr("d", ([, d]) => line(d.r.map((p) => proj(p))));
+    layoutGas();
     gP.selectAll("circle.port").data(routes).join("circle").attr("class", "port")
       .attr("cx", ([, d]) => proj(d.r[d.r.length - 1])[0]).attr("cy", ([, d]) => proj(d.r[d.r.length - 1])[1]);
     gP.selectAll("circle.src").data(Object.entries(C).filter(([n, d]) => d.gulf && !d.dot)).join("circle").attr("class", "src")
@@ -2963,6 +2974,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
       .attr("x", (x) => proj([x.lng, x.lat])[0]).attr("y", (x) => proj([x.lng, x.lat])[1]).text((x) => x.name.toUpperCase());
     gP.raise(); dotEls.raise(); gH.raise(); gPulse.raise(); gFl.raise();
     drawFlatArcs();
+    paintGas();
     drawLift();
     drawPulses();
     rescale();
@@ -3012,6 +3024,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
     const fk = $("wflowkey").previousElementSibling;
     if (fk) fk.style.borderTopColor = st.mat && st.mode === "exports" ? "#8fd0f5" : "#ffd60a";
     drawFlatArcs();
+    paintGas();
     drawLift();
     drawPulses();
     paint3d();
@@ -3069,6 +3082,45 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
       n.select(".fl-tip").attr("d", "M-6 -10.5 L0 -4 L6 -10.5 Z");
     });
     rescale();
+  }
+  // ---- gas: window.GAS (ui/app/data/gas.json). LNG via the named sea-lane segments in R, pipelines by path
+  // function declarations only: layout can run before this point is reached
+  function gasD() { return window.GAS || null; }
+  function lngPts(f) { const term = { QAT: [51.6, 25.9], ARE: [52.87, 25.15] }; return [f.start || term[f.from], ...((f.route && f.route.segments) || []).flatMap((s) => R[s] || []), ...((f.route && f.route.end) || [])].filter(Boolean); }
+  function lngMax() { return Math.max(...((gasD() || {}).lng || []).map((f) => f.value || 0), 1); }
+  // move a projected line a few pixels to its right, so a gas lane sits beside the oil lane it shares
+  function beside(pts, px) {
+    return pts.map((p, i) => { const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)], dx = b[0] - a[0], dy = b[1] - a[1], n = Math.hypot(dx, dy) || 1;
+      return [p[0] - (dy / n) * px, p[1] + (dx / n) * px]; });
+  }
+  function gasTip(f) { return `Gas: ${nmIso(f.from)} → ${nmIso(f.to)} · ${f.value} ${f.unit || "Mt"} LNG (${f.year}; ${f.source})`; }
+  function pipeTip(p) { return `Gas pipeline: ${p.name}${p.capacity != null ? ` · ${p.capacity} ${p.unit || ""}` : ""}${p.bypasses_hormuz ? " · avoids Hormuz" : ""} (${p.year || ""}; ${p.source || ""})`; }
+  function layoutGas() {
+    const GASD = gasD(); if (!GASD) return;
+    const lanes = (GASD.lng || []).filter((f) => lngPts(f).length > 1), pipes = (GASD.pipelines || []).filter((p) => (p.path || []).length > 1);
+    gGas.selectAll("path.gpipe-c").data(pipes).join("path").attr("class", "gpipe-c").attr("d", (p) => line(p.path.map((q) => proj(q))));
+    gGas.selectAll("path.gpipe").data(pipes).join("path").attr("class", "gpipe").attr("d", (p) => line(p.path.map((q) => proj(q))))
+      .selectAll("title").data((p) => [p]).join("title").text(pipeTip);
+    gGas.selectAll("path.glane").data(lanes).join("path").attr("class", "glane").attr("d", (f) => line(beside(lngPts(f).map((q) => proj(q)), 3.5)))
+      .selectAll("title").data((f) => [f]).join("title").text(gasTip);
+  }
+  function paintGas() {
+    const GASD = gasD(), key = document.getElementById("wgaskey");
+    if (key) key.hidden = !GASD || !!st.mat;
+    if (!GASD) return;
+    const f = Math.min(st.flow / PREWAR, 1.1), mx = lngMax(), own = st.sel && isoOf[st.sel];
+    gGas.style("display", st.mat ? "none" : null);
+    gGas.selectAll("path.glane").attr("stroke-width", (g) => 0.6 + Math.sqrt((g.value || 0) / mx * Math.max(f, 0.04)) * 4.5)
+      .classed("dim", (g) => !!own && g.to !== own && g.from !== own).style("animation-duration", `${(2.2 / Math.max(f, 0.15)).toFixed(2)}s`);
+    gGas.selectAll("path.gpipe").attr("stroke-width", (p) => (p.bypasses_hormuz ? 2.6 : 2.6 * Math.max(f, 0.15)));
+    gGas.selectAll("path.gpipe-c").attr("stroke-width", (p) => (p.bypasses_hormuz ? 5 : 2.4 + 2.6 * Math.max(f, 0.15)));
+  }
+  function gas3d() {
+    const GASD = gasD(); if (!GASD || st.mat) return [];
+    const mx = lngMax(), f = Math.min(st.flow / PREWAR, 1.1), out = [];
+    for (const g of GASD.lng || []) { const p = lngPts(g); if (p.length > 1) out.push({ gas: true, pts: p.map(([lng, lat]) => [lat, lng + 0.6]), w: 0.3 + 1.6 * Math.sqrt((g.value || 0) / mx * Math.max(f, 0.04)), label: gasTip(g) }); }
+    for (const q of GASD.pipelines || []) if ((q.path || []).length > 1) out.push({ gas: true, pipe: true, pts: q.path.map(([lng, lat]) => [lat, lng]), w: 1.2, label: pipeTip(q) });
+    return out;
   }
   function drawFlatArcs() {
     const arcs = st.mat ? arcsFor().sort((a, b) => b.faded - a.faded) : [];
