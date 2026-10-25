@@ -134,7 +134,8 @@ extra = [{"series": "uk_hci", "region": "UK", "label": "Household Costs Indices 
           "spending weights; official statistics in development)", "publisher": "ONS", "code": hh.HCI_FILE,
           "frequency": "M", "first": gw["month"].min(), "last": gw["month"].max(), "fetched": hci_fetched, "kind": "data"},
          {"series": "chain_cpi_scenarios", "region": "US, UK, euro area", "label": "CPI fans under Hormuz flow scenarios "
-          "from 2026-02 (knock-on chain, notes/chain-scenarios-3m.csv on seb/levy-chain)", "publisher": "Model output (ours)",
+          "from 2026-02, held losses and the IEA's 2026 path (knock-on chain, notes/chain-scenarios-3m.csv and "
+          "notes/chain-scenarios-2026-3m.csv; premium per point of the IEA's lost flow)", "publisher": "Model output (ours)",
           "code": "chain-scenarios-3m.csv", "frequency": "M", "first": "2026-03", "last": "2027-02",
           "fetched": chain["generated"].max(), "kind": "model"},
          {"series": "basket_item_fans", "region": "UK", "label": "Item price fans under closures from 2026-02 and the outlook "
