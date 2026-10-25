@@ -887,7 +887,9 @@ def regime_report() -> None:
     for mode in REGIME_MODES:
         for name, M in regime_models(lambda m: rep[m][mode], order, cost).items():
             r = regime_scores(M, actual)
-            rscore[(mode, name)] = {"crps": r["crps"] / sd, "inside": (actual >= r["lo"]) & (actual <= r["hi"])}
+            # also the median's error and the band's width, to tell accuracy from spread
+            rscore[(mode, name)] = {"crps": r["crps"] / sd, "inside": (actual >= r["lo"]) & (actual <= r["hi"]),
+                                    "mae": np.abs(np.median(M.astype(float), 0) - actual) / sd, "width": (r["hi"] - r["lo"]) / sd}
     deciding = {name: (float(np.mean(rscore[("lost_82", name)]["crps"][pub])), float(np.mean(rscore[("lost_82", name)]["inside"][pub])))
                 for name in ("rec", "rec_regime")}
     keep, why = regime_verdict(t_folds, deciding)
@@ -953,6 +955,27 @@ def regime_report() -> None:
             o.append(f"| {mode} | {mean_at(mode, 'rec', pub):.3f} | {mean_at(mode, 'rec_regime_cost', pub):.3f} | "
                      f"{mean_at(mode, 'rec', pub, 'inside'):.0%} | {mean_at(mode, 'rec_regime_cost', pub, 'inside'):.0%} | "
                      f"{int(late.sum())} | {f7('rec')} | {f7('rec_regime_cost')} |")
+        on_cost = pub & (groups == "cost")
+
+        def change(mode, a, b, what):
+            return 100 * (mean_at(mode, b, on_cost, what) / mean_at(mode, a, on_cost, what) - 1)
+        o += ["", "**The member alone, and accuracy against spread** (horizons 1–6): scaled CRPS, the median's absolute "
+              "error and the 90% band's width (both divided by the training spread), and coverage, over every published "
+              "output and over the cost group.", "",
+              "| Mode | Model | CRPS | median error | band width | cover | cost CRPS | cost median error | cost band width | "
+              "cost cover |", "|---|---|---|---|---|---|---|---|---|---|"]
+        for mode in ("whatif", "lost_82"):
+            for nm in ("bayes_own", cm, "rec", "rec_regime_cost"):
+                o.append(f"| {mode} | {nm} | " + " | ".join(
+                    f"{mean_at(mode, nm, mask, w):.0%}" if w == "inside" else f"{mean_at(mode, nm, mask, w):.3f}"
+                    for mask in (pub, on_cost) for w in ("crps", "mae", "width", "inside")) + " |")
+        o += ["", "On the cost group the member alone puts its median "
+              + " and ".join(f"{-change(mode, 'bayes_own', cm, 'mae'):.0f}% closer than bayes_own's ({mode.replace('_', ' ')}; "
+                             f"band {change(mode, 'bayes_own', cm, 'width'):+.0f}%)" for mode in ("whatif", "lost_82"))
+              + ", so its gain is not only the mixture's. Inside the ensemble the median moves "
+              + " and ".join(f"{-change(mode, 'rec', 'rec_regime_cost', 'mae'):.0f}% closer (band "
+                             f"{change(mode, 'rec', 'rec_regime_cost', 'width'):+.0f}%)" for mode in ("whatif", "lost_82"))
+              + ": there most of the CRPS gain is the wider band."]
         o += ["", "By target group, horizons 1–6:", "",
               "| Mode | Target | rec CRPS | rec_regime_cost CRPS | difference | rec cover | rec_regime_cost cover |",
               "|---|---|---|---|---|---|---|"]

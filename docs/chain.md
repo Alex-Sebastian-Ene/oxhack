@@ -273,6 +273,16 @@ After the origin, D is the calendar in the what-if, D at the origin carried on i
   | Lost 0 (terms inactive) | 1.174 | 1.175 | 58% → 55% |
 
 - **By group:** costs improve in both runs (−0.056 what-if, coverage 82% → 90%; −0.023 lost 82). The other groups move by at most 0.008 (inflation +0.008 in both runs). Their model is unchanged, so that can only be Monte Carlo noise from a separate MCMC run. For the same reason the lost-0 row, where D = 0 and the terms can't act, moves by +0.001 in CRPS and 3 points in coverage (2 of 65 outcomes).
+- **The member alone, and accuracy against spread** (cost group; the median's absolute error and the 90% band's width, both divided by the training spread):
+
+  | Run | Model | Cost CRPS | Median error | Band width | Coverage |
+  |---|---|---|---|---|---|
+  | What-if | `bayes_own` → `bayes_regime_cost` | 0.898 → 0.762 | 1.219 → 1.048 | 3.19 → 4.33 | 69% → 82% |
+  | What-if | `rec` → `rec_regime_cost` | 0.874 → 0.818 | 1.195 → 1.169 | 3.56 → 4.07 | 82% → 90% |
+  | Lost 82 | `bayes_own` → `bayes_regime_cost` | 0.828 → 0.785 | 1.157 → 1.017 | 4.62 → 6.19 | 90% → 92% |
+  | Lost 82 | `rec` → `rec_regime_cost` | 0.826 → 0.803 | 1.161 → 1.138 | 5.10 → 5.69 | 95% → 97% |
+
+  Unlike `bayes_regime`, the member is better on its own: its median is 12–14% closer, as well as its band about 35% wider. So the gain is not only the mixture's. Inside the ensemble the median moves only 2% closer while the band widens 12–14%, so there most of the CRPS gain is the wider band.
 - **Multipliers** match `bayes_regime`'s on every cost series within 0.02 (diesel 1.55, jet fuel 1.14, refinery PPI 1.31).
 - **The recheck:** the chain's horizons are 1, 3, 6 and 12 months, so the next outcomes are the 12-month changes, complete with 2027-02 data. None are published yet. When they are, refresh the data and re-run `macro_chain.py regime`: it recomputes the replay's outcomes from the current data and scores horizons 1–6 and 12 apart. Those 12-month outcomes are the only test this variant can get.
 - **Status: not adopted.** `rec` stays recommended until that recheck.

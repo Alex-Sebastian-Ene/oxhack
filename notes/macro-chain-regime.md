@@ -186,6 +186,21 @@ Pass-through multiplier 1 + κ and band factor exp(ζ) in D = 1 months: posterio
 | lost_0 | 1.174 | 1.175 | 58% | 55% | 0 | – | – |
 | lost_82 | 0.615 | 0.602 | 97% | 98% | 0 | – | – |
 
+**The member alone, and accuracy against spread** (horizons 1–6): scaled CRPS, the median's absolute error and the 90% band's width (both divided by the training spread), and coverage, over every published output and over the cost group.
+
+| Mode | Model | CRPS | median error | band width | cover | cost CRPS | cost median error | cost band width | cost cover |
+|---|---|---|---|---|---|---|---|---|---|
+| whatif | bayes_own | 0.641 | 0.861 | 2.869 | 82% | 0.898 | 1.219 | 3.192 | 69% |
+| whatif | bayes_regime_cost | 0.561 | 0.766 | 3.575 | 89% | 0.762 | 1.048 | 4.334 | 82% |
+| whatif | rec | 0.636 | 0.869 | 3.110 | 89% | 0.874 | 1.195 | 3.564 | 82% |
+| whatif | rec_regime_cost | 0.603 | 0.854 | 3.423 | 94% | 0.818 | 1.169 | 4.072 | 90% |
+| lost_82 | bayes_own | 0.602 | 0.822 | 3.982 | 94% | 0.828 | 1.157 | 4.624 | 90% |
+| lost_82 | bayes_regime_cost | 0.577 | 0.738 | 4.942 | 95% | 0.785 | 1.017 | 6.192 | 92% |
+| lost_82 | rec | 0.615 | 0.854 | 4.383 | 97% | 0.826 | 1.161 | 5.096 | 95% |
+| lost_82 | rec_regime_cost | 0.602 | 0.841 | 4.748 | 98% | 0.803 | 1.138 | 5.692 | 97% |
+
+On the cost group the member alone puts its median 14% closer than bayes_own's (whatif; band +36%) and 12% closer than bayes_own's (lost 82; band +34%), so its gain is not only the mixture's. Inside the ensemble the median moves 2% closer (band +14%) and 2% closer (band +12%): there most of the CRPS gain is the wider band.
+
 By target group, horizons 1–6:
 
 | Mode | Target | rec CRPS | rec_regime_cost CRPS | difference | rec cover | rec_regime_cost cover |
