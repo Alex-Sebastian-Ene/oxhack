@@ -1,5 +1,6 @@
 """experiments/macro_global.py: input alignment, the month-by-month simulation (nowcasting from the
-last published month, oil lags), and that training recovers a known relation.
+last published month, oil lags), that training recovers a known relation, and how the Survey of
+Professional Forecasters is matched to forecast origins and turned into changes over each horizon.
 
 Synthetic data only: no downloads. Needs torch, jax and numpyro (skipped otherwise).
 """
@@ -7,6 +8,7 @@ Synthetic data only: no downloads. Needs torch, jax and numpyro (skipped otherwi
 from types import SimpleNamespace
 
 import numpy as np
+import pandas as pd
 import pytest
 
 pytest.importorskip("torch")
@@ -209,3 +211,98 @@ def test_training_recovers_momentum_and_oil(tcn):
     with torch.no_grad():
         loc = net(*args, *(() if seq is None else (torch.as_tensor(seq, dtype=torch.float32),)))[0].numpy()
     assert np.corrcoef(loc, truth)[0, 1] > 0.95
+
+
+# --- Survey of Professional Forecasters -------------------------------------------------------
+
+RELEASES = """Deadline and Release Dates for the Survey of Professional Forecasters
+
+Survey         True Deadline Date       News Release Date
+
+1992 Q1             2/22/92
+     Q2             5/18/92             5/22/92*
+
+2018 Q4             11/6/18             11/13/18
+
+2019 Q1             3/12/19**           3/22/19**
+     Q2\t\t    5/7/19\t\t5/10/19
+
+**The 2026Q1, 2019Q1, 2013Q4, and 1996Q1 surveys were all delayed because of federal government
+ shutdowns.
+"""
+
+
+def surveys(quarters, released):
+    return pd.DataFrame({"YEAR": [y for y, _ in quarters], "QUARTER": [q for _, q in quarters],
+                         "released": pd.to_datetime(released)})
+
+
+def test_release_dates_are_parsed_with_the_year_carried_down():
+    rel = mg.parse_release_dates(RELEASES)
+    assert list(zip(rel["YEAR"], rel["QUARTER"])) == [(1992, 2), (2018, 4), (2019, 1), (2019, 2)]  # 1992Q1 has no date
+    assert list(rel["released"].dt.strftime("%Y-%m-%d")) == ["1992-05-22", "2018-11-13", "2019-03-22", "2019-05-10"]
+
+
+def test_surveys_meet_the_origin_at_the_end_of_their_release_month():
+    s = surveys([(2018, 4), (2019, 1), (2019, 2)], ["2018-11-13", "2019-03-22", "2019-05-10"])  # 2019Q1 came late
+    dates = pd.date_range("2018-10-01", "2019-06-01", freq="MS")
+    row, m = mg.spf_match(dates, s, latest=False)
+    got = {f"{d:%Y-%m}": (r, k) for d, r, k in zip(dates, row, m) if r >= 0}
+    # m: months from the middle of the survey quarter (Nov, Feb, May) to the origin
+    assert got == {"2018-11": (0, 0), "2019-03": (1, 1), "2019-05": (2, 0)}
+    row, m = mg.spf_match(dates, s, latest=True)
+    assert list(row) == [-1, 0, 0, 0, 0, 1, 1, 2, 2]  # nothing public at the end of 2018-10
+    assert list(m[1:]) == [0, 1, 2, 3, 1, 2, 0, 1]  # end of 2019-02 still has only the 2018Q4 survey
+
+
+def test_quarterly_path_becomes_the_change_over_each_horizon():
+    g = np.array([[1.0, 2.0, 3.0, 4.0]])  # growth of quarters q+1..q+4
+    change = lambda m, h: mg.spf_change(g, np.array([m]), h)[0]  # noqa: E731
+    assert change(0, 12) == pytest.approx(10.0)  # the 4-quarter change, q to q+4
+    assert change(1, 12) == pytest.approx(2 / 3 + 2 + 3 + 4 + 4 / 3)  # a month on: q+4's rate carries on
+    assert change(2, 12) == pytest.approx(1 / 3 + 2 + 3 + 4 + 8 / 3)
+    assert change(3, 12) == pytest.approx(2 + 3 + 4 + 4)
+    assert change(0, 3) == pytest.approx(1.0) and change(0, 6) == pytest.approx(3.0)
+    assert change(0, 1) == pytest.approx(1 / 3) and change(1, 6) == pytest.approx(2 / 3 + 2 + 1)
+
+
+def perfect_surveys(L: pd.Series) -> pd.DataFrame:
+    """The surveys a perfect forecaster would fill in for monthly 100 x log CPI L: annualised growth
+    of the quarterly average CPI (as the SPF defines it) for quarters q-1..q+4, released on the 12th
+    of quarter q's middle month."""
+    q = np.exp(L / 100).resample("QS").mean()
+    a = 100 * ((q / q.shift(1)) ** 4 - 1)
+    rows = []
+    for i in range(1, len(q) - 4):
+        d = q.index[i]
+        rows.append({"YEAR": d.year, "QUARTER": d.quarter, "released": d + pd.DateOffset(months=1, days=11),
+                     **{f"CPI{k}": a.iloc[i + k - 2] for k in range(1, 7)}})
+    return pd.DataFrame(rows)
+
+
+def test_a_perfect_survey_reproduces_the_cpi_change_after_its_release():
+    # monthly inflation constant within each calendar quarter, different between quarters: then the
+    # quarter's average stands for its middle month (up to the log of an average), so from a release
+    # month the survey's path gives the true 3-, 6- and 12-month changes
+    rng = np.random.default_rng(3)
+    months = pd.date_range("2000-01-01", "2006-12-01", freq="MS")
+    rate = np.repeat(rng.uniform(0.0, 0.5, len(months) // 3), 3)
+    L = pd.Series(np.cumsum(rate), index=months)
+    F = mg.spf_forecasts(months, perfect_surveys(L), latest=False)
+    hit = np.flatnonzero(np.isfinite(F[:, 0]))
+    assert len(hit) >= 20 and all(months[i].month in (2, 5, 8, 11) for i in hit)
+    for hi, h in enumerate(mg.mn.HORIZONS):
+        if h == 1:
+            continue  # one month is a third of the next quarter's growth, not the month's own
+        truth = L.values[hit + h] - L.values[hit]
+        assert np.abs(F[hit, hi] - truth).max() < 2e-3, h
+
+
+def test_steady_inflation_is_read_the_same_from_every_origin():
+    months = pd.date_range("2000-01-01", "2006-12-01", freq="MS")
+    L = pd.Series(np.arange(len(months)) * 100 * np.log(1.03) / 12, index=months)  # 3% a year
+    F = mg.spf_forecasts(months, perfect_surveys(L), latest=True)
+    ok = np.isfinite(F[:, -1])
+    assert ok.sum() > 60
+    np.testing.assert_allclose(F[ok], (100 * np.log(1.03) * np.array(mg.mn.HORIZONS) / 12)[None].repeat(ok.sum(), 0),
+                               atol=1e-6)
