@@ -92,6 +92,8 @@ sub("  const brentFor = (lost, e = PREM.mid) => BRENT0 * Math.exp(e * lost);\n",
     "  const brentFor = (lost, e = PREM.mid) => BRENT0 * Math.exp(e * lost);\n" + BAB_JS)
 
 # the combined loss drives the chain, the release table and Brent
+# the 2026 replay holds the Red Sea as it happened, so picking it clears the Bab el-Mandeb control
+sub('    st.path26 = true; st.rel = "2026";\n', '    st.path26 = true; st.rel = "2026"; st.bab = 0; st.babF = 0;\n    if ($("bab")) $("bab").value = 0;\n')
 sub("  function chainEffect(series, month = 12, lost = st.lost, pol = st.rel) {\n    const a = st.path26 && lost === st.lost &&",
     "  function chainEffect(series, month = 12, lost = st.eq, pol = st.rel) {\n    const a = st.path26 && lost === st.eq &&")
 sub("  const resAt = (lost = st.lost, pol = st.rel) =>", "  const resAt = (lost = st.eq, pol = st.rel) =>")
@@ -138,7 +140,8 @@ RENDER_BAB = r'''  // the Bab el-Mandeb control: what it adds, which parts are o
     if (st.path26) t = `The 2026 closure replays what happened, the Red Sea included: after the Houthis declared a blockade of Saudi shipping (${ymLabel(BAB.b2026.declared.slice(0, 7))}), Bab el-Mandeb lost ${BAB.b2026.lost} points of its flow and Yanbu's bypass to Asia stopped. Pick a level here to set your own; Hormuz is then held at ${st.lost}.`;
     else if (!st.bab) t = `Normal: nothing added. Bab el-Mandeb carries about ${BAB.per.toFixed(2)} times Hormuz's tanker tonnage ${M}${st.lost ? `, and while Hormuz is shut it also carries the Saudi crude piped across Arabia to Yanbu and shipped on to Asia` : ""}.`;
     else {
-      const via = st.babF === BAB.b2026.f && st.bab === BAB.b2026.lost ? `${Math.round(st.babF * 100)}% of it, as measured in ${ymLabel(BAB.b2026.month)}` : `${Math.round(st.babF * 100)}% of it, the same share as the strait's flow ${A}`;
+      const share = st.babF >= 0.995 ? "all of it" : `${Math.round(st.babF * 100)}% of it`;
+      const via = st.babF === BAB.b2026.f && st.bab === BAB.b2026.lost ? `${share}, as measured in ${ymLabel(BAB.b2026.month)},` : `${share} (the same share as the strait's flow ${A})`;
       t = `<b>${st.bab}</b> points of its flow are ${f1(st.bab * BAB.per)} Hormuz points of tanker tonnage ${M}. ${Math.round(BAB.rerouted * 100)}% of that goes round the Cape and still arrives, as in 2024 ${A}, so <b>${f1(q.red)}</b> count.`;
       if (st.lost) t += ` With Hormuz down ${st.lost} points, Yanbu's bypass sails through Bab el-Mandeb too: it made up ${Math.round(BAB.bypass * 100)}% of the Gulf's lost exports in 2026 ${M}, and losing ${via} adds <b>${f1(q.byp)}</b>.`;
       t += ` Brent and every number below follow <b>${st.lost} + ${f1(q.red)}${st.lost ? ` + ${f1(q.byp)}` : ""} = ${f1(q.raw)}</b> Hormuz-equivalent points.`;
@@ -219,7 +222,7 @@ MAP_JS = (
     return [
       { k: "pipe", v: st.lost ? 0.5 : 0.2, solid: true, idle: !st.lost,
         tip: "East–West pipeline (Petroline), Abqaiq to Yanbu: the Saudi way round Hormuz. Path approximate." },
-      { k: "cape", v: cape, dash: "cape", idle: !cape,
+      { k: "cape", v: cape, dash: "cape", idle: !cape, hide: !cape,
         tip: `Round the Cape of Good Hope: ${pc(BAB.rerouted)} of the Red Sea flow lost in 2024 went this way (PortWatch, our model). That the same share reroutes now is an assumption; these cargoes still arrive, two to three weeks later. Path approximate.` },
       { k: "red", v: pass, off: 4,
         tip: `Bab el-Mandeb and the Red Sea route to Europe through Suez: ${pc(pass)} of its normal flow passing${st.path26 ? ` (${ymLabel(BAB.b2026.month)})` : ", as set on the shock card"}. One point of its flow is ${BAB.per} Hormuz points of tanker tonnage (PortWatch, our model). Path approximate.` },
@@ -245,7 +248,9 @@ MAP_JS = (
   }
   function rescaleBab(k) {
     const b = proj(BAB_PT);
-    gH.select("text.bablabel").attr("font-size", 12 / k).attr("x", b[0] - 8 / k).attr("y", b[1] + 16 / k);
+    gH.select("text.bablabel").attr("x", b[0] - 8 / k).attr("y", b[1] + 16 / k);
+    // the labels' CSS font size beats the font-size attribute, so set it as a style or they grow with the zoom
+    gH.selectAll("text.hzlabel, text.bablabel").style("font-size", `${12 / k}px`);
   }
   function paintBab() {
     const ls = babLines(), key = document.getElementById("wbabkey");
@@ -254,9 +259,10 @@ MAP_JS = (
     const wd = (d) => (d.solid ? 1.4 + 1.4 * d.v : 0.9 + 4.2 * Math.sqrt(Math.max(d.v, 0)));
     gBab.selectAll("path.blane").data(ls, (d) => d.k).attr("stroke-width", wd)
       .attr("class", (d) => `blane${d.solid ? " solid" : ""}${d.dash ? " cape" : ""}${d.idle ? " idle" : ""}`)
-      .style("animation-duration", (d) => `${(1.8 / Math.max(d.v, 0.15)).toFixed(2)}s`)
+      .style("animation-duration", (d) => `${(1.8 / Math.max(d.v, 0.15)).toFixed(2)}s`).style("display", (d) => (d.hide ? "none" : null))
       .selectAll("title").data((d) => [d]).join("title").text((d) => d.tip);
-    gBab.selectAll("path.bcase").data(ls, (d) => d.k).attr("stroke-width", (d) => wd(d) + 2.2).attr("class", (d) => `bcase${d.idle ? " idle" : ""}`);
+    gBab.selectAll("path.bcase").data(ls, (d) => d.k).attr("stroke-width", (d) => wd(d) + 2.2).attr("class", (d) => `bcase${d.idle ? " idle" : ""}`)
+      .style("display", (d) => (d.hide ? "none" : null));
     const pass = st.path26 ? 100 - BAB.b2026.lost : 100 - st.bab;
     const t = document.getElementById("wbabtxt");
     if (t) t.textContent = `Through Bab el-Mandeb (pink): the Red Sea route to Europe, ${pass}% of normal${st.lost ? "; Yanbu's crude to Asia" : ""}${!st.path26 && st.bab ? "; dashed: round the Cape" : ""}`;
