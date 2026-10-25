@@ -128,4 +128,8 @@ SWAPS = [
     ('.labelSize((x) => (x.cont ? 2.6 :', '.labelSize((x) => (x.hz ? 1.05 : x.cont ? 2.6 :', 1),
     ('.labelAltitude((x) => (x.cont ? 0.03 : 0.003))', '.labelAltitude((x) => (x.hz ? 0.02 : x.cont ? 0.03 : 0.003))', 1),
     ('.labelColor((x) => (x.cont ? "rgba(241,232,210,0.85)"', '.labelColor((x) => (x.hz ? "#ffbf5c" : x.cont ? "rgba(241,232,210,0.85)"', 1),
+    # no pop-up on the map for the selected country: everything it showed is in the side panel (Overview and Cost of
+    # living tabs), so it only covered the map
+    ('    if (!st.sel) { pop.hidden = true; return; }',
+     '    pop.hidden = true; return;   // the side panel shows all of it', 1),
 ]

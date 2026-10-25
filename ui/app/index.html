@@ -6585,7 +6585,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
   // pop-up for the selected country: headline facts only; the panel holds the full analysis
   function renderPop() {
     const pop = $("cpop");
-    if (!st.sel) { pop.hidden = true; return; }
+    pop.hidden = true; return;   // the side panel shows all of it
     const name = st.sel, iso = isoOf[name], k = calc(name), m = mats[st.mat];
     $("cp-flag").innerHTML = iso ? flagImg(iso) : "";
     $("cp-name").textContent = name === "United States of America" ? "United States" : name;
