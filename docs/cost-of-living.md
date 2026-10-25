@@ -235,6 +235,14 @@ NUTS (2 chains, 500 warm-up, 1,000 draws per chain):
   - **One multiplier for everything would be wrong.** Use each metric's own: ×1.49 suits motor fuel
     and headline inflation, but it would overstate the composites, freight and materials, and get
     oils, fruit and vegetables the wrong way round.
+  - **Learned from 2022 alone they are larger** (the 2026 test's fit, to Feb 2026; the last column
+    of the table and the `multiplier_2022only_*` columns of the CSV). Headline is ×2.07 (US, 1.10
+    to 3.07), ×1.98 (UK) and ×2.08 (euro area), and motor fuel ×1.98–2.14. Adding 2026's months
+    brings both down to about ×1.5, so 2022 overstates how much more of an oil move reached prices
+    in 2026. The US cost series move less: diesel ×1.51, jet ×1.10, refineries ×1.32. The chain's
+    regime test (`docs/chain.md`, also learned from 2022 only) gets diesel ×1.54, jet ×1.14 and
+    refineries ×1.31, but CPI ×2.8–2.9. Its model has no gas input, so its oil multiplier likely
+    also takes up 2022's gas-driven inflation.
 - **History:** the runs below led to the main model.
 - **First full run (Iridis job 1972141): discarded.**
   - The fits that contain supply-disruption months did not converge: the 2026 test fit had R-hat
