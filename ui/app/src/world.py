@@ -132,4 +132,24 @@ SWAPS = [
     # living tabs), so it only covered the map
     ('    if (!st.sel) { pop.hidden = true; return; }',
      '    pop.hidden = true; return;   // the side panel shows all of it', 1),
+    # picking a country focuses on it (focus.js): the map zooms to the country and moves up, its detail opens large below.
+    # select() says when the selection changes; HZZoomTo frames a country on the flat map or the globe (null: whole world).
+    ('    paint();\n    renderCountry();\n    renderRank();\n    renderMat();\n  }\n  // country card: three tabs',
+     '    paint();\n    renderCountry();\n    renderRank();\n    renderMat();\n'
+     '    document.dispatchEvent(new CustomEvent("hz-select", { detail: { name: st.sel } }));\n  }\n  // country card: three tabs', 1),
+    ('  svgEl.call(zoom).on("dblclick.zoom", null);\n',
+     '  svgEl.call(zoom).on("dblclick.zoom", null);\n'
+     '  window.HZZoomTo = (name) => {\n'
+     '    if (st.wview === "3d") {\n'
+     '      const w = name && isoOf[name] && where[isoOf[name]];\n'
+     '      if (G3) G3.pointOfView(w ? { lat: w.lat, lng: w.lng, altitude: 1.3 } : { lat: 24, lng: 58, altitude: 2.2 }, 900);\n'
+     '      return;\n'
+     '    }\n'
+     '    const box = svgEl.node().getBoundingClientRect(), f = name && countries.find((c) => c.properties.name === name);\n'
+     '    if (!f || !box.width) { svgEl.transition().duration(700).call(zoom.transform, d3.zoomIdentity); return; }\n'
+     '    const [[x0, y0], [x1, y1]] = gpath.bounds(f), w = box.width, h = box.height;\n'
+     '    const k = Math.max(1, Math.min(8, 0.7 / Math.max((x1 - x0) / w, (y1 - y0) / h)));\n'
+     '    const t = d3.zoomIdentity.translate(w / 2, h / 2).scale(k).translate(-(x0 + x1) / 2, -(y0 + y1) / 2);\n'
+     '    svgEl.transition().duration(900).ease(d3.easeCubicInOut).call(zoom.transform, t);\n'
+     '  };\n', 1),
 ]
