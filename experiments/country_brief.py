@@ -13,6 +13,7 @@ limits: docs/country-briefs.md. BRIEF_FAKE=1 serves labelled test answers with n
 
     uv run experiments/country_brief.py      # serves http://127.0.0.1:8787
     uv run experiments/country_brief.py check  # one tiny live call per model, and the models this key can use
+    uv run experiments/country_brief.py bake   # every app panel ahead of time -> ui/app/data/ai-panels.json
 
 The key comes from the GEMINI_API_KEY environment variable, or from a line GEMINI_API_KEY=... in the
 repo's .env (git-ignored). Never put it in git, Linear or the page. The service binds to
@@ -182,10 +183,10 @@ def _subject(payload: dict, key: str) -> tuple[str, list[str]]:
     return name, facts
 
 
-def resource(payload: dict, key: str | None, refresh: bool = False) -> dict:
+def resource(payload: dict, key: str | None, refresh: bool = False, image: bool = True) -> dict:
     name, facts = _subject(payload, "name")
     rid = "".join(ch for ch in str(payload.get("id", name)).lower() if ch.isalnum() or ch == "_")[:40] or "item"
-    h = hashlib.sha256(json.dumps([MODEL, IMAGE_MODEL, name, facts, FAKE], sort_keys=True).encode()).hexdigest()[:12]
+    h = hashlib.sha256(json.dumps([MODEL, IMAGE_MODEL if image else None, name, facts, FAKE], sort_keys=True).encode()).hexdigest()[:12]
     path = CACHE / f"res-{rid}-{h}.json"
     if path.exists() and not refresh:
         return {**json.loads(path.read_text()), "cached": True}
@@ -196,10 +197,15 @@ def resource(payload: dict, key: str | None, refresh: bool = False) -> dict:
         if not key:
             raise PermissionError("GEMINI_API_KEY is not set (environment or the repo's .env) on the machine running country_brief.py")
         text, _ = outputs(interact(MODEL, resource_prompt(name, facts), key))
-        _, img = outputs(interact(IMAGE_MODEL, image_prompt(name), key))
-        model, image_model = MODEL, IMAGE_MODEL
         if not text:
             raise ValueError("Gemini returned no description")
+        img = None
+        if image:   # the picture is extra: a key with no image quota (free tier: HTTP 429) still gets the text
+            try:
+                _, img = outputs(interact(IMAGE_MODEL, image_prompt(name), key))
+            except (urllib.error.URLError, TimeoutError, ValueError) as e:
+                print(f"no picture for {name}: {_http_error(e)}", file=sys.stderr)
+        model, image_model = MODEL, IMAGE_MODEL
     out = {"id": rid, "name": name, "text": text, "facts": facts, "model": model, "image_model": image_model if img else None,
            "image": f"data:{img.get('mime_type') or 'image/png'};base64,{img['data']}" if img else None,
            "generated_at": datetime.now(UTC).isoformat(timespec="seconds")}
@@ -362,9 +368,101 @@ def check(key: str | None) -> int:
     return fails
 
 
+FACTS = CACHE / "facts-2026-closure.json"     # from `node ui/app/src/ai_facts.cjs`
+BAKED = ROOT / "ui" / "app" / "data" / "ai-panels.json"
+
+
+class QuotaOut(Exception):
+    """The key's quota for this model is used up for the day (a 429 that asks to wait more than five minutes)."""
+
+
+def _retrying(fn, label: str, tries: int = 6):
+    """fn() again after a rate limit (HTTP 429), a server error or a timeout, waiting longer each time. A 429 that
+    asks for a long wait is the daily quota (20 requests per model on the free tier): raise QuotaOut rather than wait."""
+    import time
+    for n in range(tries):
+        try:
+            return fn()
+        except urllib.error.HTTPError as e:
+            if e.code != 429 and e.code < 500 or n == tries - 1:
+                raise
+            wait = int(e.headers.get("Retry-After") or 0) or 15 * (n + 1)
+            if e.code == 429 and wait > 300:
+                raise QuotaOut(_http_error(e)) from None
+            print(f"  {label}: {_http_error(e)[:90]}; waiting {wait}s", file=sys.stderr)
+        except (urllib.error.URLError, TimeoutError) as e:
+            if n == tries - 1:
+                raise
+            wait = 10 * (n + 1)
+            print(f"  {label}: {str(e)[:90]}; waiting {wait}s", file=sys.stderr)
+        time.sleep(wait)
+
+
+def bake(key: str | None, facts_path: Path = FACTS, out_path: Path = BAKED, workers: int = 4) -> int:
+    """Every "What is it?" and "Summarise with Gemini" panel ahead of time, for the app build (ui/app/src/build.py
+    puts ui/app/data/ai-panels.json in the page as window.HZ_AI_BAKED). The facts file holds exactly what each panel
+    would send, read from the built page at the 2026-closure setting by ui/app/src/ai_facts.cjs. An answer already in
+    the output file is kept while its facts are unchanged, whichever model wrote it, and new answers go through the
+    service's cache, so a rerun (another day, or another GEMINI_MODEL) only asks for what is missing. Countries go in
+    order of how many facts we hold on them, so a small daily quota covers the best-documented first. When the quota
+    runs out, the rest are listed as missing and the file is still written. Text only: pictures would add megabytes
+    to the page. Returns the number of panels still missing."""
+    import threading
+    from concurrent.futures import ThreadPoolExecutor
+    if not key and not FAKE:
+        print("no GEMINI_API_KEY (environment or the repo's .env): nothing to bake")
+        return 1
+    src = json.loads(facts_path.read_text(encoding="utf-8"))
+    old = json.loads(out_path.read_text(encoding="utf-8")) if out_path.exists() else {}
+    ctys = sorted(src["countries"], key=lambda c: (-len(c["facts"]), c["country"]))
+    # each job takes the key; with no key it can only return an answer from the cache (PermissionError otherwise)
+    jobs = [("resources", r["id"], r, lambda k, r=r: resource(r, k, image=False)) for r in src["resources"]]
+    jobs += [("countries", c["iso3"], c, lambda k, c=c: country(c, k)) for c in ctys]
+    done, missing, quota_out = {"resources": {}, "countries": {}}, [], threading.Event()
+
+    def run(job):
+        group, k, payload, fn = job
+        prev = (old.get(group) or {}).get(k)
+        if prev and prev.get("facts") == payload["facts"]:
+            done[group][k] = prev
+            return
+        try:
+            b = fn(None) if quota_out.is_set() else _retrying(lambda: fn(key), k)
+        except QuotaOut as e:
+            if not quota_out.is_set():
+                print(f"  daily quota used up for {MODEL}: {str(e)[:120]}", file=sys.stderr)
+            quota_out.set()
+            missing.append(k)
+            return
+        except (urllib.error.URLError, TimeoutError, ValueError, PermissionError) as e:
+            missing.append(k)
+            if not quota_out.is_set():
+                print(f"  {k}: failed, {_http_error(e)}", file=sys.stderr)
+            return
+        done[group][k] = {f: b[f] for f in ("name", "country", "text", "facts", "model", "generated_at") if f in b}
+        print(f"{'resource' if group == 'resources' else 'country'} {k}: {'cached' if b['cached'] else 'new'} ({sum(map(len, done.values()))}/{len(jobs)})", flush=True)
+
+    with ThreadPoolExecutor(workers) as pool:
+        list(pool.map(run, jobs))
+    stamps = sorted(b["generated_at"] for g in done.values() for b in g.values())
+    out = {"about": "Gemini panels written ahead of time by `uv run experiments/country_brief.py bake`; AI-written, not "
+                    "checked by the team. Facts are what each panel sends, read from the built app by ui/app/src/ai_facts.cjs.",
+           "setting": src.get("setting", "2026 closure"), "facts_read": src.get("read_at"),
+           "models": sorted({b["model"] for g in done.values() for b in g.values()}),
+           "written": [stamps[0], stamps[-1]] if stamps else None, "missing": sorted(missing),
+           "resources": dict(sorted(done["resources"].items())), "countries": dict(sorted(done["countries"].items()))}
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(json.dumps(out, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
+    print(f"wrote {out_path}: {len(done['resources'])} resources, {len(done['countries'])} countries"
+          + (f"; {len(missing)} still to write (run bake again when the quota resets)" if missing else ""))
+    return len(missing)
+
+
 def main() -> None:
     if sys.argv[1:2] == ["check"]:
         sys.exit(1 if check(os.environ.get("GEMINI_API_KEY")) else 0)
+    if sys.argv[1:2] == ["bake"]:
+        sys.exit(1 if bake(os.environ.get("GEMINI_API_KEY")) else 0)
     if FAKE:
         print("BRIEF_FAKE=1: serving labelled test answers, not Gemini", file=sys.stderr)
     elif not os.environ.get("GEMINI_API_KEY"):
