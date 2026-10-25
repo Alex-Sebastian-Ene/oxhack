@@ -72,7 +72,8 @@ import oil_paths as op
 RUNS, NOTES = mb.RUNS, mb.NOTES
 MEMBERS = ("bayes_own", "global_lin", "global", "global_tcn", "xattn")
 REGIME_KIND = {"bayes_regime": "all", "bayes_regime_cost": "cost"}  # which series take the disruption terms
-OPTIONAL = tuple(REGIME_KIND)  # fitted and reported only when named
+GAS_MEMBER = "bayes_gas"  # bayes_own plus the regional gas price as a second driver
+OPTIONAL = (*REGIME_KIND, GAS_MEMBER)  # fitted and reported only when named
 RECOMMENDED = ("bayes_own", "global_lin", "global")  # the ensemble the earlier runs chose (docs/chain.md)
 REGIME_REC = ("bayes_regime", "global_lin", "global")  # RECOMMENDED with bayes_regime in place of bayes_own
 COST_REC = ("bayes_regime_cost", "global_lin", "global")  # and with the cost-only member
@@ -134,17 +135,47 @@ def member_simulator(data: dict, info: dict, st: mb.Stats, last: int, t: np.ndar
                      bayes_seed: int):
     """Fit one member on months 13..last; return (simulate(future, rng, regime=None) -> [N, origins, outputs],
     extra info). regime: D in the 12 months after each origin [origins, 12], used by bayes_regime only."""
-    if member in ("bayes_own", *REGIME_KIND):  # the same seed: without a disruption in training they are one fit
-        post, st_b, info_b, diag = mb.fit(data, last, seed=bayes_seed, vol="own", regime=REGIME_KIND.get(member))
-        return (lambda fut, rng, regime=None: mb.simulate(post, st_b, info_b, data, t, fut, rng, regime=regime)), \
-            {"diagnostics": diag} | ({"kappa": quantiles(post["kappa"]), "zeta": quantiles(post["zeta"])} if "kappa" in post else {})
+    if member in ("bayes_own", *REGIME_KIND, GAS_MEMBER):  # the same seed: without their extra terms they are one fit
+        post, st_b, info_b, diag = mb.fit(data, last, seed=bayes_seed, vol="own", regime=REGIME_KIND.get(member),
+                                          gas=member == GAS_MEMBER)
+        return (lambda fut, rng, regime=None, gas=None: mb.simulate(post, st_b, info_b, data, t, fut, rng, regime=regime, gas=gas)), \
+            {"diagnostics": diag} | ({"kappa": quantiles(post["kappa"]), "zeta": quantiles(post["zeta"])} if "kappa" in post else {}) \
+            | ({"gas_sum": quantiles(post["G"].sum(-1))} if "G" in post else {})
     if member == "xattn":
         nets, training, state = mx.fit_xattn(data, info, st, last, 2 if QUICK else int(os.environ.get("CHAIN_SEEDS", mx.SEEDS)),
                                              base_seed)
-        return (lambda fut, rng, regime=None: mx.simulate(nets, state, st, info, data, t, fut, rng, n=draws())), \
+        return (lambda fut, rng, regime=None, gas=None: mx.simulate(nets, state, st, info, data, t, fut, rng, n=draws())), \
             {"training": training, "context": state["ctx"]["codes"], "context_fetched": state["ctx"]["fetched"]}
     nets, training = fit_nets(data, info, st, last, member, base_seed)
-    return (lambda fut, rng, regime=None: mg.simulate(nets, st, info, data, t, fut, rng, n=draws())), {"training": training}
+    return (lambda fut, rng, regime=None, gas=None: mg.simulate(nets, st, info, data, t, fut, rng, n=draws())), {"training": training}
+
+
+def gas_driver(data: dict, last: int) -> list[dict]:
+    """Per GAS region, on months up to `last`: the gas change's beta on Brent's, and a monthly GARCH-t
+    of the rest (cost_of_living.garch_fit), as cost_of_living.driver_model does for its gas channels."""
+    import cost_of_living as col
+
+    x, out = data["oil_m"][1:last + 1], []
+    for r in range(data["gas_m"].shape[1]):
+        y = data["gas_m"][1:last + 1, r]
+        ok = np.isfinite(x) & np.isfinite(y)
+        beta = float(np.polyfit(x[ok], y[ok], 1)[0])
+        out.append(col.garch_fit(y[ok] - beta * x[ok]) | {"beta": beta})
+    return out
+
+
+def gas_paths(dm: list[dict], oil: np.ndarray, rng, excess: np.ndarray | None = None) -> np.ndarray:
+    """Gas changes [N, O, 12, regions] along simulated oil paths [N, O, 12]: beta x oil plus each
+    region's own GARCH-t noise, plus `excess` [regions, 12] (a scenario's gas move beyond what oil explains)."""
+    import cost_of_living as col
+
+    N, O, H = oil.shape
+    g = np.empty((N, O, H, len(dm)))
+    for r, par in enumerate(dm):
+        shock = np.zeros(H) if excess is None else excess[r]
+        for o in range(O):
+            g[:, o, :, r] = par["beta"] * oil[:, o] + col.garch_paths(par, N, shock, rng)
+    return g
 
 
 def quantiles(x: np.ndarray) -> dict:
@@ -176,12 +207,21 @@ def run_member(data: dict, j: int, member: str, market: dict, prices) -> tuple[d
              for k, (mode, fut) in enumerate(oil.items())}
         extra = {"margins": cm.describe()}
     else:
+        if member == GAS_MEMBER:
+            data = mb.add_gas(data)
+            dm = gas_driver(data, last)
         sim, extra = member_simulator(data, info, st, last, t, member, 1000 * j, bayes_seed=j)  # the seeds of run_fold
         S = {}
-        for mode, fut in oil.items():
+        for k, (mode, fut) in enumerate(oil.items()):
             d = mode_regime(data, t, mode)
-            S[mode] = sim(fut, np.random.default_rng(300 + j), regime=d).astype(np.float32)
-            S[f"{mode}_cop"] = sim(fut, cp.CopulaRNG(np.random.default_rng(300 + j), cop), regime=d).astype(np.float32)
+            g = None
+            if member == GAS_MEMBER:  # what happened, or gas paths along each oil path
+                g = mb.gas_future(data, t) if mode == "whatif" else gas_paths(dm, fut, np.random.default_rng(950 + 10 * j + k))
+            S[mode] = sim(fut, np.random.default_rng(300 + j), regime=d, gas=g).astype(np.float32)
+            S[f"{mode}_cop"] = sim(fut, cp.CopulaRNG(np.random.default_rng(300 + j), cop), regime=d, gas=g).astype(np.float32)
+        if member == GAS_MEMBER:
+            extra |= {"gas_driver": [{k: v for k, v in p.items()} for p in dm],
+                      "gas_sources": {r: code for r, (code, _) in mb.GAS.items()}}
     summary = {"fold": j, "member": member, "test_dates": [f"{d:%Y-%m}" for d in data["dates"][test]],
                "names": data["names"], "groups": data["groups"], "y": Y.tolist(), "seconds": round(time.time() - t0, 1),
                "copula": {k: v for k, v in cop.items() if k not in ("R", "L")},
