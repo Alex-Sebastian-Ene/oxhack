@@ -14,6 +14,22 @@
     [...hud.children].filter((x) => x !== cc).forEach((x) => side.appendChild(x));
     hud.appendChild(side);
   }
+  // each column's sticking point (focus.css): a column taller than the visible area sticks once its bottom meets the
+  // bottom of that area; a shorter one sticks at the top. Only the shorter column ever gets to stick, since the taller
+  // one sets the row's height.
+  const side = hud && hud.querySelector(".hz-side");
+  function columns() {
+    if (!side || !cc) return;
+    const wide = stage.classList.contains("hz-focus") && window.innerWidth > 860;
+    const view = stage.scrollHeight > stage.clientHeight + 1 ? stage.clientHeight : window.innerHeight;
+    for (const col of [cc, side]) {
+      if (wide) col.style.setProperty("--hz-top", `${Math.min(0, Math.round(view - col.offsetHeight - 8))}px`);
+      else col.style.removeProperty("--hz-top");
+    }
+  }
+  if (side && cc) { const ro = new ResizeObserver(columns); ro.observe(cc); ro.observe(side); ro.observe(stage); }
+  window.addEventListener("resize", columns);
+  document.addEventListener("hz-select", () => setTimeout(columns, 0));
   const still = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   let seq = 0;
 
