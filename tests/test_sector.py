@@ -37,11 +37,11 @@ def test_sector_fetch_drops_zero_indices_and_unpublished_pairs(monkeypatch):
     x = pd.Series([0.0, 100.0, 101.0], index=pd.date_range("2020-01-01", periods=3, freq="MS"))
     frame = pd.DataFrame({("DE", "C241"): x, ("LT", "C241"): x * 0})
     frame.columns = pd.MultiIndex.from_tuples(frame.columns, names=["geo", "nace_r2"])
-    monkeypatch.setattr(md, "_SECTOR_FRAMES", {"price": frame})
-    assert md.fetch_eurostat_sectors("price:DE:C241").tolist() == [100.0, 101.0]
+    monkeypatch.setattr(md, "_PANEL_FRAMES", {"price": frame})
+    assert md.fetch_eurostat_panel("price:DE:C241").tolist() == [100.0, 101.0]
     for code in ("price:LT:C241", "price:FR:C241"):  # reported as all zeros; not in the data at all
         with pytest.raises(ValueError, match="not published"):
-            md.fetch_eurostat_sectors(code)
+            md.fetch_eurostat_panel(code)
 
 
 def test_sector_rows_cover_every_industry_and_country_once():
@@ -54,7 +54,112 @@ def test_sector_rows_cover_every_industry_and_country_once():
             assert all(f"{kind}_{g.lower()}_{nace.lower()}" in keys for g in md.COUNTRIES)
         assert (f"price_us_{nace.lower()}" in keys) == bool(us_ppi)
         assert (f"output_us_{nace.lower()}" in keys) == bool(us_ip)
-    assert all(s.lag == 2 for s in rows if s.source == "eurostat_sectors")
+    assert all(s.lag == 2 for s in rows if s.source == "eurostat_panel")
+    assert all(s.geo and s.item for s in rows)
+
+
+def test_goods_rows_cover_every_good_and_country_once():
+    rows = md.goods_series()
+    keys = [s.key for s in rows]
+    assert len(keys) == len(set(keys))
+    by = {(s.target, s.geo, s.item) for s in rows}
+    for nace, _ in md.GOODS:
+        for kind in ("price", "output"):
+            assert all((kind, g, nace) in by for g in md.COUNTRIES)
+    assert all(("price", "US", code) in by for code, _ in md.US_GOODS)
+    assert all(("consumer", g, code) in by for code, _ in md.HOUSEHOLD for g in md.HOUSEHOLD_COUNTRIES)
+    assert sum(s.target == "commodity" for s in rows) == len(md.WORLD)
+    assert {s.block for s in rows} == set(md.GOODS_BLOCKS[1:])
+    lags = {(s.block, s.target): s.lag for s in rows if s.source == "eurostat_panel"}
+    assert lags == {("goods", "price"): 2, ("goods", "output"): 2, ("household", "consumer"): 1}
+
+
+def test_every_registered_key_is_unique():
+    keys = [s.key for s in md.registry(md.ALL_BLOCKS)]
+    assert len(keys) == len(set(keys))
+
+
+def test_world_bank_sheet_is_read_by_column_name(tmp_path, monkeypatch):
+    head = [None, "Crude oil, Brent", "Urea ", "Beef **"]
+    rows = [["World Bank Commodity Price Data (The Pink Sheet)", None, None, None], *[[None] * 4] * 3, head,
+            [None, "($/bbl)", "($/mt)", "($/kg)"],
+            ["2020M01", 64.0, 250.0, "…"], ["2020M02", 55.0, 260.5, 4.5], ["Notes", None, None, None]]
+    pd.DataFrame(rows).to_excel(tmp_path / "worldbank_cmo_monthly.xlsx", sheet_name="Monthly Prices", header=False,
+                                index=False)
+    monkeypatch.setattr(md, "RAW", tmp_path)
+    urea = md.fetch_worldbank("Urea")
+    assert urea.tolist() == [250.0, 260.5] and urea.index[1] == pd.Timestamp("2020-02-01")
+    assert md.fetch_worldbank("Beef **").tolist() == [4.5]  # "..." marks a missing month
+
+
+def test_nation_rows_cover_every_measure_and_country_once():
+    rows = md.nation_series()
+    assert len({s.key for s in rows}) == len(rows) == len(md.NATION_MEASURES) * len(md.NATIONS)
+    assert {s.target for s in rows} == {g for _, g, _ in md.NATION_MEASURES}
+    assert all(s.block == "nations" and s.lag == 1 and s.geo in md.NATIONS for s in rows)
+
+
+def test_inflation_database_splits_energy_from_its_housing_proxy_and_keeps_the_longest_source(tmp_path, monkeypatch):
+    months = [200001 + 100 * (i // 12) + i % 12 for i in range(300)]  # 2000-01 .. 2024-12 as yyyymm
+    def row(iso, note, n, value):
+        return {"Country Code": iso, "Country": iso, "Note": note} | {m: (value if i < n else None) for i, m in enumerate(months)}
+    energy = pd.DataFrame([row("AAA", "Energy price", 150, 100.0), row("AAA", "Energy price (estimated)", 280, 101.0),
+                           row("AAA", "Housing, Water, Electricity, Gas & Other Fuel", 300, 102.0),
+                           row("BBB", "Housing, Water, Electricity, Gas & Other Fuel", 300, 103.0)])
+    headline = pd.DataFrame([row("AAA", "", 300, 104.0)])
+    with pd.ExcelWriter(tmp_path / "worldbank_inflation.xlsx") as xl:
+        energy.to_excel(xl, sheet_name="ecpi_m", index=False)
+        headline.to_excel(xl, sheet_name="hcpi_m", index=False)
+    monkeypatch.setattr(md, "RAW", tmp_path)
+    monkeypatch.setattr(md, "_INFL_SHEETS", {})
+    real = md.fetch_wb_inflation("ecpi_m:AAA")
+    assert real.size == 280 and set(real) == {101.0}  # the longer of the two real energy rows
+    assert set(md.fetch_wb_inflation("ecpi_m_housing:AAA")) == {102.0}
+    assert set(md.fetch_wb_inflation("ecpi_m_housing:BBB")) == {103.0}
+    with pytest.raises(ValueError, match="not published"):
+        md.fetch_wb_inflation("ecpi_m:BBB")  # only the housing proxy: no energy row
+    assert md.fetch_wb_inflation("hcpi_m:AAA").index[0] == pd.Timestamp("2000-01-01")
+
+
+def test_market_and_oil_flow_rows():
+    kinds = {k for k, _ in md.KINDS}
+    world = [s for s in md.goods_series() if s.block == "world"]
+    assert {s.item for s in world} <= kinds and {s.item for s in md.market_series()} <= kinds
+    markets = md.market_series()
+    assert len({s.key for s in markets}) == len(markets) == len(md.MARKETS)
+    assert all(s.lag == 0 for s in markets if s.source == "fred" and s.code.startswith("D"))  # daily EIA spot prices
+    flows = md.oilflow_series()
+    assert len({s.key for s in flows}) == len(flows) == len(md.JODI_FLOWS) * len(md.JODI_COUNTRIES)
+    assert {s.target for s in flows} == {"production", "imports", "exports", "refining", "demand"}
+    assert all(len(s.geo) == 3 and s.lag == 2 for s in flows)
+
+
+def test_fao_indices_are_read_by_column(tmp_path, monkeypatch):
+    text = "\n".join(["FAO Food Price Index,,,", "2014-2016=100,,,", "Date,Food Price Index,Meat,Sugar", ",,,",
+                      "1990-01,64.4,74.3,87.9", "1990-02,64.0,,85.0", ""])
+    (tmp_path / "fao_food_price_indices.csv").write_text(text, encoding="utf-8")
+    monkeypatch.setattr(md, "RAW", tmp_path)
+    assert md.fetch_fao("Food Price Index").tolist() == [64.4, 64.0]
+    assert md.fetch_fao("Meat").index.tolist() == [pd.Timestamp("1990-01-01")]
+
+
+def test_jodi_flows_drop_zeros_and_give_each_country_its_oil_trade_position(monkeypatch):
+    rows = []
+    for month in pd.date_range("2015-01-01", "2024-12-01", freq="MS"):
+        for area, crude_in, crude_out in (("JP", 3000.0, 0.0), ("SA", 0.0, 7000.0)):
+            rows += [(area, month, "TOTCRUDE", "TOTIMPSB", crude_in), (area, month, "TOTCRUDE", "TOTEXPSB", crude_out),
+                     (area, month, "TOTPRODS", "TOTIMPSB", 500.0), (area, month, "TOTPRODS", "TOTEXPSB", 400.0)]
+    df = pd.DataFrame(rows, columns=["REF_AREA", "month", "ENERGY_PRODUCT", "FLOW_BREAKDOWN", "value"])
+    monkeypatch.setattr(md, "_JODI", {"kbd": df})
+    assert md.oil_trade_position() == {"JPN": "net importer", "SAU": "net exporter"}
+    assert md.fetch_jodi("TOTCRUDE:TOTEXPSB:SA").size == 120
+    with pytest.raises(ValueError, match="not published"):  # Japan exports no crude: all zeros
+        md.fetch_jodi("TOTCRUDE:TOTEXPSB:JP")
+
+
+def test_country_codes_map_to_iso3():
+    classes = {"GRC": {"iso2": "GR"}, "GBR": {"iso2": "GB"}, "DEU": {"iso2": "DE"}}
+    assert [md.iso3(g, classes) for g in ("EL", "UK", "DE", "DEU", "ZZ")] == ["GRC", "GBR", "DEU", "DEU", None]
 
 
 def test_short_or_dead_sector_series_are_skipped(monkeypatch):
