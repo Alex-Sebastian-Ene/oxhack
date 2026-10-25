@@ -30,4 +30,5 @@ Commands (oil-price and knock-on experiments; see `docs/oil-price-model.md`):
 - Knock-on links: `uv run experiments/oil_chain.py`
 - Regions, industry, AIS and fuel flows: `uv run experiments/macro_data.py`, `uv run experiments/macro_nn.py check|fold|ablate|final|report`,
   `uv run experiments/flow_price.py`, `uv run experiments/hdi_link.py` (see `docs/macro-ensemble.md`)
+- Cost of living by basket item: `uv run experiments/cost_of_living.py events|fit|check|report` (see `docs/cost-of-living.md`)
 - Cluster runs: `docs/iridis.md`

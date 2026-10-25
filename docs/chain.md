@@ -1,0 +1,283 @@
+# The chain end to end: Hormuz flow → Brent (Lévy) → knock-ons (ensemble)
+
+Technical notes for the full chain in [design.md](design.md). Each layer has its own note:
+- the Brent distribution: [oil-price-model.md](oil-price-model.md);
+- the knock-on models: [macro-ensemble.md](macro-ensemble.md);
+- the flow link: `notes/flow-price-link.md`.
+
+This page covers how they join, and what the joined chain gets right.
+
+| Code | What it does | Output |
+|---|---|---|
+| `experiments/oil_paths.py` | Monthly Brent paths from the daily GARCH-CGMY model, with an optional Hormuz flow scenario; backtest against the bootstrap paths | `notes/oil-paths-results.md` |
+| `experiments/macro_chain.py` | Every knock-on model on the same oil draws, the ensemble, the forward-chaining backtest, and the 2026 closure replay | `notes/macro-chain-results.md` (4 members, 5 seeds), `notes/macro-chain-results-s20.md` (20 seeds), `notes/chain-replay-2026-3m.md` and `notes/chain-scenarios-3m.csv` (the recommended 3 members), `notes/chain-replay-2026.md` and `notes/chain-scenarios.csv` (4 members) |
+| `experiments/flow_events.py` | Flow → Brent on other chokepoint events (Bab el-Mandeb 2023–24, Hormuz dips, attacks without lost flow), with placebo bands; the premium curve | `notes/flow-events.md`, `notes/flow-premium.csv` |
+| `experiments/macro_xattn.py` | Cross-series transformer member: one token per target series and per context series (VIX, credit spread, NASDAQ, breakevens, yields, FX), attention across them | `runs/macro/chain-*-xattn-v3.*` |
+| `experiments/copula.py` | t-copula shocks across the series, fitted per fold; energy and variogram scores of joint forecasts | `notes/macro-chain-results-v3.md` |
+| `cluster/iridis/macro_replay.slurm` | The 2026 replay and scenario tables on Iridis (task 0: the 3 recommended members, task 1: all four) | `notes/chain-replay-2026*.md`, `notes/chain-scenarios*.csv` |
+| `cluster/iridis/macro_chain.slurm` | The chain's folds as an Iridis array; `CHAIN_SEEDS`/`CHAIN_TAG` for more networks per variant | `runs/macro/chain-*.{npz,json}` |
+| `experiments/margins.py` | Refined-product margins (crack spreads) between Brent and the fuel targets, scored on the chain's own fold draws and the 2026 replay | `notes/margins-results.md`, `notes/margins-monthly.csv`, `notes/margin-scenarios.csv`, `notes/chain-fuel-scenarios-margins.csv` |
+| `macro_chain.py` with `CHAIN_MARGINS=1` | The chain with the margin member on the fuel targets (`fold J margins` first) | `notes/macro-chain-results-margins.md`, `notes/chain-replay-2026-3m-margins.md`, `notes/chain-scenarios-3m-margins.csv` |
+
+## How the chain is built
+
+    lost Hormuz flow (points of normal)
+      → Brent daily log returns: GARCH(1,1) with CGMY innovations, plus a scenario premium
+      → monthly means of the daily path → monthly Brent log changes, 12 months ahead
+      → each knock-on model simulated month by month from each series' last published month
+      → an equal-weight mixture of the models' draws
+
+1. **Flow → Brent premium** (`notes/flow-premium.csv`, from `experiments/flow_events.py`; details in `notes/flow-events.md`). The log premium per point of lost Hormuz flow:
+   - starts at 0.28% on day 1 and rises to 0.75% on day 22;
+   - decays with a 9-day half-life to a plateau of 0.39%;
+   - is fitted to all 159 observed trading days of the 2026 closure, and is an assumption (flat at the plateau) beyond them.
+
+   Its 90% band comes from 2019–2025 placebo days. Each scenario path draws one standard-normal score and keeps it on every day: a split normal around the middle of the band, never below zero. So the fan carries the flow link's own uncertainty, not only oil's.
+
+   **What is validated:** the Bab el-Mandeb disruption of 2023–24 is out of sample. Scaled to Hormuz-equivalent flow, the 2026 response predicts its Brent move within noise at every horizon from 5 to 120 trading days, and it shows that rerouted barrels (63% went round the Cape) aren't lost barrels.
+
+   **What isn't:** no other event since 2019 is large enough to test the *size*. A loss under about 26 Hormuz points can't be told from Brent's own 20-day noise. So the size still rests on 2026.
+
+   An earlier, simpler curve (flat at 0.27% per point after 120 days) proved too low. In 2026 the premium rose again (0.70% per point in days 148–159) once the bypass pipelines' exports fell back.
+2. **Brent paths.**
+   - Parameters come from `runs/levy/rolling-Y.json`, fitted on daily returns before 1 January of the start month's year.
+   - The GARCH volatility is filtered up to the start date.
+   - Daily paths use inverse-CDF sampling of the CGMY innovation. The variance is updated along each path, with the scenario's jump included, so the band widens after a shock.
+   - The paths are centred, plus the futures-curve drift where it exists.
+   - The knock-on panel's Brent is the monthly mean of daily spot, so the paths are turned into monthly means too. Month 0 is the start month's actual mean.
+3. **Knock-on members**, each fixed before it was scored:
+   - `bayes_own`, the Bayesian pass-through with own-volatility bands (MCMC);
+   - `global_lin` and `global`, the shared one-step MLP networks;
+   - `global_tcn`, a shared one-step TCN over the last 24 months. It was tested as a fourth member and doesn't earn its place (below).
+   - `xattn`, a cross-series transformer with asset-price context. It was tested as a fifth member and doesn't earn its place either (below).
+
+   Every member gets the same oil draws: draw n always uses oil path n.
+5. **Correlated shocks.** Each fold fits a t-copula to the training months' one-step residuals. Every member then draws its monthly surprises through it, so the series' surprises move together the way they did historically. Each series' own forecast stays the same.
+4. **Ensemble.** A mixture: each draw index goes to one member, so its oil path stays paired with it.
+   - Weights chosen on earlier folds (a simplex grid) did *worse* than equal weights, so the chain uses **equal weights**.
+   - **Recommended:** `bayes_own` + `global_lin` + `global`.
+
+## Backtest: 8 forward-chaining folds, 214 start points from 2008-01 to 2025-10
+
+**The oil layer** (`notes/oil-paths-results.md`, Brent's change of the monthly mean):
+- **One month ahead:** GARCH-CGMY beats the bootstrap clearly, CRPS 3.98 against 5.28 points (t −5.1). Most of the gain comes from building monthly means from the daily path: a month that rose through its last days carries into the next month's mean.
+- **Three to twelve months:** level with the bootstrap; 85–89% of outcomes fall inside the 90% band.
+- **Weak spot:** the downside tail is a little thin, with 9–11% of outcomes below the 5% quantile.
+
+**The knock-on ensemble** (`notes/macro-chain-results.md`, `notes/macro-chain-results-s20.md`). What-if skill against climatology, over all horizons:
+
+| | Inflation | Unemployment | Rate | Cost |
+|---|---|---|---|---|
+| **3 members, equal, 5 seeds** (recommended) | **+0.294** | +0.084 | **+0.249** | **+0.302** |
+| 3 members, equal, 20 seeds per network (Iridis) | +0.297 | +0.081 | +0.252 | +0.306 |
+| 4 members (plus `global_tcn`), equal, 5 seeds | +0.284 | +0.096 | +0.238 | +0.301 |
+| Best single member, 5 seeds | +0.286 `global_lin` | +0.075 `global_tcn` | +0.224 `global` | +0.280 `bayes_own` |
+| Forecast with Lévy oil, 3 members | +0.180 | +0.102 | +0.222 | +0.147 |
+| 90% coverage, what-if, 3 members | 87% | 81% | 87% | 89% |
+
+- **The 3-member ensemble is the strongest model in every group but unemployment**, where adding `global_tcn` helps (+0.096).
+  - Against `bayes_own` it's better on inflation (t −3.8) and costs (t −2.1); against `global_lin` on costs (t −4.2).
+  - Its bands are better calibrated than any single member's: 81–89%, against 74–88%.
+- **Does each member earn its place?** Leave-one-out mixtures, all against the 4-member mixture:
+  - Removing `bayes_own` hurts rates and costs (t −1.3 / −2.1).
+  - Removing `global_lin` or `global` hurts inflation (t −2.8 / −2.4).
+  - Removing `global_tcn` *helps* rates (t +2.0; +2.8 with 20 seeds) and inflation (t +1.1), and hurts only unemployment (t −1.8).
+
+  So the TCN trains properly when framed as a shared one-step model (best epochs 3–14, against 1–2 for the windowed TCN in `macro_nn.py`). But it adds nothing the MLP members don't already give, except a little on unemployment.
+- **Seeds:** 20 networks per variant instead of 5 raise `global` from +0.272 to +0.299 on inflation, but they move the ensembles by at most 0.006. Mixing already averages out the seed noise the audit found (up to 0.08 in one fold for a single network), so 5 seeds are enough for the ensemble.
+- **Calibration:** we tried two widening rules, each chosen on earlier folds only. One uses a single factor per group; the other uses separate factors for calm and turbulent oil. Both lift unemployment coverage to 90–91%, but they make CRPS slightly worse in every group (t +1.6 to +2.7), so they are reported, not used. The bands are too wide in calm years and too narrow in crises, which a rescaling can't fix.
+- **Stricter yardstick:** against the empirical distribution of all training months (the audit's recommendation), the 3-member ensemble scores +0.281 / +0.056 / +0.176 / +0.290 (inflation / unemployment / rates / costs). It is still the best model in every group.
+- **Reproduction:**
+  - The networks match their `macro_global.py` folds exactly; Bayes matches within simulation noise (inflation +0.215 against +0.218).
+  - The `global_tcn` member run on Iridis (job 1972484) gives exactly the CRPS of the laptop runs (fold 0: 3.5813).
+- **Lévy oil paths help the knock-on forecasts only a little** (scaled CRPS −0.005 to −0.011, not significant). Over 1–12 months, the knock-on uncertainty is mostly the models' own, not oil's. The Lévy layer earns its place in the scenario fan, where the size of the shock drives the band.
+
+## The cross-series transformer and correlated shocks (`notes/macro-chain-results-v3.md`)
+
+Run on Iridis: job 1972767 for the folds, 1972803 for the report, 1972768 for the replays (2026-10-25). All five members, every oil mode, each with independent and with copula shocks.
+
+**`xattn`, the cross-series transformer.**
+- **Tokens:** each month, one token per target series (22) and per context series (8). The context series come from FRED, fetched 2026-10-25: VIX (VIXCLS), the BAA–Treasury spread (BAA10Y), NASDAQ (NASDAQCOM), 5-year breakevens (T5YIE, from 2003), the US and UK 10-year yields, GBP/USD and EUR/USD.
+- **Token inputs:** its own last 12 changes, Brent lags 0–12, the oil volatility state, an availability flag and an embedding.
+- **Network:** a 2-layer, 4-head transformer (width 32) attends across the tokens of a month. Each token gets a Student-t for its next change, plus a per-token linear term. It has 19.5k parameters.
+- **Simulation:** the context series are predicted too, so in a what-if only Brent's path is given.
+- **A test** checks that attention picks up an effect carried by another series alone.
+
+| What-if skill | Inflation | Unemployment | Rate | Cost |
+|---|---|---|---|---|
+| `xattn` alone | +0.249 | +0.072 | +0.170 | +0.229 |
+| Recommended 3 (`rec`) | **+0.293** | +0.085 | **+0.250** | **+0.302** |
+| `rec` + `xattn` | +0.288 | **+0.095** | +0.239 | +0.293 |
+
+- **Alone, `xattn` is competitive:** it's better than Bayes on inflation and level with the TCN elsewhere. So attention across series trains and works in this framing.
+- **But it doesn't add to the ensemble.**
+  - Added to the recommended three, it makes costs worse (t +2.2) and the joint forecast worse (variogram score t +2.3).
+  - It helps only unemployment (t −1.2).
+  - In the 2026 replay it lowers the what-if coverage from 89% to 86%; all five members together get 83%.
+- **Our reading:** at a 1–12-month horizon, the asset-price context carries little beyond what Brent and each series' own history already give. And about 280 months aren't enough to learn the cross-series interactions reliably.
+
+**Correlated shocks: the t-copula.**
+- **Fit:** per fold, rank normal scores of each series' one-step residual (momentum and oil lags), their correlation shrunk 20% towards the identity, and the tail index by maximum likelihood.
+- **What it finds:** small correlations on average (mean absolute 0.07–0.11) with a few strong pairs (up to 0.60–0.68). The tail index is 8–30.
+
+| Recommended 3, mean over origins and horizons | Energy score | Variogram score |
+|---|---|---|
+| What-if, independent → copula | 4.489 → 4.481 (t −2.1) | 68.36 → 67.97 (**t −3.3**) |
+| Forecast with Lévy oil, independent → copula | 4.993 → 4.988 (t −1.1) | 72.12 → 71.83 (**t −2.3**) |
+
+- **The variogram score improves for every member and every ensemble** (t −1.5 to −4.3). That's the score that checks whether the series' relative moves are right. The energy score barely moves, as expected, because it's known to be insensitive to dependence.
+- **Each series' own CRPS is unchanged**, within simulation noise.
+- **So the copula makes the joint answers more coherent at no cost to any single series.** That matters for anything that adds series together, such as a household bill or a basket of costs.
+- **In the single 2026 replay** the joint scores are mixed: slightly worse at 1 and 3 months, better at 6. One event can't settle it; the folds do.
+
+**Recommended model now:** the 3-member equal ensemble (`bayes_own`, `global_lin`, `global`) with copula shocks, plus the margin member on the three fuel targets (`CHAIN_MARGINS=1`; see "Refined-product margins" below).
+
+## Independent verification
+
+A separate audit is in `notes/verification.md` on branch `claude/silly-fermat-ac28f6`, with its scripts in `notes/verification/`. It found:
+
+- **No leakage.** Six index and perturbation checks: training ends before each test block; standardisation and early stopping use training months only; no input contains its own target; the simulators read published months only; the what-if path starts the month after the start point. Publication lags leave at most one series-month per fold exposed, which is negligible.
+- **Exact reproduction.** Every skill, coverage and Diebold–Mariano number in the notes reproduces from the run files.
+- **A soft yardstick.**
+  - The climatology is Gaussian and fitted on the first 54–70% of each fold's training months.
+  - A network trained on *shuffled* targets scores up to +0.03 in aggregate against it, and up to +0.30 in a single fold and group.
+  - Against that shuffled-target zero, the headline skills drop by at most 0.023 and stay significant for inflation, rates and costs.
+  - Rate skill drops by about a third against an empirical climatology.
+  - So quote skill with its yardstick, and as a 2008–2025 average.
+- **Fragile single-model rankings.**
+  - `global_lin` beats Bayes on inflation only at 1–3 months, through UK and euro-area CPI; US CPI goes the other way.
+  - Five other seeds move one fold's skill by up to 0.08.
+  - The equal-weight ensemble is the answer here: it doesn't depend on which member wins, and it beats every member.
+- **Fuel overshoot in 2026.** With the real Brent path given, diesel and jet fuel rose 9–26 points more than every model expected. Product margins widened beyond Brent's historical pass-through, and no margin series is an input yet.
+- **Minor:** euro-area unemployment should have publication lag 2, not 1 (`macro_data.py`). It doesn't change a headline number.
+
+## The 2026 closure replay (`notes/chain-replay-2026-3m.md`)
+
+Every member is fitted on data up to 2026-01 only, then started from 2026-02, the month before the closure. The table counts 65 published outcomes: all 22 series at 1, 3 and 6 months, where published. The numbers below are for the recommended 3 members, refitted on Iridis with the premium curve of `notes/flow-premium.csv` (jobs 1972657 and 1972768 give the same numbers). Adding `xattn` (`notes/chain-replay-2026-4x.md`) gives what-if 86% and scenario 94%; all five members (`notes/chain-replay-2026.md`) give 83% and 94%. Each replay note also has the joint scores with and without copula shocks.
+
+| Run | What it tests | Actuals inside the 90% band |
+|---|---|---|
+| **What-if:** the Brent path that happened | the knock-on layer on an event it never saw (**out of sample**) | **89% of 65** (91% in the laptop fit) |
+| Lost 82: GARCH-CGMY paths plus the flow scenario | how the chain composes (**in sample for the flow link**: the premium curve was fitted to this event) | 97% of 65 (88% with the earlier, simpler curve) |
+| Lost 0: GARCH-CGMY paths, no scenario | what a forecaster without the flow link would have said | 58% of 65 |
+
+- **Laptop versus Iridis:** the what-if difference is one of 65 outcomes crossing its band edge. The Iridis refit lands slightly differently from the laptop's, most likely in the MCMC fit; means move by 0.1–0.5 points. The networks themselves reproduce exactly across machines.
+- **The scenario's wider coverage is partly bought with wider bands.** Each path now carries the flow link's own uncertainty. US CPI after 6 months: +2.5 (−0.1..+6.3) under the scenario, against +2.1 (+0.8..+3.8) given the real Brent path. Diesel after 1 month: +13.7 (+1.5..+29.1) now contains the actual +27.9; the earlier curve's band stopped at +19.1.
+
+- **US CPI after 6 months:** forecast +2.1 (+0.8..+3.8) given the real Brent path; actual +2.0.
+- **UK CPI after 6 months:** +1.9 (+0.3..+3.6); actual +2.5.
+- **Euro-area HICP after 6 months:** +1.7 (−0.2..+3.3); actual +2.9.
+- **Fuels:** the first-month jump in diesel and jet fuel (+28 and +49) is outside the bands (+12 and +26 expected). That's the margin overshoot the audit found. From 3 months on, the bands contain the actuals.
+- **Without the flow link** the chain misses the closure (58%). That is why the flow → Brent step matters. Its sign and the role of rerouting now have an out-of-sample check (Bab el-Mandeb 2023–24), but its size still rests on this one event.
+- **The 65 outcomes aren't independent.** They come from one event and overlapping horizons, so this is one strong look, not 65.
+
+`notes/chain-scenarios-3m.csv` is the slider's table, from the same fits (`notes/chain-scenarios.csv` is the 4-member version): each series' mean, median and 90% band for 0, 25, 50, 82 and 100 points of lost flow, 1–12 months ahead, with the actual where it's published. Its columns are series, group, flow_drop_points, months_ahead, mean, q05, q50, q95, actual, unit, validated, origin, source, fitted_to and generated. Unemployment and rates are marked `validated=no` (forecast only, no causal oil link). Since flow is already near zero in October 2026, a slider started today would need the *reopening* direction, which no data have tested. The demo should replay February 2026.
+
+## Refined-product margins (`notes/margins-results.md`)
+
+The fuel targets were driven by Brent alone, and in 2026 they rose 9–26 points more than every member expected. `experiments/margins.py` puts product prices between Brent and those targets.
+
+- **Data:** daily EIA spot prices: New York Harbor ULSD (New York Harbor heating oil before 2006-06), US Gulf Coast jet fuel, US Gulf Coast conventional gasoline and Los Angeles RBOB. Crack spread = product − Brent in $/bbl, monthly means, in `notes/margins-monthly.csv`.
+- **Margin model,** per product, on the log ratio r = log(product / Brent):
+  - reversion to the five-year mean (half-life 2–3 months);
+  - a sticky-dollar response to Brent, and seasonality;
+  - Brent volatility widens the band;
+  - a crisis term: the excess margin path after each earlier IEA collective action (1990, 2005, 2011, 2022). Each draw takes one past crisis.
+- **Into the chain:** each fuel target maps onto its products:
+  - jet fuel spot is an identity;
+  - retail diesel follows New York Harbor ULSD at lags 0–1;
+  - the refinery PPI follows diesel, gasoline and jet.
+
+  The **margin member** is that mapping driven by Brent path n plus a simulated margin path. It is mixed in as a fourth, equal-weight member for the three fuel targets only.
+
+Fuel targets on the 8 folds (skill against the v1 climatology, all horizons, the three targets together; Iridis jobs 1972719–1972727):
+
+| | What-if | Forecast (Lévy oil) |
+|---|---|---|
+| Chain (3 members) | +0.562 | +0.154 |
+| **+ margin member** | **+0.611** (t −3.8; better in 8 of 8 folds) | **+0.179** (t −3.5; 7 of 8) |
+| + the same member on a neutral margin | +0.596 | +0.168 |
+| Margin news added to the chain instead | +0.557 | +0.159 |
+
+- **Where the gain comes from:**
+  - Most of it is structure: about two thirds given the real Brent path, and half with Lévy oil. The members pass fuel prices through from Brent too weakly (jet fuel +8.4 for +10% Brent at 12 months in Bayes), while jet fuel spot is Brent plus its margin by definition.
+  - The margin's own state (its gap to the five-year mean, its season, crises) adds the rest, mostly from 2019 on.
+  - Adding the margin as a correction to the members' draws helps from 2019 on and hurts in 2008–2016, so it isn't used.
+- **2022 (out of sample in fold 6, trained to 2021-06):** the earlier crises' term is far too weak. The diesel crack reached $82/bbl in May 2022 against a forecast of $20 (4..40).
+- **2026 (out of sample in the replay, trained to 2026-01; 2022 is in sample there):** the overshoot after 1 month shrinks only a little.
+  - Jet fuel: +23.2 → +21.6 points.
+  - Retail diesel: +15.9 → +15.3.
+  - Refinery PPI: +6.6 → +5.9.
+
+  The 1-month bands still miss diesel and jet fuel. The replay catches the same 89% of 65 with or without the margin member.
+
+  The reason the overshoot barely moves: the diesel crack went from $34 to $63 in March 2026. The average of the four earlier crises gives $39 (23..56); only 2022 widened margins on this scale.
+- **Scenario:** `notes/margin-scenarios.csv` gives the crack fan for 0–100 points of lost flow from 2026-02.
+  - The crisis term is scaled by lost flow / 82, an assumption.
+  - It comes in two versions: the pre-2026 crises (validated against 2026), and with 2026's own path added (in sample, for a forward scenario).
+  - `notes/chain-fuel-scenarios-margins.csv` gives the fuel targets with the margin member, in the columns of `notes/chain-scenarios-3m.csv`.
+- **In the chain, behind a flag.** `macro_chain.py fold J margins` saves the margin member's draws like any member's (`runs/macro/chain-J-margins.npz`; the fuel targets only).
+  - With `CHAIN_MARGINS=1`, `report` and `replay` add it to every mixture of two or more members, as one more equal-weight member on the three fuel targets' columns.
+  - Outputs are tagged `-margins`. Single-member columns and the other 19 targets are untouched.
+  - Its draws match `margins.py`'s exactly, and they come from the same oil paths, draw by draw.
+
+  Results for the recommended 3 members (`notes/macro-chain-results-margins.md`, against the same report without the flag):
+
+  | Cost group, equal mixture | Without | With the margin member |
+  |---|---|---|
+  | What-if | +0.302 | **+0.313** |
+  | Lévy oil (forecast) | +0.147 | **+0.153** |
+  | Bootstrap oil (forecast) | +0.138 | **+0.143** |
+  | What-if, against the stricter empirical yardstick | +0.290 | **+0.301** |
+
+  Inflation, unemployment and rates are unchanged by construction, and cost coverage stays at 89%.
+
+  The replay with it is `notes/chain-replay-2026-3m-margins.md` (Iridis job 1972934), the same fits as `notes/chain-replay-2026-3m.md`. Its joint energy score of all series after 1 month is lower: 3.60 against 3.70 with independent shocks, 3.66 against 3.78 with copula shocks. It is about level at 6 months. The slider's table with it is `notes/chain-scenarios-3m-margins.csv`: same columns, and only the fuel rows differ.
+  - The copula leaves each series' own distribution unchanged, so the cost-group numbers above hold for the recommended model with copula shocks too.
+  - The margin member's draws carry their own shocks; they are not drawn through the copula.
+
+## Reproduce
+
+```bash
+uv run experiments/oil_paths.py check                     # oil-layer backtest
+export BAYES_CHAINS=4 BAYES_WARMUP=1000                   # the sampler settings of macro_bayes.py --vol own
+uv run experiments/macro_chain.py fold 0                  # ... to 7; members default to every available one
+uv run experiments/macro_chain.py report                  # notes/macro-chain-results.md
+uv run experiments/macro_chain.py replay                  # notes/chain-replay-2026.md, notes/chain-scenarios.csv
+CHAIN_MEMBERS=bayes_own,global_lin,global CHAIN_TAG=3m uv run experiments/macro_chain.py replay   # the recommended 3
+CHAIN_TAG=s20 uv run experiments/macro_chain.py report    # after the 20-seed Iridis run below
+CHAIN_TAG=v3 uv run experiments/macro_chain.py report     # five members, independent and copula shocks (notes/macro-chain-results-v3.md)
+uv run experiments/margins.py data                        # EIA spot prices -> notes/margins-monthly.csv
+uv run experiments/margins.py fold                        # all 8 folds, against runs/macro/chain-J-<member>.npz
+uv run experiments/margins.py replay                      # the 2026 replay (refits the 3 members once, then cached)
+uv run experiments/margins.py report                      # notes/margins-results.md and the scenario CSVs
+uv run experiments/macro_chain.py fold 0 margins          # ... to 7: the margin member's draws (numpy only, seconds)
+CHAIN_MARGINS=1 CHAIN_MEMBERS=bayes_own,global_lin,global uv run experiments/macro_chain.py report   # -> -margins
+```
+
+On Iridis (`docs/iridis.md` for access). Copy `experiments/`, `cluster/`, `scripts/`, `data/raw/`, `notes/industry/` and `runs/levy/` to a fresh `/scratch/$USER/<folder>`, then:
+
+```bash
+bash cluster/iridis/macro_env.sh                                       # once (torch, jax, numpyro)
+sbatch --array=0-7 cluster/iridis/macro_chain.slurm                    # every member, 5 seeds
+CHAIN_SEEDS=20 CHAIN_TAG=s20 sbatch --array=0-7 --time=08:00:00 cluster/iridis/macro_chain.slurm
+CHAIN_TAG=v3 sbatch --array=0-7 --time=04:00:00 cluster/iridis/macro_chain.slurm   # five members, with copula shocks
+sbatch --array=0-2 cluster/iridis/macro_replay.slurm                     # the replays: rec, all, rec + xattn
+sbatch --array=0-8 cluster/iridis/margins.slurm                        # margins: folds 0-7, task 8 the replay
+MEMBERS=margins sbatch --array=0-7 cluster/iridis/macro_chain.slurm    # the margin member in the chain
+CHAIN_MARGINS=1 sbatch --array=0 cluster/iridis/macro_replay.slurm     # the 3-member replay with it
+```
+
+The runs for this page are all on `amd_student`:
+- jobs 1972484 (`MEMBERS=global_tcn`) and 1972485 (20 seeds), 2026-10-24;
+- jobs 1972767 (v3 folds), 1972768 (replays) and 1972803 (v3 report), 2026-10-25;
+- the margin layer: 1972719 (`margins.py` folds and replay), 1972755 (`fold J margins`), 1972756 and, after the copula merge, 1972934 (the 3-member replay with `CHAIN_MARGINS=1`) and 1972757 (the `margins.py` replay with the premium curve), 2026-10-24/25.
+
+**Files to copy up as well:**
+- `notes/industry/fred_series.csv`: `macro_data.py` reads the industry series list from it.
+- `notes/flow-premium.csv`, for the scenario premium.
+- `data/raw/macro/`, with the context series and, for the margin layer, the EIA spot workbook (`eia_PET_PRI_SPT_S1_D.xls`).
+
+**The v3 report runs on Iridis too.** Its results come to 817 MB, so rather than download them, copy `runs/macro/fold-*.json` up and run `CHAIN_TAG=v3 sbatch --nodes=1 --partition=amd_student --mem=24G --wrap ".venv-nn/bin/python -u experiments/macro_chain.py report"`; it takes about 2 minutes.
+
+If `loginx001` drops a transfer, use `loginx002`; its banner recommends that node for jobs that need no GPU.

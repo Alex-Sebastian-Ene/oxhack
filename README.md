@@ -11,6 +11,8 @@ for oil prices, the Fed's interest rate and the cost of living.
   which knock-on links hold up in [docs/knock-on-validation.md](docs/knock-on-validation.md), and
   cluster runs in [docs/iridis.md](docs/iridis.md); the multi-region ensemble with industry, AIS,
   pipeline and fuel-flow inputs, the AIS flow → Brent link and HDI in
-  [docs/macro-ensemble.md](docs/macro-ensemble.md)
+  [docs/macro-ensemble.md](docs/macro-ensemble.md); the cost of living built up from basket items
+  (food, household energy, motor fuel, air fares, restaurants) in the US, UK and euro area in
+  [docs/cost-of-living.md](docs/cost-of-living.md)
 - **How the team works:** [coord/PROTOCOL.md](coord/PROTOCOL.md). New laptop? Start with
   [coord/BOOTSTRAP.md](coord/BOOTSTRAP.md).
