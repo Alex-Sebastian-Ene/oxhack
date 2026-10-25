@@ -38,12 +38,6 @@ Interactions API (`POST /v1beta/interactions`).
     doesn't exist shows as `[n?]`.
 - **Test mode.** `BRIEF_FAKE=1` answers both with clearly labelled test text and a striped test picture,
   so the panels can be tried without a key.
-- **Written ahead.** `uv run experiments/country_brief.py bake` writes both panels ahead of time for
-  every resource and every country, from the facts `node ui/app/src/ai_facts.cjs` reads off the built
-  app at the 2026-closure setting. They go into `ui/app/data/ai-panels.json`, which the app build puts in the
-  page. Run on 25 Oct 2026 with a free-tier key: 14 of 16 resources and 4 of 174 countries were written
-  before the daily quotas (20 requests per model) ran out. `gemini-3.8-flash` was also returning "high
-  demand" errors, so most of them are from `gemini-3.5-flash`. Each panel names its model.
 
 ## Why an LLM, and why Gemini
 
@@ -87,11 +81,15 @@ page at another proxy.
 
 ## Not done yet / open questions
 
-- **Live check, 25 Oct 2026** (`country_brief.py check`, free-tier key): the key lists 60 models,
-  including `gemini-3.8-flash` and `gemini-nano-banana-2.1`. Text through the Interactions API works. The
-  picture fails: the free tier has no quota for the image model (HTTP 429, limit 0), so "What is it?" now
-  returns the text without a picture rather than failing. The `generateContent` call timed out at 60 s,
-  so `/brief` (the globe's grounded brief) is still unconfirmed.
+- **The Interactions request shape is from the skill, not tested live.** The service sends
+  `{"model", "input"}` and reads `model_output` steps, plus a `generateContent`-style answer in case one
+  comes back. The first live run should confirm both models and the image output.
+- **Untested against the live API.** Our sandbox can't reach `generativelanguage.googleapis.com`,
+  and no one has shared a key yet. The tests cover the prompt, the response parsing, the cache and
+  the origin check offline. The first live run should confirm that `generateContent` with the
+  `google_search` tool still answers for `gemini-3.8-flash`. Google now steers new code to the
+  Interactions API (`POST /v1beta/interactions`), where search results arrive as
+  `google_search_result` steps; moving there is the fallback if `generateContent` is refused.
 - **Event rules on AI use.** AGENTS.md still has a TODO for the hackathon's AI-use and provenance
   rules. If they restrict generated content in the demo, keep the button off.
 - **The published artifact** is a page on claude.ai, so it can't reach a localhost proxy. If we
