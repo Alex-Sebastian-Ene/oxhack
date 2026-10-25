@@ -67,8 +67,8 @@ SWAPS = [
      '.arcColor((d) => (d.faded ? [d.color + "0a", d.color + "55"] : [d.color + "55", d.color])).arcStroke((d) => (d.faded ? 0.45 : 1) * (0.25 + 1.2 * Math.sqrt(d.weight || 0.1)))', 1),
 
     # titles and keys say what each form means
-    ('$("wttl").textContent = m ? `${m.name}: ${st.mode === "exports" ? "who ships it" : "who makes it"}` : "Exposure score (illustrative)";',
-     '$("wttl").textContent = m ? `${m.short || m.name}: ${st.mode === "exports" ? "shipped (fill) · made (columns)" : "made (fill) · shipped (columns)"}` : "Exposure score (illustrative)";', 1),
+    ('$("wttl").textContent = m ? `${m.name}: ${st.mode === "exports" ? "who ships it" : "who makes it"}` : "Oil cut off by the shock";',
+     '$("wttl").textContent = m ? `${m.short || m.name}: ${st.mode === "exports" ? "shipped (fill) · made (columns)" : "made (fill) · shipped (columns)"}` : "Oil cut off by the shock";', 1),
     ('aria-label="Who makes it or who ships it"', 'aria-label="Which layer is in front"', 1),
 
     ("$(\"wticks\").innerHTML = '<span style=\"left:0;transform:none\">smaller</span><span style=\"left:100%;transform:translateX(-100%)\">larger producer</span><span class=\"viarow\"><i class=\"viakey\"></i>amber edge: Gulf producer, ships via Hormuz</span>';",
@@ -85,6 +85,6 @@ SWAPS = [
      '      const m = mats[st.mat], iso = isoOf[name];\n'
      '      const row = (md, lab) => { const r = tableOf(m, md).find((x) => x.iso3 === iso); return `<span${md === st.mode ? "" : \' class="faint"\'}>${lab}: <span class="mono">${r ? shareTxt(r) : "not listed"}</span></span>`; };\n'
      '      return `<b>${iso ? flagImg(iso) + " " : ""}${escH(name === "United States of America" ? "United States" : name)}</b>${row("production", "Made")}${row("exports", "Shipped")}', 1),
-    ('return `<b>${escH(name)}</b><span>Exposure',
-     'return `<b>${isoOf[name] ? flagImg(isoOf[name]) + " " : ""}${escH(name === "United States of America" ? "United States" : name)}</b><span>Exposure', 1),
+    ('return `<b>${escH(name)}</b><span class="mono">${cutTxt(k)}',
+     'return `<b>${isoOf[name] ? flagImg(isoOf[name]) + " " : ""}${escH(name === "United States of America" ? "United States" : name)}</b><span class="mono">${cutTxt(k)}', 1),
 ]

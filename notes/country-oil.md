@@ -47,3 +47,20 @@ Pooled (for countries without a series): 0.27, middle half 0.25 to 0.31 over 37 
 | NOR | 0.19 | 0.14 to 0.24 | 0.55 | 204 |
 | ISL | 0.18 | 0.12 to 0.24 | 0.43 | 109 |
 | MLT | 0.07 | 0.02 to 0.12 | 0.16 | 204 |
+
+## Cost of living
+
+FAOSTAT consumer price indices (general and food, 2015 = 100, monthly), fetched 2026-10-25. Oil links: h-month log change in the price index on the h-month log change in Brent (FRED MCOILBRENTEU, US$), 2009-01 to 2025-12, Newey-West errors over h months; each country's slope is ridge-updated towards our cost-of-living model's link (US, UK and euro-area average, normal regime) by its noise, the penalty set by how far the countries' true slopes spread around the model; inflation is the 12-month change in the index, at the latest month and in Feb 2026 before the closure.
+
+206 countries; too unstable to fit (very high inflation): LBN food, LBN all, SDN food, SDN all, SSD food, SSD all, SYR food, SYR all, VEN food, VEN all, ZWE food, ZWE all.
+
+Pooled link (% price change per 1% Brent move over the same months, and the spread of the true slopes):
+
+| Prices | 1 mo | 2 mo | 3 mo | 6 mo | 12 mo |
+|---|---|---|---|---|---|
+| food | +0.0010 (±0.0001) | +0.0002 (±0.0001) | +0.0018 (±0.0001) | +0.0080 (±0.0065) | +0.0304 (±0.0271) |
+| all | +0.0095 (±0.0075) | +0.0167 (±0.0129) | +0.0190 (±0.0132) | +0.0241 (±0.0161) | +0.0321 (±0.0204) |
+
+Outlook: the latest 12 months' inflation continues, plus the country's oil link applied to Brent's known move since the latest price month; 90% band from this country's past misses of that rule (12-month forecasts from every 6 months, 2015-2024), scaled by the square root of the horizon.
+
+A per-country time-series model (its own last month, month of year, Brent's last three months) was tried first and lost to the naive rule in the same backtest: skill against naive food -0.16 over 3093 forecasts, all -1.21 over 3132 forecasts. So the outlook uses the naive rule plus the oil link.
