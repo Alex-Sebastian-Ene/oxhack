@@ -474,6 +474,9 @@ select { padding: 0 8px; }
 .exp-facts summary { cursor: pointer; font-size: 13px; color: var(--muted); }
 .exp-facts ol { margin: 6px 0 0; padding-left: 22px; display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; line-height: 1.5; color: var(--muted); }
 .gexp .warn { color: #8a4b00 !important; font-size: 12.5px; }
+
+.illus { display: inline-block; margin-left: 4px; padding: 0 6px; border-radius: 999px; border: 1px dashed var(--line2); font: 600 10.5px/1.6 var(--sans); font-style: normal; color: var(--muted); vertical-align: 1px; white-space: nowrap; cursor: help; }
+.illus-note { padding: 10px 12px; border-radius: 8px; background: #fff6e5; border-left: 3px solid #c78100; }
 </style>
 <style>
 /* Pixelify Sans and VT323, SIL Open Font License 1.1 (ui/app/vendor/fonts), bundled so the app works offline */
@@ -1451,7 +1454,7 @@ window.HZIcons = {
         <button type="button" id="wzreset" aria-label="Show the whole world"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
       </div>
       <div class="legendbar">
-        <div class="ttl"><span id="wttl">Exposure score</span><button type="button" class="ib" data-winfo="score" aria-label="How the score works" style="width:24px;min-height:24px"><svg viewBox="0 0 24 24" aria-hidden="true" style="width:14px;height:14px"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><path d="M12 7.5v.5"/></svg></button></div>
+        <div class="ttl"><span id="wttl">Exposure score (illustrative)</span><button type="button" class="ib" data-winfo="score" aria-label="How the score works" style="width:24px;min-height:24px"><svg viewBox="0 0 24 24" aria-hidden="true" style="width:14px;height:14px"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><path d="M12 7.5v.5"/></svg></button></div>
         <div class="grad" id="wgrad"></div>
         <div class="ticks" id="wticks"></div>
         <div class="flowkey"><i></i><span id="wflowkey">Oil leaving Hormuz, width = volume</span></div>
@@ -1472,12 +1475,12 @@ window.HZIcons = {
         <p class="sub" id="c-sub"></p>
         <div id="t-sec" hidden><span class="label">What it makes, where inputs come from, where it ships</span><div id="t-body"></div></div>
         <div class="kpis">
-          <div><b id="c-score">–</b><span>Exposure score</span></div>
-          <div><b id="c-fuel">–</b><span>Fuel cost now vs pre-war</span></div>
+          <div><b id="c-score">–</b><span>Exposure score <i class="illus" title="Illustrative: the score's weights are hand-set, not from a model (asked on OXH-3)">illustrative</i></span></div>
+          <div><b id="c-fuel">–</b><span>Fuel cost now vs pre-war <i class="illus" title="Includes a hand-set shortage premium (0.8 per unit of missing flow x Hormuz share), not fitted to data">assumed</i></span></div>
           <div><b id="c-dep">–</b><span>Oil use sourced via Hormuz</span></div>
         </div>
         <div>
-          <span class="label">Fuel cost forecast, next 12 months <span class="mono faint" style="margin:0">(pre-war = 100)</span></span>
+          <span class="label">Fuel cost path, next 12 months <span class="mono faint" style="margin:0">(pre-war = 100)</span> <i class="illus" title="Illustrative: built from the fuel cost (with its hand-set premium) and hand-set recovery speeds, not a model forecast">illustrative</i></span>
           <div class="chartbox" id="c-chartbox"></div>
           <div class="legend2"><span><i style="background:var(--oil)"></i>Base case</span><span><i style="background:rgba(242,107,0,0.28)"></i>Fast reopening to prolonged closure</span></div>
         </div>
@@ -1573,7 +1576,7 @@ window.HZIcons = {
 
 
       <section class="card">
-        <span class="label"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg> Most exposed</span>
+        <span class="label"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg> Most exposed</span> <i class="illus" title="Illustrative: the score's weights are hand-set, not from a model (asked on OXH-3)">illustrative</i>
         <div class="rank" id="w-rank"></div>
       </section>
     </aside>
@@ -2932,7 +2935,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
     $("wflowkey").textContent = st.mat ? (st.sel ? (st.mode === "exports" ? "Trade flows of this product, blinking at the buyer" : "Arcs: where its ingredients come from, blinking where they land") : "Click a country for its supplier and trade arcs")
       : `Oil routes out of Hormuz, blinking where they land · flow now ${(f * 100).toFixed(0)}% of pre-war`;
     const m = mats[st.mat];
-    $("wttl").textContent = m ? `${m.name}: ${st.mode === "exports" ? "who ships it" : "who makes it"}` : "Exposure score";
+    $("wttl").textContent = m ? `${m.name}: ${st.mode === "exports" ? "who ships it" : "who makes it"}` : "Exposure score (illustrative)";
     if (m) {
       const r = rampOf(st.mat);
       $("wgrad").style.background = `linear-gradient(90deg, ${r(0)}, ${r(0.55)} 55%, ${r(1)})`;
@@ -3194,8 +3197,8 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
   // what the page shows for a country, each with where it comes from
   function countryFacts(name) {
     const iso = isoOf[name], k = calc(name), out = [scenFact()];
-    out.push(`${nmIso(iso)} exposure score ${fmtS(k.score)} on a -40 (gains) to +65 (hurt) scale (this page's model, from the simulated scenario)`);
-    out.push(`Fuel cost ${pct(k.fuel)} vs pre-war: Brent to retail fuel link validated on FRED (fitted 1991-2008, tested 2009-2026) plus an assumed shortage premium`);
+    out.push(`${nmIso(iso)} exposure score ${fmtS(k.score)} on a -40 (gains) to +65 (hurt) scale (an illustrative index: its weights are hand-set, not from a model; inputs from the scenario)`);
+    out.push(`Fuel cost ${pct(k.fuel)} vs pre-war: Brent to retail fuel link validated on FRED (fitted 1991-2008, tested 2009-2026) plus a hand-set shortage premium (0.8, not fitted to data)`);
     if (k.d.c) out.push(`About ${(k.hz * 100).toFixed(0)}% of ${nmIso(iso)}'s oil use comes through Hormuz (this page's country table)`);
     if (VIA[name]) out.push(`${nmIso(iso)} exports oil: ${VIA[name]}`);
     for (const r of industries(name).slice(0, 4)) out.push(`${r.label}: ${r.v == null ? "no sourced cost share" : `costs ${pct(r.lo / 100, 1)} to ${pct(r.hi / 100, 1)} (${r.src || "sourced share"})`}; ${String(r.why || "").slice(0, 120)}`);
@@ -3415,12 +3418,12 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
       const into = m.links.filter((l) => l.to === iso && l.from !== iso).sort((a, b) => b.share - a.share)[0];
       kpis = kpi(mi >= 0 ? shareTxt(made[mi]) : "–", mi >= 0 ? `made, #${mi + 1}` : "not a listed maker")
         + kpi(si >= 0 ? shareTxt(ship[si]) : "–", si >= 0 ? `shipped, #${si + 1}` : "not a listed exporter")
-        + kpi(fmtS(k.score), "exposure score", k.score > 0.5 ? "hurt" : k.score < -0.5 ? "gain" : "");
+        + kpi(fmtS(k.score), "exposure score, illustrative", k.score > 0.5 ? "hurt" : k.score < -0.5 ? "gain" : "");
       line = into ? `${escH(m.name)}: biggest outside input is ${escH((MAT.inputs[into.input] || {}).name || into.input)} from ${flagImg(into.from)} ${escH(nmIso(into.from))}, ${Math.round(into.share * 100)}%.`
         : `${escH(m.name)}: no sourced supplier split for ${escH(nmIso(iso) || name)}.`;
     } else {
-      kpis = kpi(fmtS(k.score), "exposure score", k.score > 0.5 ? "hurt" : k.score < -0.5 ? "gain" : "")
-        + kpi(pct(k.fuel), "fuel cost vs pre-war", k.fuel > 0.005 ? "hurt" : k.fuel < -0.005 ? "gain" : "")
+      kpis = kpi(fmtS(k.score), "exposure score, illustrative", k.score > 0.5 ? "hurt" : k.score < -0.5 ? "gain" : "")
+        + kpi(pct(k.fuel), "fuel cost, with assumed premium", k.fuel > 0.005 ? "hurt" : k.fuel < -0.005 ? "gain" : "")
         + kpi(k.kind === "imp" ? `${(k.hz * 100).toFixed(0)}%` : "–", "of its oil via Hormuz");
       line = k.kind === "gulf" ? `About ${Math.round(k.d.gulf * 100)}% of its exports must pass the strait.` : k.kind === "exp" ? "Sells oil abroad, so a higher price brings in revenue." : "Pick a product above to see what it makes and trades.";
     }
@@ -3563,10 +3566,10 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
       <li><b>Bundled:</b> globe.gl 2.41.4 (MIT), flag-icons 7.6.0 (MIT), Natural Earth 1:110m (public domain). Nothing here is live.</li></ul>` },
     model: { title: "How the world view works", html: `<p>The Hormuz flow comes from the estimator in the Strait view for the chosen scenario. Brent is a scenario assumption you can change. For reference, Brent traded around $109 on 18 October 2026.</p>
       <ul><li><b>Lines:</b> the main tanker routes from the strait to each importer. Faint lines show pre-war volume, bright dotted lines show today's estimated flow.</li>
-      <li><b>Fuel cost change</b> = the validated Brent → petrol link (6.9% per 10% Brent rise, fitted on US data 1991–2008; 5.2% on 2009–2026), plus a shortage premium for the share of a country's oil that came through Hormuz. The premium is an assumption, not fitted.</li><li><b>Inflation:</b> energy CPI moves 3.2% and headline CPI 0.36 points within 12 months per 10% Brent rise (same data and method). Ranges show both fits.</li><li><b>Industries:</b> cost change = fuel share of operating costs × the fuel price change. Shares are pre-war: airlines 25.4% (IATA), shipping 22% (Maersk), trucking 20.6% (ATRI). Industries without a sourced share show no number.</li>
+      <li><b>Fuel cost change</b> = the validated Brent → petrol link (6.9% per 10% Brent rise, fitted on US data 1991–2008; 5.2% on 2009–2026), plus a shortage premium for the share of a country's oil that came through Hormuz. That premium (0.8) is hand-set, not fitted to data. The premium is an assumption, not fitted.</li><li><b>Inflation:</b> energy CPI moves 3.2% and headline CPI 0.36 points within 12 months per 10% Brent rise (same data and method). Ranges show both fits.</li><li><b>Industries:</b> cost change = fuel share of operating costs × the fuel price change. Shares are pre-war: airlines 25.4% (IATA), shipping 22% (Maersk), trucking 20.6% (ATRI). Industries without a sourced share show no number.</li>
       <li><b>Forecast:</b> the base case halves the flow gap every 6 months and the price gap every 8. The band runs from a fast reopening (2 to 4 months) to a closure that lasts the whole year with prices 15% higher.</li></ul>
       <p>Country volumes are rounded pre-war estimates (EIA 2024 Hormuz data, Energy Institute consumption). China, India, Japan and South Korea took about 69% of Hormuz crude. This is a teaching model; check figures before quoting.</p>` },
-    score: { title: "Exposure score", html: `<p>One number per country for how hard the shock hits its economy. Positive means hurt, negative means a net gain.</p>
+    score: { title: "Exposure score (illustrative)", html: `<p class="illus-note"><b>Illustrative, not from a model.</b> The weights below (0.4 and 0.6 for importers; ÷3, +0.15 and ×60 for exporters) and the 0.8 shortage premium inside the fuel cost are hand-set and have no source yet. They came with the original Hormuz Flow page; we asked Edward and Seb on OXH-3 (25 Oct 2026) to source or replace them. The inputs they combine are cited: EIA 2024 Hormuz volumes and Energy Institute consumption.</p><p>One number per country for how hard the shock hits its economy. Positive means hurt, negative means a net gain.</p>
       <ul><li><b>Importers:</b> fuel cost change × how much of their oil is imported, scaled to 0–100.</li>
       <li><b>Exporters outside the Gulf</b> (Norway, Canada, Nigeria and others) gain from the higher price, so they score below zero.</li>
       <li><b>Gulf producers</b> are hurt by volume: the share of their exports trapped behind the strait × how much of the flow is missing.</li></ul>
