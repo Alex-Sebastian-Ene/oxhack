@@ -137,3 +137,86 @@ def test_level_yoy_on_a_full_calendar_and_passthrough_from_index_levels():
     assert np.isnan(yoy["2015-06-01"]) and np.isnan(yoy["2016-06-01"]) and not np.isnan(yoy["2016-07-01"])
     assert yoy["2016-07-01"] == pytest.approx(100 * (level["2016-07-01"] / level["2015-07-01"] - 1))
     assert co.passthrough(co.level_yoy(level), brent)["e"] == pytest.approx(0.25, abs=1e-3)
+
+
+def test_sidra_changes_chain_into_annual_rates():
+    rows = [{"V": "Valor", "D3C": "Mês (Código)"}]  # row 0 is the header
+    rows += [{"V": "1.00", "D3C": f"2010{m:02d}"} for m in range(1, 13)] + [{"V": "...", "D3C": "201101"}, {"V": "2.00", "D3C": "201102"}]
+    ch = co.sidra_changes(rows)
+    assert list(ch.index.strftime("%Y-%m"))[:2] == ["2010-01", "2010-02"] and "2011-01" not in ch.index.strftime("%Y-%m")
+    yoy = co.chain_yoy(ch)
+    assert yoy["2010-12-01"] == pytest.approx(100 * (1.01 ** 12 - 1))
+    assert np.isnan(yoy["2010-11-01"]) and np.isnan(yoy["2011-02-01"])  # under 12 months, and a missing month inside
+
+
+def test_statsnz_levels_reads_october_as_october():
+    text = ('"Series_reference","Period","Data_value","STATUS"\n"CPIM.SE9072020000","2011.09",1100,"FINAL"\n'
+            '"CPIM.SE9072020000","2011.10",1110,"FINAL"\n"CPIM.SE9072030001","2011.10",900,"FINAL"\n')
+    s = co.statsnz_levels(text, "CPIM.SE9072020000")
+    assert list(s.index.strftime("%Y-%m")) == ["2011-09", "2011-10"] and s.iloc[-1] == 1110
+
+
+def test_sssu_yoy_takes_the_same_month_a_year_earlier():
+    text = ("BASE_PERIOD,TIME_PERIOD,OBS_VALUE\nCORMONTH_PREV_YEAR,2007-M02,101.8\nCORMONTH_PREV_YEAR,2007-M01,104.6\n"
+            "PREV_MONTH,2007-M01,99.0\n")
+    s = co.sssu_yoy(text)
+    assert list(s.index.strftime("%Y-%m")) == ["2007-01", "2007-02"]
+    assert s.iloc[0] == pytest.approx(4.6) and s.iloc[1] == pytest.approx(1.8)
+
+
+def test_estat_levels_reads_the_shift_jis_long_series():
+    text = ("類・品目,総合,ガソリン\nGroup/Item,All items,Gasoline\n符号(code),0001,7301\nウエイト(Weight),10000,195\n"
+            "200901,96.0,59.1\n200902,96.1,-\n200812,96.5,65.2\n")
+    s = co.estat_levels(text.encode("cp932"), "7301")
+    assert list(s.index.strftime("%Y-%m")) == ["2008-12", "2009-01"] and s.iloc[-1] == 59.1
+
+
+def test_pxweb_levels_picks_the_class_and_skips_missing():
+    text = ('"Geolocation","Commodity Description","2017 Dec","2018 Jan"\n'
+            '"PHILIPPINES","07.2.2 - Fuels and lubricants for personal transport equipment (ND)","..","90.3"\n'
+            '"PHILIPPINES","07.2.2.1 - Diesel (ND)","88.0","87.97"\n')
+    s = co.pxweb_levels(text, "07.2.2 -")
+    assert list(s.index.strftime("%Y-%m")) == ["2018-01"] and s.iloc[0] == 90.3
+
+
+def test_dosm_levels_keeps_the_class_code_as_text():
+    text = "date,class,index\n2010-01-01,0722,98.5\n2010-01-01,722,1.0\n2010-02-01,0722,99.0\n2010-01-01,0721,100.0\n"
+    s = co.dosm_levels(text, "0722")
+    assert list(s) == [98.5, 99.0]
+
+
+def test_abs_levels_keeps_the_monthly_index():
+    text = ("DATAFLOW,MEASURE,INDEX,TSEST,REGION,FREQ,TIME_PERIOD,OBS_VALUE\nABS:CPI(2.0.0),1,40081,10,50,M,2017-10,101.0\n"
+            "ABS:CPI(2.0.0),1,40081,10,50,M,2017-09,100.0\nABS:CPI(2.0.0),3,40081,10,50,M,2018-09,7.5\n")
+    s = co.abs_levels(text)
+    assert list(s.index.strftime("%Y-%m")) == ["2017-09", "2017-10"] and list(s) == [100.0, 101.0]
+
+
+def test_dgbas_levels_takes_the_index_not_the_annual_rate():
+    xml = ("<?xml version='1.0' encoding='utf-8'?><DataSet>"
+           "<Obs><Item>2.油料費(指數基期：民國110年=100)</Item><TIME_PERIOD>2009M01</TIME_PERIOD><TYPE>原始值</TYPE><Item_VALUE>70.5</Item_VALUE></Obs>"
+           "<Obs><Item>2.油料費(指數基期：民國110年=100)</Item><TIME_PERIOD>2009M01</TIME_PERIOD><TYPE>年增率(%)</TYPE><Item_VALUE>-20.1</Item_VALUE></Obs>"
+           "<Obs><Item>2.油料費(指數基期：民國110年=100)</Item><TIME_PERIOD>2009M02</TIME_PERIOD><TYPE>原始值</TYPE><Item_VALUE></Item_VALUE></Obs>"
+           "<Obs><Item>12.食用油(指數基期：民國110年=100)</Item><TIME_PERIOD>2009M01</TIME_PERIOD><TYPE>原始值</TYPE><Item_VALUE>80</Item_VALUE></Obs>"
+           "</DataSet>")
+    s = co.dgbas_levels(xml.encode("utf-8"), "2.油料費")
+    assert list(s.index.strftime("%Y-%m")) == ["2009-01"] and s.iloc[0] == 70.5
+
+
+def test_tpso_levels_finds_the_commodity_and_converts_buddhist_years():
+    leaf = {"commodityCode": "52200", "children": [], "years": [
+        {"year": 2569, "months": [{"month": 9, "index": 113.51}]}, {"year": 2552, "months": [{"month": 1, "index": 55.24}, {"month": 2, "index": None}]}]}
+    tree = [{"commodityCode": "00000", "years": [], "children": [{"commodityCode": "50000", "years": [], "children": [leaf]}]}]
+    s = co.tpso_levels(tree, "52200")
+    assert list(s.index.strftime("%Y-%m")) == ["2009-01", "2026-09"] and s.iloc[0] == 55.24
+    with pytest.raises(KeyError):
+        co.tpso_levels(tree, "99999")
+
+
+def test_mospi_levels_reads_month_names_across_years():
+    years = [[{"year": 2014, "month": "December", "item": "Petrol for Vehicle", "index": "94.5"},
+              {"year": 2014, "month": "December", "item": "Diesel for Vehicle", "index": "90.0"}],
+             [{"year": 2020, "month": "April", "item": "Petrol for Vehicle", "index": ""},
+              {"year": 2020, "month": "June", "item": "Petrol for Vehicle", "index": "101.2"}]]
+    s = co.mospi_levels(years, "Petrol for Vehicle")
+    assert list(s.index.strftime("%Y-%m")) == ["2014-12", "2020-06"] and list(s) == [94.5, 101.2]

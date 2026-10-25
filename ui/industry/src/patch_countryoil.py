@@ -5,7 +5,7 @@
 #    table (EIA, Energy Institute) fills in where Comtrade has nothing (Taiwan, Iran); a country in neither says
 #    "not in our data" and is grey on the map.
 # 2. Fuel cost from the country's own Brent -> pump-price pass-through, fitted on its monthly motor-fuel consumer
-#    prices (Eurostat, the BLS, the OECD's national CPIs, Statistics Canada, SingStat), with the series, its months
+#    prices (Eurostat, the BLS, the OECD's national CPIs, national statistics offices), with the series, its months
 #    and when it was collected. Other countries show no fuel estimate: a pooled median would be the same number for
 #    all of them. The Industries tab and the fuel-cost path use the same pass-through.
 # 3. The hand-set exposure score is gone. The map, the ranking and the cards show how much oil the shock cuts off:
@@ -71,13 +71,9 @@ COIL = {
     "priorSrc": {k: "our cost-of-living model" if k in prices["prior"] else "the cross-country average" for k in prices["pooled"]},
     "col": COL, "colFrom": col_from, "colGen": fans[0]["generated"],
 }
-# who publishes the motor-fuel prices behind the pass-through, for the "no estimate" text
-FUEL_BY = {"Eurostat": "Eurostat", "BLS": "the BLS", "OECD": "the OECD", "Statistics Canada": "Statistics Canada", "SingStat": "SingStat"}
-unnamed = {v["source"] for v in fuel["countries"].values() if not any(v["source"].startswith(k) for k in FUEL_BY)}
-assert not unnamed, f"add these fuel sources to FUEL_BY: {unnamed}"
-fuel_by = [name for k, name in FUEL_BY.items() if any(v["source"].startswith(k) for v in fuel["countries"].values())]
 NOFUEL = (f"No fuel price estimate: we only estimate pump prices for the {len(fuel['countries'])} countries whose monthly "
-          f"motor-fuel consumer prices we have ({', '.join(fuel_by[:-1])} and {fuel_by[-1]}), and this is not one of them.")
+          "motor-fuel consumer prices we have (from Eurostat, the BLS, the OECD and national statistics offices), and this is "
+          "not one of them.")
 
 # 1. one profile per country: hand-entered table for routes and volumes, data for dependence, Gulf share, pass-through
 sub('''  function info(name) {
