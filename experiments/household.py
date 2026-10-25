@@ -459,12 +459,17 @@ def scenarios(panel: pd.DataFrame, path: Path = NOTES / "chain-scenarios-3m.csv"
     """Real pay over the 12 months after the chain's origin under each flow scenario.
 
     CPI paths come from the knock-on chain's replay table (equal-weight ensemble fitted
-    on data to 2026-01). Nominal pay is assumed to keep growing at its pace over the 12 months to the
-    origin (known at the origin; pay responses to the shock are not modelled), so the real-pay band
+    on data to 2026-01): each loss held for 12 months (`scenario` "held"), plus, where the chain wrote
+    it (chain-scenarios-2026-*.csv), 2026 as the IEA counts it month by month ("iea_2026_path", with no
+    single flow_drop_points). Nominal pay is assumed to keep growing at its pace over the 12 months to
+    the origin (known at the origin; pay responses to the shock are not modelled), so the real-pay band
     is the CPI band. 'actual' is what happened, where published."""
     if not path.exists():
         return pd.DataFrame()
-    sc = pd.read_csv(path)
+    sc = pd.read_csv(path).assign(scenario="held")
+    p26 = path.with_name(path.name.replace("chain-scenarios-", "chain-scenarios-2026-"))
+    if p26 != path and p26.exists():
+        sc = pd.concat([sc, pd.read_csv(p26).assign(scenario=lambda x: x["flow_drop_points"], flow_drop_points=np.nan)])
     origin = pd.Timestamp(sc["origin"].iloc[0] + "-01")
     rows = []
     for r in ("us", "uk", "ea"):
@@ -475,7 +480,7 @@ def scenarios(panel: pd.DataFrame, path: Path = NOTES / "chain-scenarios-3m.csv"
         pay = pay[pay.index <= origin]
         step = 4 if r == "ea" else 12
         pace = 100 * np.log(pay.iloc[-1] / pay.iloc[-1 - step]) * (12 / (3 * step) if r == "ea" else 1)  # % a year
-        for (lost, h), g in sc[sc["series"] == cpi_key].groupby(["flow_drop_points", "months_ahead"]):
+        for (scen, lost, h), g in sc[sc["series"] == cpi_key].groupby(["scenario", "flow_drop_points", "months_ahead"], dropna=False):
             g = g.iloc[0]
             wage = pace * h / 12
             act_cpi = g["actual"]
@@ -484,7 +489,7 @@ def scenarios(panel: pd.DataFrame, path: Path = NOTES / "chain-scenarios-3m.csv"
             t1 = origin + pd.DateOffset(months=int(h))
             if r != "ea" and t1 in later.index and origin in later.index:
                 act_pay = 100 * np.log(later[t1] / later[origin])
-            rows.append({"region": r, "flow_drop_points": lost, "months_ahead": h, "pay_assumed": round(wage, 3),
+            rows.append({"region": r, "scenario": scen, "flow_drop_points": lost, "months_ahead": h, "pay_assumed": round(wage, 3),
                          "cpi_q05": g["q05"], "cpi_q50": g["q50"], "cpi_q95": g["q95"],
                          "real_pay_q05": round(wage - g["q95"], 3), "real_pay_q50": round(wage - g["q50"], 3),
                          "real_pay_q95": round(wage - g["q05"], 3), "cpi_actual": act_cpi,
@@ -630,11 +635,12 @@ def report() -> None:
         pts.append(f"**A gallon of US petrol** took {x[x.index.year == BASE_YEAR].mean():.1f} minutes of work in {BASE_YEAR}, "
                    f"{x[x.index.year == 2022].max():.1f} at the 2022 peak and {x.iloc[-1]:.1f} in {x.index[-1]:%Y-%m}.")
     if len(sc):
-        g = sc[(sc["region"] == "uk") & (sc["months_ahead"] == 6)].set_index("flow_drop_points")
-        if 82.0 in g.index:
-            pts.append(f"**The 2026 Hormuz closure:** for the UK, the chain's 82-points-lost scenario gives real pay "
-                       f"{g.loc[82.0, 'real_pay_q50']:+.1f}% after 6 months ({g.loc[82.0, 'real_pay_q05']:+.1f} to "
-                       f"{g.loc[82.0, 'real_pay_q95']:+.1f}); it was {g.loc[82.0, 'real_pay_actual']:+.1f}%.")
+        g = sc[(sc["region"] == "uk") & (sc["months_ahead"] == 6)].set_index("scenario")
+        if "iea_2026_path" in g.index:
+            x = g.loc["iea_2026_path"]
+            pts.append(f"**The 2026 Hormuz closure:** for the UK, the chain's 2026 scenario (the IEA's lost flow month by "
+                       f"month) gives real pay {x['real_pay_q50']:+.1f}% after 6 months ({x['real_pay_q05']:+.1f} to "
+                       f"{x['real_pay_q95']:+.1f}); it was {x['real_pay_actual']:+.1f}%.")
     out += ["## Main points", ""] + [f"- {p}" for p in pts] + [""]
 
     # 1. real pay, year by year
@@ -847,24 +853,28 @@ def report() -> None:
     # 9. Hormuz scenarios
     if len(sc):
         out += ["", "## The 2026 Hormuz closure: real pay under the chain's scenarios", "",
-                f"From {sc['origin'].iloc[0]}: CPI from the knock-on chain's replay (`notes/chain-scenarios-3m.csv`: the "
-                "3-member ensemble fitted on data to 2026-01, the flow premium of `notes/flow-premium.csv`), and nominal pay "
-                "assumed to keep its pace of the 12 months before (pay's response to the shock is not modelled). Real pay "
-                "change in % with the 90% band; 'actual' is what happened, where published (US and UK). Lost flow is in "
-                "points of normal Hormuz tanker flow; 2026 lost about 82.", "",
-                "| Region | Months ahead | Pay (assumed) | No closure | 25 lost | 50 lost | 82 lost (as in 2026) | 100 lost | Actual |",
-                "|---|---|---|---|---|---|---|---|---|"]
+                f"From {sc['origin'].iloc[0]}: CPI from the knock-on chain's replay (`notes/chain-scenarios-3m.csv` and "
+                "`notes/chain-scenarios-2026-3m.csv`: the 3-member ensemble fitted on data to 2026-01, the flow premium of "
+                "`notes/flow-premium-iea.csv` per point of the IEA's lost flow), and nominal pay assumed to keep its pace of the "
+                "12 months before (pay's response to the shock is not modelled). Real pay change in % with the 90% band; "
+                "'actual' is what happened, where published (US and UK). Lost flow is in points of February 2026's strait "
+                "flow, held for 12 months; the 2026 column is the closure as the IEA counts it month by month (89 points lost "
+                "in March to 47 in September).", "",
+                "| Region | Months ahead | Pay (assumed) | No closure | 25 lost | 50 lost | 82 lost | 100 lost | 2026 (IEA path) | Actual |",
+                "|---|---|---|---|---|---|---|---|---|---|"]
         for r, name in regions:
             g = sc[sc["region"] == r]
             for h in (3, 6, 12):
-                gh = g[g["months_ahead"] == h].set_index("flow_drop_points")
+                gh = g[g["months_ahead"] == h]
                 if gh.empty:
                     continue
-                cell = lambda lost: (f"{gh.loc[lost, 'real_pay_q50']:+.1f} ({gh.loc[lost, 'real_pay_q05']:+.1f}..{gh.loc[lost, 'real_pay_q95']:+.1f})"  # noqa: E731
-                                     if lost in gh.index else "–")
+                key = gh["flow_drop_points"].map(lambda v: f"{v:g}").where(gh["scenario"] == "held", gh["scenario"])
+                gh = gh.set_index(key)
+                cell = lambda k: (f"{gh.loc[k, 'real_pay_q50']:+.1f} ({gh.loc[k, 'real_pay_q05']:+.1f}..{gh.loc[k, 'real_pay_q95']:+.1f})"  # noqa: E731
+                                  if k in gh.index else "–")
                 act = gh["real_pay_actual"].iloc[0]
-                out.append(f"| {name} | {h} | {gh['pay_assumed'].iloc[0]:+.1f} | {cell(0.0)} | {cell(25.0)} | {cell(50.0)} | "
-                           f"{cell(82.0)} | {cell(100.0)} | {fmt(act, sign=True)} |")
+                out.append(f"| {name} | {h} | {gh['pay_assumed'].iloc[0]:+.1f} | {cell('0')} | {cell('25')} | {cell('50')} | "
+                           f"{cell('82')} | {cell('100')} | {cell('iea_2026_path')} | {fmt(act, sign=True)} |")
 
     # 10. sources
     out += ["", "## Series and sources", "", "| Series | Region | What | Unit | Source | Code | Months | Fetched |",

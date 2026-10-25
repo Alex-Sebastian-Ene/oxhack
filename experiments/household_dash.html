@@ -206,10 +206,10 @@
         </div>
       </div>
       <p class="model">Model output, not data</p>
-      <p class="note">Change in real pay (%) from February 2026 for each loss of Hormuz flow (points out of a normal 100). Bars are 90% bands, ticks the medians, the dashed line what happened.</p>
+      <p class="note">Change in real pay (%) from February 2026 for each loss of Hormuz flow held for 12 months (points of February's strait flow), and for 2026 as the IEA counts it month by month. Bars are 90% bands, ticks the medians, the dashed line what happened.</p>
       <div class="hc-chart short dash-skeleton" id="ch-hormuz-pay" data-source="hormuz_pay"></div>
       <p class="sub">What happened: <span id="hz-actual" data-source="hormuz_pay" data-field="real_pay_actual" data-fmt="spct">—</span><span id="hz-actual-note"></span></p>
-      <p class="src">Consumer-price fans from the knock-on chain (notes/chain-scenarios-3m.csv: Lévy oil paths with the flow premium, then the Bayes and neural-network ensemble), fitted on data to January 2026. Nominal pay keeps its pace of the year before, so the band is the price band. 82 points is the 2026 closure; the flow link was calibrated on that event, so that bar is in sample.</p>
+      <p class="src">Consumer-price fans from the knock-on chain (notes/chain-scenarios-3m.csv and notes/chain-scenarios-2026-3m.csv: Lévy oil paths with the flow premium per point of the IEA's lost flow, then the Bayes and neural-network ensemble), fitted on data to January 2026. Nominal pay keeps its pace of the year before, so the band is the price band. The 2026 bar uses the IEA's monthly loss (89 points in March to 47 in September); the flow link was fitted to that event, so that bar is in sample.</p>
     </div>
     <div class="hc-card" id="hormuz-groups">
       <h3>What a full closure adds to each UK group's costs</h3>
@@ -738,7 +738,7 @@ function rangeChart(box, rows, o) {
     .on('pointermove', (ev, r) => {
       const hd = document.createElement('div');
       hd.className = 'hd';
-      hd.textContent = r.label === 'None' ? 'No closure' : `${r.label} points lost${r.sub ? ' ' + r.sub : ''}`;
+      hd.textContent = r.label === 'None' ? 'No closure' : r.label === '2026' ? '2026, the IEA\'s monthly loss' : `${r.label} points lost for 12 months`;
       const line = (name, v) => {
         const d = document.createElement('div');
         d.className = 'row';
@@ -949,13 +949,14 @@ dash.onData(() => {
 
   // Hormuz: real pay under the scenarios
   const zr = param('hz_region'), zh = Number(param('hz_h'));
-  $('hz-actual').setAttribute('data-where', `region=${enc(zr)}&months_ahead=${zh}&flow_drop_points=82`);
+  $('hz-actual').setAttribute('data-where', `region=${enc(zr)}&months_ahead=${zh}&scenario=iea_2026_path`);
   withData($('ch-hormuz-pay'), ['hormuz_pay'], (rows) => {
-    const sel = rows.filter((r) => r.region === zr && Number(r.months_ahead) === zh)
-      .sort((a, b) => Number(a.flow_drop_points) - Number(b.flow_drop_points));
+    const at = rows.filter((r) => r.region === zr && Number(r.months_ahead) === zh);
+    const held = at.filter((r) => r.scenario === 'held').sort((a, b) => Number(a.flow_drop_points) - Number(b.flow_drop_points));
+    const sel = held.concat(at.filter((r) => r.scenario === 'iea_2026_path'));
     const R = sel.map((r) => ({
-      label: Number(r.flow_drop_points) === 0 ? 'None' : String(Number(r.flow_drop_points)),
-      sub: Number(r.flow_drop_points) === 82 ? '(2026)' : '',
+      label: r.scenario === 'iea_2026_path' ? '2026' : Number(r.flow_drop_points) === 0 ? 'None' : String(Number(r.flow_drop_points)),
+      sub: r.scenario === 'iea_2026_path' ? '(IEA)' : '',
       q05: Number(r.real_pay_q05), q50: Number(r.real_pay_q50), q95: Number(r.real_pay_q95),
     }));
     const a = sel.length && ok(sel[0].real_pay_actual) ? Number(sel[0].real_pay_actual) : NaN;

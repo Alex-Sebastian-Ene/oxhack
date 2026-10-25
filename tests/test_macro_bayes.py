@@ -173,6 +173,23 @@ def test_cost_only_regime_masks_every_other_group():
     assert np.array_equal(on, mb.simulate(post, st, info2, data, np.array([40]), fut, np.random.default_rng(0), noise=False))
 
 
+def test_gas_channel_takes_each_series_regional_gas():
+    post, st, info, data = toy()
+    post["G"] = np.zeros((3, K, mb.LAGS))
+    post["G"][:, :, 0] = 1.0  # lag 0, both series
+    info["gas_region"] = np.array([0, 1])  # series 0 takes the first gas price, series 1 the second
+    st.gs = np.ones(2)
+    data["gas_m"] = np.zeros((M, 2))
+    gas = np.zeros((1, 1, 12, 2))
+    gas[0, 0, 0] = [0.2, -0.1]  # the first month after the origin
+    out = mb.simulate(post, st, info, data, np.array([40]), np.zeros((1, 1, 12)), np.random.default_rng(0), noise=False, gas=gas)
+    assert out[0, 0, 0] == pytest.approx(0.2)  # series 0, 1 month: its own region's gas move
+    assert out[0, 0, 4] == pytest.approx(-0.1)  # series 1 (published a month late, so nowcast first), 1 month
+    del post["G"]  # without the gas terms the gas argument changes nothing
+    assert mb.simulate(post, st, info, data, np.array([40]), np.zeros((1, 1, 12)), np.random.default_rng(0),
+                       noise=False, gas=gas)[0, 0, 0] == pytest.approx(0.0)
+
+
 def test_regime_months_are_the_cost_of_living_models():
     col = pytest.importorskip("cost_of_living")
     assert [(a, b) for a, b, _ in mb.REGIME] == [(a, b) for a, b, _ in col.SUPPLY]

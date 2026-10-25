@@ -28,12 +28,14 @@ This page covers how they join, and what the joined chain gets right.
       → each knock-on model simulated month by month from each series' last published month
       → an equal-weight mixture of the models' draws
 
-1. **Flow → Brent premium** (`notes/flow-premium.csv`, from `experiments/flow_events.py`; details in `notes/flow-events.md`). The log premium per point of lost Hormuz flow:
-   - starts at 0.28% on day 1 and rises to 0.75% on day 22;
-   - decays with a 9-day half-life to a plateau of 0.39%;
-   - is fitted to all 159 observed trading days of the 2026 closure, and is an assumption (flat at the plateau) beyond them.
+1. **Flow → Brent premium** (`notes/flow-premium-iea.csv`, from `experiments/flow_events.py iea`; details in `notes/hormuz-flow-check.md` and `notes/flow-events.md`). The log premium per point of the IEA's lost strait flow:
+   - starts at 0.25% on day 1 and rises to 0.70% on day 22;
+   - decays with a 4-day half-life to a plateau of 0.51%;
+   - is fitted to the observed trading days of the 2026 closure, each day divided by that day's loss by the IEA's monthly figures (89 points of February's flow in March to 47 in September), and is an assumption (flat at the plateau) beyond them.
 
-   Its 90% band comes from 2019–2025 placebo days. Each scenario path draws one standard-normal score and keeps it on every day: a split normal around the middle of the band, never below zero. So the fan carries the flow link's own uncertainty, not only oil's.
+   A scenario's premium on a day is that day's loss times the curve: a loss held for 12 months for the slider, or the IEA's 2026 path for the replay. Its 90% band comes from 2019–2025 placebo days. Each scenario path draws one standard-normal score and keeps it on every day: a split normal around the middle of the band, never below zero. So the fan carries the flow link's own uncertainty, not only oil's.
+
+   **Why the IEA's count (switched 2026-10-25).** The curve before was fitted per point of PortWatch's trough loss (82 points held for the whole closure; `notes/flow-premium.csv`, plateau 0.39%). The IEA counts dark transits and ship-to-ship transfers too, as the chain's flow input does, and has the strait recovering to 47 points lost by September. A curve only reproduces 2026 with the loss it was fitted with, so the switch changes the curve, the replay's scenario path and the app's 2026 preset together. By the IEA's count an 82-point loss held for 12 months is harsher than 2026 was (its loss averaged 67 points), and gives a log premium of 42% after 12 months against 32% before. `experiments/reserves.py` still uses the trough curve with its 82, until it is restated on the IEA path.
 
    **What is validated:** the Bab el-Mandeb disruption of 2023–24 is out of sample. Scaled to Hormuz-equivalent flow, the 2026 response predicts its Brent move within noise at every horizon from 5 to 120 trading days, and it shows that rerouted barrels (63% went round the Cape) aren't lost barrels.
 
@@ -44,7 +46,7 @@ This page covers how they join, and what the joined chain gets right.
    - Parameters come from `runs/levy/rolling-Y.json`, fitted on daily returns before 1 January of the start month's year.
    - The GARCH volatility is filtered up to the start date.
    - Daily paths use inverse-CDF sampling of the CGMY innovation. The variance is updated along each path, with the scenario's jump included, so the band widens after a shock.
-   - The paths are centred, plus the futures-curve drift where it exists.
+   - The paths are centred, plus the futures-curve drift where it exists: EIA stops publishing the NYMEX futures after 2024-04, so later forecasts have no drift. The EIA Short-Term Energy Outlook's Brent path was tested as a substitute and predicts Brent worse than no drift (4-month MAE 19.5 against 15.4 points after 2024-04; `notes/drift-check.md`), so zero it stays. Where both exist, the futures beat no drift by about 6% at 4 months.
    - The knock-on panel's Brent is the monthly mean of daily spot, so the paths are turned into monthly means too. Month 0 is the start month's actual mean.
 3. **Knock-on members**, each fixed before it was scored:
    - `bayes_own`, the Bayesian pass-through with own-volatility bands (MCMC);
@@ -154,16 +156,17 @@ A separate audit is in `notes/verification.md` on branch `seb/knock-on-verificat
 
 ## The 2026 closure replay (`notes/chain-replay-2026-3m.md`)
 
-Every member is fitted on data up to 2026-01 only, then started from 2026-02, the month before the closure. The table counts 65 published outcomes: all 22 series at 1, 3 and 6 months, where published. The numbers below are for the recommended 3 members, refitted on Iridis with the premium curve of `notes/flow-premium.csv` (jobs 1972657 and 1972768 give the same numbers). Adding `xattn` (`notes/chain-replay-2026-4x.md`) gives what-if 86% and scenario 94%; all five members (`notes/chain-replay-2026.md`) give 83% and 94%. Each replay note also has the joint scores with and without copula shocks.
+Every member is fitted on data up to 2026-01 only, then started from 2026-02, the month before the closure. The table counts 65 published outcomes: all 22 series at 1, 3 and 6 months, where published. The numbers below are for the recommended 3 members, refitted on Iridis with the IEA premium curve (`notes/flow-premium-iea.csv`; job 1974021, and 1974022 with the margin member). Adding `xattn` (`notes/chain-replay-2026-4x.md`) gives what-if 86% and scenario 94%; all five members (`notes/chain-replay-2026.md`) give 83% and 94%. Each replay note also has the joint scores with and without copula shocks.
 
 | Run | What it tests | Actuals inside the 90% band |
 |---|---|---|
 | **What-if:** the Brent path that happened | the knock-on layer on an event it never saw (**out of sample**) | **89% of 65** (91% in the laptop fit) |
-| Lost 82: GARCH-CGMY paths plus the flow scenario | how the chain composes (**in sample for the flow link**: the premium curve was fitted to this event) | 97% of 65 (88% with the earlier, simpler curve) |
+| IEA 2026: GARCH-CGMY paths plus the flow scenario of 2026 as the IEA counts it, month by month | how the chain composes (**in sample for the flow link**: the premium curve was fitted to this event) | 95% of 65 (97% with the trough curve and 82 points held; 88% with the first, simpler curve) |
 | Lost 0: GARCH-CGMY paths, no scenario | what a forecaster without the flow link would have said | 58% of 65 |
 
+- **The IEA switch** (2026-10-25) changes only the scenario run: the what-if and lost 0 don't use the premium, and reproduce exactly. Its mean scaled CRPS improves from 0.615 to 0.600, with slightly narrower bands.
 - **Laptop versus Iridis:** the what-if difference is one of 65 outcomes crossing its band edge. The Iridis refit lands slightly differently from the laptop's, most likely in the MCMC fit; means move by 0.1–0.5 points. The networks themselves reproduce exactly across machines.
-- **The scenario's wider coverage is partly bought with wider bands.** Each path now carries the flow link's own uncertainty. US CPI after 6 months: +2.5 (−0.1..+6.3) under the scenario, against +2.1 (+0.8..+3.8) given the real Brent path. Diesel after 1 month: +13.7 (+1.5..+29.1) now contains the actual +27.9; the earlier curve's band stopped at +19.1.
+- **The scenario's wider coverage is partly bought with wider bands.** Each path carries the flow link's own uncertainty. US CPI after 6 months: +2.6 (−0.3..+6.8) under the IEA 2026 scenario, against +2.1 (+0.8..+3.8) given the real Brent path; actual +2.0. Diesel after 1 month: +13.8 (+1.7..+29.1) contains the actual +27.9, and jet fuel +29.6 (+3.2..+62.7) contains +49.1, where the what-if misses both.
 
 - **US CPI after 6 months:** forecast +2.1 (+0.8..+3.8) given the real Brent path; actual +2.0.
 - **UK CPI after 6 months:** +1.9 (+0.3..+3.6); actual +2.5.
@@ -172,7 +175,7 @@ Every member is fitted on data up to 2026-01 only, then started from 2026-02, th
 - **Without the flow link** the chain misses the closure (58%). That is why the flow → Brent step matters. Its sign and the role of rerouting now have an out-of-sample check (Bab el-Mandeb 2023–24), but its size still rests on this one event.
 - **The 65 outcomes aren't independent.** They come from one event and overlapping horizons, so this is one strong look, not 65.
 
-`notes/chain-scenarios-3m.csv` is the slider's table, from the same fits (`notes/chain-scenarios.csv` is the 4-member version): each series' mean, median and 90% band for 0, 25, 50, 82 and 100 points of lost flow, 1–12 months ahead, with the actual where it's published. Its columns are series, group, flow_drop_points, months_ahead, mean, q05, q50, q95, actual, unit, validated, origin, source, fitted_to and generated. Unemployment and rates are marked `validated=no` (forecast only, no causal oil link). Since flow is already near zero in October 2026, a slider started today would need the *reopening* direction, which no data have tested. The demo should replay February 2026.
+`notes/chain-scenarios-3m.csv` is the slider's table, from the same fits (`notes/chain-scenarios.csv` is the all-member version, `-3m-margins` the app's): each series' mean, median and 90% band for 0, 25, 50, 82 and 100 points of lost flow held for 12 months, 1–12 months ahead, with the actual where it's published. `notes/chain-scenarios-2026-3m.csv` (and `-margins`) has the same columns for the IEA's 2026 path, `flow_drop_points` = `iea_2026_path`: that, not 82 held, should be the app's 2026 preset (handed to the UI lane). The stock-release replays (`*-3m-d2000-margins*`, `experiments/reserves.py`) still use the trough curve and wait to be restated on the IEA path. Its columns are series, group, flow_drop_points, months_ahead, mean, q05, q50, q95, actual, unit, validated, origin, source, fitted_to and generated. Unemployment and rates are marked `validated=no` (forecast only, no causal oil link). Since flow is already near zero in October 2026, a slider started today would need the *reopening* direction, which no data have tested. The demo should replay February 2026.
 
 ## Refined-product margins (`notes/margins-results.md`)
 
@@ -288,6 +291,14 @@ After the origin, D is the calendar in the what-if, D at the origin carried on i
 - **The recheck:** the chain's horizons are 1, 3, 6 and 12 months, so the next outcomes are the 12-month changes, complete with 2027-02 data. None are published yet. When they are, refresh the data and re-run `macro_chain.py regime`: it recomputes the replay's outcomes from the current data and scores horizons 1–6 and 12 apart. Those 12-month outcomes are the only test this variant can get.
 - **Status: not adopted.** `rec` stays recommended until that recheck.
 
+## A gas channel: tested, not adopted (`notes/macro-chain-gas.md`)
+
+Hormuz also carries about a fifth of the world's LNG, and in 2022 the disruption terms' oil multiplier absorbed gas-driven inflation. `bayes_gas` adds each series' regional gas price to `bayes_own` as a second driver: Henry Hub (FRED `MHHNGSP`) for the US series and the US industry costs, the IMF EU gas price (`PNGASEUUSDM`) for the UK and euro area, lags 0–12, pooled like the oil lags. The what-if is given the gas that happened; a forecast draws gas along each oil path (beta × Brent plus each price's own GARCH-t noise; betas 0.21 and 0.07). The keep rule, fixed before scoring: no group worse beyond 2 Newey–West errors on the folds, a lower fold CRPS over all outputs in the what-if, and a 2026 replay what-if no worse.
+
+- **Folds** (all 214 origins have gas data, so this is a real test; `bayes_own` refitted alongside reproduces its earlier run exactly; job 1974005): costs improve (ensemble t −3.1 what-if, −3.5 levy), inflation doesn't move, unemployment and rates get worse (rates t +2.3 in levy and bootstrap). Over all outputs, −0.003 (t −1.7).
+- **The 2026 replay** (job 1974025): worse in the what-if, 0.664 against 0.636, with inflation 0.427 against 0.392 even though EU gas rose; coverage the same.
+- **Verdict: not adopted.** The gas data add to the industry costs, as the disruption terms did, but not to the series the app leads with. The code stays, off unless named.
+
 ## Reproduce
 
 ```bash
@@ -306,6 +317,8 @@ uv run experiments/margins.py report                      # notes/margins-result
 uv run experiments/macro_chain.py fold 0 margins          # ... to 7: the margin member's draws (numpy only, seconds)
 CHAIN_MARGINS=1 CHAIN_MEMBERS=bayes_own,global_lin,global uv run experiments/macro_chain.py report   # -> -margins
 CHAIN_TAG=regime uv run experiments/macro_chain.py regime  # notes/macro-chain-regime.md, after the regime runs below
+uv run experiments/macro_chain.py gas                     # notes/macro-chain-gas.md, after the gas runs below
+uv run experiments/macro_bayes.py drift                   # notes/drift-check.md: futures, STEO or no drift
 ```
 
 On Iridis (`docs/iridis.md` for access). Copy `experiments/`, `cluster/`, `scripts/`, `data/raw/`, `notes/industry/` and `runs/levy/` to a fresh `/scratch/$USER/<folder>`, then:
@@ -324,13 +337,19 @@ MEMBERS="global_lin global" CHAIN_TAG=regime sbatch --array=0-7 cluster/iridis/m
 CHAIN_MEMBERS=bayes_own,bayes_regime,global_lin,global CHAIN_TAG=regime sbatch --array=1 --time=03:00:00 cluster/iridis/macro_replay.slurm
 MEMBERS=bayes_regime_cost CHAIN_TAG=regime sbatch --array=0-7 cluster/iridis/macro_chain.slurm         # the cost-only variant
 CHAIN_MEMBERS=bayes_regime_cost CHAIN_TAG=regimecost sbatch --array=1 cluster/iridis/macro_replay.slurm
+MEMBERS="bayes_own bayes_gas" CHAIN_TAG=gas sbatch --array=0-7 cluster/iridis/macro_chain.slurm         # the gas channel
+CHAIN_MEMBERS=bayes_own,global_lin,global CHAIN_TAG=3m sbatch --array=1 cluster/iridis/macro_replay.slurm   # the replays on the IEA curve
+CHAIN_MEMBERS=bayes_own,global_lin,global CHAIN_TAG=3m CHAIN_MARGINS=1 sbatch --array=1 cluster/iridis/macro_replay.slurm
+CHAIN_MEMBERS=bayes_gas,global_lin,global CHAIN_TAG=3m-gas sbatch --array=1 cluster/iridis/macro_replay.slurm
 ```
+Copy `notes/` up as well for the replays: they read `notes/flow-premium-iea.csv` and `notes/hormuz-iea-flows.csv`.
 
 The runs for this page are all on `amd_student`:
 - jobs 1972484 (`MEMBERS=global_tcn`) and 1972485 (20 seeds), 2026-10-24;
 - jobs 1972767 (v3 folds), 1972768 (replays) and 1972803 (v3 report), 2026-10-25;
 - the margin layer: 1972719 (`margins.py` folds and replay), 1972755 (`fold J margins`), 1972756 and, after the copula merge, 1972934 (the 3-member replay with `CHAIN_MARGINS=1`) and 1972757 (the `margins.py` replay with the premium curve), 2026-10-24/25;
-- the supply-disruption test: 1973498 (Bayesian folds), 1973499 (network folds) and 1973500 (replay), and the cost-only variant 1973890 (folds) and 1973891 (replay), 2026-10-25.
+- the supply-disruption test: 1973498 (Bayesian folds), 1973499 (network folds) and 1973500 (replay), and the cost-only variant 1973890 (folds) and 1973891 (replay), 2026-10-25;
+- the gas channel 1974005 (folds), and the replays on the IEA curve 1974021 (3m), 1974022 (3m with margins), 1974023 (all members), 1974024 (4x) and 1974025 (3m with gas), 2026-10-25.
 
 **Files to copy up as well:**
 - `notes/industry/fred_series.csv`: `macro_data.py` reads the industry series list from it.

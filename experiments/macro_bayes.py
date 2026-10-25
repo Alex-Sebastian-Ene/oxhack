@@ -54,6 +54,8 @@ import argparse
 import json
 import os
 import time
+import urllib.error
+import urllib.request
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -99,6 +101,10 @@ REGIME = (("2022-03-01", "2022-12-01", "Russia's invasion of Ukraine and the emb
 # A flow scenario switches the regime on from this many points of Hormuz flow lost (of a normal 100,
 # about 20 mb/d): 25 points is about 5 mb/d, more supply than Russia lost in 2022
 REGIME_LOST = 25.0
+# Regional gas prices for the gas channel (`fit(..., gas=True)`, the chain's bayes_gas member): US
+# series and the US industry costs take Henry Hub, UK and euro-area series the IMF EU gas price
+GAS = {"us": ("MHHNGSP", "Henry Hub natural gas spot, monthly (EIA via FRED)"),
+       "eu": ("PNGASEUUSDM", "EU natural gas price, monthly (IMF via FRED)")}
 QUICK = False
 
 
@@ -116,7 +122,24 @@ def series_info(data: dict) -> dict:
             "cluster": np.array([clusters.index(c) for c in zip(groups, data["target_lags"])]),
             "clusters": [f"{g}/{n}" for g, n in clusters],
             "vgroup": np.array([order.index(g) for g in groups]),
-            "floor": np.array([SIGMA_FLOOR.get(g, SIGMA_FLOOR_DEFAULT) for g in groups])}
+            "floor": np.array([SIGMA_FLOOR.get(g, SIGMA_FLOOR_DEFAULT) for g in groups]),
+            "gas_region": np.array([1 if k.startswith(("uk_", "ea_")) else 0 for k in keys])}  # index into GAS
+
+
+def add_gas(data: dict) -> dict:
+    """data plus "gas_m": the monthly log change of each GAS price [months, 2], on the months of the
+    monthly arrays. Market prices, known at the end of their month, as Brent is."""
+    idx = month_index(data)
+    cols = [np.log(md.fetch_fred(code)).diff().reindex(idx).to_numpy(float) for code, _ in GAS.values()]
+    return data | {"gas_m": np.column_stack(cols)}
+
+
+def gas_future(data: dict, t: np.ndarray) -> np.ndarray:
+    """The gas changes that happened in the 12 months after each origin [1, len(t), 12, 2] (0 where
+    not yet published): the gas half of the what-if."""
+    g = np.nan_to_num(data["gas_m"])
+    pad = np.vstack([g, np.zeros((mn.OIL_AHEAD, g.shape[1]))])
+    return np.stack([pad[i + 1:i + 1 + mn.OIL_AHEAD] for i in t])[None]
 
 
 class Stats:
@@ -126,6 +149,8 @@ class Stats:
         self.last = last_month
         x = data["oil_m"][1:last_month + 1]
         self.xm, self.xs = 0.0, float(np.nanstd(x))
+        if "gas_m" in data:
+            self.gs = np.nanstd(data["gas_m"][1:last_month + 1], 0) + 1e-8
         self.x2 = float(np.nanmean(x ** 2))
         lv = log_vol(np.nan_to_num(data["oil_m"]) / self.xs)[13:last_month + 1]
         self.vm, self.vs = float(lv.mean()), float(lv.std())
@@ -158,8 +183,13 @@ def design(data: dict, st: Stats, last_month: int) -> dict:
     y = (data["dM"] - st.ym) / st.ys
     u = (np.log(own_ewma(y) + OWN_FLOOR) - st.um) / st.us
     rows = np.arange(13, last_month + 1)  # full oil lags behind every training month
-    return {"Xp": np.maximum(lag, 0)[rows], "Xn": np.minimum(lag, 0)[rows], "v": v[rows],
-            "y": y[rows], "yprev": y[rows - 1], "u": u[rows], "D": regime_all(data)[rows]}
+    out = {"Xp": np.maximum(lag, 0)[rows], "Xn": np.minimum(lag, 0)[rows], "v": v[rows],
+           "y": y[rows], "yprev": y[rows - 1], "u": u[rows], "D": regime_all(data)[rows]}
+    if "gas_m" in data:  # lagged gas changes [S, LAGS] per region (used only by the gas member)
+        g = np.nan_to_num(data["gas_m"]) / st.gs
+        for r, name in enumerate(("Gus", "Geu")):
+            out[name] = np.stack([np.concatenate([np.zeros(l), g[:len(g) - l, r]]) for l in range(LAGS)], 1)[rows]
+    return out
 
 
 def month_index(data: dict) -> pd.DatetimeIndex:
@@ -197,13 +227,47 @@ def regime_scenario(data: dict, t: np.ndarray, lost: float) -> np.ndarray:
     return np.maximum(regime_future(data, t, known=False), float(lost >= REGIME_LOST))
 
 
+STEO_URL = "https://www.eia.gov/outlooks/steo/archives/{}_base.xlsx"  # one vintage a month, released early in it
+
+
+def steo_brent(month: pd.Timestamp) -> pd.Series | None:
+    """Brent spot ($/bbl, row BREPUUS of table 2) by month, as forecast in the EIA Short-Term Energy
+    Outlook released in `month`, so known at its end; None where there is no vintage (they start
+    2013-07). Cached in data/raw/macro/steo/."""
+    path = md.RAW / "steo" / f"{month:%b%y}_base.xlsx".lower()
+    if not path.exists():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            req = urllib.request.Request(STEO_URL.format(path.stem.split("_")[0]), headers=md.UA)
+            path.write_bytes(urllib.request.urlopen(req, timeout=120).read())
+        except urllib.error.HTTPError:
+            return None
+    df = pd.read_excel(path, sheet_name="2tab", header=None)
+    row = df.index[df[0].astype(str).str.strip() == "BREPUUS"][0]
+    vals = pd.to_numeric(df.iloc[row, 2:], errors="coerce").to_numpy(float)
+    first = int(df.iloc[2, 2])  # the first value column is January of this year
+    return pd.Series(vals, index=pd.date_range(f"{first}-01-01", periods=len(vals), freq="MS")).dropna()
+
+
+def steo_drift(month: pd.Timestamp, months: int = 4) -> np.ndarray | None:
+    """Expected Brent log change in each of the `months` months after `month`, from that month's STEO
+    vintage (its own path, month 0 included, so only the slope is used, as with the futures curve)."""
+    s = steo_brent(month)
+    if s is None:
+        return None
+    path = s.reindex(pd.date_range(month, periods=months + 1, freq="MS")).to_numpy(float)
+    return np.diff(np.log(path)) if np.isfinite(path).all() else None
+
+
 def market_inputs(data: dict) -> dict:
     """Market prices for the forecast mode's oil paths, aligned to the monthly arrays.
 
     ovx:   CBOE crude-oil implied volatility (FRED OVXCLS, monthly mean, annualised %), from 2007-05.
     drift: expected Brent log change in months 1..12 after each month, from the slope of the NYMEX
            WTI futures curve (EIA RCLC1-4 monthly means: front month against spot, then contract 2
-           against 1, ...); zero beyond 4 months and where EIA has no data (after 2024-04)."""
+           against 1, ...); zero beyond 4 months and after 2024-04, when EIA stops publishing the
+           series. The STEO's Brent path was checked as a substitute and predicts worse than no drift
+           (drift_check, `macro_bayes.py drift`), so zero it stays."""
     idx = month_index(data)
     ovx = md.fetch_fred("OVXCLS").reindex(idx).values
     spot = md.fetch_fred("DCOILWTICO").reindex(idx).values
@@ -222,10 +286,39 @@ def market_inputs(data: dict) -> dict:
     return {"ovx": ovx, "drift": drift, "has_futures": np.isfinite(curve).all(1), "fetched": fetched}
 
 
+def drift_check(data: dict) -> list[str]:
+    """Which drift predicts Brent's realised change in monthly means best, from 2014: none (a random
+    walk), the futures slope (to 2024-04) or the STEO slope (steo_drift)? Markdown lines."""
+    market = market_inputs(data)
+    idx, oil = month_index(data), data["oil_m"]
+    rows = []
+    for i, m in enumerate(idx):
+        if m < pd.Timestamp("2014-01-01") or i + 4 >= len(oil) or not np.isfinite(oil[i + 1:i + 5]).all():
+            continue
+        st = steo_drift(m)
+        if st is None:
+            continue
+        real, fut = np.cumsum(oil[i + 1:i + 5]), market["has_futures"][i]
+        rows.append({"month": m, "period": "with futures" if fut else "after the futures end", "real1": real[0],
+                     "real4": real[3], "steo1": st[0], "steo4": st.sum(),
+                     "fut1": market["drift"][i, 0] if fut else np.nan, "fut4": market["drift"][i, :4].sum() if fut else np.nan})
+    df = pd.DataFrame(rows)
+    out = ["| Origins | Horizon | No drift: MAE / RMSE | Futures: MAE / RMSE | STEO: MAE / RMSE |", "|---|---|---|---|---|"]
+    for period, g in sorted(df.groupby("period"), key=lambda x: x[1]["month"].min()):
+        for h in (1, 4):
+            cells = []
+            for pred in (0.0, g[f"fut{h}"], g[f"steo{h}"]):
+                e = 100 * (g[f"real{h}"] - pred)
+                cells.append(f"{np.abs(e).mean():.2f} / {np.sqrt((e ** 2).mean()):.2f}" if np.isfinite(e).all() else "–")
+            out.append(f"| {period}: {len(g)} ({g['month'].min():%Y-%m}..{g['month'].max():%Y-%m}) | {h} month{'s' * (h > 1)} | "
+                       + " | ".join(cells) + " |")
+    return out
+
+
 # --- model -----------------------------------------------------------------------------------
 
 def model(Xp, Xn, v, yprev, y, u, D, lagmask, cluster, n_clusters, floor, vgroup, n_vgroups, own, own_us, regime=False,
-          kmask=None, n_kgroups=len(GROUPS)):
+          kmask=None, n_kgroups=len(GROUPS), gas=False, Gus=None, Geu=None, greg=None):
     S, K = y.shape
     mu = numpyro.sample("mu", dist.Normal(0, 0.5).expand([n_clusters, LAGS]).to_event(2))
     tau = numpyro.sample("tau", dist.HalfNormal(0.2).expand([n_clusters, 1]).to_event(2))
@@ -263,6 +356,12 @@ def model(Xp, Xn, v, yprev, y, u, D, lagmask, cluster, n_clusters, floor, vgroup
         m = a + rho * jnp.nan_to_num(yprev) + ((Xp @ B.T) * (1 + alpha) + (Xn @ B.T) * (1 - alpha)) * (1 + kappa * D[:, None])
     else:  # written as before the regime terms, so earlier runs reproduce exactly
         m = a + rho * jnp.nan_to_num(yprev) + (Xp @ B.T) * (1 + alpha) + (Xn @ B.T) * (1 - alpha)
+    if gas:  # the region's gas price, lags 0..12, pooled like the oil lags (greg: 1 for EU gas, 0 for Henry Hub)
+        mu_g = numpyro.sample("mu_g", dist.Normal(0, 0.5).expand([n_clusters, LAGS]).to_event(2))
+        tau_g = numpyro.sample("tau_g", dist.HalfNormal(0.2).expand([n_clusters, 1]).to_event(2))
+        gbz = numpyro.sample("gbz", dist.Normal(0, 1).expand([K, LAGS]).to_event(2))
+        G = numpyro.deterministic("G", (mu_g[cluster] + tau_g[cluster] * gbz) * lagmask)
+        m = m + (Gus @ G.T) * (1 - greg) + (Geu @ G.T) * greg
     # The floor keeps a series that sits still for years (policy rates at zero: most monthly changes
     # are exactly 0) from collapsing its scale towards 0, which strands chains in that spike.
     scale = floor + sigma_raw * jnp.exp(logs)
@@ -270,9 +369,9 @@ def model(Xp, Xn, v, yprev, y, u, D, lagmask, cluster, n_clusters, floor, vgroup
         numpyro.sample("y", dist.StudentT(nu, m, scale), obs=jnp.nan_to_num(y))
 
 
-KEEP = ("B", "a", "rho", "alpha", "sigma", "sigma_raw", "phi", "nu", "omega", "psi", "kappa", "zeta")
+KEEP = ("B", "a", "rho", "alpha", "sigma", "sigma_raw", "phi", "nu", "omega", "psi", "kappa", "zeta", "G")
 SITES = ("mu", "tau", "bz", "a", "rho_raw", "alpha_raw", "sigma_raw", "phi", "nu_m", "omega", "h_eps", "psi_raw",
-         "mu_kappa", "tau_kappa", "kz", "zeta")
+         "mu_kappa", "tau_kappa", "kz", "zeta", "mu_g", "tau_g", "gbz")
 
 
 def regime_mask(info: dict, kind: str | None) -> np.ndarray:
@@ -281,14 +380,17 @@ def regime_mask(info: dict, kind: str | None) -> np.ndarray:
     return np.ones(len(groups)) if kind == "all" else (groups == "cost").astype(float) if kind == "cost" else np.zeros(len(groups))
 
 
-def fit(data: dict, last_month: int, seed: int = 0, vol: str = "oil", regime: str | None = None) -> tuple[dict, Stats, dict, dict]:
+def fit(data: dict, last_month: int, seed: int = 0, vol: str = "oil", regime: str | None = None,
+        gas: bool = False) -> tuple[dict, Stats, dict, dict]:
     """NUTS on months 13..last_month. Returns posterior draws (KEEP), stats, series info, diagnostics.
     regime: add the supply-disruption terms on every series ("all") or on the cost group only ("cost"),
     if the training months hold a disruption (else the fit is the same as without them: nothing would
-    identify kappa and zeta but their priors)."""
+    identify kappa and zeta but their priors). gas: add the regional gas price as a second driver
+    (needs add_gas(data))."""
     info = series_info(data)
     st = Stats(data, last_month)
     d = design(data, st, last_month)
+    assert not gas or "gas_m" in data, "gas=True needs add_gas(data)"
     regime = "all" if regime is True else regime
     assert regime in (None, False, "all", "cost"), f"regime {regime!r}: use 'all' or 'cost'"
     regime = regime if regime and d["D"].any() else None
@@ -303,7 +405,8 @@ def fit(data: dict, last_month: int, seed: int = 0, vol: str = "oil", regime: st
              cluster=jnp.asarray(info["cluster"]), n_clusters=len(info["clusters"]),
              floor=jnp.asarray(info["floor"]), vgroup=jnp.asarray(info["vgroup"]),
              n_vgroups=int(info["vgroup"].max()) + 1 if vol == "cdv" else 0, own=vol == "own", own_us=jnp.asarray(st.us),
-             regime=bool(regime), kmask=jnp.asarray(kmask), n_kgroups=int(info["vgroup"].max()) + 1)
+             regime=bool(regime), kmask=jnp.asarray(kmask), n_kgroups=int(info["vgroup"].max()) + 1,
+             gas=gas, greg=jnp.asarray(info["gas_region"], float))
     grouped = mcmc.get_samples(group_by_chain=True)
     # every sampled site, hyperparameters included (they mix slowest in a non-centred hierarchy)
     summ = numpyro.diagnostics.summary({k: np.asarray(grouped[k]) for k in SITES if k in grouped})
@@ -313,7 +416,8 @@ def fit(data: dict, last_month: int, seed: int = 0, vol: str = "oil", regime: st
     diag = {"seconds": round(time.time() - t0, 1), "chains": CHAINS, "warmup": warm, "samples": samp, "vol": vol,
             "divergences": int(np.sum(extra["diverging"])), "max_r_hat": round(rhat, 3), "min_ess": round(ess, 1),
             "tree_depth_hits": int(np.sum(np.asarray(extra["num_steps"]) >= 2 ** TREE_DEPTH - 1)),
-            "months": int(np.isfinite(d["y"]).any(1).sum()), "regime": regime or False, "regime_months": int(d["D"].sum())}
+            "months": int(np.isfinite(d["y"]).any(1).sum()), "regime": regime or False, "regime_months": int(d["D"].sum()),
+            "gas": gas}
     samples = mcmc.get_samples()
     post = {k: np.asarray(v) for k, v in samples.items() if k in KEEP}
     if "zeta" in post:  # as the model uses it: zero where the terms are masked out
@@ -353,7 +457,7 @@ def oil_paths(data: dict, st: Stats, last_month: int, t: np.ndarray, n: int, rng
 
 
 def simulate(post: dict, st: Stats, info: dict, data: dict, t: np.ndarray, future: np.ndarray, rng,
-             noise: bool = True, regime: np.ndarray | None = None) -> np.ndarray:
+             noise: bool = True, regime: np.ndarray | None = None, gas: np.ndarray | None = None) -> np.ndarray:
     """Draws of every output (target-major, horizon-minor, as data['names']) at origins t (month
     indices): [N, len(t), outputs]. future: oil log changes after each origin, [N or 1, len(t), 12].
 
@@ -363,7 +467,9 @@ def simulate(post: dict, st: Stats, info: dict, data: dict, t: np.ndarray, futur
     month, so a later origin in a test block is less sure of the current volatility.
 
     With the supply-disruption terms (kappa in post), D is the calendar up to the origin and `regime`
-    [len(t), 12] after it (default: D at the origin carried on; see regime_future, regime_scenario)."""
+    [len(t), 12] after it (default: D at the origin carried on; see regime_future, regime_scenario).
+    With the gas channel (G in post), gas changes are the data up to the origin and `gas` [N or 1,
+    len(t), 12, 2] after it (gas_future for the what-if; simulated paths for a forecast)."""
     N, K = len(post["a"]), len(info["keys"])
     O, pmax, H = len(t), int(info["pub_lag"].max()), mn.OIL_AHEAD
     z_all = np.nan_to_num(data["oil_m"]) / st.xs
@@ -388,6 +494,12 @@ def simulate(post: dict, st: Stats, info: dict, data: dict, t: np.ndarray, futur
     if reg:
         D_all = regime_all(data)
         D_ahead = np.repeat(D_all[t][:, None], H, 1) if regime is None else np.asarray(regime, float)  # [O, H]
+    has_gas = "G" in post
+    if has_gas:  # buffers of the last LAGS gas changes per region, newest first [N, O, 2, LAGS]
+        g_all = np.nan_to_num(data["gas_m"]) / st.gs
+        gf = np.broadcast_to((np.zeros((1, O, H, 2)) if gas is None else gas) / st.gs, (N, O, H, 2))
+        gbuf = np.stack([g_all[s0 - 1 - l] for l in range(LAGS)], -1)[None].repeat(N, 0)
+        pick = np.arange(K), info["gas_region"]  # each series' own region
     cum = np.zeros((N, O, K))
     out = np.zeros((N, O, K, len(mn.HORIZONS)))
     for j in range(-pmax + 1, H + 1):  # month s = t + j
@@ -401,6 +513,10 @@ def simulate(post: dict, st: Stats, info: dict, data: dict, t: np.ndarray, futur
             m = a[:, None] + rho[:, None] * yprev + (up + down) * (1 + post["kappa"][:, None, :] * d)
         else:  # written as before the regime terms, so earlier runs reproduce exactly
             m = a[:, None] + rho[:, None] * yprev + up + down
+        if has_gas:
+            gnew = gf[:, :, j - 1] if j >= 1 else np.broadcast_to(g_all[t + j], (N, O, 2))
+            gbuf = np.concatenate([gnew[..., None], gbuf[..., :-1]], -1)
+            m = m + np.einsum("nogl,nkl->nokg", gbuf, post["G"])[..., pick[0], pick[1]]
         if noise:
             logs = phi[:, None] * v[..., None]
             if cdv:
@@ -818,7 +934,7 @@ def write_responses(fin: dict) -> None:
 def main() -> None:
     global QUICK
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("cmd", choices=("check", "fold", "final", "benchmarks", "report"))
+    p.add_argument("cmd", choices=("check", "fold", "final", "benchmarks", "report", "drift"))
     p.add_argument("j", nargs="?", type=int, default=0)
     p.add_argument("--vol", choices=("oil", "cdv", "own"), default="oil",
                    help="oil: volatility follows oil only; cdv: plus a drifting volatility per target group; "
@@ -827,6 +943,20 @@ def main() -> None:
     if a.cmd == "report":
         return report()
     data = mn.make_dataset(mn.V1_BLOCKS)
+    if a.cmd == "drift":
+        lines = ["# The forecast mode's oil drift after the futures end", "",
+                 f"_Generated by `experiments/macro_bayes.py drift` on {datetime.now(UTC).date().isoformat()}. Realised: "
+                 "Brent's change in monthly means (FRED DCOILBRENTEU via `notes/macro-panel.md`). Futures: the NYMEX WTI "
+                 "curve's slope (EIA RCLC1-4), which EIA stops publishing after 2024-04. STEO: the slope of the Brent "
+                 "path in that month's EIA Short-Term Energy Outlook (`data/raw/macro/steo/`, vintages from 2013-07)._", "",
+                 "Error of each drift as a forecast of Brent's cumulative log change, in percentage points (lower is better):", "",
+                 *drift_check(data), "",
+                 "The futures beat no drift at 4 months; the STEO barely does where futures exist and is worse than no drift "
+                 "after they end (it kept forecasting falls through 2025-26). So the forecast mode keeps zero drift after "
+                 "2024-04."]
+        (NOTES / "drift-check.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+        print("\n".join(lines))
+        return
     RUNS.mkdir(parents=True, exist_ok=True)
     meta = {"generated": datetime.now(UTC).isoformat(timespec="seconds"), "job": os.environ.get("SLURM_JOB_ID")}
     tag = {"oil": "bayes", "cdv": "bayes-cdv", "own": "bayes-own"}[a.vol]

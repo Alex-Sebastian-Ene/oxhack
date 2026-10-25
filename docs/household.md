@@ -44,7 +44,7 @@ its source, code, unit, frequency and fetch date.
 | Mortgage burden | Monthly repayment per 100,000 borrowed, as a share of a full-time month of average pay (US 30-year; UK 2-year fixed over 25 years). Typical home: US, 80% of the median price against median household income; UK, 75% of the UK HPI average price against one average earner |
 | Squeezes | From a peak in real pay to its lowest point before the peak was regained, if the fall lasts 6 months or more: depth, length and the month of recovery |
 | UK household groups | HCI 12-month rates by group at key dates (`notes/household-groups.csv`: index and official rate for 11 key categories; weights for all 25 in `notes/household-group-weights.csv`), the rise since 2021-01, spending shares, and the approximate first-round cost of the 2026 energy and fuel moves (share × the group's own category index change) |
-| Hormuz scenarios | Real pay over 3, 6 and 12 months from 2026-02 under the knock-on chain's flow scenarios (`notes/chain-scenarios-3m.csv`). Nominal pay keeps its pace of the 12 months before the origin, so the band is the CPI band. Set against what happened |
+| Hormuz scenarios | Real pay over 3, 6 and 12 months from 2026-02 under the knock-on chain's flow scenarios: each loss held for 12 months (`notes/chain-scenarios-3m.csv`) and 2026 as the IEA counts it month by month (`notes/chain-scenarios-2026-3m.csv`; column `scenario` in `notes/household-scenarios.csv`). Nominal pay keeps its pace of the 12 months before the origin, so the band is the CPI band. Set against what happened |
 
 ## What it shows (see `notes/household-costs.md` for every table)
 
@@ -63,7 +63,7 @@ its source, code, unit, frequency and fetch date.
 - **Mortgages:** a UK 2-year fixed repayment per £100,000 rose from 15.8% of an average month's pay in 2021 to 21.1% in 2023.
 - **2026:**
   - From February 2026, motor fuel rose 25–31% in all three regions. Real pay fell 0.9% in the US (to September), 1.0% in the UK (to August) and 0.3% in the euro area (first to second quarter).
-  - Given the chain's CPI paths, real pay in the 82-points-lost scenario was forecast at −0.6% (US) and −0.4% (UK) after 3 months. The actuals were −1.1% and −1.0%, inside the bands.
+  - Given the chain's CPI paths for 2026 as the IEA counts it (89 points of strait flow lost in March to 47 in September), real pay was forecast at −0.7% (US) and −0.5% (UK) after 3 months, and −0.3% and −0.2% after 6. The actuals were −1.1% and −1.0%, then −0.5% and −1.0%, inside the bands. (Before the chain switched to the IEA's count, the table held 82 points as "2026".)
 
 ## A Hormuz closure by UK household group (`notes/household-group-scenarios.csv`)
 
