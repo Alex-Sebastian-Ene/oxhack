@@ -1,6 +1,7 @@
 # Runs after patch_strait.py on hormuz-flow.html.
-# Steel and aluminium get Seb's OXH-5 oil links (notes/steel-aluminium-responses.csv, branch claude/upbeat-jones-ba5f1a,
-# commit e0d122f). Linear links: a +10% Brent move gives the mean below after 12 months, a -10% move the mirror image.
+# Steel and aluminium get Seb's OXH-5 oil links (notes/steel-aluminium-responses.csv,
+# branch seb/OXH-5-steel-aluminium-links, commit 8619e9c). Linear links: a +10% Brent move gives the mean below after
+# 12 months, a -10% move the mirror image.
 # The band is mean ± 1.645 standard errors, the 90% interval of the average effect, same as the other products.
 import pathlib, subprocess
 
@@ -16,7 +17,7 @@ def sub(old, new, count=1):
     s = s.replace(old, new)
 
 
-SRC = ("Seb's linear oil link, notes/steel-aluminium-responses.csv on claude/upbeat-jones-ba5f1a, commit e0d122f "
+SRC = ("Seb's linear oil link, notes/steel-aluminium-responses.csv on seb/OXH-5-steel-aluminium-links, commit 8619e9c "
        "(experiments/metal_links.py; FRED monthly 2001-2026, fetched 2026-10-24)")
 METALS = {
     # series, mean, SE (12 months, per +10% Brent), mean and SE with world demand held fixed, what happened in the 2026 closure

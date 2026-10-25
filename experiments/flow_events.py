@@ -90,7 +90,7 @@ NEWS = [
 CURVE_DAYS = 262  # the most trading days in 12 months (oil_paths.premium's horizon)
 D_PEAK_GRID = range(3, 41)
 HALF_LIFE_GRID = np.r_[np.arange(2, 40, 1), np.arange(40, 400, 5)]
-# oil_paths.premium as of commit 7706979, for comparison (not imported: oil_paths pulls in torch)
+# oil_paths.premium as of commit 1b66286, for comparison (not imported: oil_paths pulls in torch)
 OP_E_PEAK, OP_E_LATE, OP_D_PEAK, OP_D_LATE = np.log(1.67) / 82.0, np.log(1.222) / 82.0, 20, 120
 
 
@@ -256,7 +256,7 @@ def premium_curve(y: np.ndarray, noise: np.ndarray, lost: float, days: int = CUR
 
 
 def chain_premium(days: int = CURVE_DAYS) -> np.ndarray:
-    """oil_paths.premium(1, days) as of commit 7706979: the chain's current curve per point."""
+    """oil_paths.premium(1, days) as of commit 1b66286: the chain's current curve per point."""
     d = np.arange(1, days + 1, dtype=float)
     k = np.log(OP_E_PEAK / OP_E_LATE) / (OP_D_LATE - OP_D_PEAK)
     return np.where(d <= OP_D_PEAK, OP_E_PEAK * d / OP_D_PEAK,
