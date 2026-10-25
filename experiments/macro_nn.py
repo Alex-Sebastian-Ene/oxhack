@@ -559,6 +559,10 @@ VARIANTS = {
     "v2_no_pipeline": {"blocks": tuple(b for b in md.BLOCKS if b != "pipeline"), "archs": V2_ARCHS},
     "v2_no_drivers": {"blocks": tuple(b for b in md.BLOCKS if b != "drivers"), "archs": V2_ARCHS},
     "v2_no_ais_pipeline": {"blocks": tuple(b for b in md.BLOCKS if b not in ("ais", "pipeline")), "archs": V2_ARCHS},
+    # Oil stocks (macro_data's optional `stocks` block: US gasoline, distillate and total stocks): compare `v1_stocks` with `full`.
+    "v1_stocks": {"blocks": V1_BLOCKS + ("stocks",)},
+    "v1_fuel": {"blocks": V1_BLOCKS + ("fuel",)},  # with `v1_fuel_stocks`: what stocks add next to the fuel block
+    "v1_fuel_stocks": {"blocks": V1_BLOCKS + ("fuel", "stocks")},
     # The anchored model on the reduced set: compare with `full` and `no_ais` above.
     "anchored": {"anchored": True},
     "anchored_no_ais": {"blocks": tuple(b for b in V1_BLOCKS if b != "ais"), "anchored": True},

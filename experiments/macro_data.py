@@ -126,6 +126,12 @@ SERIES = [
     Series("distillate_demand", "eia", "WDIUPUS2", "fuel", "dlog", 0, name="US distillate product supplied (EIA)"),
     Series("crude_imports", "eia", "WCEIMUS2", "fuel", "dlog", 0, name="US crude oil imports (EIA)"),
     Series("crude_output", "eia", "WCRFPUS2", "fuel", "dlog", 0, name="US crude oil production (EIA)"),
+    # Oil stocks beyond the fuel block (EIA weekly, no key needed), US. Optional: not in BLOCKS, so the
+    # runs so far are unchanged; macro_nn's `v1_stocks` and `v1_fuel_stocks` variants test them.
+    Series("gasoline_stocks", "eia", "WGTSTUS1", "stocks", "dlog", 0, name="US motor gasoline stocks (EIA)"),
+    Series("distillate_stocks", "eia", "WDISTUS1", "stocks", "dlog", 0, name="US distillate fuel oil stocks (EIA)"),
+    Series("total_stocks", "eia", "WTTSTUS1", "stocks", "dlog", 0,
+           name="US crude oil and petroleum product stocks, including the SPR (EIA)"),
     # Pipelines around Hormuz, seen from AIS: tanker exports at the pipelines' sea ends against exports
     # from ports inside the Gulf (IMF PortWatch daily ports data, from 2019).
     Series("bypass_exports", "ports", "port570,port362", "pipeline", "share", 0,
@@ -144,6 +150,7 @@ SERIES = [
     Series("wages", "fred", "ECIWAG", "drivers", "dlog", 2, name="US employment cost index, wages (BLS)", freq="Q"),
 ]
 BLOCKS = ("oil", "ais", "pipeline", "fuel", "drivers", "us", "uk", "ea", "industry")
+OPTIONAL = ("stocks",)  # registered and fetched, but only used by variants that ask for them
 MASKED = ("ais", "pipeline")  # blocks that start late (2019) and get an availability flag
 
 
@@ -325,7 +332,8 @@ def build_panel(blocks=BLOCKS, ignore_lags: bool = False):
             x.index = x.index + pd.offsets.MonthBegin(2)  # value belongs to the quarter's last month
             x = x.resample("MS").ffill()
         raw[s.key] = x
-        fetched = min((p.stat().st_mtime for p in RAW.glob("*")), default=time.time())
+        own = [p.stat().st_mtime for p in RAW.glob(f"{s.source}_{s.code}.*")]  # its own cache file, where named by its id
+        fetched = max(own) if own else min((p.stat().st_mtime for p in RAW.glob("*")), default=time.time())
         prov.append({"series": s, "first": x.dropna().index.min(), "last": x.dropna().index.max(),
                      "fetched": datetime.fromtimestamp(fetched, UTC).date().isoformat()})
     idx = pd.date_range(START, max(v.index.max() for v in raw.values()), freq="MS")
@@ -357,7 +365,7 @@ def build_panel(blocks=BLOCKS, ignore_lags: bool = False):
 
 
 def main() -> None:
-    F, L, prov = build_panel()
+    F, L, prov = build_panel(BLOCKS + OPTIONAL)
     today = datetime.now(UTC).date().isoformat()
     out = [
         "# Macro panel: what goes into the knock-on models",
