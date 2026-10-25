@@ -823,6 +823,11 @@ body.hz-mandeb #link-card, body.hz-mandeb #pw-card, body.hz-mandeb #cap-card { d
 .hz-hh .hz-hl { margin: 0; font-size: 16px; line-height: 1.6; color: var(--text); text-wrap: pretty; }
 .hz-hh .hz-hl b { color: var(--oil-soft); }
 .hz-hh .hz-hlnums { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 8px; }
+/* one bar for the closure and the months: it sets the short version and cards 2 and 3 */
+.hz-hh .hz-bar { grid-column: 1 / -1; gap: 6px; }
+.hz-hh .hz-bar .ctrl { gap: 8px 18px; }
+.hz-hh .hz-bar .bg { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.hz-hh .hz-bar .bl { font: 600 11px var(--pix); letter-spacing: .8px; text-transform: uppercase; color: var(--oil-soft); }
 .hz-hh .hz-t { display: flex; flex-direction: column; gap: 3px; padding: 10px 12px; background: var(--panel2); border: 2px solid var(--ink); }
 .hz-hh .hz-t b { font: 400 30px/1 var(--mono); color: var(--text); }
 .hz-hh .hz-t.hurt b { color: var(--harm); }
@@ -1021,12 +1026,12 @@ a.hz-src:hover { background: #163257; }
 .hz-mod code { font: 15px var(--mono); color: var(--muted); }
 .hz-mod .mono { font-family: var(--mono); }
 
-/* the page's header: what the cards are, how to read skill, and a jump list */
+/* the page's header: the title with its info key (how to read skill), one line, and the groups as tabs */
 .hz-mtop { gap: 8px; }
+.hz-mtop .mtt { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .hz-mtop h2 { font: 700 21px var(--pix); color: var(--text); letter-spacing: .4px; }
-.hz-mtop .lede { font-size: 14.5px; line-height: 1.45; color: var(--text); }
-.hz-mtop .how { font-size: 13.5px; line-height: 1.45; color: var(--muted); }
-.hz-mtop .how b, .hz-mtop .lede b { color: var(--oil-soft); font-weight: 600; }
+.hz-mtop .lede { font-size: 14px; line-height: 1.45; color: var(--muted); }
+.hz-mtop .lede b { color: var(--seen-soft); font-weight: 700; }
 /* the groups as tabs: one group of cards shows at a time */
 .hz-mtop .hz-mtabs { display: flex; width: 100%; margin-top: 4px; }
 .hz-mtop .hz-mtabs button { flex: 1 1 0; min-height: 40px; padding: 0 10px; font-size: 14px; white-space: nowrap; }
@@ -1065,19 +1070,27 @@ a.hz-src:hover { background: #163257; }
 .hz-mc .st .v.neg { color: #ff8a7a; }
 .hz-mc .st .v small { font-size: 19px; color: var(--muted); white-space: nowrap; }
 .hz-mc .st .l { font-size: 14px; line-height: 1.3; color: var(--text); }
-.hz-mc .st .n { font-size: 12.5px; line-height: 1.35; color: var(--muted); }
+.hz-mc .st[title] { cursor: help; }
 .hz-mc .mf { font: 400 15px/1.15 var(--mono); color: var(--faint); letter-spacing: .2px; overflow-wrap: anywhere; }
 .hz-mc .st .mf { margin-top: auto; padding-top: 3px; }
 
-/* Tested / Can't */
-.hz-mc .row { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 8px; align-items: start; }
-.hz-mc .tl { font: 600 11px var(--pix); letter-spacing: .9px; text-transform: uppercase; color: var(--oil-soft); padding-top: 3px; }
-.hz-mc .lim .tl { color: #ff8a7a; }
-.hz-mc .row p, .hz-mc .row ul { font-size: 13.5px; line-height: 1.45; color: var(--muted); }
-.hz-mc .row ul { margin: 0; padding-left: 16px; }
-.hz-mc .row li + li { margin-top: 3px; }
-.hz-mc .row b { color: var(--text); font-weight: 600; }
-.hz-mc .files { font-size: 12px; color: var(--faint); border-top: 2px solid var(--line); padding-top: 6px; display: flex; flex-wrap: wrap; gap: 2px 14px; align-items: baseline; }
+/* the card's foot: how it was tested and what it can't do open the card's panel at that section */
+.hz-mc .mfoot { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; padding-top: 2px; }
+.hz-mc .mk { min-height: 32px; padding: 0 10px 0 8px; gap: 7px; font-size: 13px; color: var(--muted); background: var(--panel) !important; }
+.hz-mc .mk::before { content: ""; width: 8px; height: 8px; flex: none; background: var(--ok); box-shadow: 0 0 0 1px var(--ink); }
+.hz-mc .mk.lim::before { background: #ff8a7a; }
+.hz-mc .mk .mono { font-size: 16px; color: var(--text); }
+.hz-mc .mk:hover { color: var(--text); background: var(--panel2) !important; }
+
+/* the card's panel, in the shared sheet: each number with its context and the note it came from */
+.sheet:has(.hz-mpanel) { width: min(540px, calc(100% - 24px)); max-height: 78%; }
+#sheet .hz-mpanel .tagk { font: 400 16px var(--mono); color: var(--muted); border: 1px dashed var(--line2); padding: 0 6px; letter-spacing: .5px; }
+#sheet .hz-nums { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+#sheet .hz-nums li { display: flex; flex-direction: column; gap: 2px; padding: 7px 10px; background: var(--panel2); border: 2px solid var(--ink); box-shadow: inset 3px 0 0 var(--seen); }
+#sheet .hz-nums .v { font: 400 22px/1.05 var(--mono); color: var(--text); }
+#sheet .hz-nums .l { font-size: 13.5px; line-height: 1.35; color: var(--text); }
+#sheet .hz-nums .n { font-size: 12.5px; line-height: 1.4; color: var(--muted); }
+#sheet .hz-mpanel code { font: 15px var(--mono); color: var(--muted); }
 
 /* the knock-on links across folds */
 .hz-mc .lt { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -1112,26 +1125,26 @@ a.hz-src:hover { background: #163257; }
 @media (max-width: 720px) { .hz-mod { overflow: visible; } }
 @media (max-width: 560px) {
   .hz-mc .st .v { font-size: 27px; }
-  .hz-mc .row { grid-template-columns: 1fr; gap: 2px; }
   .hz-mc .mb .br { grid-template-columns: minmax(0, 9em) minmax(0, 1fr) 54px; gap: 6px; font-size: 12.5px; }
-  .hz-mc .lt td small { display: none; }
 }
 @media (max-width: 380px) { .hz-mc .stats { grid-template-columns: 1fr; } }
+/* the group heading repeats the selected tab: kept for screen readers only */
+.hz-mgrp .gt { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 /* Info keys and panels for the Households and Strait cards (households.js, strait.js). The notes that used to sit
    under each card (sources, fetch dates, method, caveats) live behind a blue "i" key and open in the sheet, laid out
    as short sections with one line per source. Blue is the app's colour for information; amber stays for oil. */
-#hz-households .hz-ch .hz-i, #strait-stage .hud .ib[data-info], #strait-stage .info-map {
+#hz-households .hz-ch .hz-i, #hz-models .hz-i, #strait-stage .hud .ib[data-info], #strait-stage .info-map {
   background: #1d5fbf !important; color: #ffffff !important; border: 2px solid var(--ink) !important; border-radius: 0 !important;
   box-shadow: inset -2px -2px 0 #123f80, inset 2px 2px 0 #5aa9ff, 2px 2px 0 rgba(0, 0, 0, .55) !important;
 }
-#hz-households .hz-ch .hz-i, #strait-stage .hud .ib[data-info] { width: 30px; min-height: 30px; padding: 0; }
-#hz-households .hz-ch .hz-i:hover, #strait-stage .hud .ib[data-info]:hover, #strait-stage .info-map:hover { background: #2b74dd !important; color: #ffffff !important; }
-#hz-households .hz-ch .hz-i:active, #strait-stage .hud .ib[data-info]:active, #strait-stage .info-map:active {
+#hz-households .hz-ch .hz-i, #hz-models .hz-i, #strait-stage .hud .ib[data-info] { width: 30px; min-height: 30px; padding: 0; }
+#hz-households .hz-ch .hz-i:hover, #hz-models .hz-i:hover, #strait-stage .hud .ib[data-info]:hover, #strait-stage .info-map:hover { background: #2b74dd !important; color: #ffffff !important; }
+#hz-households .hz-ch .hz-i:active, #hz-models .hz-i:active, #strait-stage .hud .ib[data-info]:active, #strait-stage .info-map:active {
   transform: translate(1px, 1px); box-shadow: inset 2px 2px 0 #123f80 !important;
 }
-#hz-households .hz-ch .hz-i svg, #strait-stage .hud .ib[data-info] svg, #strait-stage .info-map svg { width: 18px; height: 18px; stroke: #ffffff; stroke-width: 2.6; }
-#hz-households .hz-ch .hz-i:focus-visible, #strait-stage .hud .ib[data-info]:focus-visible { outline: 2px solid var(--seen-soft); outline-offset: 2px; }
+#hz-households .hz-ch .hz-i svg, #hz-models .hz-i svg, #strait-stage .hud .ib[data-info] svg, #strait-stage .info-map svg { width: 18px; height: 18px; stroke: #ffffff; stroke-width: 2.6; }
+#hz-households .hz-ch .hz-i:focus-visible, #hz-models .hz-i:focus-visible, #strait-stage .hud .ib[data-info]:focus-visible { outline: 2px solid var(--seen-soft); outline-offset: 2px; }
 .hz-tucked { display: none !important; }
 #strait-stage .tagc.hz-cached { margin-left: 4px; }
 
@@ -1146,9 +1159,9 @@ a.hz-src:hover { background: #163257; }
 .sheet .hz-sec h4 { margin: 0; font: 700 11.5px var(--pix); letter-spacing: 1px; text-transform: uppercase; color: var(--seen-soft); }
 .sheet .hz-sec p { margin: 0; color: var(--text); font-size: 14px; line-height: 1.55; }
 .sheet .hz-sec p + p { color: var(--muted); }
-.sheet ul:not(.hz-srcl) { list-style: none; padding-left: 0; }
-.sheet ul:not(.hz-srcl) li { position: relative; padding-left: 16px; margin: 6px 0; }
-.sheet ul:not(.hz-srcl) li::before { content: ""; position: absolute; left: 2px; top: .62em; width: 6px; height: 6px; background: var(--seen); }
+.sheet ul:not(.hz-srcl):not(.hz-nums) { list-style: none; padding-left: 0; }
+.sheet ul:not(.hz-srcl):not(.hz-nums) li { position: relative; padding-left: 16px; margin: 6px 0; }
+.sheet ul:not(.hz-srcl):not(.hz-nums) li::before { content: ""; position: absolute; left: 2px; top: .62em; width: 6px; height: 6px; background: var(--seen); }
 .sheet .hz-srcl { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .sheet .hz-srcl li { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 1px 10px; align-items: baseline; padding: 7px 10px;
   background: var(--panel2); border: 2px solid var(--ink); box-shadow: inset 3px 0 0 var(--seen); }
@@ -5051,7 +5064,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
     return rampOf(st.mat)(f);
   }
   const NOSCORE = new Set(["Antarctica", "Fr. S. Antarctic Lands"]);
-  function fillFor(name) { if (NOSCORE.has(name)) return "#243049"; if (st.mat) return matShade(name); const v = calc(name).score; return v == null ? NODATA : color(v); }
+  function fillFor(name) { if (NOSCORE.has(name)) return NODATA; if (st.mat) return matShade(name); const v = calc(name).score; return v == null ? NODATA : color(v); }
   // 12-month price change (%) for the current Brent vs pre-war, with the 90% interval of the average effect
   // Seb's recommended chain (docs/chain.md): scenario table, notes/chain-scenarios-3m-margins.csv, as
   // series -> lost-flow points -> months ahead -> [mean, q05, q95], in 100 x log change (pp for unemployment)
@@ -5174,7 +5187,8 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
       return `<b>${iso ? flagImg(iso) + " " : ""}${escH(name === "United States of America" ? "United States" : name)}</b>${row("production", "Made")}${row("exports", "Shipped")}${VIA[name] ? `<span>${VIA[name]}</span>` : ""}`;
     }
     const k = calc(name);
-    return `<b>${isoOf[name] ? flagImg(isoOf[name]) + " " : ""}${escH(name === "United States of America" ? "United States" : name)}</b><span class="mono">${cutTxt(k)}</span><span>Fuel <span class="mono">${pct(k.fuel)}${k.d.pt.own ? "" : " (pooled)"}</span></span>`;
+    const pr = COIL.prices[isoOf[name]], al = pr && pr.all && pr.all.now, fd = pr && pr.food && pr.food.now;
+    return `<b>${isoOf[name] ? flagImg(isoOf[name]) + " " : ""}${escH(name === "United States of America" ? "United States" : name)}</b><span class="mono ${k.score > 0.5 ? "hurt" : k.score < -0.5 ? "gain" : ""}">${cutTxt(k)}</span><span>Fuel <span class="mono">${pct(k.fuel)}${k.d.pt.own ? "" : " (pooled)"}</span></span>${al ? `<span>Prices <span class="mono">${pctP(al.v)}</span>, food <span class="mono">${fd ? pctP(fd.v) : "–"}</span> (${ymLabel(al.month)})</span>` : ""}`;
   }
 
   // ------------------------------------------------------------ 3D globe (built the first time 3D is chosen)
@@ -5347,7 +5361,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
   }
 
   // ------------------------------------------------------------ colour
-  const STOPS = [[-40, "#3ff0c8"], [-15, "#1e9e88"], [0, "#2b3653"], [10, "#6e3a33"], [25, "#b8492e"], [40, "#ff5a33"], [65, "#ffcf5a"]];
+  const STOPS = [[-40, "#3ff0c8"], [-15, "#1e9e88"], [0, "#2b3653"], [8, "#e8c547"], [25, "#ff9a2e"], [45, "#ff4a2e"], [65, "#d6141a"]];
   function color(v) {
     if (v <= STOPS[0][0]) return STOPS[0][1];
     for (let i = 1; i < STOPS.length; i++) if (v <= STOPS[i][0]) {
@@ -5631,9 +5645,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
       return;
     }
     const r = svgEl.node().getBoundingClientRect();
-    const pr = COIL.prices[isoOf[name]], al = pr && pr.all && pr.all.now, fd = pr && pr.food && pr.food.now;
-    if (NOSCORE.has(name)) t.innerHTML = tipHtml(name); else t.innerHTML = `<b>${name}</b><span class="mono ${k.score > 0.5 ? "hurt" : k.score < -0.5 ? "gain" : ""}">${cutTxt(k)}</span>
-      <span>Fuel <span class="mono">${pct(k.fuel)}${k.d.pt.own ? "" : " (pooled)"}</span></span>${al ? `<span>Prices <span class="mono">${pctP(al.v)}</span>, food <span class="mono">${fd ? pctP(fd.v) : "–"}</span> (${ymLabel(al.month)})</span>` : ""}`;
+    t.innerHTML = tipHtml(name);
     t.hidden = false;
     let x = e.clientX - r.left + 14, y = e.clientY - r.top + 14;
     if (x + t.offsetWidth > r.width - 8) x = e.clientX - r.left - t.offsetWidth - 14;
@@ -6377,13 +6389,14 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
       line = into ? `${escH(m.name)}: biggest outside input is ${escH((MAT.inputs[into.input] || {}).name || into.input)} from ${flagImg(into.from)} ${escH(nmIso(into.from))}, ${Math.round(into.share * 100)}%.`
         : `${escH(m.name)}: no sourced supplier split for ${escH(nmIso(iso) || name)}.`;
     } else {
-      const P = COIL.prices[iso] || {}, fd = P.food, al = P.all, g = fd && fd.out && fd.out["12"];
+      const P = COIL.prices[iso] || {}, fd = P.food, al = P.all, g = fd && fd.out && fd.out["12"], ga = al && al.out && al.out["12"];
       kpis = kpi(g ? pctP(g[1]) : "–", g ? `groceries by ${ymAdd(fd.from, 12)}` : "groceries: not in our data", g && g[1] > 0.05 ? "hurt" : "")
-        + kpi(pct(k.fuel), k.d.pt.own ? "fuel at the pump" : "fuel, pooled estimate", k.fuel > 0.005 ? "hurt" : k.fuel < -0.005 ? "gain" : "")
+        + kpi(ga ? pctP(ga[1]) : "–", ga ? `all prices by ${ymAdd(al.from, 12)}` : "all prices: not in our data", ga && ga[1] > 0.05 ? "hurt" : "")
         + kpi(k.cut ? k.cut.txt : "–", k.cut ? k.cut.lab : "oil cut off: not in our data", k.score > 0.5 ? "hurt" : k.score < -0.5 ? "gain" : "");
       line = k.kind === "gulf" ? `About ${Math.round(k.d.gulf * 100)}% of its exports must pass the strait.` : k.kind === "exp" ? "Sells oil abroad, so a higher price brings in revenue." : (coverOf(name) ? `Oil stocks: ${coverOf(name).txt}. ` : "") + "Pick a product above to see what it makes and trades.";
       line = (al && al.now ? `Prices now <b>${pctP(al.now.v)}</b>, food <b>${fd && fd.now ? pctP(fd.now.v) : "–"}</b> on a year earlier (${ymLabel(al.now.month)}, FAOSTAT). ` : "")
-        + (k.kind === "imp" && k.hz != null ? `${Math.round(k.hz * 100)}% of its oil imports came from the Gulf. ` : "") + line + predHtml(name);
+        + (k.kind === "imp" && k.hz != null ? `${Math.round(k.hz * 100)}% of its oil imports came from the Gulf. ` : "")
+        + `Fuel at the pump ${pct(k.fuel)}${k.d.pt.own ? "" : " (pooled estimate)"}. ` + line + predHtml(name);
     }
     $("cp-kpis").innerHTML = kpis;
     $("cp-line").innerHTML = line;
@@ -7021,7 +7034,7 @@ window.HZHouseholds = (() => {
   const SEV_NAME = { none: "No closure", closure_25: "A quarter of 2026's closure", closure_50: "Half of 2026's closure", closure_100: "A 2026-sized closure" };
   const sevName = (sev) => (sev === "closure_100" && onPath() ? "The 2026 closure" : SEV_NAME[sev]);
   const lostEl = $("lost");
-  const st = { lost: lostEl ? Number(lostEl.value) : 82, h: 12, gh: 6, outlook: false, gtype: "income decile" };
+  const st = { lost: lostEl ? Number(lostEl.value) : 82, h: 12, outlook: false, gtype: "income decile" };
   const near = (arr, v) => arr.reduce((a, b) => (Math.abs(b - v) < Math.abs(a - v) ? b : a));
   const dropFor = (lost) => (onPath() && HAS_IEA ? "iea" : near(DROPS, lost));
   const sevFor = (lost) => (onPath() ? "closure_100" : SEV.reduce((a, b) => (Math.abs(b[1] * AVG26 - lost) < Math.abs(a[1] * AVG26 - lost) ? b : a))[0]);
@@ -7071,6 +7084,11 @@ window.HZHouseholds = (() => {
       <p class="hz-hl" id="hh-hl"></p>
       <div class="hz-hlnums" id="hh-hlnums"></div>
     </section>
+    <section class="card hz-bar" id="hh-bar" aria-label="Closure and months for the short version and cards 2 and 3">
+      <div class="ctrl"><span class="bg"><span class="bl">Flow lost</span><div class="seg presets" role="group" aria-label="Points of flow lost">${drops}</div></span>
+        <span class="bg"><span class="bl">Months on</span><div class="seg" role="group" aria-label="Months on">${hs("hh", [3, 6, 12])}</div></span></div>
+      <p class="src">Sets the short version and cards 2 and 3.</p>
+    </section>
     <section class="card" id="hh-pay">
       ${head(1, "Where did households start?", REAL, "hh-pay-src")}
       <p class="lede" id="hh-pay-lede"></p>
@@ -7081,9 +7099,7 @@ window.HZHouseholds = (() => {
     </section>
     <section class="card" id="hh-scen">
       ${head(2, "What does a closure do to pay?", MODEL, "hh-scen-src")}
-      <p class="lede">Change in real pay from Feb 2026, for each amount of Hormuz flow lost.</p>
-      <div class="ctrl"><div class="seg presets" role="group" aria-label="Points of flow lost">${drops}</div>
-        <div class="seg" role="group" aria-label="Months on">${hs("hh", [3, 6, 12])}</div></div>
+      <p class="lede">Change in real pay from Feb 2026, for the amount of Hormuz flow lost picked above.</p>
       <p class="src" id="hh-scen-pick"></p>
       <div class="rows" id="hh-scen-rows"></div>
       <div class="keys"><span><i style="background:var(--muted)"></i>90% range</span><span><i style="background:var(--text);width:4px;height:12px;vertical-align:-1px"></i>Middle forecast</span><span><i style="background:#7ee0b0;width:4px;height:12px;vertical-align:-1px"></i>What happened</span></div>
@@ -7092,9 +7108,7 @@ window.HZHouseholds = (() => {
     <section class="card" id="hh-gs">
       ${head(3, "Who is hit hardest?", MODEL, "hh-gs-src")}
       <p class="lede" id="hh-gs-lede"></p>
-      <div class="ctrl"><div class="seg presets" role="group" aria-label="Closure size">${SEV.map(([k, s]) => `<button type="button" data-hsev="${k}" aria-pressed="false">${k === "none" ? "None" : `${s * 100}%`}</button>`).join("")}</div>
-        <div class="seg" role="group" aria-label="Months on">${hs("hgh", [3, 6, 12])}</div>
-        <button type="button" class="hz-outlook" data-hout aria-pressed="false" title="The year ahead from Sep 2026">Year ahead</button></div>
+      <div class="ctrl"><button type="button" class="hz-outlook" data-hout aria-pressed="false" title="The year ahead from Sep 2026">Year ahead</button></div>
       <p class="src" id="hh-gs-pick"></p>
       <div class="keys">${PARTS.map(([, l, c]) => `<span><i style="background:${c}"></i>${l}</span>`).join("")}</div>
       <div class="rows" id="hh-gs-rows"></div>
@@ -7232,16 +7246,14 @@ window.HZHouseholds = (() => {
       + sec("What happened", `<p>${acts.length ? `The green marks (${acts.map((x) => REG[x.g].short).join(", ")}) use the same pay and price series as card 1.` : `Nothing to compare with yet at ${st.h} months.`}</p>`);
   }
   function gsCard() {
-    const sev = sevFor(st.lost), scen = st.outlook ? "outlook" : sev, h = st.gh;
-    page.querySelectorAll("[data-hsev]").forEach((b) => b.setAttribute("aria-pressed", String(!st.outlook && b.dataset.hsev === sev)));
-    page.querySelectorAll("[data-hgh]").forEach((b) => b.setAttribute("aria-pressed", String(+b.dataset.hgh === h)));
+    const sev = sevFor(st.lost), scen = st.outlook ? "outlook" : sev, h = st.h;
     page.querySelector("[data-hout]").setAttribute("aria-pressed", String(st.outlook));
     $("hh-gs-lede").innerHTML = st.outlook ? "Each group's costs over the year ahead from Sep 2026, split by what drives them."
       : "What the closure adds to each group's costs, on top of no closure, split by what drives it.";
     const pts = SEV.find((s) => s[0] === sev)[1] * AVG26;
     $("hh-gs-pick").innerHTML = st.outlook ? `The year ahead from Sep 2026, ${h} months on. Change in costs, %.`
       : onPath() ? `The 2026 closure as it happened, from Feb 2026, ${h} months on.`
-      : `${SEV_NAME[sev]}${sev === "none" ? "" : ` (about ${Math.round(pts)} points of flow lost on average)`}, from Feb 2026, ${h} months on.${st.lost > AVG26 ? " The largest modelled closure is 2026's." : st.lost !== Math.round(pts) ? ` Nearest to the slider's ${st.lost} points.` : ""}`;
+      : `${SEV_NAME[sev]}${sev === "none" ? "" : ` (about ${Math.round(pts)} points of flow lost on average)`}, from Feb 2026, ${h} months on.${st.lost > AVG26 ? " The largest modelled closure is 2026's." : st.lost !== Math.round(pts) ? ` The nearest modelled closure to ${st.lost} points of flow lost.` : ""}`;
     const rows = groupsOf(st.gtype).map((g) => {
       const r = gRow(g.group, scen, h), base = gRow(g.group, "none", h);
       if (!r) return null;
@@ -7255,7 +7267,7 @@ window.HZHouseholds = (() => {
       const tip = st.outlook ? `Costs ${sgn(r.q50, 2)}% (range up to ${sgn(r.q05)} to ${sgn(r.q95)}%)` : `Costs ${sgn(r.q50, 2)}% against ${sgn(base.q50, 2)}% with no closure`;
       return `<div class="rrow${g.type === "all" ? " all" : ""}"><span class="nm">${esc(gname(g.group))}</span><div class="track">${segs}</div>
         <span class="v" title="${esc(`${tip}. ${parts.map((p) => `${p.l} ${sgn(p.v, 2)}`).join(", ")} pts`)}">${sgn(total, 2)}${st.outlook ? "%" : " pts"} <small>${st.outlook ? `${sgn(r.q05)} to ${sgn(r.q95)}` : `· costs ${sgn(r.q50)}%`}</small></span></div>`;
-    }).join("") : `<p class="src">No closure, so nothing added. Choose a closure size, or move the slider.</p>`);
+    }).join("") : `<p class="src">No closure, so nothing added. Pick an amount of flow lost above.</p>`);
     $("hh-gs-src").innerHTML = sec("How the model works", `<p>The team's household model. Item price ranges from the basket-item model, weighted by each group's ${D.weights_year} spending shares. Mortgage interest is held flat.</p><p>First-order sums, so the range is an upper bound on its width.</p>`)
       + sec("Inputs", `<ul class="hz-srcl">${srcRow("Prices", "Basket-item model", `run ${esc(D.fans_generated || "–")}`)}${srcRow("Shares", esc(D.groups_source), `${D.weights_year} weights`)}</ul>`);
   }
@@ -7306,7 +7318,7 @@ window.HZHouseholds = (() => {
     "Mortgagor and other owner occupier": "mortgage holders", "Outright owner occupier": "outright owners" };
   const phrase = (g) => PHRASE[g] || (g.startsWith("Decile ") ? `the ${ord(+g.slice(7)).replace(" tenth", "")} income tenth` : g);
   function headline() {
-    const drop = dropFor(st.lost), sev = sevFor(st.lost), h = 12;
+    const drop = dropFor(st.lost), sev = sevFor(st.lost), h = st.h, when = h === 12 ? "after a year" : `after ${h} months`;
     const diff = (g) => { const r = scenRow(g, drop, h), b = scenRow(g, 0, h); return r && b ? r.q50 - b.q50 : null; };
     const what = drop === "iea" ? "The 2026 closure, as the IEA counts it," : drop === 0 ? "" : `Losing ${drop} of every 100 barrels of Hormuz flow`;
     const groups = sev === "none" ? [] : D.groups.filter((g) => g.type !== "all").map((g) => {
@@ -7314,19 +7326,19 @@ window.HZHouseholds = (() => {
     const us = diff("us"), uk = diff("uk"), ea = diff("ea");
     const word = (v) => (v < 0 ? "cuts" : "raises");
     if (!drop) {
-      $("hh-hl").innerHTML = "With Hormuz flowing normally, the model adds nothing: real pay follows its usual path. Move the slider, or pick a closure in step 2.";
+      $("hh-hl").innerHTML = "With Hormuz flowing normally, the model adds nothing: real pay follows its usual path. Pick an amount of flow lost below.";
       $("hh-hlnums").innerHTML = "";
       return;
     }
     const top = groups[0], low = groups[groups.length - 1];
-    $("hh-hl").innerHTML = `${what} ${word(us)} real pay by about <b>${Math.abs(us).toFixed(1)} points</b> in the US and <b>${Math.abs(uk).toFixed(1)}</b> in the UK after a year, compared with no closure.` +
+    $("hh-hl").innerHTML = `${what} ${word(us)} real pay by about <b>${Math.abs(us).toFixed(1)} points</b> in the US and <b>${Math.abs(uk).toFixed(1)}</b> in the UK ${when}, compared with no closure.` +
       (top ? ` In the UK, the hardest hit are <b>${esc(phrase(top.g.group))}</b>; the least, <b>${esc(phrase(low.g.group))}</b>.` : "");
     const tile = (lab, v, unit, sub, cls) => `<div class="hz-t ${cls || ""}"><b>${sgn(v)}${unit}</b><span>${lab}</span><small>${sub}</small></div>`;
     $("hh-hlnums").innerHTML =
-      tile(`${flag("us")} US real pay`, us, " pts", "vs no closure, 12 months", us < 0 ? "hurt" : "") +
-      tile(`${flag("uk")} UK real pay`, uk, " pts", "vs no closure, 12 months", uk < 0 ? "hurt" : "") +
-      tile(`${flag("ea")} Euro-area real pay`, ea, " pts", "vs no closure, 12 months", ea < 0 ? "hurt" : "") +
-      (top ? tile(`${flag("uk")} Hardest hit: ${esc(phrase(top.g.group))}`, top.v, " pts", "added to costs, 12 months", "hurt") : "");
+      tile(`${flag("us")} US real pay`, us, " pts", `vs no closure, ${h} months`, us < 0 ? "hurt" : "") +
+      tile(`${flag("uk")} UK real pay`, uk, " pts", `vs no closure, ${h} months`, uk < 0 ? "hurt" : "") +
+      tile(`${flag("ea")} Euro-area real pay`, ea, " pts", `vs no closure, ${h} months`, ea < 0 ? "hurt" : "") +
+      (top ? tile(`${flag("uk")} Hardest hit: ${esc(phrase(top.g.group))}`, top.v, " pts", `added to costs, ${h} months`, "hurt") : "");
   }
   function draw() { headline(); scenCard(); gsCard(); miniStep(); }
   btn.addEventListener("click", () => { if (page.hidden) show(true); });
@@ -7343,12 +7355,10 @@ window.HZHouseholds = (() => {
       $("sheet").hidden = false; $("sheet-close").focus();
       return;
     }
+    if (d.hdrop != null) st.outlook = false;
     if (d.hdrop === "iea") { pathBtn.click(); return; }
     else if (d.hdrop != null) setLost(+d.hdrop);
-    else if (d.hsev === "closure_100" && pathBtn) { st.outlook = false; pathBtn.click(); return; }
-    else if (d.hsev != null) { st.outlook = false; setLost(Math.round(SEV.find((s) => s[0] === d.hsev)[1] * AVG26)); }
     else if (d.hh != null) st.h = +d.hh;
-    else if (d.hgh != null) st.gh = +d.hgh;
     else if (d.hout != null) st.outlook = !st.outlook;
     else if (d.hgt != null) { st.gtype = d.hgt; page.querySelectorAll("[data-hgt]").forEach((x) => x.setAttribute("aria-pressed", String(x === b))); whoTable(); }
     else return;
@@ -7369,9 +7379,10 @@ window.HZHouseholds = (() => {
 
 </script>
 <script>
-// The Models page: what each of Seb's statistical and ML models answers, its headline numbers (each with the note it
-// was read from and the date that note was generated), how it was tested and what it can't do, from window.MODELS
-// (models.py). A fourth view beside World, Strait and Households.
+// The Models page: what each of Seb's statistical and ML models answers and its headline numbers, from window.MODELS
+// (models.py). A fourth view beside World, Strait and Households. The card shows the question and the numbers; the rest
+// (each number's context and the note it was read from, how it was tested, what it can't do) opens from the card's
+// blue info key, or from the "How it was tested" and "What it can't do" keys at its foot.
 window.HZModels = (() => {
   const $ = (id) => document.getElementById(id);
   const D = window.MODELS, seg = document.querySelector(".modeseg"), straitStage = $("strait-stage");
@@ -7379,15 +7390,19 @@ window.HZModels = (() => {
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const md = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/`([^`]+)`/g, "<code>$1</code>");
   const src = (path, date) => `<span class="mf">${esc(path)}${date ? ` · ${esc(date)}` : ""}</span>`;
-  // a card's sources sit behind its info button (as on the Households page): each number's note and date, then the notes
+  // a card's details open in the shared sheet (as on the Households and Strait cards), in short sections
   const INFO = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><path d="M12 7.5v.5"/></svg>';
-  function sources(c) {
-    const row = (what, path, date) => `<li><b>${esc(what)}</b><br>${src(path, date)}</li>`;
-    const nums = [...c.stats.map((s) => row(s.label, s.src, s.date)),
-      ...(c.table ? [row("The links table", c.table.src, c.table.date)] : []),
-      ...(c.bars ? [row(c.bars.title, c.bars.src, c.bars.date)] : [])];
-    return `<div class="msrc" id="msrc-${esc(c.id)}" hidden><p>Every number is read from the team's notes when the app is built.</p>
-      <ul>${nums.join("")}</ul><p><b>Notes behind this model</b></p><ul>${c.files.map((f) => `<li>${src(f.path, f.date)}</li>`).join("")}</ul></div>`;
+  const sec = (h, body, id) => `<section class="hz-sec"${id ? ` data-sec="${id}"` : ""}><h4>${h}</h4>${body}</section>`;
+  function about(c) {
+    const num = (v, label, note, path, date) => `<li><b class="v">${esc(v)}</b><span class="l">${esc(label)}</span>${note ? `<span class="n">${esc(note)}</span>` : ""}${src(path, date)}</li>`;
+    const nums = [...c.stats.map((s) => num(s.v, s.label, s.note, s.src, s.date)),
+      ...(c.bars ? [num("Chart", c.bars.title, "", c.bars.src, c.bars.date)] : [])];
+    return `<div class="msrc" id="msrc-${esc(c.id)}" hidden>
+      ${sec("The numbers", `<ul class="hz-nums">${nums.join("")}</ul>`, "numbers")}
+      ${c.table ? sec("The links table: units", `<ul>${c.table.rows.map((r) => `<li><b>${esc(r[0])}</b>: ${esc(r[2])}</li>`).join("")}</ul><p>${src(c.table.src, c.table.date)}</p>`) : ""}
+      ${sec("How it was tested", `<p>${md(c.tested)}</p>`, "tested")}
+      ${sec("What it can't do", `<ul>${c.limits.map((x) => `<li>${md(x)}</li>`).join("")}</ul>`, "limits")}
+      ${sec("Notes behind it", `<p class="hz-fine">Every number is read from these notes when the app is built.</p><ul>${c.files.map((f) => `<li>${src(f.path, f.date)}</li>`).join("")}</ul>`)}</div>`;
   }
 
   // ------------------------------------------------------------ the parts of a card
@@ -7396,14 +7411,14 @@ window.HZModels = (() => {
     const [v, pm] = s.v.split(" ± ");
     const zero = !/[1-9]/.test(v.replace(/[^\d.]/g, ""));   // −0.0000 is zero: no colour
     const sign = zero ? "" : /^\+/.test(v) ? " pos" : /^[−-]/.test(v) ? " neg" : "";   // + in green, − in red
-    return `<div class="st"><b class="v${sign}">${esc(v)}${pm ? `<small> ± ${esc(pm)}</small>` : ""}</b>
-      <span class="l">${esc(s.label)}</span>${s.note ? `<span class="n">${esc(s.note)}</span>` : ""}</div>`;
+    return `<div class="st"${s.note ? ` title="${esc(s.note)}"` : ""}><b class="v${sign}">${esc(v)}${pm ? `<small> ± ${esc(pm)}</small>` : ""}</b>
+      <span class="l">${esc(s.label)}</span></div>`;
   }
   // the knock-on links and how they held up across folds
   function links(t) {
     const tone = (v) => (/^holds/i.test(v) ? "ok" : /^fails/i.test(v) ? "bad" : "mid");
     return `<table class="lt"><thead><tr>${t.head.map((h) => `<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>${t.rows.map((r) =>
-      `<tr><td>${esc(r[0])}</td><td><span class="mono">${esc(r[1])}</span><small>${esc(r[2])}</small></td><td class="mono">${esc(r[3].replace(" of ", " of "))}</td>
+      `<tr><td>${esc(r[0])}</td><td title="${esc(r[2])}"><span class="mono">${esc(r[1])}</span></td><td class="mono">${esc(r[3].replace(" of ", " of "))}</td>
        <td class="vd ${tone(r[4])}">${esc(r[4])}</td></tr>`).join("")}</tbody></table>`;
   }
   // skill against the institutions: one bar each from zero, ours in amber and labelled, the benchmarks in blue
@@ -7425,13 +7440,13 @@ window.HZModels = (() => {
   function card(c) {
     return `<article class="card hz-mc${c.wide ? " wide" : ""}${c.full ? " full" : ""}" id="mod-${esc(c.id)}">
       <div class="mh"><h3>${esc(c.title)}</h3><span class="kind">${esc(c.kind)}</span>
-        <button type="button" class="ib hz-i" data-msrc="msrc-${esc(c.id)}" aria-label="Sources for ${esc(c.title)}">${INFO}</button></div>
+        <button type="button" class="ib hz-i" data-msrc="msrc-${esc(c.id)}" aria-label="About ${esc(c.title)}: its numbers, tests, limits and sources">${INFO}</button></div>
       <p class="asks">${md(c.asks)}</p>
       <div class="stats">${c.stats.map(stat).join("")}</div>
       ${c.table ? links(c.table) : ""}${c.bars ? bars(c.bars) : ""}
-      <div class="row"><span class="tl">Tested</span><p>${md(c.tested)}</p></div>
-      <div class="row lim"><span class="tl">Can't</span><ul>${c.limits.map((x) => `<li>${md(x)}</li>`).join("")}</ul></div>
-      ${sources(c)}
+      <div class="mfoot"><button type="button" class="mk ok" data-msrc="msrc-${esc(c.id)}" data-sec="tested">How it was tested</button>
+        <button type="button" class="mk lim" data-msrc="msrc-${esc(c.id)}" data-sec="limits">What it can't do <span class="mono">${c.limits.length}</span></button></div>
+      ${about(c)}
     </article>`;
   }
 
@@ -7446,10 +7461,13 @@ window.HZModels = (() => {
   const groups = D.groups.map(([g, title]) => [g, title, D.cards.filter((c) => c.group === g)]).filter((x) => x[2].length);
   page.innerHTML = `
   <header class="card hz-mtop">
-    <h2>The models behind the numbers</h2>
-    <p class="how"><b>Skill</b> = 1 − CRPS ÷ the CRPS of climatology (each series' own history): 0 is no better than the historical average,
-      higher is better. <b>Given the oil path</b> means the run knew the oil price that happened; <b>forecasting oil too</b> means it knew nothing
-      after the forecast date. All scores are backtests on real, revised data.</p>
+    <div class="mtt"><h2>The models behind the numbers</h2>
+      <button type="button" class="ib hz-i" data-mhow aria-label="How to read these cards">${INFO}</button></div>
+    <p class="lede">What each model answers and its headline numbers. Tests, limits and sources are behind each card's blue <b>i</b>.</p>
+    <div class="msrc" id="msrc-how" hidden>
+      ${sec("Skill", "<p>1 − CRPS ÷ the CRPS of climatology, each series' own history. 0 is no better than the historical average; higher is better.</p>")}
+      ${sec("Given the oil path, or forecasting oil too", "<p><b>Given the oil path:</b> the run knew the oil price that happened. <b>Forecasting oil too:</b> it knew nothing after the forecast date.</p>")}
+      ${sec("Backtests", "<p>All scores are backtests on real, revised data.</p>")}</div>
     <div class="seg ctabs hz-mtabs" role="tablist" aria-label="Model groups">${groups.map(([g, title, cs]) =>
       `<button type="button" role="tab" id="mtab-${esc(g)}" data-mtab="${esc(g)}" aria-controls="mgrp-${esc(g)}">${esc(title)} <span class="mtn">${cs.length}</span></button>`).join("")}</div>
   </header>
@@ -7494,11 +7512,15 @@ window.HZModels = (() => {
   }
   page.addEventListener("click", (e) => {
     const b = e.target.closest("[data-mtab]"); if (b) tab(b.dataset.mtab);
-    const i = e.target.closest("[data-msrc]");
+    const i = e.target.closest("[data-msrc], [data-mhow]");
     if (i && $("sheet")) {
-      $("sheet-title").textContent = `Sources: ${i.closest(".hz-mc").querySelector("h3").textContent}`;
-      $("sheet-body").innerHTML = $(i.dataset.msrc).innerHTML;
-      $("sheet").hidden = false; $("sheet-close").focus();
+      const c = i.closest(".hz-mc"), body = $("sheet-body");
+      $("sheet-title").textContent = c ? c.querySelector("h3").textContent : "Reading the model cards";
+      body.innerHTML = `<div class="hz-mpanel">${c ? `<div class="hz-tagline"><span class="tagk">${esc(c.querySelector(".kind").textContent)}</span></div>` : ""}${$(i.dataset.msrc || "msrc-how").innerHTML}</div>`;
+      $("sheet").hidden = false; $("sheet").scrollTop = 0;
+      const to = i.dataset.sec && body.querySelector(`[data-sec="${i.dataset.sec}"]`);
+      if (to) to.scrollIntoView({ block: "start" });
+      $("sheet-close").focus({ preventScroll: true });
     }
   });
   page.querySelector(".hz-mtabs").addEventListener("keydown", (e) => {

@@ -1,17 +1,17 @@
 /* Info keys and panels for the Households and Strait cards (households.js, strait.js). The notes that used to sit
    under each card (sources, fetch dates, method, caveats) live behind a blue "i" key and open in the sheet, laid out
    as short sections with one line per source. Blue is the app's colour for information; amber stays for oil. */
-#hz-households .hz-ch .hz-i, #strait-stage .hud .ib[data-info], #strait-stage .info-map {
+#hz-households .hz-ch .hz-i, #hz-models .hz-i, #strait-stage .hud .ib[data-info], #strait-stage .info-map {
   background: #1d5fbf !important; color: #ffffff !important; border: 2px solid var(--ink) !important; border-radius: 0 !important;
   box-shadow: inset -2px -2px 0 #123f80, inset 2px 2px 0 #5aa9ff, 2px 2px 0 rgba(0, 0, 0, .55) !important;
 }
-#hz-households .hz-ch .hz-i, #strait-stage .hud .ib[data-info] { width: 30px; min-height: 30px; padding: 0; }
-#hz-households .hz-ch .hz-i:hover, #strait-stage .hud .ib[data-info]:hover, #strait-stage .info-map:hover { background: #2b74dd !important; color: #ffffff !important; }
-#hz-households .hz-ch .hz-i:active, #strait-stage .hud .ib[data-info]:active, #strait-stage .info-map:active {
+#hz-households .hz-ch .hz-i, #hz-models .hz-i, #strait-stage .hud .ib[data-info] { width: 30px; min-height: 30px; padding: 0; }
+#hz-households .hz-ch .hz-i:hover, #hz-models .hz-i:hover, #strait-stage .hud .ib[data-info]:hover, #strait-stage .info-map:hover { background: #2b74dd !important; color: #ffffff !important; }
+#hz-households .hz-ch .hz-i:active, #hz-models .hz-i:active, #strait-stage .hud .ib[data-info]:active, #strait-stage .info-map:active {
   transform: translate(1px, 1px); box-shadow: inset 2px 2px 0 #123f80 !important;
 }
-#hz-households .hz-ch .hz-i svg, #strait-stage .hud .ib[data-info] svg, #strait-stage .info-map svg { width: 18px; height: 18px; stroke: #ffffff; stroke-width: 2.6; }
-#hz-households .hz-ch .hz-i:focus-visible, #strait-stage .hud .ib[data-info]:focus-visible { outline: 2px solid var(--seen-soft); outline-offset: 2px; }
+#hz-households .hz-ch .hz-i svg, #hz-models .hz-i svg, #strait-stage .hud .ib[data-info] svg, #strait-stage .info-map svg { width: 18px; height: 18px; stroke: #ffffff; stroke-width: 2.6; }
+#hz-households .hz-ch .hz-i:focus-visible, #hz-models .hz-i:focus-visible, #strait-stage .hud .ib[data-info]:focus-visible { outline: 2px solid var(--seen-soft); outline-offset: 2px; }
 .hz-tucked { display: none !important; }
 #strait-stage .tagc.hz-cached { margin-left: 4px; }
 
@@ -26,9 +26,9 @@
 .sheet .hz-sec h4 { margin: 0; font: 700 11.5px var(--pix); letter-spacing: 1px; text-transform: uppercase; color: var(--seen-soft); }
 .sheet .hz-sec p { margin: 0; color: var(--text); font-size: 14px; line-height: 1.55; }
 .sheet .hz-sec p + p { color: var(--muted); }
-.sheet ul:not(.hz-srcl) { list-style: none; padding-left: 0; }
-.sheet ul:not(.hz-srcl) li { position: relative; padding-left: 16px; margin: 6px 0; }
-.sheet ul:not(.hz-srcl) li::before { content: ""; position: absolute; left: 2px; top: .62em; width: 6px; height: 6px; background: var(--seen); }
+.sheet ul:not(.hz-srcl):not(.hz-nums) { list-style: none; padding-left: 0; }
+.sheet ul:not(.hz-srcl):not(.hz-nums) li { position: relative; padding-left: 16px; margin: 6px 0; }
+.sheet ul:not(.hz-srcl):not(.hz-nums) li::before { content: ""; position: absolute; left: 2px; top: .62em; width: 6px; height: 6px; background: var(--seen); }
 .sheet .hz-srcl { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .sheet .hz-srcl li { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 1px 10px; align-items: baseline; padding: 7px 10px;
   background: var(--panel2); border: 2px solid var(--ink); box-shadow: inset 3px 0 0 var(--seen); }

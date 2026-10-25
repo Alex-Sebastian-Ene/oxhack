@@ -83,7 +83,12 @@ FOOD_MODE = os.environ.get("COL_FOOD", "bread")
 FOOD = FOOD_MODE != "0"
 RUNS_BASE, RUNS_FOOD, RUNS_BREAD = ROOT / "runs" / "col", ROOT / "runs" / "col-food", ROOT / "runs" / "col-food-bread"
 RUNS_MAIN = RUNS_BREAD
-RUNS = {"0": RUNS_BASE, "1": RUNS_FOOD, "bread": RUNS_BREAD}[FOOD_MODE]
+# COL_PETROL=1: US retail petrol (EIA weekly, as monthly averages) also drives US motor fuel and the direct US
+# headline, so the 1-month forecast can use the pump prices published so far. Tested against the main model on
+# the same folds before any adoption; its own runs folder.
+PETROL = os.environ.get("COL_PETROL", "0") == "1"
+RUNS_PETROL = ROOT / "runs" / "col-petrol"
+RUNS = RUNS_PETROL if PETROL else {"0": RUNS_BASE, "1": RUNS_FOOD, "bread": RUNS_BREAD}[FOOD_MODE]
 NOTES, LEVY_RUNS = ROOT / "notes", ROOT / "runs" / "levy"
 START = "2000-01-01"
 LAGS = 13  # oil and gas lags 0..12
@@ -93,11 +98,14 @@ WARMUP = int(os.environ.get("COL_WARMUP", 500))
 SAMPLES = int(os.environ.get("COL_SAMPLES", 500))  # per chain
 DRAWS = 400  # posterior draws that go into the simulations
 # COL_DRAWS: keys (comma-separated) whose 1-3 month Lévy forecasts each fold also saves, every draw
-# and origin, to fold-<j>-draws.npz, for rescoring against first-published CPI and nowcasts
+# and origin, to fold-<j>-draws.npz (and fold-<j>-mtd*-draws.npz for the part-month modes), for
+# rescoring against first-published CPI and nowcasts
 SAVE_KEYS = [k for k in os.environ.get("COL_DRAWS", "").split(",") if k]
 VOL_FLOOR, NU_MIN, SIGMA_FLOOR = 0.05, 2.5, 0.05
 SHOCK = np.log(1.10)
 DAYS = 21  # trading days per simulated month
+PETROL_KEYS, PETROL_LAGS = ("us_fuel", "us_all"), 2  # the series petrol drives, and its lags (0..2)
+PETROL_WEEK_LAG = 3  # days after its Monday date that a weekly petrol price is taken as published
 QUICK = False
 
 
@@ -266,6 +274,8 @@ DRIVERS = {"brent": ("fred", "DCOILBRENTEU", "Brent spot, $/bbl (EIA via FRED)")
            "wheat": ("fred", "PWHEAMTUSDM", "Global price of wheat, $/t (IMF via FRED)"),
            "maize": ("fred", "PMAIZMTUSDM", "Global price of maize, $/t (IMF via FRED)"),
            "urea": ("pinksheet", "Urea", "Urea, $/t (World Bank Pink Sheet)")}
+if PETROL:
+    DRIVERS["petrol"] = ("fred", "GASREGW", "US regular retail gasoline, $/gal, weekly (EIA via FRED)")
 # Series whose prices grain and fertiliser can reach (food, restaurants, and the aggregates).
 FOOD_KINDS = ("bread", "meat", "dairy", "oils_fats", "fruit_veg", "sugar", "restaurants", "rest", "all")
 DRIVEN_KINDS = ("bread",) if FOOD_MODE == "bread" else FOOD_KINDS  # the series that get the food drivers
@@ -408,6 +418,7 @@ def load() -> dict:
     return {"months": idx, "keys": keys, "y": ch[keys].values, "x": ch["brent"].values / 100,
             "g_us": ch["henry_hub"].values / 100, "g_eu": ch["eu_gas"].values / 100,
             "g_grain": (ch["wheat"] + ch["maize"]).values / 200, "g_urea": ch["urea"].values / 100, "D": D, "prov": prov,
+            **({"g_petrol": ch["petrol"].values / 100} if PETROL else {}),
             "weights": wt, "brent_level": np.exp(lv["brent"].values)}
 
 
@@ -512,8 +523,8 @@ def fuel_average_links() -> dict:
 
 ENERGY = ("x", "g_us", "g_eu")  # Brent and the two gas prices: the energy-cost pass-through
 FOODIN = {"0": (), "1": ("g_grain", "g_urea"), "bread": ("g_grain",)}[FOOD_MODE]  # grains (wheat, maize), urea
-CHANNELS = ENERGY + FOODIN
-GROUPS = {"oil": ("x",), "gas": ("g_us", "g_eu"), "grain": ("g_grain",), "urea": ("g_urea",)}
+CHANNELS = ENERGY + FOODIN + (("g_petrol",) if PETROL else ())
+GROUPS = {"oil": ("x",), "gas": ("g_us", "g_eu"), "grain": ("g_grain",), "urea": ("g_urea",), "petrol": ("g_petrol",)}
 
 
 class Stats:
@@ -548,10 +559,12 @@ def series_arrays() -> dict:
             "nsa": np.array([s.nsa for s in SERIES], float),
             "kind": np.array([KINDS.index(s.kind) for s in SERIES]),
             "fmask": np.array([s.kind in DRIVEN_KINDS for s in SERIES], float),
+            "pmask": np.array([[s.key in PETROL_KEYS and l <= PETROL_LAGS for l in range(LAGS)] for s in SERIES], float),
             "floor": np.array([SIGMA_FLOORS.get(s.kind, SIGMA_FLOOR) for s in SERIES])}
 
 
-def model(Zx, Zus, Zeu, mon, D, v, yprev, y, lagmask, gsel, nsa, kind, fmask, floor, Zgr=None, Zur=None):
+def model(Zx, Zus, Zeu, mon, D, v, yprev, y, lagmask, gsel, nsa, kind, fmask, pmask, floor, Zgr=None, Zur=None,
+          Zpe=None):
     K = y.shape[1]
     B = numpyro.deterministic("Bm", numpyro.sample("B", dist.Normal(0, 0.3).expand([K, LAGS]).to_event(2)) * lagmask)
     G = numpyro.deterministic("Gm", numpyro.sample("G", dist.Normal(0, 0.3).expand([K, LAGS]).to_event(2)) * lagmask)
@@ -576,13 +589,16 @@ def model(Zx, Zus, Zeu, mon, D, v, yprev, y, lagmask, gsel, nsa, kind, fmask, fl
     if Zur is not None:
         Fu = numpyro.deterministic("Fu", numpyro.sample("Fur", dist.Normal(0, 0.3).expand([K, LAGS]).to_event(2)) * food)
         m = m + Zur @ Fu.T
+    if Zpe is not None:  # retail petrol, for US motor fuel and the direct US headline only
+        P = numpyro.deterministic("Pm", numpyro.sample("Ppe", dist.Normal(0, 0.3).expand([K, LAGS]).to_event(2)) * pmask)
+        m = m + Zpe @ P.T
     scale = sigma * jnp.exp(phi * v[:, None] + psi * D[:, None])
     ok = jnp.isfinite(y) & jnp.isfinite(yprev)
     with numpyro.handlers.mask(mask=ok):
         numpyro.sample("y", dist.StudentT(nu, m, scale), obs=jnp.nan_to_num(y))
 
 
-KEEP = ("Bm", "Gm", "Fg", "Fu", "a", "S", "rho", "kappa", "mu_kappa", "phi", "psi", "sigma", "nu")
+KEEP = ("Bm", "Gm", "Fg", "Fu", "Pm", "a", "S", "rho", "kappa", "mu_kappa", "phi", "psi", "sigma", "nu")
 
 
 def fit_inputs(data: dict, st: Stats, last: int) -> dict:
@@ -591,7 +607,7 @@ def fit_inputs(data: dict, st: Stats, last: int) -> dict:
     inp = {"Zx": lagmat(z["x"], fill=0.0)[rows], "Zus": lagmat(z["g_us"], fill=0.0)[rows],
            "Zeu": lagmat(z["g_eu"], fill=0.0)[rows], "mon": data["months"].month.values[rows] - 1,
            "D": data["D"][rows], "v": z["v"][rows], "yprev": z["y"][rows - 1], "y": z["y"][rows]}
-    for key, c in (("Zgr", "g_grain"), ("Zur", "g_urea")):
+    for key, c in (("Zgr", "g_grain"), ("Zur", "g_urea"), ("Zpe", "g_petrol")):
         if c in CHANNELS:
             inp[key] = lagmat(z[c], fill=0.0)[rows]
     return inp
@@ -608,6 +624,8 @@ def residuals(post: dict, inp: dict) -> np.ndarray:
         m = m + inp["Zgr"] @ p["Fg"].T
     if "Fu" in p:
         m = m + inp["Zur"] @ p["Fu"].T
+    if "Pm" in p:
+        m = m + inp["Zpe"] @ p["Pm"].T
     scale = p["sigma"] * np.exp(p["phi"] * inp["v"][:, None] + p["psi"] * inp["D"][:, None])
     z = (inp["y"] - m) / scale
     z[~(np.isfinite(inp["y"]) & np.isfinite(inp["yprev"]))] = np.nan
@@ -627,12 +645,13 @@ def fit(data: dict, last: int, seed: int = 0) -> tuple[dict, Stats, dict, np.nda
              **{k: jnp.asarray(v) for k, v in inp.items()}, **{k: jnp.asarray(v) for k, v in arr.items()})
     grouped = mcmc.get_samples(group_by_chain=True)
     sites = ("B", "G", "a", "rho_raw", "kz", "mu_kappa", "psi", "sigma_raw", "phi")
-    sites += tuple(s for s, c in (("Fgr", "g_grain"), ("Fur", "g_urea")) if c in CHANNELS)
+    sites += tuple(s for s, c in (("Fgr", "g_grain"), ("Fur", "g_urea"), ("Ppe", "g_petrol")) if c in CHANNELS)
     summ = numpyro.diagnostics.summary({k: np.asarray(grouped[k]) for k in sites})
-    keep = series_arrays()["fmask"] > 0  # the other series' food coefficients are masked out (prior-only): skip them
-    for k in ("Fgr", "Fur"):
+    # the masked-out coefficients (other series' food and petrol terms) are prior-only: skip them
+    keep = {"Fgr": series_arrays()["fmask"] > 0, "Fur": series_arrays()["fmask"] > 0, "Ppe": series_arrays()["pmask"] > 0}
+    for k, kp in keep.items():
         if k in summ:
-            summ[k] = {s: np.asarray(v)[keep] for s, v in summ[k].items()}
+            summ[k] = {s: np.asarray(v)[kp] for s, v in summ[k].items()}
     diag = {"seconds": round(time.time() - t0, 1), "chains": CHAINS, "warmup": warm, "samples": samp,
             "divergences": int(np.sum(mcmc.get_extra_fields()["diverging"])),
             "max_r_hat": round(max(float(np.nanmax(s["r_hat"])) for s in summ.values()), 3),
@@ -663,7 +682,8 @@ def simulate(post: dict, st: Stats, data: dict, t0: np.ndarray, fut: dict, Dfut:
     B, G, a, S, rho = post["Bm"], post["Gm"], post["a"], post["S"], post["rho"]
     kappa, psi = (post["kappa"], post["psi"]) if regime else (np.zeros_like(post["kappa"]), np.zeros_like(post["psi"]))
     phi, sig, nu = post["phi"], post["sigma"], post["nu"]
-    food = [(c, post[p]) for c, p in (("g_grain", "Fg"), ("g_urea", "Fu")) if p in post and c in CHANNELS]
+    food = [(c, post[p]) for c, p in (("g_grain", "Fg"), ("g_urea", "Fu"), ("g_petrol", "Pm"))
+            if p in post and c in CHANNELS]
     cum, out = np.zeros((N, O, K)), np.zeros((N, O, hz, K))
     first = data["months"][0]
     lag = lambda b, M: np.einsum("nol,nkl->nok", b, M)  # noqa: E731
@@ -727,6 +747,57 @@ def daily_brent() -> pd.Series:
     return s.dropna()
 
 
+def weekly_petrol() -> pd.Series:
+    """US regular retail gasoline, $/gal, by the Monday of each EIA survey week."""
+    df = pd.read_csv(md.RAW / "fred_GASREGW.csv", parse_dates=["observation_date"])
+    s = pd.to_numeric(df["GASREGW"], errors="coerce")
+    s.index = df["observation_date"]
+    return s.dropna()
+
+
+def petrol_month(weekly: pd.Series, month: pd.Timestamp, through: pd.Timestamp, n: int, rng) -> np.ndarray:
+    """Draws [n] of the log change in the next month's average retail petrol on `month`'s, given the
+    weekly prices published before `through` (PETROL_WEEK_LAG days after each Monday). The month's
+    other weeks follow a random walk from the latest price, with the weekly spread of the two years
+    before."""
+    nxt = month + pd.DateOffset(months=1)
+    prev = weekly[(weekly.index >= month) & (weekly.index < nxt)].mean()
+    weeks = pd.date_range(nxt, nxt + pd.DateOffset(months=1) - pd.Timedelta(days=1), freq="W-MON")
+    known = weekly[weekly.index <= through - pd.Timedelta(days=PETROL_WEEK_LAG)]
+    seen = known[(known.index >= nxt) & (known.index < nxt + pd.DateOffset(months=1))]
+    sd = np.diff(np.log(known.values[-105:])).std()
+    walk = np.log(known.values[-1]) + np.cumsum(sd * rng.standard_normal((n, len(weeks) - len(seen))), 1)
+    return np.log((seen.sum() + np.exp(walk).sum(1)) / len(weeks) / prev)
+
+
+# The Cleveland Fed's inflation nowcasts: the chart data behind clevelandfed.org/indicators-and-data/inflation-nowcasting.
+# For each month (or quarter) since 2013-07, the CPI nowcast on every business day up to the release, and CPI as
+# first published on release day. The release dates set when a forecast from a month's CPI can first be made.
+NOWCAST_URL = "https://www.clevelandfed.org/-/media/files/webcharts/inflationnowcasting/nowcast_{}.json?sc_lang=en"
+
+
+def nowcasts(freq: str) -> pd.DataFrame:
+    """One row per target month or quarter (freq "month" or "quarter"): the CPI nowcasts by business day,
+    the release date and CPI as first published (month: % change; quarter: annualised % change; both
+    seasonally adjusted)."""
+    path = md._get(NOWCAST_URL.format(freq), md.RAW / f"cleveland_nowcast_{freq}.json")
+    rows = []
+    for e in json.loads(path.read_text(encoding="utf-8")):
+        cap = e["chart"]["subcaption"]  # "2013-7" or "2013:Q3"
+        y, m = (int(cap[:4]), 3 * int(cap[-1]) - 2) if ":" in cap else map(int, cap.split("-"))
+        days = []
+        for c in e["categories"][0]["category"]:
+            if not c.get("vline"):  # the vertical lines mark releases and carry no data
+                mm, dd = map(int, c["label"].split("/"))
+                days.append(pd.Timestamp(y + (mm < m), mm, dd))  # the labels run on past December
+        ser = {s["seriesname"]: [d.get("value", "") for d in s["data"]] for s in e["dataset"]}
+        now = pd.Series({d: float(v) for d, v in zip(days, ser.get("CPI Inflation", [])) if v not in ("", None)}, dtype=float)
+        act = [(d, float(v)) for d, v in zip(days, ser.get("Actual CPI Inflation", [])) if v not in ("", None)]
+        rows.append({"period": pd.Timestamp(y, m, 1), "nowcasts": now, "released": act[0][0] if act else pd.NaT,
+                     "actual": act[0][1] if act else np.nan})
+    return pd.DataFrame(rows).set_index("period").sort_index()
+
+
 def levy_fit(year: int, model: str) -> dict:
     """The stored daily fit trained on every day before 1 January of `year` (runs/levy/rolling-*.json)."""
     path = LEVY_RUNS / f"rolling-{min(max(year, 1998), 2026)}.json"
@@ -741,31 +812,36 @@ def innovation_table(model: str, p: dict) -> tuple[np.ndarray, np.ndarray]:
     raise ValueError(model)
 
 
-def daily_paths(model: str, daily: pd.Series, month: pd.Timestamp, n: int, shock: np.ndarray, rng) -> np.ndarray:
+def daily_paths(model: str, daily: pd.Series, month: pd.Timestamp, n: int, shock: np.ndarray, rng,
+                through: pd.Timestamp | None = None) -> np.ndarray:
     """Monthly-average Brent log changes [n, len(shock)] after month `month`, from daily GARCH paths
     with the stored innovations. shock[j] shifts the whole of month j+1 (a scenario level step; it
-    does not feed the GARCH variance)."""
+    does not feed the GARCH variance). through: a day in the next month; its prices before that day
+    are known, so only the rest of that month is simulated, from the GARCH state they leave."""
     p = levy_fit(month.year, model)
     mu, w, al, be = p["mu"], p["omega"], p["alpha"], p["beta"]
-    upto = daily[daily.index < month + pd.DateOffset(months=1)]
+    nxt = month + pd.DateOffset(months=1)
+    upto = daily[daily.index < (nxt if through is None else through)]
     r = np.diff(np.log(upto.values))
     s = lf.garch_sigma(r, mu, w, al, be)
     s2 = np.full(n, w + al * (r[-1] - mu) ** 2 + be * s[-1] ** 2)
     cdf_tab, x_tab = innovation_table(model, p)
-    this_month = upto[upto.index >= month]
+    this_month = upto[(upto.index >= month) & (upto.index < nxt)]
+    seen = upto[upto.index >= nxt]  # the next month's known days (none without `through`)
     prev_avg = np.full(n, np.log(this_month.mean()))
     lp0 = np.log(upto.values[-1])
     lp, level = np.full(n, lp0), np.zeros(n)
     out = np.zeros((n, len(shock)))
     for j in range(len(shock)):
         level = level + shock[j]
-        acc = np.zeros(n)
-        for _ in range(DAYS):
+        k = len(seen) if j == 0 else 0
+        acc = np.full(n, np.exp(np.log(seen.values) - lp0).sum() if k else 0.0)
+        for _ in range(max(DAYS - k, 0)):
             e = np.sqrt(s2) * np.interp(rng.random(n), cdf_tab, x_tab)
             lp = lp + mu + e
             acc += np.exp(lp + level - lp0)
             s2 = w + al * e * e + be * s2
-        avg = lp0 + np.log(acc / DAYS)
+        avg = lp0 + np.log(acc / max(DAYS, k))
         out[:, j] = avg - prev_avg
         prev_avg = avg
     return out
@@ -816,13 +892,33 @@ def garch_paths(par: dict, n: int, shock: np.ndarray, rng) -> np.ndarray:
     return out
 
 
+def lag_fit(x: np.ndarray, y: np.ndarray, lags: int) -> tuple[np.ndarray, np.ndarray]:
+    """OLS of y on x at lags 0..lags plus a constant: (the lag coefficients, the residuals)."""
+    X = np.c_[np.ones(len(x)), lagmat(x, lags)]
+    ok = np.isfinite(y) & np.isfinite(X).all(1)
+    b = np.linalg.lstsq(X[ok], y[ok], rcond=None)[0]
+    return b[1:], (y - X @ b)[ok]
+
+
+def lag_apply(b: np.ndarray, x: np.ndarray, hist: np.ndarray) -> np.ndarray:
+    """sum_l b[l] x[t-l] for every month t of x [n, hz]; hist holds the len(b)-1 months before, oldest first."""
+    k = len(hist)
+    full = np.c_[np.broadcast_to(hist, (len(x), k)), x]
+    return sum(b[l] * full[:, k - l:k - l + x.shape[1]] for l in range(len(b)))
+
+
 def driver_model(data: dict, last: int) -> dict:
     """Each driver channel besides Brent: beta x Brent's monthly change plus its own monthly GARCH-t
-    residual, fitted on months up to `last`."""
+    residual, fitted on months up to `last`. Retail petrol follows Brent over 0..PETROL_LAGS months
+    (`betas`), as the pump trails crude."""
     sl = slice(1, last + 1)
     out = {}
     for c in CHANNELS[1:]:
         x, y = data["x"][sl], data[c][sl]
+        if c == "g_petrol":
+            b, res = lag_fit(x, y, PETROL_LAGS)
+            out[c] = garch_fit(res) | {"beta": float(b[0]), "betas": b.tolist()}
+            continue
         ok = np.isfinite(x) & np.isfinite(y)
         beta = float(np.polyfit(x[ok], y[ok], 1)[0])
         out[c] = garch_fit(y[ok] - beta * x[ok]) | {"beta": beta}
@@ -841,11 +937,14 @@ def closure_template(data: dict) -> dict:
 
 
 def driver_paths(data: dict, last: int, n: int, rng, driver: str = "GARCH-CGMY", severity: float = 0.0,
-                 dm: dict | None = None, daily: pd.Series | None = None, hz: int = H) -> dict:
+                 dm: dict | None = None, daily: pd.Series | None = None, hz: int = H,
+                 through: pd.Timestamp | None = None, weekly: pd.Series | None = None) -> dict:
     """Paths [n, hz] of every driver channel after month `last`. severity scales the 2026 closure
     template (0 = no closure). driver: GARCH-CGMY or GARCH-Student-t (daily, stored fits) or monthly-t.
-    The other channels follow Brent (beta) plus their own GARCH-t noise and, in a closure, their own
-    2026 moves beyond what Brent explains."""
+    The other channels follow Brent (beta, or betas over lags) plus their own GARCH-t noise and, in a
+    closure, their own 2026 moves beyond what Brent explains. through: the forecast is made on that day
+    of the next month, so that month's Brent days before it are known (daily drivers only) and, given
+    `weekly`, its retail petrol weeks published by then."""
     dm = dm or driver_model(data, last)
     tpl = ({c: np.r_[v, np.zeros(hz)][:hz] for c, v in closure_template(data).items()} if severity
            else {c: np.zeros(hz) for c in CHANNELS})
@@ -853,12 +952,17 @@ def driver_paths(data: dict, last: int, n: int, rng, driver: str = "GARCH-CGMY",
     if driver == "monthly-t":
         x = garch_paths(garch_fit(data["x"][1:last + 1]), n, shock, rng)
     else:
-        x = daily_paths(driver, daily if daily is not None else daily_brent(), data["months"][last], n, shock, rng)
+        x = daily_paths(driver, daily if daily is not None else daily_brent(), data["months"][last], n, shock, rng,
+                        through)
     out = {"x": x}
     for c in CHANNELS[1:]:
         par = dm[c]
-        excess = severity * np.where(tpl[c] != 0, tpl[c] - par["beta"] * tpl["x"], 0.0)
-        out[c] = par["beta"] * x + garch_paths(par, n, excess, rng)
+        b = np.array(par.get("betas", [par["beta"]]))
+        hist = np.nan_to_num(data["x"][last - len(b) + 2:last + 1])
+        excess = severity * np.where(tpl[c] != 0, tpl[c] - lag_apply(b, tpl["x"][None], np.zeros(len(b) - 1))[0], 0.0)
+        out[c] = lag_apply(b, x, hist) + garch_paths(par, n, excess, rng)
+    if through is not None and weekly is not None and "g_petrol" in out:
+        out["g_petrol"][:, 0] = petrol_month(weekly, data["months"][last], through, n, rng)
     return out
 
 
@@ -971,15 +1075,48 @@ def run_fold(data: dict, j: int) -> dict:
         fc = {c: np.stack([p[c] for p in paths], 1) for c in CHANNELS}  # [N, O, H]
         S = with_composites(simulate(post, st, data, t0, fc, Dfc, zres, rng), data)
         res["modes"][f"forecast_{driver}"] = pack(score(S, actual), actual)
-        if driver == "GARCH-CGMY" and SAVE_KEYS:
-            RUNS.mkdir(parents=True, exist_ok=True)
-            np.savez_compressed(RUNS / f"fold-{j}{'-quick' if QUICK else ''}-draws.npz",
-                                S=S[:, :, :3][..., [OUT_KEYS.index(k) for k in SAVE_KEYS]].astype(np.float32),
-                                origins=np.array(res["origins"]), keys=np.array(SAVE_KEYS))
+        if driver == "GARCH-CGMY":
+            save_draws(S, j, res["origins"])
         B = np.cumsum(fc["x"], 2) * 100
         res["brent"][driver] = pack(score(B[..., None], brent_actual[..., None]), brent_actual[..., None])
     res["benchmarks"] = {k: pack(v, actual) for k, v in benchmarks(data, last, t0, actual, rng).items()}
+    res["modes"] |= month_to_date_modes(post, st, data, j, t0, actual, dm, daily, zres, Dfc)
     return res
+
+
+def month_to_date_modes(post, st, data, j, t0, actual, dm, daily, zres, Dfc) -> dict:
+    """Lévy forecasts made the day after the origin month's CPI is published (Cleveland's release
+    dates; origins before 2013-08 have none and are left out), with the next month's prices so far:
+    its Brent trading days (forecast_mtd_brent) and, with COL_PETROL, also its weekly pump prices
+    (forecast_mtd). Their own random stream, so the other modes keep their numbers."""
+    released = nowcasts("month")["released"]
+    days = [released.get(data["months"][t], pd.NaT) for t in t0]
+    has = np.array([pd.notna(d) for d in days])
+    if not has.any():
+        return {}
+    rng = np.random.default_rng(500 + j)
+    tm, through = t0[has], [d + pd.Timedelta(days=1) for d in np.array(days, dtype=object)[has]]
+    act = np.where(has[:, None, None], actual, np.nan)
+    N, out = len(post["a"]), {}
+    for label, weekly in (("forecast_mtd_brent", None),) + ((("forecast_mtd", weekly_petrol()),) if PETROL else ()):
+        paths = [driver_paths(data, int(t), N, rng, "GARCH-CGMY", 0.0, dm, daily, through=d, weekly=weekly)
+                 for t, d in zip(tm, through)]
+        fc = {c: np.stack([p[c] for p in paths], 1) for c in CHANNELS}
+        S = np.full((N, len(t0), H, len(OUT_KEYS)), np.nan)
+        S[:, has] = with_composites(simulate(post, st, data, tm, fc, Dfc[has], zres, rng), data)
+        out[label] = pack(score(S, act), act)
+        save_draws(S, j, [f"{data['months'][t]:%Y-%m}" for t in t0], label.removeprefix("forecast_"))
+    return out
+
+
+def save_draws(S: np.ndarray, j: int, origins: list[str], tag: str = "") -> None:
+    """With COL_DRAWS, keep the 1-3 month draws of those keys: fold-<j>[-tag]-draws.npz in RUNS."""
+    if not SAVE_KEYS:
+        return
+    RUNS.mkdir(parents=True, exist_ok=True)
+    np.savez_compressed(RUNS / f"fold-{j}{'-' + tag if tag else ''}{'-quick' if QUICK else ''}-draws.npz",
+                        S=S[:, :, :3][..., [OUT_KEYS.index(k) for k in SAVE_KEYS]].astype(np.float32),
+                        origins=np.array(origins), keys=np.array(SAVE_KEYS))
 
 
 def run_fold_lagged(data: dict, j: int) -> dict:

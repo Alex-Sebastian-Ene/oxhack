@@ -1,6 +1,7 @@
-// The Models page: what each of Seb's statistical and ML models answers, its headline numbers (each with the note it
-// was read from and the date that note was generated), how it was tested and what it can't do, from window.MODELS
-// (models.py). A fourth view beside World, Strait and Households.
+// The Models page: what each of Seb's statistical and ML models answers and its headline numbers, from window.MODELS
+// (models.py). A fourth view beside World, Strait and Households. The card shows the question and the numbers; the rest
+// (each number's context and the note it was read from, how it was tested, what it can't do) opens from the card's
+// blue info key, or from the "How it was tested" and "What it can't do" keys at its foot.
 window.HZModels = (() => {
   const $ = (id) => document.getElementById(id);
   const D = window.MODELS, seg = document.querySelector(".modeseg"), straitStage = $("strait-stage");
@@ -8,15 +9,19 @@ window.HZModels = (() => {
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const md = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/`([^`]+)`/g, "<code>$1</code>");
   const src = (path, date) => `<span class="mf">${esc(path)}${date ? ` · ${esc(date)}` : ""}</span>`;
-  // a card's sources sit behind its info button (as on the Households page): each number's note and date, then the notes
+  // a card's details open in the shared sheet (as on the Households and Strait cards), in short sections
   const INFO = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><path d="M12 7.5v.5"/></svg>';
-  function sources(c) {
-    const row = (what, path, date) => `<li><b>${esc(what)}</b><br>${src(path, date)}</li>`;
-    const nums = [...c.stats.map((s) => row(s.label, s.src, s.date)),
-      ...(c.table ? [row("The links table", c.table.src, c.table.date)] : []),
-      ...(c.bars ? [row(c.bars.title, c.bars.src, c.bars.date)] : [])];
-    return `<div class="msrc" id="msrc-${esc(c.id)}" hidden><p>Every number is read from the team's notes when the app is built.</p>
-      <ul>${nums.join("")}</ul><p><b>Notes behind this model</b></p><ul>${c.files.map((f) => `<li>${src(f.path, f.date)}</li>`).join("")}</ul></div>`;
+  const sec = (h, body, id) => `<section class="hz-sec"${id ? ` data-sec="${id}"` : ""}><h4>${h}</h4>${body}</section>`;
+  function about(c) {
+    const num = (v, label, note, path, date) => `<li><b class="v">${esc(v)}</b><span class="l">${esc(label)}</span>${note ? `<span class="n">${esc(note)}</span>` : ""}${src(path, date)}</li>`;
+    const nums = [...c.stats.map((s) => num(s.v, s.label, s.note, s.src, s.date)),
+      ...(c.bars ? [num("Chart", c.bars.title, "", c.bars.src, c.bars.date)] : [])];
+    return `<div class="msrc" id="msrc-${esc(c.id)}" hidden>
+      ${sec("The numbers", `<ul class="hz-nums">${nums.join("")}</ul>`, "numbers")}
+      ${c.table ? sec("The links table: units", `<ul>${c.table.rows.map((r) => `<li><b>${esc(r[0])}</b>: ${esc(r[2])}</li>`).join("")}</ul><p>${src(c.table.src, c.table.date)}</p>`) : ""}
+      ${sec("How it was tested", `<p>${md(c.tested)}</p>`, "tested")}
+      ${sec("What it can't do", `<ul>${c.limits.map((x) => `<li>${md(x)}</li>`).join("")}</ul>`, "limits")}
+      ${sec("Notes behind it", `<p class="hz-fine">Every number is read from these notes when the app is built.</p><ul>${c.files.map((f) => `<li>${src(f.path, f.date)}</li>`).join("")}</ul>`)}</div>`;
   }
 
   // ------------------------------------------------------------ the parts of a card
@@ -25,14 +30,14 @@ window.HZModels = (() => {
     const [v, pm] = s.v.split(" ± ");
     const zero = !/[1-9]/.test(v.replace(/[^\d.]/g, ""));   // −0.0000 is zero: no colour
     const sign = zero ? "" : /^\+/.test(v) ? " pos" : /^[−-]/.test(v) ? " neg" : "";   // + in green, − in red
-    return `<div class="st"><b class="v${sign}">${esc(v)}${pm ? `<small> ± ${esc(pm)}</small>` : ""}</b>
-      <span class="l">${esc(s.label)}</span>${s.note ? `<span class="n">${esc(s.note)}</span>` : ""}</div>`;
+    return `<div class="st"${s.note ? ` title="${esc(s.note)}"` : ""}><b class="v${sign}">${esc(v)}${pm ? `<small> ± ${esc(pm)}</small>` : ""}</b>
+      <span class="l">${esc(s.label)}</span></div>`;
   }
   // the knock-on links and how they held up across folds
   function links(t) {
     const tone = (v) => (/^holds/i.test(v) ? "ok" : /^fails/i.test(v) ? "bad" : "mid");
     return `<table class="lt"><thead><tr>${t.head.map((h) => `<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>${t.rows.map((r) =>
-      `<tr><td>${esc(r[0])}</td><td><span class="mono">${esc(r[1])}</span><small>${esc(r[2])}</small></td><td class="mono">${esc(r[3].replace(" of ", " of "))}</td>
+      `<tr><td>${esc(r[0])}</td><td title="${esc(r[2])}"><span class="mono">${esc(r[1])}</span></td><td class="mono">${esc(r[3].replace(" of ", " of "))}</td>
        <td class="vd ${tone(r[4])}">${esc(r[4])}</td></tr>`).join("")}</tbody></table>`;
   }
   // skill against the institutions: one bar each from zero, ours in amber and labelled, the benchmarks in blue
@@ -54,13 +59,13 @@ window.HZModels = (() => {
   function card(c) {
     return `<article class="card hz-mc${c.wide ? " wide" : ""}${c.full ? " full" : ""}" id="mod-${esc(c.id)}">
       <div class="mh"><h3>${esc(c.title)}</h3><span class="kind">${esc(c.kind)}</span>
-        <button type="button" class="ib hz-i" data-msrc="msrc-${esc(c.id)}" aria-label="Sources for ${esc(c.title)}">${INFO}</button></div>
+        <button type="button" class="ib hz-i" data-msrc="msrc-${esc(c.id)}" aria-label="About ${esc(c.title)}: its numbers, tests, limits and sources">${INFO}</button></div>
       <p class="asks">${md(c.asks)}</p>
       <div class="stats">${c.stats.map(stat).join("")}</div>
       ${c.table ? links(c.table) : ""}${c.bars ? bars(c.bars) : ""}
-      <div class="row"><span class="tl">Tested</span><p>${md(c.tested)}</p></div>
-      <div class="row lim"><span class="tl">Can't</span><ul>${c.limits.map((x) => `<li>${md(x)}</li>`).join("")}</ul></div>
-      ${sources(c)}
+      <div class="mfoot"><button type="button" class="mk ok" data-msrc="msrc-${esc(c.id)}" data-sec="tested">How it was tested</button>
+        <button type="button" class="mk lim" data-msrc="msrc-${esc(c.id)}" data-sec="limits">What it can't do <span class="mono">${c.limits.length}</span></button></div>
+      ${about(c)}
     </article>`;
   }
 
@@ -75,10 +80,13 @@ window.HZModels = (() => {
   const groups = D.groups.map(([g, title]) => [g, title, D.cards.filter((c) => c.group === g)]).filter((x) => x[2].length);
   page.innerHTML = `
   <header class="card hz-mtop">
-    <h2>The models behind the numbers</h2>
-    <p class="how"><b>Skill</b> = 1 − CRPS ÷ the CRPS of climatology (each series' own history): 0 is no better than the historical average,
-      higher is better. <b>Given the oil path</b> means the run knew the oil price that happened; <b>forecasting oil too</b> means it knew nothing
-      after the forecast date. All scores are backtests on real, revised data.</p>
+    <div class="mtt"><h2>The models behind the numbers</h2>
+      <button type="button" class="ib hz-i" data-mhow aria-label="How to read these cards">${INFO}</button></div>
+    <p class="lede">What each model answers and its headline numbers. Tests, limits and sources are behind each card's blue <b>i</b>.</p>
+    <div class="msrc" id="msrc-how" hidden>
+      ${sec("Skill", "<p>1 − CRPS ÷ the CRPS of climatology, each series' own history. 0 is no better than the historical average; higher is better.</p>")}
+      ${sec("Given the oil path, or forecasting oil too", "<p><b>Given the oil path:</b> the run knew the oil price that happened. <b>Forecasting oil too:</b> it knew nothing after the forecast date.</p>")}
+      ${sec("Backtests", "<p>All scores are backtests on real, revised data.</p>")}</div>
     <div class="seg ctabs hz-mtabs" role="tablist" aria-label="Model groups">${groups.map(([g, title, cs]) =>
       `<button type="button" role="tab" id="mtab-${esc(g)}" data-mtab="${esc(g)}" aria-controls="mgrp-${esc(g)}">${esc(title)} <span class="mtn">${cs.length}</span></button>`).join("")}</div>
   </header>
@@ -123,11 +131,15 @@ window.HZModels = (() => {
   }
   page.addEventListener("click", (e) => {
     const b = e.target.closest("[data-mtab]"); if (b) tab(b.dataset.mtab);
-    const i = e.target.closest("[data-msrc]");
+    const i = e.target.closest("[data-msrc], [data-mhow]");
     if (i && $("sheet")) {
-      $("sheet-title").textContent = `Sources: ${i.closest(".hz-mc").querySelector("h3").textContent}`;
-      $("sheet-body").innerHTML = $(i.dataset.msrc).innerHTML;
-      $("sheet").hidden = false; $("sheet-close").focus();
+      const c = i.closest(".hz-mc"), body = $("sheet-body");
+      $("sheet-title").textContent = c ? c.querySelector("h3").textContent : "Reading the model cards";
+      body.innerHTML = `<div class="hz-mpanel">${c ? `<div class="hz-tagline"><span class="tagk">${esc(c.querySelector(".kind").textContent)}</span></div>` : ""}${$(i.dataset.msrc || "msrc-how").innerHTML}</div>`;
+      $("sheet").hidden = false; $("sheet").scrollTop = 0;
+      const to = i.dataset.sec && body.querySelector(`[data-sec="${i.dataset.sec}"]`);
+      if (to) to.scrollIntoView({ block: "start" });
+      $("sheet-close").focus({ preventScroll: true });
     }
   });
   page.querySelector(".hz-mtabs").addEventListener("keydown", (e) => {
