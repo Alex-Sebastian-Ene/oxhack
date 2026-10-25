@@ -40,6 +40,7 @@ SWAPS = [
     ('.range([d3.interpolateLab("#ffffff", h)(0.32), h, d3.hsl(h).darker(0.9).formatHex()])',
      '.range([d3.interpolateLab("#1a2439", h)(0.4), h, d3.hsl(h).brighter(0.75).formatHex()])', 1),
     ('if (!v) return "#eceff3";', 'if (!v) return "#243049";', 1),
+    ('const NODATA = "#eceff3";', 'const NODATA = "#243049";', 1),
     ('c.properties.name === st.sel ? "#aab5c2" : fillFor(c.properties.name)', 'c.properties.name === st.sel ? "#070b16" : fillFor(c.properties.name)', 1),
     ('(n === st.sel ? "#14202e" : "var(--bg)")', '(n === st.sel ? "#ffd27a" : "var(--bg)")', 1),
     # 3D globe: a night sea, light labels, a gold edge and ring for the chosen country

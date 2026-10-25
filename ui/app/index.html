@@ -207,6 +207,7 @@ select { padding: 0 8px; }
 .inds .ind-act button { font-size: 12px; min-height: 28px; padding: 0 10px; }
 .ind-add { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
 #c-ind-pick { width: 100%; }
+.cpop .cp-pred { display: block; margin-top: 6px; font-size: 11.5px; color: var(--faint); }
 .rank { display: flex; flex-direction: column; gap: 2px; }
 .rank button { display: grid; grid-template-columns: 18px minmax(0, 1fr) 70px 34px; align-items: center; gap: 8px; min-height: 30px; padding: 0 6px; background: transparent; border: 0; border-radius: 6px; text-align: left; font-size: 12.5px; }
 .rank button:hover, .rank button[aria-current="true"] { background: var(--panel2); }
@@ -3631,7 +3632,7 @@ window.HZIcons = {
         <div class="kpis">
           <div><b id="c-score">–</b><span>Exposure score <i class="illus" title="Illustrative: the score's weights are hand-set, not from a model (asked on OXH-3)">illustrative</i></span></div>
           <div><b id="c-fuel">–</b><span>Fuel cost now vs pre-war <i class="illus" title="In a supply disruption fuel moves 1.49 times its normal link (Seb's cost-of-living model, 90% range 1.08 to 1.89; fitted on the US, UK and euro area, an assumption elsewhere)">disruption ×1.49</i></span></div>
-          <div><b id="c-dep">–</b><span>Oil use sourced via Hormuz</span></div>
+          <div><b id="c-dep">–</b><span>Oil imports from the Gulf</span></div>
         </div>
         <p class="sub" id="c-res" hidden></p>
         <div>
@@ -4844,7 +4845,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
     const max = Math.max(...Object.values(w), 0.01), f = 0.25 + 0.75 * Math.sqrt(v / max);
     return rampOf(st.mat)(f);
   }
-  function fillFor(name) { return st.mat ? matShade(name) : color(calc(name).score); }
+  function fillFor(name) { if (st.mat) return matShade(name); const v = calc(name).score; return v == null ? NODATA : color(v); }
   // 12-month price change (%) for the current Brent vs pre-war, with the 90% interval of the average effect
   // Seb's recommended chain (docs/chain.md): scenario table, notes/chain-scenarios-3m-margins.csv, as
   // series -> lost-flow points -> months ahead -> [mean, q05, q95], in 100 x log change (pp for unemployment)
@@ -4966,7 +4967,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
       return `<b>${iso ? flagImg(iso) + " " : ""}${escH(name === "United States of America" ? "United States" : name)}</b>${row("production", "Made")}${row("exports", "Shipped")}${VIA[name] ? `<span>${VIA[name]}</span>` : ""}`;
     }
     const k = calc(name);
-    return `<b>${isoOf[name] ? flagImg(isoOf[name]) + " " : ""}${escH(name === "United States of America" ? "United States" : name)}</b><span>Exposure <span class="mono">${fmtS(k.score)}</span></span><span>Fuel cost <span class="mono">${pct(k.fuel)}</span></span>`;
+    return `<b>${isoOf[name] ? flagImg(isoOf[name]) + " " : ""}${escH(name === "United States of America" ? "United States" : name)}</b><span>Exposure <span class="mono">${k.score == null ? "not in our data" : fmtS(k.score)}</span></span><span>Fuel cost <span class="mono">${pct(k.fuel)}${k.d.pt.own ? "" : " (pooled)"}</span></span>`;
   }
 
   // ------------------------------------------------------------ 3D globe (built the first time 3D is chosen)
@@ -5048,20 +5049,31 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
   }
   function zoom3d(f) { if (!G3) return; const p = G3.pointOfView(); G3.pointOfView({ altitude: Math.min(4.5, Math.max(0.6, p.altitude * f)) }, 300); }
 
+  // Country oil profiles from notes/country-oil.json (experiments/country_oil.py, read at build time): import
+  // dependence and the Gulf share of oil imports (UN Comtrade), and the Brent -> pump-price pass-through (own or pooled)
+  const COIL = {"generated": "2026-10-25", "fuelSrc": "12-month log change in motor-fuel consumer prices on the 12-month log change in Brent (US$), 2009-01 to 2025-12, Newey-West errors over 12 months; range is 90%. Brent: FRED MCOILBRENTEU (Brent, monthly average, US$), fetched 2026-10-25", "tradeSrc": "", "pooled": {"e": 0.269, "lo": 0.247, "hi": 0.314, "n": 37}, "fuel": {"ALB": {"e": 0.204, "lo": 0.086, "hi": 0.322, "series": "Eurostat HICP motor fuels (CP0722)", "from": "2016-12", "to": "2025-12"}, "AUT": {"e": 0.316, "lo": 0.249, "hi": 0.384, "series": "Eurostat HICP motor fuels (CP0722)", "from": "2009-01", "to": "2025-12"}, "BEL": {"e": 0.287, "lo": 0.245, "hi": 0.329, "series": "Eurostat HICP motor fuels (CP0722)", "from": "2009-01", "to": "2025-12"}, "BGR": {"e": 0.32, "lo": 0.26, "hi": 0.38, "series": "Eurostat HICP motor fuels (CP0722)", "from": "2009-01", "to": "2025-12"}, "HRV": {"e": 0.271, "lo": 0.235, "hi": 0.307, "series": "Eurostat HICP motor fuels (CP0722)", "from": "2009-01", "to": "2025-12"}, "CYP": {"e": 0.283, "lo": 0.233, "hi": 0.332, "series": "Eurostat HICP motor fuels (CP0722)", "from": "2009-01", "to": "2025-12"}, "CZE": {"e": 0.287, "lo": 0.229, "hi": 0.344, "series": "Eurostat HICP motor fuels (CP0722)", "from": "2009-01", "to": "2025-12"}, "DNK": {"e": 0.26, "lo": 0.215, "hi": 0.305, "series": "Eurostat HICP motor fuels (CP0722)", "from": "2009-01", "to": "2025-12"}, "EST": {"e": 0.315, "lo": 0.254, "hi": 0.375, "series": "Eurostat HICP motor fuels (CP0722)", "from": "2009-01", "to": "2025-12"}, "FIN": {"e": 0.252, "lo": 0.196, "hi": 0.307, "series": "Eurostat HICP motor fuels (CP0722)", "from": "2009-01", "to": "2025-12"}, "FRA": {"e": 0.264, "lo": 0.222, "hi": 0.305, "series": "Eurostat HICP motor fuels (CP0722)", "from": "2009-01", "to": "2025-12"}, "DEU": {"e": 0.262, "lo": 0.213, "hi": 0.31, "series": "Eurostat HICP motor fuels (CP0722)", "from": "2009-01", "to": "2025-12"}, "GRC": {"e": 0.278, "lo": 0.221, "hi": 0.336, "series": "Eurostat HICP motor fuels (CP0722)", "from": "2009-01", "to": "2025-12"}, "HUN": {"e": 0.248, "lo": 0.216, "hi": 0.279, "series": "Eurostat HICP motor fuels (CP0722)", "from": "2009-01", "to": "2025-12"}, "ISL": {"e": 0.182, "lo": 0.124, "hi": 0.24, "series": "Eurostat HICP motor fuels (CP0722)", "from": "2016-12", "to": "2025-12"}, "IRL": {"e": 0.241, "lo": 0.178, "hi": 0.303, "series": "Eurostat HICP motor fuels (CP0722)", "from": "2009-01", "to": "2025-12"}, "ITA": {"e": 0.225, "lo": 0.189, "hi": 0.26, "series": "Eurostat HICP motor fuels (CP0722)", "from": "2009-01", "to": "2025-12"}, "KOS": {"e": 0.346, "lo": 0.259, "hi": 0.432, "series": "Eurostat HICP motor fuels (CP0722)", "from": "2016-01", "to": "2025-12"}, "LVA": {"e": 0.316, "lo": 0.261, "hi": 0.371, "series": "Eurostat HICP motor fuels (CP0722)", "from": "2009-01", "to": "2025-12"}, "LTU": {"e": 0.291, "lo": 0.229, "hi": 0.352, "series": "Eurostat HICP motor fuels (CP0722)", "from": "2009-01", "to": "2025-12"}, "LUX": {"e": 0.331, "lo": 0.27, "hi": 0.392, "series": "Eurostat HICP motor fuels (CP0722)", "from": "2009-01", "to": "2025-12"}, "MLT": {"e": 0.07, "lo": 0.016, "hi": 0.124, "series": "Eurostat HICP motor fuels (CP0722)", "from": "2009-01", "to": "2025-12"}, "MNE": {"e": 0.314, "lo": 0.253, "hi": 0.374, "series": "Eurostat HICP motor fuels (CP0722)", "from": "2015-12", "to": "2025-12"}, "NLD": {"e": 0.235, "lo": 0.195, "hi": 0.276, "series": "Eurostat HICP motor fuels (CP0722)", "from": "2009-01", "to": "2025-12"}, "MKD": {"e": 0.343, "lo": 0.294, "hi": 0.391, "series": "Eurostat HICP motor fuels (CP0722)", "from": "2009-01", "to": "2025-12"}, "NOR": {"e": 0.192, "lo": 0.141, "hi": 0.244, "series": "Eurostat HICP motor fuels (CP0722)", "from": "2009-01", "to": "2025-12"}, "POL": {"e": 0.269, "lo": 0.227, "hi": 0.31, "series": "Eurostat HICP motor fuels (CP0722)", "from": "2009-01", "to": "2025-12"}, "PRT": {"e": 0.247, "lo": 0.202, "hi": 0.293, "series": "Eurostat HICP motor fuels (CP0722)", "from": "2009-01", "to": "2025-12"}, "ROU": {"e": 0.267, "lo": 0.21, "hi": 0.323, "series": "Eurostat HICP motor fuels (CP0722)", "from": "2009-01", "to": "2025-12"}, "SRB": {"e": 0.217, "lo": 0.183, "hi": 0.25, "series": "Eurostat HICP motor fuels (CP0722)", "from": "2009-01", "to": "2025-12"}, "SVK": {"e": 0.287, "lo": 0.243, "hi": 0.332, "series": "Eurostat HICP motor fuels (CP0722)", "from": "2009-01", "to": "2025-12"}, "SVN": {"e": 0.264, "lo": 0.219, "hi": 0.31, "series": "Eurostat HICP motor fuels (CP0722)", "from": "2009-01", "to": "2025-12"}, "ESP": {"e": 0.292, "lo": 0.251, "hi": 0.334, "series": "Eurostat HICP motor fuels (CP0722)", "from": "2009-01", "to": "2025-12"}, "SWE": {"e": 0.244, "lo": 0.183, "hi": 0.306, "series": "Eurostat HICP motor fuels (CP0722)", "from": "2009-01", "to": "2025-12"}, "CHE": {"e": 0.261, "lo": 0.219, "hi": 0.303, "series": "Eurostat HICP motor fuels (CP0722)", "from": "2009-01", "to": "2025-12"}, "TUR": {"e": 0.392, "lo": 0.223, "hi": 0.56, "series": "Eurostat HICP motor fuels (CP0722)", "from": "2009-01", "to": "2025-12"}, "USA": {"e": 0.532, "lo": 0.468, "hi": 0.597, "series": "US CPI motor fuel (BLS via FRED)", "from": "2009-01", "to": "2025-12"}}, "trade": {}};
+  const NODATA = "#243049";
   function info(name) {
-    const d = C[name] || (DEFAULT_EXP.has(name) ? { c: 50, h: 0, m: -3, ind: EXP } : { c: 0, h: 0, m: .8, ind: IMP, generic: true });
+    const iso = isoOf[name], t = COIL.trade[iso], f = COIL.fuel[iso], hand = C[name];
+    const d = Object.assign({ c: 0, h: 0, m: null }, hand || {});
+    if (t) Object.assign(d, { dep: t.m, gs: t.gs, top: t.top, depSrc: `UN Comtrade, ${t.year}` });
+    else if (hand) Object.assign(d, { dep: hand.m, gs: hand.c && hand.m > 0 ? Math.min(1, hand.h / (hand.c * hand.m)) : null, depSrc: "this page's country table (EIA, Energy Institute)" });
+    else Object.assign(d, { dep: null, gs: null, nodata: true });
+    if (!hand) d.ind = d.dep != null && d.dep <= 0 ? EXP : IMP;
+    d.pt = f ? Object.assign({ own: true }, f) : Object.assign({ own: false, series: `pooled: the median of ${COIL.pooled.n} countries' pass-through` }, COIL.pooled);
     return d;
   }
   function calc(name, dB = st.brent / BRENT0 - 1, s = Math.max(0, 1 - st.flow / PREWAR)) {
     const d = info(name);
-    const hz = d.c ? Math.min(1, d.h / d.c) : 0;
+    const hz = d.gs;                                  // share of its oil imports from the Gulf producers (null: not in our data)
     const dlog = Math.log(1 + dB);
-    const price = fuelFrac(dlog);                     // validated: Brent -> retail fuel
+    const price = d.pt.e * dlog;                      // its own Brent -> pump-price pass-through, or the pooled one
     const fuel = price * (1 + (inDisruption(s) ? DISRUPT.mid : 0));   // the normal link, times 1.49 in a disruption
     let score, kind;
     if (d.gulf) { kind = "gulf"; score = d.gulf * s * 100; }
-    else if (d.m <= 0) { kind = "exp"; score = -Math.min(1, -d.m / 3 + 0.15) * Math.max(dB, 0) * 60; }
-    else { kind = "imp"; score = fuel * (0.4 + 0.6 * d.m) * 100; }
+    else if (d.dep == null) { kind = "none"; score = null; }
+    else if (d.dep <= 0) { kind = "exp"; score = -Math.min(1, -d.dep / 3 + 0.15) * Math.max(dB, 0) * 60; }
+    else { kind = "imp"; score = fuel * (0.4 + 0.6 * Math.min(1, d.dep)) * 100; }
     return { d, hz, fuel, price, dlog, score, kind, s, dB };
   }
   // Cost shares from notes/industry/industry_exposure.csv (read at build time); sector codes for Seb's sector model
@@ -5087,7 +5099,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
   // oil exporters: earnings = price change x the oil that still gets out
   function exportEarnings(name) {
     const k = calc(name);
-    if (!k.d || k.d.m > 0) return null;
+    if (!k.d || !(k.d.dep <= 0)) return null;
     const out = 1 - (k.d.gulf ? k.d.gulf * k.s : 0);
     return { v: ((1 + k.dB) * out - 1) * 100, trapped: k.d.gulf ? k.d.gulf * k.s : 0 };
   }
@@ -5110,8 +5122,8 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
       if (!sh) return { key, label, why, v: null, sec, earn, chn, ports, power };
       // cost change = fuel share of costs × modelled fuel price change; range from the two link fits
       const dz = inDisruption(k.s);
-      const lo = sh.s * fuelFrac(k.dlog, 1) * (1 + (dz ? DISRUPT.lo : 0)), hi = sh.s * fuelFrac(k.dlog, 0) * (1 + (dz ? DISRUPT.hi : 0));
-      const mid = sh.s * fuelFrac(k.dlog, 0) * (1 + (dz ? DISRUPT.mid : 0));
+      const lo = sh.s * k.d.pt.lo * k.dlog * (1 + (dz ? DISRUPT.lo : 0)), hi = sh.s * k.d.pt.hi * k.dlog * (1 + (dz ? DISRUPT.hi : 0));
+      const mid = sh.s * k.d.pt.e * k.dlog * (1 + (dz ? DISRUPT.mid : 0));
       return { key, label, why, v: mid, lo: Math.min(lo, hi), hi: Math.max(lo, hi), src: sh.src, lag: sh.lag, sec };
     });
   }
@@ -5121,7 +5133,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
     const k = calc(name);
     return MONTHS.map((_, t) => {
       const dB = k.dB * mult * Math.pow(0.5, t / hlB), s = k.s * Math.min(1, mult) * Math.pow(0.5, t / hlS);
-      return 100 * (1 + fuelFrac(Math.log(1 + dB)) * (1 + DISRUPT.mid * (inDisruption(k.s) ? s / k.s : 0)));
+      return 100 * (1 + k.d.pt.e * Math.log(1 + dB) * (1 + DISRUPT.mid * (inDisruption(k.s) ? s / k.s : 0)));
     });
   }
 
@@ -5396,7 +5408,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
   }
 
   const pct = (x, dp = 0) => `${x > 0.0005 ? "+" : x < -0.0005 ? "−" : ""}${Math.abs(x * 100).toFixed(dp)}%`;
-  const fmtS = (v) => (v > 0.5 ? "+" : v < -0.5 ? "−" : "") + Math.abs(v).toFixed(0);
+  const fmtS = (v) => (v == null ? "–" : (v > 0.5 ? "+" : v < -0.5 ? "−" : "") + Math.abs(v).toFixed(0));
   function tip(e, name) {
     const k = calc(name), t = $("wtip");
     if (st.mat) {
@@ -5409,7 +5421,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
     }
     const r = svgEl.node().getBoundingClientRect();
     t.innerHTML = `<b>${name}</b><span>Exposure <span class="mono ${k.score > 0.5 ? "hurt" : k.score < -0.5 ? "gain" : ""}">${fmtS(k.score)}</span></span>
-      <span>Fuel cost <span class="mono">${pct(k.fuel)}</span></span>${k.d.h ? `<span>Via Hormuz <span class="mono">${(k.hz * 100).toFixed(0)}% of use</span></span>` : ""}`;
+      <span>Fuel cost <span class="mono">${pct(k.fuel)}${k.d.pt.own ? "" : " (pooled)"}</span></span>${k.kind === "imp" || k.kind === "none" ? `<span>From the Gulf <span class="mono">${k.hz == null ? "not in our data" : `${(k.hz * 100).toFixed(0)}% of oil imports`}</span></span>` : ""}${k.score == null ? `<span>Exposure: not in our data</span>` : ""}`;
     t.hidden = false;
     let x = e.clientX - r.left + 14, y = e.clientY - r.top + 14;
     if (x + t.offsetWidth > r.width - 8) x = e.clientX - r.left - t.offsetWidth - 14;
@@ -5581,8 +5593,9 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
   function countryFacts(name) {
     const iso = isoOf[name], k = calc(name), out = [scenFact()];
     out.push(`${nmIso(iso)} exposure score ${fmtS(k.score)} on a -40 (gains) to +65 (hurt) scale (an illustrative index: its weights are hand-set, not from a model; inputs from the scenario)`);
-    out.push(`Fuel cost ${pct(k.fuel)} vs pre-war: Brent to retail fuel link validated on FRED (fitted 1991-2008, tested 2009-2026) times 1.49 in a supply disruption (Seb's cost-of-living model: 90% range 1.08 to 1.89, fitted on the US, UK and euro area, an assumption elsewhere)`);
-    if (k.d.c) out.push(`About ${(k.hz * 100).toFixed(0)}% of ${nmIso(iso)}'s oil use comes through Hormuz (this page's country table)`);
+    out.push(`Fuel cost ${pct(k.fuel)} vs pre-war: ${k.d.pt.own ? `${nmIso(iso)}'s own` : "a pooled"} Brent to pump-price pass-through of ${k.d.pt.e.toFixed(2)} (${k.d.pt.series}; country_oil.py) times 1.49 in a supply disruption (Seb's cost-of-living model: 90% range 1.08 to 1.89, fitted on the US, UK and euro area, an assumption elsewhere)`);
+    if (k.hz != null) out.push(`About ${(k.hz * 100).toFixed(0)}% of ${nmIso(iso)}'s oil imports came from the Gulf producers before the war (${k.d.depSrc}; an upper bound for oil through the strait)`);
+    else if (k.d.nodata) out.push(`${nmIso(iso)} has no oil trade in our data, so its exposure score is not shown`);
     if (VIA[name]) out.push(`${nmIso(iso)} exports oil: ${VIA[name]}`);
     for (const r of industries(name).slice(0, 4)) out.push(`${r.label}: ${r.v == null ? "no sourced cost share" : `costs ${pct(r.lo / 100, 1)} to ${pct(r.hi / 100, 1)} (${r.src || "sourced share"})`}; ${String(r.why || "").slice(0, 120)}`);
     const m = mats[st.mat];
@@ -5848,19 +5861,22 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
     $("c-name").innerHTML = `${isoOf[name] ? flagImg(isoOf[name]) : ""}${escH(name)}`;
     const tag = $("c-tag");
     tag.className = "tag" + (k.kind === "gulf" ? " gulf" : k.kind === "exp" ? " exp" : "");
-    tag.textContent = k.kind === "gulf" ? "Gulf producer" : k.kind === "exp" ? "Net exporter" : "Net importer";
+    tag.textContent = k.kind === "gulf" ? "Gulf producer" : k.kind === "exp" ? "Net exporter" : k.kind === "none" ? "No oil trade data" : "Net importer";
     let sub;
     if (k.kind === "gulf") sub = `About ${Math.round(d.gulf * 100)}% of its exports must pass the strait. ${d.note || ""}`;
     else if (k.kind === "exp") sub = `Sells oil abroad, so a higher price brings in revenue, though drivers and airlines still pay more. ${d.note || ""}`;
     else if (d.h) sub = `Via Hormuz: ${(d.h / 1000).toFixed(d.h >= 1000 ? 1 : 2)} mb/d pre-war, about ${(d.h * Math.min(st.flow / PREWAR, 1) / 1000).toFixed(2)} now.`;
-    else sub = d.generic ? "No direct Hormuz cargoes in this model, so the shock arrives through the world oil price. Figures use a typical importer profile." : "Feels the shock through the world oil price.";
+    else if (d.nodata) sub = "Not in our data: it doesn't report oil trade to UN Comtrade, so there is no import dependence or Gulf share for it. Fuel cost uses the pooled pass-through.";
+    else if (k.hz != null) sub = `Before the war about ${Math.round(k.hz * 100)}% of its oil imports came from the Gulf producers${d.top ? `, most from ${d.top}` : ""} (${d.depSrc}), so the shock reaches it through supply as well as price.`;
+    else sub = "Feels the shock through the world oil price.";
     $("c-sub").textContent = sub;
     const sc = $("c-score");
     sc.textContent = fmtS(k.score);
     sc.className = k.score > 0.5 ? "hurt" : k.score < -0.5 ? "gain" : "";
     $("c-fuel").textContent = pct(k.fuel);
     $("c-fuel").className = k.fuel > 0.005 ? "hurt" : "";
-    $("c-dep").textContent = k.kind === "imp" ? `${(k.hz * 100).toFixed(0)}%` : "–";
+    $("c-dep").textContent = k.kind === "imp" && k.hz != null ? `${(k.hz * 100).toFixed(0)}%` : "–";
+    $("c-fuel").title = `Pass-through ${k.d.pt.e.toFixed(2)} (${k.d.pt.series}${k.d.pt.from ? `, ${k.d.pt.from} to ${k.d.pt.to}` : ""}) × 1.49 in a disruption`;
     const cv = coverOf(name);
     $("c-res").hidden = !cv;
     $("c-res").title = cv ? `${cv.src}: ${cv.url}` : "";
@@ -6055,6 +6071,14 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
     const [x, y] = cur.invert([e.clientX - r.left, e.clientY - r.top]);
     return proj.invert([x, y]);
   }
+  // our models' 12-month what-ifs for a country at the shock card's Brent, where they reach it
+  function predHtml(name) {
+    const own = ecoOf(name), out = [];
+    if (own) out.push(`consumer prices <b>${pctP(ecoPath(`${own}_cpi`)[12][0])}</b> (${own === "ea" ? "euro area" : own === "us" ? "US" : "UK"}, Bayesian model)`);
+    const sec = sectorMove(name, "manuf");
+    if (sec) out.push(`factory prices <b>${pctP(sec.v)}</b> (sector model)`);
+    return `<span class="cp-pred">${out.length ? `Our models, 12 months at $${st.brent}: ${out.join("; ")}.` : "Model what-ifs for prices: not in our data."}</span>`;
+  }
   // pop-up for the selected country: headline facts only; the panel holds the full analysis
   function renderPop() {
     const pop = $("cpop");
@@ -6062,7 +6086,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
     const name = st.sel, iso = isoOf[name], k = calc(name), m = mats[st.mat];
     $("cp-flag").innerHTML = iso ? flagImg(iso) : "";
     $("cp-name").textContent = name === "United States of America" ? "United States" : name;
-    const tag = VIA[name] ? VIA[name] : k.kind === "gulf" ? "Gulf producer" : k.kind === "exp" ? "Net exporter" : "Net importer";
+    const tag = VIA[name] ? VIA[name] : k.kind === "gulf" ? "Gulf producer" : k.kind === "exp" ? "Net exporter" : k.kind === "none" ? "No oil trade data" : "Net importer";
     $("cp-tag").textContent = tag;
     $("cp-tag").className = "tag" + (VIA[name] || k.kind === "gulf" ? " gulf" : k.kind === "exp" ? " exp" : "");
     const kpi = (v, label, cls = "") => `<div><b class="${cls}">${v}</b><span>${label}</span></div>`;
@@ -6077,10 +6101,11 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
       line = into ? `${escH(m.name)}: biggest outside input is ${escH((MAT.inputs[into.input] || {}).name || into.input)} from ${flagImg(into.from)} ${escH(nmIso(into.from))}, ${Math.round(into.share * 100)}%.`
         : `${escH(m.name)}: no sourced supplier split for ${escH(nmIso(iso) || name)}.`;
     } else {
-      kpis = kpi(fmtS(k.score), "exposure score, illustrative", k.score > 0.5 ? "hurt" : k.score < -0.5 ? "gain" : "")
-        + kpi(pct(k.fuel), "fuel cost, in a disruption", k.fuel > 0.005 ? "hurt" : k.fuel < -0.005 ? "gain" : "")
-        + kpi(k.kind === "imp" ? `${(k.hz * 100).toFixed(0)}%` : "–", "of its oil via Hormuz");
+      kpis = kpi(fmtS(k.score), k.score == null ? "exposure: not in our data" : "exposure score, illustrative", k.score > 0.5 ? "hurt" : k.score < -0.5 ? "gain" : "")
+        + kpi(pct(k.fuel), k.d.pt.own ? "fuel cost, in a disruption" : "fuel cost, pooled estimate", k.fuel > 0.005 ? "hurt" : k.fuel < -0.005 ? "gain" : "")
+        + kpi(k.kind !== "imp" || k.hz == null ? "–" : `${(k.hz * 100).toFixed(0)}%`, k.kind !== "exp" && k.kind !== "gulf" && k.hz == null ? "Gulf share: not in our data" : "of its oil imports from the Gulf");
       line = k.kind === "gulf" ? `About ${Math.round(k.d.gulf * 100)}% of its exports must pass the strait.` : k.kind === "exp" ? "Sells oil abroad, so a higher price brings in revenue." : (coverOf(name) ? `Oil stocks: ${coverOf(name).txt}. ` : "") + "Pick a product above to see what it makes and trades.";
+      line += predHtml(name);
     }
     $("cp-kpis").innerHTML = kpis;
     $("cp-line").innerHTML = line;
@@ -6233,7 +6258,7 @@ window.FLAGS = {"source":"flag-icons 7.6.0 (MIT)","flags":{"AGO":"data:image/svg
       <ul><li><b>Importers:</b> how much more fuel costs × how much of their oil they import.</li>
       <li><b>Exporters outside the Gulf</b> (Norway, Canada, Nigeria and others) gain from the higher price.</li>
       <li><b>Gulf producers</b> are hurt by the oil they can't ship out.</li></ul>
-      <p class="illus-note"><b>Illustrative:</b> the weights are set by hand, not fitted to data. Inputs: EIA 2024 Hormuz volumes and Energy Institute consumption. Countries without their own data use a typical importer.</p>` },
+      <p class="illus-note"><b>Illustrative:</b> the weights are set by hand, not fitted to data. Inputs: each country's oil imports, exports and imports from the Gulf (UN Comtrade), and its own Brent to pump-price pass-through where we have its fuel prices (else the median, marked pooled). Countries in neither are grey: not in our data.</p>` },
   };
   document.querySelectorAll("[data-winfo]").forEach((b) => b.addEventListener("click", () => {
     const i = WINFO[b.dataset.winfo];
