@@ -68,3 +68,25 @@ def test_forward_choice_uses_earlier_folds_only():
                       [1.0, 0.9, 0.1]])  # fold 2 prefers combination 2, but fold 2 can't see itself
     assert mc.forward_choice(score, 0, equal=0) == 0
     assert mc.forward_choice(score, 2, equal=0) == 1
+
+
+def test_margin_member_joins_mixtures_on_the_fuel_columns_only():
+    rng = np.random.default_rng(2)
+    S = rng.normal(size=(3, 400, 2, 5))  # members, draws, origins, outputs
+    D = rng.normal(size=(400, 2, 5)) + 100  # the margin member, easy to recognise
+    order = rng.permutation(400)
+    cols, other = [1, 3], [0, 2, 4]
+    w = np.full(3, 1 / 3)
+    M = mc.with_margins(S, D, w, order, cols)
+    base = mc.mixture(S, w, order)
+    assert np.array_equal(M[..., other], base[..., other])  # other targets: the members alone
+    a4 = mc.assignment(np.full(4, 0.25), 400, order)  # one more equal-weight member, same order
+    for n in range(400):  # draw n keeps oil path n whichever member it comes from
+        expect = D[n] if a4[n] == 3 else S[a4[n], n]
+        assert np.array_equal(M[n][..., cols], expect[..., cols])
+    assert (M[:, 0, cols[0]] > 50).sum() == 100
+    one = np.array([0.0, 1.0, 0.0])  # a single member, or no margin draws, is left alone
+    assert np.array_equal(mc.with_margins(S, D, one, order, cols), S[1])
+    assert np.array_equal(mc.with_margins(S, None, w, order, cols), base)
+    names = ["us_cpi@1", "ind_gasdesw@3", "ind_djfuelusgulf@12", "ind_pcu324110324110@1", "ind_pcu325311325311@1"]
+    assert mc.fuel_columns(names) == [1, 2, 3]
