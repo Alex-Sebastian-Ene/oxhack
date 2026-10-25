@@ -5,6 +5,7 @@ Synthetic data only, apart from the daily Lévy paths, which need the cached Bre
 Lévy fits (skipped otherwise). No MCMC. Needs jax and numpyro (skipped otherwise).
 """
 
+import json
 from types import SimpleNamespace
 
 import numpy as np
@@ -22,7 +23,11 @@ def toy_data(y=None, x=None):
     months = pd.date_range("2000-01-01", periods=T, freq="MS")
     w = {k: 0.01 for k in [it.key for it in col.ITEMS]}
     for r in col.REGIONS:
-        w[f"{r}_rest"] = 1 - sum(v for k, v in w.items() if k.startswith(f"{r}_"))
+        agg, parts = col.SERVICES[r]
+        w[agg.key] = 0.3
+        w[f"{r}_services"] = w[agg.key] - sum(w[k] for k in parts)
+        comp = [it.key for it in col.ITEMS if it.region == r] + [f"{r}_services"]
+        w[f"{r}_rest"] = 1 - sum(w[k] for k in comp)
     return {"months": months, "x": np.zeros(T) if x is None else x, "g_us": np.zeros(T), "g_eu": np.zeros(T),
             "g_grain": np.zeros(T), "g_urea": np.zeros(T), "y": np.zeros((T, K)) if y is None else y,
             "D": np.zeros(T), "weights": {"w": w}}
@@ -60,16 +65,29 @@ def test_lagmat_shifts_down():
 
 def test_rest_makes_the_composite_equal_headline():
     rng = np.random.default_rng(1)
-    keys = [it.key for it in col.ITEMS] + [f"{r}_all" for r in col.REGIONS]
+    keys = ([it.key for it in col.ITEMS] + [col.SERVICES[r][0].key for r in col.REGIONS]
+            + [f"{r}_all" for r in col.REGIONS])
     ch = pd.DataFrame(rng.normal(0, 1, (T, len(keys))), columns=keys)
     data = toy_data()
-    ch = col.derive_rest(ch, data["weights"]["w"])
+    w = data["weights"]["w"]
+    ch = col.derive_rest(ch, w)
     for s in col.OTHER:  # metrics outside the basket: large values, which must not leak into the composite
         ch[s.key] = 1e6
     S = ch[[s.key for s in col.SERIES]].values[None]  # one "draw"
     out = col.with_composites(S, data)[0]
     for i, r in enumerate(col.REGIONS):
         assert np.allclose(out[:, K + i], ch[f"{r}_all"].values)
+        # other services and the service items modelled on their own add back to the services total
+        agg, parts = col.SERVICES[r]
+        rebuilt = w[f"{r}_services"] * ch[f"{r}_services"] + sum(w[k] * ch[k] for k in parts)
+        assert np.allclose(rebuilt, w[agg.key] * ch[agg.key])
+
+
+def test_basket_split_has_housing_core_goods_and_services_everywhere():
+    for r in col.REGIONS:
+        kinds = {s.kind for s in col.SERIES if s.region == r}
+        assert {"housing", "core_goods", "services", "rest"} <= kinds
+        assert set(col.SERVICES[r][1]) <= {it.key for it in col.ITEMS}  # the service items it nets out exist
 
 
 def test_average_link_recovers_the_pass_through():
@@ -176,3 +194,52 @@ def test_benchmarks_are_matched_by_origin_month():
     out = rep.bench_by_origin(bench, ["2020-02", "2020-03", "2020-04"], "spf", 12)
     assert out[:2].tolist() == pytest.approx([2.3, 5.3])  # second origin of fold 0, first of fold 1, at h=12
     assert np.isnan(out[2])  # no survey for that month
+
+
+def test_nowcasts_skip_release_lines_and_run_into_the_next_year(tmp_path, monkeypatch):
+    rep = pytest.importorskip("cost_of_living_report")
+    monkeypatch.setattr(col.md, "RAW", tmp_path)  # a cached file, so nothing is downloaded
+    cats = [{"label": "12/30"}, {"label": "CPI Nov", "vline": "true"}, {"label": "01/03"}, {"label": "01/12"}]
+    entry = {"chart": {"subcaption": "2021-12"}, "categories": [{"category": cats}],
+             "dataset": [{"seriesname": "CPI Inflation", "data": [{"value": "0.4"}, {"value": "0.5"}, {"value": ""}]},
+                         {"seriesname": "Actual CPI Inflation", "data": [{"value": ""}, {"value": ""}, {"value": "0.6"}]}]}
+    (tmp_path / "cleveland_nowcast_month.json").write_text(json.dumps([entry]))
+    row = rep.nowcasts("month").loc[pd.Timestamp("2021-12-01")]
+    assert row["nowcasts"].to_dict() == {pd.Timestamp("2021-12-30"): 0.4, pd.Timestamp("2022-01-03"): 0.5}
+    assert row["released"] == pd.Timestamp("2022-01-12")
+    assert row["actual"] == pytest.approx(0.6)
+
+
+def test_benchmark_bands_use_only_earlier_errors():
+    rep = pytest.importorskip("cost_of_living_report")
+    rng = np.random.default_rng(7)
+    vol = rng.normal(0, 1, 60)
+    err = np.exp(0.5 * vol) * rng.normal(0, 1, 60)  # errors that grow with oil volatility
+    a = rep.bands(err, vol, 12, 0.9)
+    later = err.copy()
+    later[40:] *= 10  # changing later errors must leave every band up to target 40 alone
+    b = rep.bands(later, vol, 12, 0.9)
+    for k in a:
+        assert np.isnan(a[k][:12]).all()
+        assert np.allclose(a[k][12:41], b[k][12:41])
+    assert a["fixed"][20] == pytest.approx(err[:20].std(ddof=1))
+    assert np.corrcoef(np.log(a["oil"][40:]), vol[40:])[0, 1] > 0.9  # the oil band widens with volatility
+
+
+def test_quarter_rate_annualises_the_quarterly_average():
+    rep = pytest.importorskip("cost_of_living_report")
+    g = 0.25  # the same log change (x100) every month
+    assert rep.quarter_rate(g * np.arange(6.0)) == pytest.approx(100 * (np.exp(12 * g / 100) - 1))
+
+
+def test_a_forecast_started_a_month_early_scores_the_same_window():
+    # simulate takes its horizon from Dfut, so the timing-matched mode can run H + 1 months and drop the first
+    post = toy_post(a=0.3)
+    x = np.zeros((1, 1, col.H + 1))
+    S = col.simulate(post, UNIT, toy_data(), np.array([29]), {"x": x}, np.zeros((1, col.H + 1)), np.zeros((5, K)),
+                     np.random.default_rng(0))
+    assert S.shape == (2, 1, col.H + 1, K)
+    window = (S[:, :, 1:] - S[:, :, :1])[0, 0, :, 0]
+    assert window == pytest.approx(0.3 * np.arange(1, col.H + 1))
+    par = {"mu": 0.001, "omega": 0.0004, "alpha": 0.1, "beta": 0.8, "nu": 5.0, "s2_next": 0.005}
+    assert col.garch_paths(par, 10, np.zeros(col.H + 1), np.random.default_rng(1)).shape == (10, col.H + 1)

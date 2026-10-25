@@ -24,6 +24,10 @@ REGION = {k: k.split("_")[0] for k in KEYS}
 NAME = {s.key: s.name for s in col.SERIES} | {f"{r}_composite": f"{col.REGIONS[r]} composite (weighted items + rest)"
                                               for r in col.REGIONS}
 ITEM_KINDS = [k for k in col.KINDS if k not in ("rest", "all")]
+# Housing, core goods, other services and what is left of the rest, region by region, for the scenario
+# and outlook tables.
+CORE_BASKET = [s.key for r in col.REGIONS for s in col.SERIES
+               if s.region == r and s.kind in ("housing", "core_goods", "services", "rest")]
 H_IDX = {h: i for i, h in enumerate(col.HS)}
 MODES = [("whatif", "Bayesian, given oil and gas"), ("whatif_no_regime", "same, no supply-shock terms"),
          ("avg_link", "average link (OLS)"), ("forecast_GARCH-CGMY", "forecast, Lévy Brent paths"),
@@ -40,6 +44,20 @@ INSTITUTIONS = (("cleveland", "Cleveland Fed 1-year expected inflation (FRED EXP
                 ("spf_latest", "SPF median, latest survey at every month-end"),
                 ("rw", "Random walk: last 12-month pace carries on"))
 BENCH_LAG = 12  # Newey-West lags of the comparison, as in the chain's Diebold-Mariano tests
+# The Cleveland Fed's inflation nowcasts: the chart data behind clevelandfed.org/indicators-and-data/inflation-nowcasting.
+# For each month (or quarter) since 2013-07, the CPI nowcast on every business day up to the release, and CPI as
+# first published on release day.
+NOWCAST_URL = "https://www.clevelandfed.org/-/media/files/webcharts/inflationnowcasting/nowcast_{}.json?sc_lang=en"
+NOWCAST_MIN = {"month": 12, "quarter": 8}  # earlier errors a benchmark band needs before it is scored
+NOWCAST_LAG = {"month": 3, "quarter": 1}  # Newey-West lags of the nowcast comparison
+EWMA = 0.9  # monthly decay of a benchmark's EWMA error variance (half-life 6.6 months)
+BANDS = (("fixed", "fixed band (spread of its earlier errors)"), ("ewma", "EWMA band (recent errors weigh more)"),
+         ("oil", "band that scales with Brent's volatility"))
+# Two more of its monthly nowcasts, each with an EWMA band, to bracket the matched one: the first of the month, made
+# at its start (it knows oil to the month before, as ours does, but not last month's CPI), and the last before the
+# release (it knows the whole month's oil and petrol)
+OTHER_NOWCASTS = (("first", "first nowcast of the month, made at its start (not yet last month's CPI), EWMA band"),
+                  ("last", "last nowcast before the release (knows the whole month), EWMA band"))
 
 
 def converged(d: dict) -> bool:
@@ -56,6 +74,18 @@ def load_runs(folder=None) -> tuple[dict, dict]:
             r = json.loads(p.read_text())
             (ok if converged(r["diagnostics"]) and not r["meta"].get("quick") else failed)[n] = r
     return ok, failed
+
+
+def load_lagged(folder) -> list[dict]:
+    """The converged fold-j-lagged runs (the timing-matched forecasts for the Fed/SPF comparison)."""
+    out = []
+    for j in range(8):
+        p = folder / f"fold-{j}-lagged.json"
+        if p.exists():
+            r = json.loads(p.read_text())
+            if converged(r["diagnostics"]) and not r["meta"].get("quick"):
+                out.append(r)
+    return out
 
 
 def stack(folds: list[dict], mode: str, field: str = "crps") -> np.ndarray:
@@ -87,7 +117,7 @@ def diff(a: np.ndarray, b: np.ndarray, clim: np.ndarray, c: np.ndarray, hi: int)
 
 def groups() -> list[tuple[str, list[str]]]:
     g = [(col.KIND_NAMES[k], [s.key for s in col.SERIES if s.kind == k]) for k in ITEM_KINDS]
-    g += [("Rest of the basket", [f"{r}_rest" for r in col.REGIONS])]
+    g += [("Rest of the basket (remainder)", [f"{r}_rest" for r in col.REGIONS])]
     g += [(f"{col.REGIONS[r]} headline: composite", [f"{r}_composite"]) for r in col.REGIONS]
     g += [(f"{col.REGIONS[r]} headline: direct", [f"{r}_all"]) for r in col.REGIONS]
     return g
@@ -196,55 +226,287 @@ def bench_by_origin(bench: dict, origins: list[str], key: str, h: int) -> np.nda
     return np.array([np.nan if by.get(d) is None else by[d] for d in origins], float)
 
 
-def institutions_section(folds: list[dict], bench: dict) -> list[str]:
-    mode = "forecast_GARCH-CGMY"
-    origins = [o for f in folds for o in f["origins"]]
-    clim, S, I = stack(folds, "climatology"), stack(folds, mode), stack(folds, mode, "inside90")
+def institutions_section(folds: list[dict], bench: dict, lagged: list[dict] | None = None) -> list[str]:
+    """US CPI against the Fed and SPF forecasts. With `lagged` (the fold-j-lagged runs) the main tables
+    are timing-matched: our forecast starts a month earlier, with the CPI the surveys had. The tables
+    from the folds' own forecast mode follow, with the head start it gives us."""
     ours = (("us_composite", "Our US composite (items + rest)"), ("us_all", "Our US headline, forecast directly"))
-    B = {(k, h): bench_by_origin(bench, origins, k, h) for k, _ in INSTITUTIONS for h in col.HS}
     head = KEYS.index("us_all")  # one scale for every row: the climatology of US headline CPI
     gen = bench["meta"]["generated"][:10]
+
+    def tables(fl: list[dict], mode: str) -> list[str]:
+        origins = [o for f in fl for o in f["origins"]]
+        clim, S, I = stack(fl, "climatology"), stack(fl, mode), stack(fl, mode, "inside90")
+        B = {(k, h): bench_by_origin(bench, origins, k, h) for k, _ in INSTITUTIONS for h in col.HS}
+        out = ["**Skill against the climatology of US headline CPI**, each on the origins it has (the release-month "
+               "SPF has one a quarter)", "",
+               "| Forecast | " + " | ".join(f"h={h}" for h in col.HS) + " |", "|---|" + "---|" * len(col.HS)]
+        for k, lab in ours:
+            c = KEYS.index(k)
+            out.append(f"| {lab} | " + " | ".join(
+                f3(1 - np.nanmean(S[:, H_IDX[h], c]) / np.nanmean(clim[:, H_IDX[h], head])) for h in col.HS) + " |")
+        for k, lab in INSTITUTIONS:
+            cells = []
+            for h in col.HS:
+                b, cl = B[(k, h)], clim[:, H_IDX[h], head]
+                ok = np.isfinite(b) & np.isfinite(cl)
+                cells.append(f3(1 - b[ok].mean() / cl[ok].mean()))
+            out.append(f"| {lab} | " + " | ".join(cells) + " |")
+        out += ["| 90% coverage of our US composite | " + " | ".join(
+            pct(np.nanmean(I[:, H_IDX[h], KEYS.index("us_composite")])) for h in col.HS) + " |", ""]
+        for k, lab in ours:
+            c = KEYS.index(k)
+            out += [f"**{lab} against each benchmark**: how much lower our CRPS is, on the origins both have; t is the "
+                    f"Diebold-Mariano statistic of ours minus theirs (Newey-West, {BENCH_LAG} lags; negative = ours better)",
+                    "", "| Benchmark | " + " | ".join(f"h={h}" for h in col.HS) + " |", "|---|" + "---|" * len(col.HS)]
+            for bk, blab in INSTITUTIONS:
+                cells = []
+                for h in col.HS:
+                    a, b, cl = S[:, H_IDX[h], c], B[(bk, h)], clim[:, H_IDX[h], head]
+                    ok = np.isfinite(a) & np.isfinite(b) & np.isfinite(cl)
+                    d = (a[ok] - b[ok]) / cl[ok].mean()
+                    m_, cov = oc.ols_hac(d, np.ones((len(d), 1)), BENCH_LAG)
+                    lower = 1 - a[ok].mean() / b[ok].mean()
+                    cells.append(f"{abs(100 * lower):.0f}% {'lower' if lower >= 0 else 'higher'} "
+                                 f"(t {m_[0] / np.sqrt(cov[0, 0]):+.1f}, n {ok.sum()})")
+                out.append(f"| {blab} | " + " | ".join(cells) + " |")
+            out.append("")
+        return out
+
     out = ["## Against the Fed and the SPF: US CPI", "",
            f"_Benchmarks from `{BENCH_FILE.relative_to(col.ROOT).as_posix()}` (written by `experiments/macro_global.py "
            f"benchmarks` on {gen}; surveys fetched {bench['fetched']}, SPF to the {bench['spf_last_survey']} survey)._", "",
            "Our rows are the forecast mode with Lévy Brent paths: nothing after the origin is known. The benchmarks are the "
-           "chain's, on the same 8 folds, matched by origin month. Each is a point forecast with a Gaussian band of the "
-           "spread of its own errors on the fold's training origins. Cleveland and Michigan give 1-year rates, scaled by "
-           "h/12 at shorter horizons; the SPF's quarterly path is interpolated to months (`docs/macro-ensemble.md`). The "
-           "surveys were made with the data as first published, while we train and score on today's revised CPI "
-           "(`CPIAUCSL`, revised only through its seasonal factors), which flatters us slightly.", "",
-           "**Skill against the climatology of US headline CPI**, each on the origins it has (the release-month SPF has "
-           "one a quarter)", "",
-           "| Forecast | " + " | ".join(f"h={h}" for h in col.HS) + " |", "|---|" + "---|" * len(col.HS)]
-    for k, lab in ours:
-        c = KEYS.index(k)
-        out.append(f"| {lab} | " + " | ".join(f3(1 - np.nanmean(S[:, H_IDX[h], c]) / np.nanmean(clim[:, H_IDX[h], head]))
-                                              for h in col.HS) + " |")
-    for k, lab in INSTITUTIONS:
-        cells = []
-        for h in col.HS:
-            b, cl = B[(k, h)], clim[:, H_IDX[h], head]
-            ok = np.isfinite(b) & np.isfinite(cl)
-            cells.append(f3(1 - b[ok].mean() / cl[ok].mean()))
-        out.append(f"| {lab} | " + " | ".join(cells) + " |")
-    out += ["| 90% coverage of our US composite | " + " | ".join(
-        pct(np.nanmean(I[:, H_IDX[h], KEYS.index("us_composite")])) for h in col.HS) + " |", ""]
-    for k, lab in ours:
-        c = KEYS.index(k)
-        out += [f"**{lab} against each benchmark**: how much lower our CRPS is, on the origins both have; t is the "
-                f"Diebold-Mariano statistic of ours minus theirs (Newey-West, {BENCH_LAG} lags; negative = ours better)", "",
-                "| Benchmark | " + " | ".join(f"h={h}" for h in col.HS) + " |", "|---|" + "---|" * len(col.HS)]
-        for bk, blab in INSTITUTIONS:
+           "chain's, on the same 8 folds, matched by origin month: each forecasts the change in CPI over the h months "
+           "after the origin month t. Each benchmark is a point forecast with a Gaussian band of the spread of its own "
+           "errors on the fold's training origins. Cleveland and Michigan give 1-year rates, scaled by h/12 at shorter "
+           "horizons; the SPF's quarterly path is interpolated to months (`docs/macro-ensemble.md`). The surveys were "
+           "made with the data as first published, while we train and score on today's revised CPI (`CPIAUCSL`, revised "
+           "only through its seasonal factors), which flatters us slightly.", ""]
+    if lagged:
+        gl = [f["diagnostics"] for f in lagged]
+        jobs = sorted({str(f["meta"].get("job")) for f in lagged if f["meta"].get("job")})
+        out += ["### Timing matched: our forecast uses only the CPI the surveys had", "",
+                "A survey taken at the end of month t knows CPI to month t-1: month t's is published about two weeks "
+                "into t+1. So here our forecast starts at the end of month t-1, runs h+1 months, and is scored on the "
+                "change over months t+1..t+h, the window the surveys forecast. It also starts from a month less of Brent "
+                "and gas than the surveys saw. Each fold is refitted as in the fold tables (same seed and settings; "
+                f"Iridis job {', '.join(jobs) or '-'}; R-hat at most {max(d['max_r_hat'] for d in gl)}, ESS at least "
+                f"{min(d['min_ess'] for d in gl)}).", ""]
+        out += tables(lagged, "forecast_lagged_GARCH-CGMY")
+        clim = stack(lagged, "climatology")
+        S0, S1 = stack(lagged, "forecast_GARCH-CGMY"), stack(lagged, "forecast_lagged_GARCH-CGMY")
+        out += ["**What the head start is worth**: the same fits, forecasting the same window from the end of month t "
+                "(knowing month t's CPI) instead of t-1. How much lower the CRPS is with month t known, and its "
+                f"Diebold-Mariano t (Newey-West, {BENCH_LAG} lags)", "",
+                "| Series | " + " | ".join(f"h={h}" for h in col.HS) + " |", "|---|" + "---|" * len(col.HS)]
+        for k, lab in ours:
+            c = KEYS.index(k)
             cells = []
             for h in col.HS:
-                a, b, cl = S[:, H_IDX[h], c], B[(bk, h)], clim[:, H_IDX[h], head]
+                a, b, cl = S0[:, H_IDX[h], c], S1[:, H_IDX[h], c], clim[:, H_IDX[h], head]
                 ok = np.isfinite(a) & np.isfinite(b) & np.isfinite(cl)
                 d = (a[ok] - b[ok]) / cl[ok].mean()
                 m_, cov = oc.ols_hac(d, np.ones((len(d), 1)), BENCH_LAG)
-                lower = 1 - a[ok].mean() / b[ok].mean()
-                cells.append(f"{abs(100 * lower):.0f}% {'lower' if lower >= 0 else 'higher'} "
-                             f"(t {m_[0] / np.sqrt(cov[0, 0]):+.1f}, n {ok.sum()})")
-            out.append(f"| {blab} | " + " | ".join(cells) + " |")
+                cells.append(f"{100 * (1 - a[ok].mean() / b[ok].mean()):.0f}% (t {m_[0] / np.sqrt(cov[0, 0]):+.1f})")
+            out.append(f"| {lab} | " + " | ".join(cells) + " |")
+        out += ["", "### Starting from month t's CPI (a two-week head start)", "",
+                "The folds' own forecast mode starts at the end of month t, with month t's CPI, which the surveys did not "
+                "have yet. Kept for comparison; the timing-matched tables above are the fair test.", ""]
+    else:
+        out += ["That gives us a head start: we start from the origin month's CPI, which is published about two weeks "
+                "into the next month, while the Cleveland and Michigan values are taken at the end of the origin month, "
+                "before it. It matters most at 1-3 months.", ""]
+    return out + tables(folds, "forecast_GARCH-CGMY")
+
+
+def nowcasts(freq: str) -> pd.DataFrame:
+    """One row per target month or quarter (freq "month" or "quarter"): the CPI nowcasts by business day,
+    the release date and CPI as first published (month: % change; quarter: annualised % change; both
+    seasonally adjusted)."""
+    path = col.md._get(NOWCAST_URL.format(freq), col.md.RAW / f"cleveland_nowcast_{freq}.json")
+    rows = []
+    for e in json.loads(path.read_text(encoding="utf-8")):
+        cap = e["chart"]["subcaption"]  # "2013-7" or "2013:Q3"
+        y, m = (int(cap[:4]), 3 * int(cap[-1]) - 2) if ":" in cap else map(int, cap.split("-"))
+        days = []
+        for c in e["categories"][0]["category"]:
+            if not c.get("vline"):  # the vertical lines mark releases and carry no data
+                mm, dd = map(int, c["label"].split("/"))
+                days.append(pd.Timestamp(y + (mm < m), mm, dd))  # the labels run on past December
+        ser = {s["seriesname"]: [d.get("value", "") for d in s["data"]] for s in e["dataset"]}
+        now = pd.Series({d: float(v) for d, v in zip(days, ser.get("CPI Inflation", [])) if v not in ("", None)}, dtype=float)
+        act = [(d, float(v)) for d, v in zip(days, ser.get("Actual CPI Inflation", [])) if v not in ("", None)]
+        rows.append({"period": pd.Timestamp(y, m, 1), "nowcasts": now, "released": act[0][0] if act else pd.NaT,
+                     "actual": act[0][1] if act else np.nan})
+    return pd.DataFrame(rows).set_index("period").sort_index()
+
+
+def bands(err: np.ndarray, vol: np.ndarray, n_min: int, lam: float) -> dict:
+    """The sd of a point forecast's band for each target, from its earlier errors only (NaN until there
+    are n_min): fixed (their spread), ewma (an EWMA of their squares, decay lam per target) and oil (log
+    sd linear in log Brent volatility, `vol`, fitted to them by maximum likelihood)."""
+    out = {k: np.full(len(err), np.nan) for k, _ in BANDS}
+    for i in range(len(err)):
+        ok = np.isfinite(err[:i]) & np.isfinite(vol[:i])
+        e, z = err[:i][ok], vol[:i][ok]
+        if len(e) < n_min:
+            continue
+        out["fixed"][i] = e.std(ddof=1)
+        v = np.mean(e[:n_min] ** 2)
+        for x in e[n_min:]:
+            v = lam * v + (1 - lam) * x ** 2
+        out["ewma"][i] = np.sqrt(v)
+        nll = lambda p: np.sum(p[0] + p[1] * z + e ** 2 / (2 * np.exp(2 * (p[0] + p[1] * z))))  # noqa: E731
+        p = col.optimize.minimize(nll, [np.log(e.std()), 0.0], method="Nelder-Mead").x
+        out["oil"][i] = np.exp(p[0] + p[1] * vol[i])
+    return out
+
+
+def quarter_rate(levels: np.ndarray) -> np.ndarray:
+    """Annualised % change of a quarter's average level on the quarter before, from [..., 6] log levels
+    (x100): the previous quarter's three months, then this quarter's."""
+    lv = np.exp(levels / 100)
+    return 100 * ((lv[..., 3:].mean(-1) / lv[..., :3].mean(-1)) ** 4 - 1)
+
+
+def nowcast_draws() -> dict | None:
+    """Our saved 1-3 month Lévy forecasts by origin month: {origin: {key: [draws, 3]}}, or None."""
+    files = [col.RUNS_MAIN / f"fold-{j}-draws.npz" for j in range(8)]
+    if not all(f.exists() for f in files):
+        return None
+    out = {}
+    for f in files:
+        z = np.load(f)
+        keys = list(z["keys"])
+        for o, origin in enumerate(z["origins"]):
+            out[pd.Timestamp(f"{origin}-01")] = {k: z["S"][:, o, :, keys.index(k)].astype(float) for k in keys}
+    return out
+
+
+def nowcast_section(data: dict) -> list[str]:
+    draws = nowcast_draws()
+    if draws is None:
+        return []
+    mon, qtr = nowcasts("month"), nowcasts("quarter")
+    lg = lambda p: float(100 * np.log1p(p / 100))  # noqa: E731  # % change -> log change x100
+    first = 100 * np.log1p(mon["actual"] / 100)  # CPI as first published, by month
+    N = len(next(iter(draws.values()))["us_composite"])
+    r = np.log(col.daily_brent()).diff().dropna()
+    vol = lambda day: float(np.log(r[r.index < day].iloc[-21:].std()))  # noqa: E731  # the 21 trading days before
+    revised = pd.Series(data["y"][:, KEYS.index("us_all")], index=data["months"])
+    nxt = lambda t, k=1: t + pd.DateOffset(months=k)  # noqa: E731
+    ours = (("us_composite", "Our US composite (items + rest)"), ("us_all", "Our US headline, forecast directly"))
+
+    def after(nc: pd.Series, day) -> float:
+        later = nc[nc.index > day]
+        return float(later.iloc[0]) if pd.notna(day) and len(later) else np.nan
+
+    # Cleveland's error series over its whole history (bands use only earlier errors), then our origins in it
+    tests = {}
+    rows = []
+    for m in mon.index[1:]:
+        info = mon.loc[nxt(m, -1), "released"] if nxt(m, -1) in mon.index else pd.NaT
+        rel = mon.loc[m, "released"]
+        nc = mon.loc[m, "nowcasts"]
+        last = nc[nc.index < rel] if pd.notna(rel) else nc.iloc[:0]
+        rows.append({"target": m, "origin": nxt(m, -1), "info": info, "y": first[m], "rev": revised.get(m, np.nan),
+                     "mu": lg(after(nc, info)), "mu_last": lg(last.iloc[-1]) if len(last) else np.nan,
+                     "mu_first": lg(nc.iloc[0]) if len(nc) and pd.notna(info) and nc.index[0] < info else np.nan})
+    tests["month"] = pd.DataFrame(rows)
+    for p in (0, 1):  # the quarter's first or second month comes next: 3 or 2 of its months still to come
+        rows = []
+        for q in qtr.index:
+            t = nxt(q, p - 1)  # the origin: the last month published at the information date
+            info = mon.loc[t, "released"] if t in mon.index else pd.NaT
+            known = [first.get(nxt(q, k), np.nan) for k in range(-2, p)]  # monthly changes, q-2 .. t
+            rows.append({"target": q, "origin": t, "info": info, "y": qtr.loc[q, "actual"], "known": known,
+                         "mu": after(qtr.loc[q, "nowcasts"], info)})
+        tests[f"quarter{3 - p}"] = pd.DataFrame(rows)
+
+    def score(df: pd.DataFrame, freq: str, ahead: int) -> dict:
+        df = df.copy()
+        df["err"] = df["y"] - df["mu"]
+        df["vol"] = [vol(d) if pd.notna(d) else np.nan for d in df["info"]]
+        sd = bands(df["err"].values, df["vol"].values, NOWCAST_MIN[freq], EWMA ** (1 if freq == "month" else 3))
+        others = OTHER_NOWCASTS if freq == "month" else ()
+        for b, _ in others:
+            sd[b] = bands((df["y"] - df[f"mu_{b}"]).values, df["vol"].values, NOWCAST_MIN[freq], EWMA)["ewma"]
+        ok = np.isfinite(df["y"].values) & np.isfinite(df["mu"].values) & np.isfinite(np.c_[tuple(sd.values())]).all(1)
+        for b, _ in others:
+            ok &= np.isfinite(df[f"mu_{b}"].values)
+        S = {}
+        for k, _ in ours:
+            if freq == "month":
+                S[k] = np.stack([draws[o][k][:, 0] if o in draws else np.full(N, np.nan) for o in df["origin"]], 1)
+            else:
+                lv = []
+                for o, kn in zip(df["origin"], df["known"]):
+                    # log levels relative to month t: the known months from q-3 to t, then our paths
+                    known = -np.r_[np.cumsum(np.asarray(kn)[::-1])[::-1], 0.0]
+                    lv.append(np.c_[np.repeat(known[None], N, 0), draws[o][k][:, :ahead]] if o in draws
+                              else np.full((N, 6), np.nan))
+                S[k] = quarter_rate(np.stack(lv, 1))  # [draws, targets]
+            ok &= np.all(np.isfinite(S[k]), 0)
+        y = df["y"].values[ok]
+        res = {"n": int(ok.sum()), "from": df["target"][ok].min(), "to": df["target"][ok].max(), "rows": []}
+        for k, lab in ours:
+            s = S[k][:, ok]
+            lo, hi = np.quantile(s, 0.05, 0), np.quantile(s, 0.95, 0)
+            res[k] = col.crps_samples(s, y)
+            res["rows"].append((lab, res[k], np.mean((y >= lo) & (y <= hi))))
+        for b, lab in BANDS + others:
+            mu, s_ = df[f"mu_{b}" if b in dict(others) else "mu"].values[ok], sd[b][ok]
+            res[b] = col.crps_normal(mu, s_, y)
+            res["rows"].append((f"Cleveland nowcast, {lab}", res[b], np.mean(np.abs(y - mu) <= 1.645 * s_)))
+        if freq == "month":
+            rv_ = df["rev"].values[ok]
+            okr = np.isfinite(rv_)
+            res["revised"] = (col.crps_samples(S["us_composite"][:, ok][:, okr], rv_[okr]).mean(),
+                              col.crps_samples(S["us_composite"][:, ok][:, okr], y[okr]).mean(), int(okr.sum()))
+        return res
+
+    def vs(a: np.ndarray, b: np.ndarray, lag: int) -> str:
+        d = a - b
+        m_, cov = oc.ols_hac(d, np.ones((len(d), 1)), lag)
+        lower = 1 - a.mean() / b.mean()
+        return f"{abs(100 * lower):.0f}% {'lower' if lower >= 0 else 'higher'} (t {m_[0] / np.sqrt(cov[0, 0]):+.1f})"
+
+    fetched = datetime.fromtimestamp((col.md.RAW / "cleveland_nowcast_month.json").stat().st_mtime, UTC).date()
+    out = ["## Against the Cleveland Fed's nowcast: US CPI at 1-3 months, as first published", "",
+           f"_Nowcasts from the Cleveland Fed's inflation-nowcasting chart data (`data/raw/macro/cleveland_nowcast_"
+           f"{{month,quarter}}.json`, fetched {fetched}); our forecasts are the main model's Lévy forecast draws, saved "
+           "by the 8 folds (`COL_DRAWS=us_composite,us_all`, `runs/col-food-bread/fold-*-draws.npz`)._", "",
+           "This lines up what each forecast knows. Ours from month t starts from month t's CPI, so it can only be made "
+           "once that is published, about two weeks into month t+1. The nowcast is taken on the first business day after "
+           "that release. So it knows the same CPI, plus two weeks of daily oil and weekly petrol prices that our model "
+           "doesn't use. Both are scored on CPI as first published, which is the actual on each Cleveland chart; for the "
+           "52 months that can be checked, 51 match the Philadelphia Fed's real-time vintages to 0.005 pp. The nowcast is a "
+           "point, so it gets three bands, each from its own earlier errors only:", "",
+           "- **Fixed:** the spread of those errors.",
+           f"- **EWMA:** an exponentially weighted average of their squares (decay {EWMA} a month).",
+           "- **Oil volatility:** log sd linear in the log volatility of Brent over the 21 trading days before the "
+           "nowcast, fitted to the errors by maximum likelihood.", "",
+           f"Scoring starts once a band has {NOWCAST_MIN['month']} months ({NOWCAST_MIN['quarter']} quarters) of errors. "
+           f"The CRPS is in percentage points. t is the Diebold-Mariano statistic of ours minus theirs (Newey-West, "
+           f"{NOWCAST_LAG['month']} lags for months, {NOWCAST_LAG['quarter']} for quarters; negative = ours better).", ""]
+    titles = {"month": "**Next month's CPI change**", "quarter3": "**This quarter's CPI, annualised q/q, with all 3 of "
+              "its months still to come** (origins at a quarter's end)", "quarter2": "**The same with 2 of its months "
+              "still to come** (origins at a quarter's first month)"}
+    for name, df in tests.items():
+        freq = "month" if name == "month" else "quarter"
+        res = score(df, freq, 1 if name == "month" else int(name[-1]))
+        lag = NOWCAST_LAG[freq]
+        out += [f"{titles[name]}: {res['n']} origins, targets {res['from']:%Y-%m} to {res['to']:%Y-%m}", "",
+                "| Forecast | CRPS | 90% band holds | Our composite against it | Our headline against it |",
+                "|---|---|---|---|---|"]
+        for i, (lab, c, cov) in enumerate(res["rows"]):
+            cells = ["", ""] if i < 2 else [vs(res[k], c, lag) for k, _ in ours]
+            out.append(f"| {lab} | {c.mean():.3f} | {pct(cov)} | " + " | ".join(cells) + " |")
+        if freq == "month":
+            rv_, fp, n = res["revised"]
+            out += ["", f"Scored on today's revised CPI instead, our composite's CRPS is {rv_:.3f} against {fp:.3f} on "
+                    f"first-published CPI ({n} origins with both)."]
         out.append("")
     return out
 
@@ -336,7 +598,7 @@ def multipliers_section(fin: dict, ev: dict | None = None) -> tuple[list[str], l
 
 def scenario_section(ev: dict, weights: dict) -> list[str]:
     show = [f"{r}_composite" for r in col.REGIONS] + [f"{r}_{i}" for r in col.REGIONS for i in ("fuel", "electricity", "gas")]
-    show += [f"{r}_bread" for r in col.REGIONS] + [f"{r}_restaurants" for r in col.REGIONS]
+    show += [f"{r}_bread" for r in col.REGIONS] + [f"{r}_restaurants" for r in col.REGIONS] + CORE_BASKET
     out = ["## Scenario fans from February 2026: how much a closure moves and widens the band", "",
            "Brent paths from the daily GARCH-CGMY (Lévy) model, plus the 2026 closure's monthly Brent and gas moves scaled "
            "by severity (0 = no closure). The supply-shock terms are on in the closure scenarios. Median and 90% interval of the "
@@ -387,7 +649,8 @@ def final_section(fin: dict, weights: dict) -> list[str]:
     out += ["", f"**Outlook from {fin['latest']}**, Lévy Brent paths, "
             f"{'the disruption assumed to continue' if fin['in_supply_regime'] else 'no disruption'}: change over the next 12 months.", "",
             "| Series | Median | 90% interval |", "|---|---|---|"]
-    for key in [f"{r}_composite" for r in col.REGIONS] + [f"{r}_{i}" for r in col.REGIONS for i in ("fuel", "electricity", "gas", "bread")]:
+    for key in ([f"{r}_composite" for r in col.REGIONS] + [f"{r}_{i}" for r in col.REGIONS for i in ("fuel", "electricity", "gas", "bread")]
+                + CORE_BASKET):
         k = KEYS.index(key)
         out.append(f"| {NAME[key]} | {o['q50'][11][k]:+.1f} | {o['q05'][11][k]:+.1f} to {o['q95'][11][k]:+.1f} |")
     return out + [""]
@@ -439,12 +702,22 @@ def data_section(data: dict) -> list[str]:
         wt = w.get(s.key)
         out.append(f"| {s.name} | {col.REGIONS[s.region]} | `{code}` | {'' if wt is None else f'{100 * wt:.2f}%'} | "
                    f"{yr.get(s.key, '')} | {first} | {last} | {fetched} |")
+    for r in col.REGIONS:  # the services totals that other services are derived from (inputs, not modelled)
+        s = col.SERVICES[r][0]
+        first, last = data["prov"].get(s.key, ("-", "-"))
+        code = s.code.strip("/").split("/")[-2].upper() if s.source == "ons" else s.code
+        out.append(f"| {s.name}, input to other services | {col.REGIONS[r]} | `{code}` | {100 * w[s.key]:.2f}% | "
+                   f"{yr.get(s.key, '')} | {first} | {last} | {col.fetched(s)} |")
     for k, (src, code, name) in col.DRIVERS.items():
         first, last = data["prov"][k]
         out.append(f"| {name} | driver | `{code}` | | | {first} | {last} | {col.fetched(col.Item(k, 'us', 'all', src, code, name, None, False, 0))} |")
-    out += ["", f"Weights: US {col.US_WEIGHTS_SOURCE}; UK ONS CPI weights (series CJWB … CJYL); euro area Eurostat "
-            "`prc_hicp_inw`, geo EA. The rest of the basket is headline minus the weighted items, so the composite equals "
-            "headline in every month by construction; it differs from a direct headline model only in its forecasts.", ""]
+    out += ["", f"Weights: US {col.US_WEIGHTS_SOURCE}; UK ONS CPI weights (series CJWB … CJYL, CJVC for rents, A9ER for "
+            "non-energy industrial goods, ICVI for services); euro area Eurostat `prc_hicp_inw`, geo EA. Euro-area "
+            "services and non-energy industrial goods come from Eurostat's COICOP 2018 dataset `prc_hicp_minr` (EA19), "
+            "because the older dataset stops at 2025-12 and FRED doesn't carry them. Other services are each region's "
+            "services total less the service items modelled on their own; the rest of the basket is headline minus every "
+            "weighted item and other services, so the composite equals headline in every month by construction; it "
+            "differs from a direct headline model only in its forecasts.", ""]
     return out
 
 
@@ -679,9 +952,12 @@ def write() -> None:
     today = datetime.now(UTC).date().isoformat()
     jobs = sorted({str(r["meta"].get("job")) for r in (runs | failed).values() if r["meta"].get("job")})
     fits = f"{len(runs)} converged fits" if runs else "no converged model fits yet (the event analysis needs none)"
+    days = sorted({col.fetched(s) for s in col.SERIES + [col.SERVICES[r][0] for r in col.REGIONS]
+                   if s.source != "derived"} - {"-"})
+    fetched_on = days[0] if len(days) == 1 else f"{days[0]} to {days[-1]}" if days else "-"
     out = ["# Cost of living in an oil supply shock: the basket, item by item", "",
            f"_Generated by `experiments/cost_of_living.py report` on {today} from {fits} of the main model"
-           f"{' (Iridis job ' + ', '.join(jobs) + ')' if jobs else ''}. Data fetched 2026-10-24 (table below). The data are real; "
+           f"{' (Iridis job ' + ', '.join(jobs) + ')' if jobs else ''}. Data fetched {fetched_on} (table below). The data are real; "
            "the only simulated inputs are Brent and gas paths in forecast and scenario rows._", "",
            "The main model gives every series oil and gas pass-through, and bread and cereals grain prices as well. It "
            "replaced the oil-and-gas-only base after beating it on the same folds; that comparison, and the grain-and-urea "
@@ -698,7 +974,9 @@ def write() -> None:
     if folds:
         out += fold_section(folds)
         if BENCH_FILE.exists():
-            out += institutions_section(folds, json.loads(BENCH_FILE.read_text()))
+            lagged = load_lagged(col.RUNS_MAIN)
+            out += institutions_section(folds, json.loads(BENCH_FILE.read_text()), lagged if len(lagged) == 8 else None)
+        out += nowcast_section(data)
     for name, label in (("event-2026", "The 2026 Hormuz closure as a test"), ("event-2022", "The 2022 shock as a test")):
         if name in runs:
             ev = runs[name] | {"weights": data["weights"]["w"]}

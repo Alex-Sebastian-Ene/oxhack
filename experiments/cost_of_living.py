@@ -4,8 +4,11 @@
 #                 "jax>=0.4.30", "numpyro>=0.15"]
 # ///
 """Cost of living in an oil supply shock, built up from the basket: bread, meat, dairy, oils and
-fats, fruit and vegetables, sugar, electricity, gas, motor fuel, air fares and restaurants in the
-US, UK and euro area, each with its own oil and gas pass-through, weighted into a composite.
+fats, fruit and vegetables, sugar, electricity, gas, motor fuel, air fares, restaurants, housing
+(rent, and owners' equivalent rent in the US), core goods (non-energy industrial goods) and other
+services in the US, UK and euro area, each with its own oil and gas pass-through, weighted into a
+composite. Other services are each region's services index less the service items modelled on their
+own, so nothing is counted twice.
 
 The average historical pass-through fell far short in the 2022 and 2026 supply shocks. This script
 measures that miss item by item, then fits one Bayesian model (NUTS) for every item, the rest of
@@ -22,8 +25,9 @@ the basket and headline inflation, on their monthly log changes (% of the price 
   widens the band. A fit that ends before 2026 learns kappa from 2022 alone.
 - v: recent oil volatility (log mean |x| over 3 months), so bands widen in oil turmoil.
 - season: month-of-year terms for series that are not seasonally adjusted (UK, euro area).
-- The rest of the basket is headline minus the weighted items, with each region's latest basket
-  weights, so the composite (weighted items + rest) adds up to headline inflation exactly.
+- The rest of the basket is headline minus the weighted items and other services, with each region's
+  latest basket weights, so the composite (weighted items + other services + rest) adds up to headline
+  inflation exactly. With housing, core goods and other services modelled it is a 3-8% remainder.
 - Bread and cereals also take grain prices (the monthly log change of the mean of IMF wheat and
   maize), lags 0..12: + sum_l F[k,l] grain[s-l]. This is the main model (COL_FOOD=bread, the default,
   runs/col-food-bread). It was adopted after beating the oil-and-gas-only base (COL_FOOD=0,
@@ -88,6 +92,9 @@ HS = (1, 3, 6, 12)  # horizons scored
 WARMUP = int(os.environ.get("COL_WARMUP", 500))
 SAMPLES = int(os.environ.get("COL_SAMPLES", 500))  # per chain
 DRAWS = 400  # posterior draws that go into the simulations
+# COL_DRAWS: keys (comma-separated) whose 1-3 month Lévy forecasts each fold also saves, every draw
+# and origin, to fold-<j>-draws.npz, for rescoring against first-published CPI and nowcasts
+SAVE_KEYS = [k for k in os.environ.get("COL_DRAWS", "").split(",") if k]
 VOL_FLOOR, NU_MIN, SIGMA_FLOOR = 0.05, 2.5, 0.05
 SHOCK = np.log(1.10)
 DAYS = 21  # trading days per simulated month
@@ -110,10 +117,13 @@ class Item:
 
 
 KINDS = ("bread", "meat", "dairy", "oils_fats", "fruit_veg", "sugar", "electricity", "gas", "fuel", "air",
-         "restaurants", "rest", "all", "ind_fuel", "ind_transport", "ind_materials", "unemployment", "rate")
+         "restaurants", "housing", "core_goods", "services", "rest", "all", "ind_fuel", "ind_transport",
+         "ind_materials", "unemployment", "rate")
 KIND_NAMES = {"bread": "Bread and cereals", "meat": "Meat", "dairy": "Dairy", "oils_fats": "Oils and fats",
               "fruit_veg": "Fruit and vegetables", "sugar": "Sugar and sweets", "electricity": "Electricity",
               "gas": "Household gas", "fuel": "Motor fuel", "air": "Air fares", "restaurants": "Restaurants",
+              "housing": "Housing (rent, and owners' equivalent rent in the US)",
+              "core_goods": "Core goods (non-energy industrial goods)", "services": "Other services",
               "rest": "Rest of the basket", "all": "Headline (direct)", "ind_fuel": "Industry fuel (US)",
               "ind_transport": "Freight and air transport (US)", "ind_materials": "Materials (US)",
               "unemployment": "Unemployment", "rate": "Policy rate"}
@@ -170,7 +180,28 @@ ITEMS = [
     _ea("fuel", "fuel", "CP0722", "fuels and lubricants for personal transport", lags=2),
     _ea("air", "air", "CP0733", "passenger transport by air", lags=2),
     _ea("restaurants", "restaurants", "CP1111", "restaurants, cafés and the like"),
+    # Housing and core goods. UK CPI and the HICP leave out owner-occupiers' housing costs (the UK
+    # puts them in CPIH), so their housing is actual rents only; the US adds owners' equivalent rent.
+    _us("rent", "housing", "CUSR0000SEHA", "rent of primary residence"),
+    _us("oer", "housing", "CUSR0000SEHC", "owners' equivalent rent of residences"),
+    _us("core_goods", "core_goods", "CUSR0000SACL1E", "commodities less food and energy commodities"),
+    _uk("rent", "housing", "d7ce", "cjvc", "04.1 actual rents for housing"),
+    _uk("core_goods", "core_goods", "dk9j", "a9er", "non-energy industrial goods"),
+    Item("ea_rent", "ea", "housing", "fred", "CP0410EZ19M086NEST", "Euro-area HICP actual rentals for housing "
+         "(Eurostat via FRED)", "CP041", True, 12),
+    Item("ea_core_goods", "ea", "core_goods", "eurostat18", "EA19:IGD_NNRG", "Euro-area HICP non-energy industrial "
+         "goods (Eurostat prc_hicp_minr, EA19)", "IGD_NNRG", True, 12),
 ]
+# Other services: each region's services index less the service items modelled on their own,
+# derived like the rest of the basket, so nothing is counted twice. US "services less energy
+# services" holds rent, OER and air fares (food away from home is food); UK CPI and HICP services
+# hold rents, air fares and restaurants.
+SERVICES = {"us": (Item("us_services_all", "us", "agg", "fred", "CUSR0000SASLE", "US CPI services less energy "
+                        "services (BLS)", None, False, 12), ("us_rent", "us_oer", "us_air")),
+            "uk": (Item("uk_services_all", "uk", "agg", "ons", ONS_URI.format("d7f5"), "UK CPI services (ONS D7F5)",
+                        "icvi", True, 12), ("uk_rent", "uk_air", "uk_restaurants")),
+            "ea": (Item("ea_services_all", "ea", "agg", "eurostat18", "EA19:SERV", "Euro-area HICP services (Eurostat "
+                        "prc_hicp_minr, EA19)", "SERV", True, 12), ("ea_rent", "ea_air", "ea_restaurants"))}
 HEADLINE = {"us": Item("us_all", "us", "all", "fred", "CPIAUCSL", "US CPI, all items (BLS)", None, False, 12),
             "uk": Item("uk_all", "uk", "all", "ons", ONS_URI.format("d7bt"), "UK CPI, all items (ONS D7BT)", None, True, 12),
             "ea": Item("ea_all", "ea", "all", "fred", "CP0000EZ19M086NEST", "Euro-area HICP, all items (Eurostat via FRED)",
@@ -209,18 +240,25 @@ OTHER = [
     Item("ea_rate", "ea", "rate", "fred", "ECBDFR", "ECB deposit facility rate (ECB via FRED)", None, False, 12, "diff",
          False),
 ]
-SERIES = (ITEMS + [Item(f"{r}_rest", r, "rest", "derived", f"{r}_all minus weighted items", f"{REGIONS[r]} rest of basket",
-                        None, HEADLINE[r].nsa, 12) for r in REGIONS] + list(HEADLINE.values()) + OTHER)
+SERVICE_ITEMS = [Item(f"{r}_services", r, "services", "derived", f"{SERVICES[r][0].key} minus "
+                      + ", ".join(SERVICES[r][1]), f"{REGIONS[r]} other services ({SERVICES[r][0].name.split(' (')[0]} "
+                      "less the service items above)", None, SERVICES[r][0].nsa, 12) for r in REGIONS]
+SERIES = (ITEMS + SERVICE_ITEMS + [Item(f"{r}_rest", r, "rest", "derived", f"{r}_all minus weighted items",
+                                         f"{REGIONS[r]} rest of basket (remainder: other food, other fuels, "
+                                         "aggregation residual)", None, HEADLINE[r].nsa, 12) for r in REGIONS]
+          + list(HEADLINE.values()) + OTHER)
 # Policy rates move in steps and sit still for years, so their error scale needs a wider floor (as
 # in experiments/macro_bayes.py), in units of each series' training sd.
 SIGMA_FLOORS = {"rate": 0.2}
 # US basket weights: BLS relative importance, CPI-U, December 2025 (% of all items), read from
-# https://www.bls.gov/cpi/tables/relative-importance/2025.htm on 2026-10-24 (BLS refuses scripted
-# downloads). UK: ONS CPI weights (parts per 1000). Euro area: Eurostat prc_hicp_inw (per 1000).
+# https://www.bls.gov/cpi/tables/relative-importance/2025.htm (BLS refuses scripted downloads): the
+# food, energy, fares and restaurant items on 2026-10-24, housing, core goods and services on
+# 2026-10-25. UK: ONS CPI weights (parts per 1000). Euro area: Eurostat prc_hicp_inw (per 1000).
 US_WEIGHTS = {"us_bread": 1.035, "us_meat": 1.995, "us_dairy": 0.758, "us_oils_fats": 0.231, "us_fruit_veg": 1.269,
               "us_sugar": 0.328, "us_electricity": 2.489, "us_gas": 0.773, "us_fuel": 2.895, "us_air": 0.881,
-              "us_restaurants": 5.373}
-US_WEIGHTS_SOURCE = "BLS relative importance, CPI-U, December 2025 (collected 2026-10-24)"
+              "us_restaurants": 5.373, "us_rent": 7.840, "us_oer": 26.204, "us_core_goods": 19.176,
+              "us_services_all": 60.744}
+US_WEIGHTS_SOURCE = "BLS relative importance, CPI-U, December 2025 (collected 2026-10-24 and 2026-10-25)"
 # Driver keys must not clash with series keys (load() puts both in one table).
 DRIVERS = {"brent": ("fred", "DCOILBRENTEU", "Brent spot, $/bbl (EIA via FRED)"),
            "henry_hub": ("fred", "MHHNGSP", "Henry Hub natural gas spot, monthly (EIA via FRED)"),
@@ -248,6 +286,8 @@ def fetched(it: Item) -> str:
         name = f"fred_{it.code}.csv"
     elif it.source == "pinksheet":
         name = PINK_FILE
+    elif it.source == "eurostat18":
+        name = "eurostat_prc_hicp_minr_{}_{}.json".format(*it.code.split(":"))
     elif it.source == "eurostat":
         name = f"eurostat_{it.code.split('?')[0]}_{it.code.split('geo=')[1].split('&')[0]}.json"
     else:
@@ -267,7 +307,19 @@ def fetch_pinksheet(column: str) -> pd.Series:
     return s[s.index.notna()].dropna()
 
 
-FETCH = md.FETCH | {"pinksheet": fetch_pinksheet}
+def fetch_eurostat18(code: str) -> pd.Series:
+    """A monthly HICP index (2015 = 100) from Eurostat's COICOP 2018 dataset prc_hicp_minr, "GEO:COICOP".
+    The older prc_hicp_midx stops at 2025-12; the special aggregates (services, non-energy industrial
+    goods) are not on FRED."""
+    geo, coicop = code.split(":")
+    path = md._get(md.EUROSTAT.format("prc_hicp_minr", f"geo={geo}&coicop18={coicop}&unit=I15&sinceTimePeriod=1996-01"),
+                   md.RAW / f"eurostat_prc_hicp_minr_{geo}_{coicop}.json")
+    j = json.loads(path.read_text(encoding="utf-8"))
+    times = list(j["dimension"]["time"]["category"]["index"])
+    return pd.Series({pd.Timestamp(times[int(k)] + "-01"): v for k, v in j["value"].items()}).sort_index()
+
+
+FETCH = md.FETCH | {"pinksheet": fetch_pinksheet, "eurostat18": fetch_eurostat18}
 
 
 def ons_annual(cdid: str) -> pd.Series:
@@ -283,8 +335,10 @@ def ons_annual(cdid: str) -> pd.Series:
 
 def eurostat_weights(coicops: list[str]) -> dict[str, tuple[int, float]]:
     q = "&".join(f"coicop={c}" for c in coicops)
+    # The cache file is named after the code list, so adding items fetches a fresh copy.
+    tag = "items" if len(coicops) == 12 else f"items{len(coicops)}"
     path = md._get(md.EUROSTAT.format("prc_hicp_inw", f"geo=EA&{q}&sinceTimePeriod=2018"),
-                   md.RAW / "eurostat_prc_hicp_inw_EA_items.json")
+                   md.RAW / f"eurostat_prc_hicp_inw_EA_{tag}.json")
     j = json.loads(path.read_text(encoding="utf-8"))
     cats = list(j["dimension"]["coicop"]["category"]["index"])
     times = list(j["dimension"]["time"]["category"]["index"])
@@ -302,24 +356,32 @@ def weights() -> dict:
     w, year = {}, {}
     for k, v in US_WEIGHTS.items():
         w[k], year[k] = v / 100, 2025
-    for it in ITEMS:
+    aggs = [SERVICES[r][0] for r in REGIONS]
+    for it in ITEMS + aggs:
         if it.region == "uk":
             s = ons_annual(it.weight)
             w[it.key], year[it.key] = float(s.iloc[-1]) / 1000, int(s.index[-1])
-    ea = eurostat_weights([it.weight for it in ITEMS if it.region == "ea"])
-    for it in ITEMS:
+    ea = eurostat_weights([it.weight for it in ITEMS + aggs if it.region == "ea"])
+    for it in ITEMS + aggs:
         if it.region == "ea":
             year[it.key], w[it.key] = ea[it.weight][0], ea[it.weight][1] / 1000
+    for r in REGIONS:  # other services: the services total less the service items modelled on their own
+        agg, parts = SERVICES[r]
+        w[f"{r}_services"], year[f"{r}_services"] = w[agg.key] - sum(w[k] for k in parts), year[agg.key]
+    comp = {it.key for it in ITEMS} | {it.key for it in SERVICE_ITEMS}
     for r in REGIONS:
-        w[f"{r}_rest"] = 1 - sum(v for k, v in w.items() if k.startswith(f"{r}_") and not k.endswith("_rest"))
+        w[f"{r}_rest"] = 1 - sum(v for k, v in w.items() if k in comp and k.startswith(f"{r}_"))
     return {"w": w, "year": year}
 
 
 def derive_rest(ch: pd.DataFrame, w: dict) -> pd.DataFrame:
-    """Add each region's rest of the basket: headline minus the weighted items, over the rest's weight,
-    so that the weighted items plus the rest give headline exactly."""
+    """Add each region's other services (the services total less the service items modelled on their
+    own) and rest of the basket (headline minus every weighted item and other services), each over its
+    own weight, so that the weighted items, other services and the rest give headline exactly."""
     for r in REGIONS:
-        items = [it.key for it in ITEMS if it.region == r]
+        agg, parts = SERVICES[r]
+        ch[f"{r}_services"] = (w[agg.key] * ch[agg.key] - sum(w[k] * ch[k] for k in parts)) / w[f"{r}_services"]
+        items = [it.key for it in ITEMS if it.region == r] + [f"{r}_services"]
         ch[f"{r}_rest"] = (ch[f"{r}_all"] - sum(w[k] * ch[k] for k in items)) / w[f"{r}_rest"]
     return ch
 
@@ -327,9 +389,10 @@ def derive_rest(ch: pd.DataFrame, w: dict) -> pd.DataFrame:
 def load() -> dict:
     """Monthly log changes (x100) of every series from START to the last month all items share."""
     raw = {k: FETCH[src](code) for k, (src, code, _) in DRIVERS.items()}
-    raw |= {it.key: md.FETCH[it.source](it.code) for it in ITEMS + list(HEADLINE.values()) + OTHER}
+    basket_inputs = ITEMS + [SERVICES[r][0] for r in REGIONS] + list(HEADLINE.values())
+    raw |= {it.key: FETCH[it.source](it.code) for it in basket_inputs + OTHER}
     # The panel ends with the basket's last month; the other metrics are NaN after their own last month.
-    end = min(raw[it.key].dropna().index.max() for it in ITEMS + list(HEADLINE.values()))
+    end = min(raw[it.key].dropna().index.max() for it in basket_inputs)
     idx = pd.date_range(START, end, freq="MS")
     diff_keys = {s.key for s in OTHER if s.transform == "diff"}
     lv = pd.DataFrame({k: np.log(v.reindex(idx)) for k, v in raw.items() if k not in diff_keys})
@@ -585,26 +648,26 @@ def fit(data: dict, last: int, seed: int = 0) -> tuple[dict, Stats, dict, np.nda
 
 def simulate(post: dict, st: Stats, data: dict, t0: np.ndarray, fut: dict, Dfut: np.ndarray, zres: np.ndarray, rng,
              regime: bool = True) -> np.ndarray:
-    """Draws of the cumulative change (% of the price level) of every series 1..H months after each
-    origin t0 [O]: [N, O, H, K]. fut: future monthly log changes of each driver channel,
-    [N or 1, O, H] (a missing channel is held flat); Dfut [O, H].
+    """Draws of the cumulative change (% of the price level) of every series 1..hz months after each
+    origin t0 [O]: [N, O, hz, K], hz = Dfut.shape[1] (H unless a run needs a longer path). fut: future
+    monthly log changes of each driver channel, [N or 1, O, hz] (a missing channel is held flat); Dfut [O, hz].
     Noise: whole standardised residual vectors drawn from the training months (zres), so the series
     keep their cross-correlation; a missing entry falls back to a Student-t draw.
     regime=False switches the supply-disruption terms off (kappa = psi = 0) for the ablation."""
-    N, K, O = len(post["a"]), len(SERIES), len(t0)
+    N, K, O, hz = len(post["a"]), len(SERIES), len(t0), Dfut.shape[1]
     z = standardised(data, st)
     arr = series_arrays()
-    f = {c: np.broadcast_to(np.nan_to_num(fut.get(c, np.zeros((1, O, H)))) / st.sd[c], (N, O, H)) for c in CHANNELS}
+    f = {c: np.broadcast_to(np.nan_to_num(fut.get(c, np.zeros((1, O, hz)))) / st.sd[c], (N, O, hz)) for c in CHANNELS}
     buf = {c: np.stack([z[c][t0 - l] for l in range(LAGS)], -1)[None].repeat(N, 0) for c in CHANNELS}  # [N, O, LAGS]
     yprev = np.nan_to_num(z["y"][t0])[None].repeat(N, 0)  # [N, O, K]
     B, G, a, S, rho = post["Bm"], post["Gm"], post["a"], post["S"], post["rho"]
     kappa, psi = (post["kappa"], post["psi"]) if regime else (np.zeros_like(post["kappa"]), np.zeros_like(post["psi"]))
     phi, sig, nu = post["phi"], post["sigma"], post["nu"]
     food = [(c, post[p]) for c, p in (("g_grain", "Fg"), ("g_urea", "Fu")) if p in post and c in CHANNELS]
-    cum, out = np.zeros((N, O, K)), np.zeros((N, O, H, K))
+    cum, out = np.zeros((N, O, K)), np.zeros((N, O, hz, K))
     first = data["months"][0]
     lag = lambda b, M: np.einsum("nol,nkl->nok", b, M)  # noqa: E731
-    for j in range(H):
+    for j in range(hz):
         for c in CHANNELS:
             buf[c] = np.concatenate([f[c][..., j:j + 1], buf[c][..., :-1]], -1)
         v = (np.log(np.abs(buf["x"][..., :3]).mean(-1) + VOL_FLOOR) - st.vm) / st.vs  # [N, O]
@@ -679,9 +742,9 @@ def innovation_table(model: str, p: dict) -> tuple[np.ndarray, np.ndarray]:
 
 
 def daily_paths(model: str, daily: pd.Series, month: pd.Timestamp, n: int, shock: np.ndarray, rng) -> np.ndarray:
-    """Monthly-average Brent log changes [n, H] after month `month`, from daily GARCH paths with
-    the stored innovations. shock[j] shifts the whole of month j+1 (a scenario level step; it does
-    not feed the GARCH variance)."""
+    """Monthly-average Brent log changes [n, len(shock)] after month `month`, from daily GARCH paths
+    with the stored innovations. shock[j] shifts the whole of month j+1 (a scenario level step; it
+    does not feed the GARCH variance)."""
     p = levy_fit(month.year, model)
     mu, w, al, be = p["mu"], p["omega"], p["alpha"], p["beta"]
     upto = daily[daily.index < month + pd.DateOffset(months=1)]
@@ -693,8 +756,8 @@ def daily_paths(model: str, daily: pd.Series, month: pd.Timestamp, n: int, shock
     prev_avg = np.full(n, np.log(this_month.mean()))
     lp0 = np.log(upto.values[-1])
     lp, level = np.full(n, lp0), np.zeros(n)
-    out = np.zeros((n, H))
-    for j in range(H):
+    out = np.zeros((n, len(shock)))
+    for j in range(len(shock)):
         level = level + shock[j]
         acc = np.zeros(n)
         for _ in range(DAYS):
@@ -741,11 +804,12 @@ def garch_fit(r: np.ndarray) -> dict:
 
 
 def garch_paths(par: dict, n: int, shock: np.ndarray, rng) -> np.ndarray:
-    """[n, H] monthly changes: mu + shock[j] + sigma_j eps_j; the scenario shock does not feed the variance."""
+    """[n, len(shock)] monthly changes: mu + shock[j] + sigma_j eps_j; the scenario shock does not feed
+    the variance."""
     s2 = np.full(n, par["s2_next"])
     c = np.sqrt((par["nu"] - 2) / par["nu"])
-    out = np.zeros((n, H))
-    for j in range(H):
+    out = np.zeros((n, len(shock)))
+    for j in range(len(shock)):
         e = np.sqrt(s2) * rng.standard_t(par["nu"], n) * c
         out[:, j] = par["mu"] + shock[j] + e
         s2 = par["omega"] + par["alpha"] * e ** 2 + par["beta"] * s2
@@ -777,13 +841,14 @@ def closure_template(data: dict) -> dict:
 
 
 def driver_paths(data: dict, last: int, n: int, rng, driver: str = "GARCH-CGMY", severity: float = 0.0,
-                 dm: dict | None = None, daily: pd.Series | None = None) -> dict:
-    """Paths [n, H] of every driver channel after month `last`. severity scales the 2026 closure
+                 dm: dict | None = None, daily: pd.Series | None = None, hz: int = H) -> dict:
+    """Paths [n, hz] of every driver channel after month `last`. severity scales the 2026 closure
     template (0 = no closure). driver: GARCH-CGMY or GARCH-Student-t (daily, stored fits) or monthly-t.
     The other channels follow Brent (beta) plus their own GARCH-t noise and, in a closure, their own
     2026 moves beyond what Brent explains."""
     dm = dm or driver_model(data, last)
-    tpl = closure_template(data) if severity else {c: np.zeros(H) for c in CHANNELS}
+    tpl = ({c: np.r_[v, np.zeros(hz)][:hz] for c, v in closure_template(data).items()} if severity
+           else {c: np.zeros(hz) for c in CHANNELS})
     shock = severity * tpl["x"]
     if driver == "monthly-t":
         x = garch_paths(garch_fit(data["x"][1:last + 1]), n, shock, rng)
@@ -906,8 +971,39 @@ def run_fold(data: dict, j: int) -> dict:
         fc = {c: np.stack([p[c] for p in paths], 1) for c in CHANNELS}  # [N, O, H]
         S = with_composites(simulate(post, st, data, t0, fc, Dfc, zres, rng), data)
         res["modes"][f"forecast_{driver}"] = pack(score(S, actual), actual)
+        if driver == "GARCH-CGMY" and SAVE_KEYS:
+            RUNS.mkdir(parents=True, exist_ok=True)
+            np.savez_compressed(RUNS / f"fold-{j}{'-quick' if QUICK else ''}-draws.npz",
+                                S=S[:, :, :3][..., [OUT_KEYS.index(k) for k in SAVE_KEYS]].astype(np.float32),
+                                origins=np.array(res["origins"]), keys=np.array(SAVE_KEYS))
         B = np.cumsum(fc["x"], 2) * 100
         res["brent"][driver] = pack(score(B[..., None], brent_actual[..., None]), brent_actual[..., None])
+    res["benchmarks"] = {k: pack(v, actual) for k, v in benchmarks(data, last, t0, actual, rng).items()}
+    return res
+
+
+def run_fold_lagged(data: dict, j: int) -> dict:
+    """Forecast mode with the information the surveys had, for the comparison with the Fed and the SPF.
+    A survey taken at the end of month t knows CPI to month t-1 (month t's is published two weeks into
+    t+1), so for each origin t of block j the forecast starts at t-1, runs H+1 months and is scored on
+    the change over months t+1..t+h, the window the surveys forecast. The same fit (seed) as the fold,
+    and, from the same draws, the usual forecast from t, so the head start's worth is measured on one fit."""
+    block = fold_blocks(data["months"])[j]
+    last = int(block[0] - 1)
+    post, st, diag, zres = fit(data, last, seed=j)
+    rng = np.random.default_rng(300 + j)
+    t0 = block
+    N = len(post["a"])
+    actual = actual_paths(data, t0)
+    dm, daily = driver_model(data, last), daily_brent()
+    res = {"fold": j, "diagnostics": diag, "origins": [f"{data['months'][t]:%Y-%m}" for t in t0], "modes": {}}
+    for label, start, hz in (("forecast_GARCH-CGMY", t0, H), ("forecast_lagged_GARCH-CGMY", t0 - 1, H + 1)):
+        paths = [driver_paths(data, int(t), N, rng, "GARCH-CGMY", 0.0, dm, daily, hz) for t in start]
+        fc = {c: np.stack([p[c] for p in paths], 1) for c in CHANNELS}  # [N, O, hz]
+        S = simulate(post, st, data, start, fc, np.repeat(data["D"][start][:, None], hz, 1), zres, rng)
+        if hz > H:
+            S = S[:, :, 1:] - S[:, :, :1]  # the change after month t, forecast from the end of t-1
+        res["modes"][label] = pack(score(with_composites(S, data), actual), actual)
     res["benchmarks"] = {k: pack(v, actual) for k, v in benchmarks(data, last, t0, actual, rng).items()}
     return res
 
@@ -986,7 +1082,9 @@ def run_final(data: dict) -> dict:
 def run(data: dict, name: str) -> dict:
     meta = {"generated": datetime.now(UTC).isoformat(timespec="seconds"), "job": os.environ.get("SLURM_JOB_ID"),
             "quick": QUICK, "food_drivers": FOOD_MODE, "samples": SAMPLES}
-    if name.startswith("fold-"):
+    if name.startswith("fold-") and name.endswith("-lagged"):
+        out = run_fold_lagged(data, int(name.split("-")[1]))
+    elif name.startswith("fold-"):
         out = run_fold(data, int(name.split("-")[1]))
     elif name == "event-2022":
         out = run_event(data, "2022-02-01", seed=22, scenarios=False)
