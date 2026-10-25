@@ -89,12 +89,12 @@ SWAPS = [
     # fuel, and prices and food where we have them. The flat map's tooltip used to build its own copy.
     ('    const pr = COIL.prices[isoOf[name]], al = pr && pr.all && pr.all.now, fd = pr && pr.food && pr.food.now;\n'
      '    t.innerHTML = `<b>${name}</b><span class="mono ${k.score > 0.5 ? "hurt" : k.score < -0.5 ? "gain" : ""}">${cutTxt(k)}</span>\n'
-     '      <span>Fuel <span class="mono">${pct(k.fuel)}${k.d.pt.own ? "" : " (pooled)"}</span></span>${al ? `<span>Prices <span class="mono">${pctP(al.v)}</span>, food <span class="mono">${fd ? pctP(fd.v) : "–"}</span> (${ymLabel(al.month)})</span>` : ""}`;\n',
+     '      ${k.fuel == null ? "" : `<span>Fuel <span class="mono">${pct(k.fuel)}</span></span>`}${al ? `<span>Prices <span class="mono">${pctP(al.v)}</span>, food <span class="mono">${fd ? pctP(fd.v) : "–"}</span> (${ymLabel(al.month)})</span>` : ""}`;\n',
      '    t.innerHTML = tipHtml(name);\n', 1),
-    ('    return `<b>${escH(name)}</b><span class="mono">${cutTxt(k)}</span><span>Fuel <span class="mono">${pct(k.fuel)}${k.d.pt.own ? "" : " (pooled)"}</span></span>`;',
+    ('    return `<b>${escH(name)}</b><span class="mono">${cutTxt(k)}</span>${k.fuel == null ? "" : `<span>Fuel <span class="mono">${pct(k.fuel)}</span></span>`}`;',
      '    const pr = COIL.prices[isoOf[name]], al = pr && pr.all && pr.all.now, fd = pr && pr.food && pr.food.now;\n'
      '    return `<b>${isoOf[name] ? flagImg(isoOf[name]) + " " : ""}${escH(name === "United States of America" ? "United States" : name)}</b>'
-     '<span class="mono ${k.score > 0.5 ? "hurt" : k.score < -0.5 ? "gain" : ""}">${cutTxt(k)}</span><span>Fuel <span class="mono">${pct(k.fuel)}${k.d.pt.own ? "" : " (pooled)"}</span></span>'
+     '<span class="mono ${k.score > 0.5 ? "hurt" : k.score < -0.5 ? "gain" : ""}">${cutTxt(k)}</span>${k.fuel == null ? "" : `<span>Fuel <span class="mono">${pct(k.fuel)}</span></span>`}'
      '${al ? `<span>Prices <span class="mono">${pctP(al.v)}</span>, food <span class="mono">${fd ? pctP(fd.v) : "–"}</span> (${ymLabel(al.month)})</span>` : ""}`;', 1),
     # Antarctica (and the French Southern lands) on the flat map too, and the flat map's "Macedonia" under the
     # globe's name, so it can be selected and found in our tables; the Arctic Ocean labelled on both
@@ -128,4 +128,28 @@ SWAPS = [
     ('.labelSize((x) => (x.cont ? 2.6 :', '.labelSize((x) => (x.hz ? 1.05 : x.cont ? 2.6 :', 1),
     ('.labelAltitude((x) => (x.cont ? 0.03 : 0.003))', '.labelAltitude((x) => (x.hz ? 0.02 : x.cont ? 0.03 : 0.003))', 1),
     ('.labelColor((x) => (x.cont ? "rgba(241,232,210,0.85)"', '.labelColor((x) => (x.hz ? "#ffbf5c" : x.cont ? "rgba(241,232,210,0.85)"', 1),
+    # no pop-up on the map for the selected country: everything it showed is in the side panel (Overview and Cost of
+    # living tabs), so it only covered the map
+    ('    if (!st.sel) { pop.hidden = true; return; }',
+     '    pop.hidden = true; return;   // the side panel shows all of it', 1),
+    # picking a country focuses on it (focus.js): the map zooms to the country and moves up, its detail opens large below.
+    # select() says when the selection changes; HZZoomTo frames a country on the flat map or the globe (null: whole world).
+    ('    paint();\n    renderCountry();\n    renderRank();\n    renderMat();\n  }\n  // country card: three tabs',
+     '    paint();\n    renderCountry();\n    renderRank();\n    renderMat();\n'
+     '    document.dispatchEvent(new CustomEvent("hz-select", { detail: { name: st.sel } }));\n  }\n  // country card: three tabs', 1),
+    ('  svgEl.call(zoom).on("dblclick.zoom", null);\n',
+     '  svgEl.call(zoom).on("dblclick.zoom", null);\n'
+     '  window.HZZoomTo = (name) => {\n'
+     '    if (st.wview === "3d") {\n'
+     '      const w = name && isoOf[name] && where[isoOf[name]];\n'
+     '      if (G3) G3.pointOfView(w ? { lat: w.lat, lng: w.lng, altitude: 1.3 } : { lat: 24, lng: 58, altitude: 2.2 }, 900);\n'
+     '      return;\n'
+     '    }\n'
+     '    const box = svgEl.node().getBoundingClientRect(), f = name && countries.find((c) => c.properties.name === name);\n'
+     '    if (!f || !box.width) { svgEl.transition().duration(700).call(zoom.transform, d3.zoomIdentity); return; }\n'
+     '    const [[x0, y0], [x1, y1]] = gpath.bounds(f), w = box.width, h = box.height;\n'
+     '    const k = Math.max(1, Math.min(8, 0.7 / Math.max((x1 - x0) / w, (y1 - y0) / h)));\n'
+     '    const t = d3.zoomIdentity.translate(w / 2, h / 2).scale(k).translate(-(x0 + x1) / 2, -(y0 + y1) / 2);\n'
+     '    svgEl.transition().duration(900).ease(d3.easeCubicInOut).call(zoom.transform, t);\n'
+     '  };\n', 1),
 ]

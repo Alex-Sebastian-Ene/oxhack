@@ -63,7 +63,7 @@ def test_latest_yoy_now_and_at_a_month():
 def test_naive_outlook_continues_the_latest_rate_with_a_band():
     level = pd.Series(100 * 1.005 ** np.arange(len(MONTHS)), index=MONTHS)  # about 6.2% a year
     brent = pd.Series(70.0, index=pd.date_range("2005-01-01", "2026-09-01", freq="MS"))  # flat: no oil move
-    o = co.naive_outlook(level, brent, link=None, misses=list(np.linspace(-2, 2, 20)))
+    o = co.naive_outlook(level, brent, link=None, misses=list(np.linspace(-0.02, 0.02, 20)))  # log terms
     lo, mid, hi, oil = o["q"]["12"]
     assert mid == pytest.approx(100 * (1.005 ** 12 - 1), abs=0.01) and oil == 0
     assert lo < mid < hi
@@ -71,8 +71,69 @@ def test_naive_outlook_continues_the_latest_rate_with_a_band():
     assert co.naive_outlook(level, brent, None, misses=[0.1] * 3) is None  # too few past misses
 
 
+def test_naive_outlook_scales_with_high_inflation_and_stays_above_minus_100():
+    level = pd.Series(100 * 1.04 ** np.arange(len(MONTHS)), index=MONTHS)  # about 60% a year
+    brent = pd.Series(70.0, index=pd.date_range("2005-01-01", "2026-09-01", freq="MS"))
+    o = co.naive_outlook(level, brent, link=None, misses=list(np.linspace(-0.3, 0.3, 20)))
+    lo, mid, hi, _ = o["q"]["12"]
+    assert mid == pytest.approx(100 * (1.04 ** 12 - 1), abs=0.05)
+    assert lo > -100 and hi - mid > mid - lo                       # a log band is skewed upwards
+    assert o["width12"] == pytest.approx(0.6 * 0.9, abs=0.01)      # 5th to 95th percentile of the misses
+
+
 def test_trade_profile_net_exporter_and_caps():
     assert co.trade_profile(imp=10.0, exp=50.0, gulf_by={})["m"] == -4.0
     assert co.trade_profile(imp=1.0, exp=1000.0, gulf_by={})["m"] == -20.0
     assert co.trade_profile(imp=0.0, exp=5.0, gulf_by={})["gulf_share"] is None
     assert co.trade_profile(imp=10.0, exp=0.0, gulf_by={"Iraq": 12.0})["gulf_share"] == 1.0  # CIF/FOB mismatch capped
+
+
+# --------------------------------------------------------------- national motor-fuel CPIs (synthetic replies)
+OECD_HEAD = ("DATAFLOW,REF_AREA,FREQ,METHODOLOGY,MEASURE,UNIT_MEASURE,EXPENDITURE,ADJUSTMENT,TRANSFORMATION,"
+             "TIME_PERIOD,OBS_VALUE,OBS_STATUS,UNIT_MULT,BASE_PER,DURABILITY,DECIMALS")
+
+
+def oecd_row(area, month, value, base="2015", method="N", unit="IX", item="CP0722"):
+    return f"OECD.SDD.TPS:DSD_PRICES@DF_PRICES_ALL(1.0),{area},M,{method},CPI,{unit},{item},N,_Z,{month},{value},A,,{base},,2"
+
+
+def test_oecd_levels_keeps_national_index_levels_by_country():
+    rows = [oecd_row("KOR", "2020-02", 101.5), oecd_row("KOR", "2020-01", 100.0),
+            oecd_row("JPN", "2020-01", 99.0),
+            oecd_row("KOR", "2020-01", 3.1, unit="PA"),            # a growth rate, not the index
+            oecd_row("EA20", "2020-01", 98.0, method="HICP"),      # an aggregate on another methodology
+            oecd_row("KOR", "2020-01", 88.0, item="CP045_0722"),   # energy: mixes in electricity and gas
+            oecd_row("ISR", "2020-01", 90.0, base="2010"), oecd_row("ISR", "2020-02", 92.0)]  # rebased inside: dropped
+    out = co.oecd_levels("\n".join([OECD_HEAD] + rows))
+    assert set(out) == {"KOR", "JPN"}
+    assert list(out["KOR"].index.strftime("%Y-%m")) == ["2020-01", "2020-02"]  # sorted
+    assert list(out["KOR"]) == [100.0, 101.5]
+
+
+def test_statcan_levels_reads_vector_points_and_checks_status():
+    body = [{"status": "SUCCESS", "object": {"vectorId": 41691136, "vectorDataPoint": [
+        {"refPer": "2009-02-01", "value": 101.0}, {"refPer": "2009-01-01", "value": 100.0}, {"refPer": "2009-03-01", "value": None}]}}]
+    s = co.statcan_levels(body)
+    assert list(s.index.strftime("%Y-%m")) == ["2009-01", "2009-02"] and list(s) == [100.0, 101.0]
+    with pytest.raises(ValueError):
+        co.statcan_levels([{"status": "FAILED", "object": "Invalid vector"}])
+
+
+def test_singstat_levels_picks_the_row_and_drops_missing_months():
+    body = {"Data": {"row": [
+        {"seriesNo": "1.06.1.5", "rowText": "Petrol", "columns": [{"key": "2015 Feb", "value": "61.2"},
+                                                                  {"key": "2015 Jan", "value": "60.039"},
+                                                                  {"key": "2014 Dec", "value": "na"}]},
+        {"seriesNo": "1.06.1.6", "rowText": "Other Fuel & Lubricants", "columns": [{"key": "2015 Jan", "value": "90"}]}]}}
+    s = co.singstat_levels(body, "1.06.1.5")
+    assert list(s.index.strftime("%Y-%m")) == ["2015-01", "2015-02"]
+    assert s.iloc[0] == pytest.approx(60.039)
+
+
+def test_level_yoy_on_a_full_calendar_and_passthrough_from_index_levels():
+    brent = brent_path(2)
+    level = pd.Series(np.exp(0.25 * np.log(brent)) * 100, index=MONTHS)
+    yoy = co.level_yoy(level.drop(pd.Timestamp("2015-06-01")))  # a missing month: its change and the next year's are NaN
+    assert np.isnan(yoy["2015-06-01"]) and np.isnan(yoy["2016-06-01"]) and not np.isnan(yoy["2016-07-01"])
+    assert yoy["2016-07-01"] == pytest.approx(100 * (level["2016-07-01"] / level["2015-07-01"] - 1))
+    assert co.passthrough(co.level_yoy(level), brent)["e"] == pytest.approx(0.25, abs=1e-3)
