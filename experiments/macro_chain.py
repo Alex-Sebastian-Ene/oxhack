@@ -17,8 +17,9 @@ Members (fixed before scoring):
                 more members as one more equal-weight member on those targets' columns (outputs
                 tagged -margins); run it with `fold J margins`
     bayes_regime  bayes_own plus the supply-disruption terms (macro_bayes.REGIME: extra oil
-                pass-through and a wider band in disruption months), a candidate to replace
-                bayes_own; only when named (`fold J bayes_regime`, CHAIN_MEMBERS). D after the
+                pass-through and a wider band in disruption months), tested as a replacement for
+                bayes_own and not adopted (notes/macro-chain-regime.md); only when named
+                (`fold J bayes_regime`, CHAIN_MEMBERS). D after the
                 origin: the calendar in whatif, D at the origin carried on in levy and bootstrap,
                 set by the flow scenario in the replay (REGIME_LOST points or more)
 
@@ -734,6 +735,9 @@ def replay(origin: str = REPLAY_ORIGIN) -> None:
 # --- bayes_regime against bayes_own: the keep rule ---------------------------------------------
 
 KEEP_T = 2.0  # a group is worse if candidate minus incumbent has a Newey-West t above this
+# What was decided once the results were in (the rule's outcome alone did not settle it)
+REGIME_DECISION = ("Not adopted (2026-10-25): the recommended ensemble stays `rec`. The rule's pass is narrow and comes "
+                   "from the mixture's spread; inflation, the app's headline, is worse in the scenario run.")
 REGIME_MODES = ("whatif", "lost_0", "lost_82")  # replay modes scored; lost_82 (D from the scenario) decides
 
 
@@ -891,8 +895,9 @@ def regime_report() -> None:
            "(rec_regime minus rec, what-if and levy), and the replay improves in its deciding mode, lost 82 with D from "
            "the scenario: lower mean scaled CRPS and coverage no lower.", "",
            "## Verdict", "",
-           ("**Kept.** " if keep else "**Not kept.** ") + ("No group is worse on the folds, and the replay improves." if keep
-                                                             else "; ".join(why) + "."), "",
+           ("**Passes the keep rule.** " if keep else "**Fails the keep rule.** ")
+           + ("No group is worse on the folds, and the replay improves." if keep else "; ".join(why) + "."), "",
+           f"**Decision:** {REGIME_DECISION}", "",
            "**Reviewer's checks** (the cost-of-living session; reported, not part of the rule): "
            + "; ".join(f"{label} {'✓' if ok else '✗'}" for label, ok in checks) + ". "
            + ("They agree with the verdict." if checks_pass == keep else "**They disagree with the verdict.**"), "",
@@ -975,7 +980,8 @@ def regime_report() -> None:
         out.append(f"| replay | {'on' if d.get('regime') else 'off'} | {d.get('regime_months', 0)} | {d['max_r_hat']} | "
                    f"{d['min_ess']} | {d['divergences']} |")
     (NOTES / "macro-chain-regime.md").write_text("\n".join(out) + "\n", encoding="utf-8")
-    print(f"wrote {NOTES / 'macro-chain-regime.md'}: {'kept' if keep else 'not kept'}" + ("" if keep else f" ({'; '.join(why)})"))
+    print(f"wrote {NOTES / 'macro-chain-regime.md'}: {'passes' if keep else 'fails'} the keep rule"
+          + ("" if keep else f" ({'; '.join(why)})"))
 
 
 # --- entry -----------------------------------------------------------------------------------

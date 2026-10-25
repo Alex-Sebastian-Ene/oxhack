@@ -130,7 +130,7 @@ Run on Iridis: job 1972767 for the folds, 1972803 for the report, 1972768 for th
 - **So the copula makes the joint answers more coherent at no cost to any single series.** That matters for anything that adds series together, such as a household bill or a basket of costs.
 - **In the single 2026 replay** the joint scores are mixed: slightly worse at 1 and 3 months, better at 6. One event can't settle it; the folds do.
 
-**Recommended model now:** the 3-member equal ensemble (`bayes_own`, `global_lin`, `global`) with copula shocks, plus the margin member on the three fuel targets (`CHAIN_MARGINS=1`; see "Refined-product margins" below).
+**Recommended model now:** the 3-member equal ensemble (`bayes_own`, `global_lin`, `global`) with copula shocks, plus the margin member on the three fuel targets (`CHAIN_MARGINS=1`; see "Refined-product margins" below). The supply-disruption terms (`bayes_regime`) were tested and not adopted; see "Supply-disruption terms" below.
 
 ## Independent verification
 
@@ -236,7 +236,7 @@ Fuel targets on the 8 folds (skill against the v1 climatology, all horizons, the
   - The copula leaves each series' own distribution unchanged, so the cost-group numbers above hold for the recommended model with copula shocks too.
   - The margin member's draws carry their own shocks; they are not drawn through the copula.
 
-## Supply-disruption terms (`notes/macro-chain-regime.md`)
+## Supply-disruption terms: tested, not adopted (`notes/macro-chain-regime.md`)
 
 The cost-of-living model (`docs/cost-of-living.md`) adds two terms in months of a physical supply disruption, D = 1 (2022-03..2022-12 and 2026-03..2026-12). `bayes_regime` adds them to `bayes_own`:
 - the oil term is multiplied by 1 + κ, with κ pooled by target group;
@@ -258,7 +258,7 @@ After the origin, D is the calendar in the what-if, D at the origin carried on i
 - **By group, the gain is all costs and unemployment.** Costs improve in both runs (−0.062 what-if, coverage 82% → 90%; −0.022 lost 82). Inflation improves slightly in the what-if (−0.010) but worsens in lost 82 (+0.068). Rates worsen in both (+0.018, +0.023): their disruption band factor is ×1.9–3.4, though oil doesn't drive rates.
 - **The member alone is worse in the replay:** `bayes_regime` scores 0.647 against `bayes_own`'s 0.641 in the what-if, and 0.685 against 0.602 in lost 82. So the ensemble's what-if gain, which comes with coverage rising from 89% to 94%, is the mixture's wider spread, not a sharper member.
 - **Why inflation overshoots:** learned from 2022, the CPI multiplier 1 + κ is 2.8–2.9. Like for like, the cost-of-living model's own fit to 2026-02 (κ from 2022 only) gives about 2.0–2.1 for headline CPI (2.07 US, 1.98 UK, 2.08 euro area, as reported by that session from Iridis job 1973278; not yet in a committed note). Its all-data fit, which includes 2026, gives about 1.5. So both overshoot when they learn from 2022 alone, and the chain more. A likely reason: `macro_bayes.py` takes Brent alone, with no gas input, so its κ also absorbs 2022's gas-driven inflation, which the cost-of-living model gives to its gas terms. Over 12 months of a scenario, that overshoots 2026.
-- **Verdict:** it passes the agreed rule narrowly (0.615 → 0.613 is within the noise of one replay), and fails the reviewer's inflation check. **The recommended model stays `rec` until that is decided.** Eight origins and one replay are thin evidence either way.
+- **Verdict: tested, not adopted (2026-10-25).** It passes the agreed rule narrowly (0.615 → 0.613 is within the noise of one replay), but fails the reviewer's inflation check. **The recommended model stays `rec`.** The code stays, off unless named (`bayes_regime`), as a documented result. Eight origins and one replay are thin evidence either way.
 - **What would be worth testing:** the terms on the cost group only (the `ind_*` series), where they help in both runs and the fuel multipliers are close to the cost-of-living model's (diesel 1.54, jet fuel 1.14, refinery PPI 1.31). It was chosen after seeing this replay, so it would have to be labelled post hoc and checked again when the 7–12-month outcomes of 2026 are published.
 
 ## Reproduce
