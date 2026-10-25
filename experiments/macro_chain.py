@@ -867,6 +867,8 @@ def regime_report() -> None:
     checks.append((f"lost 82, coverage {deciding['rec_regime'][1]:.0%} against {deciding['rec'][1]:.0%}",
                    deciding["rec_regime"][1] >= deciding["rec"][1]))
     checks_pass = all(ok for _, ok in checks)
+    alone = {mode: [float(np.mean(rscore[(mode, m)][w][pub])) for m in ("bayes_own", "bayes_regime", "rec", "rec_regime")
+                    for w in ("crps", "inside")] for mode in ("whatif", "lost_82")}
 
     models = ("bayes_own", "bayes_regime", "rec", "rec_regime")
     gen = datetime.now(UTC).date().isoformat()
@@ -894,6 +896,11 @@ def regime_report() -> None:
            "**Reviewer's checks** (the cost-of-living session; reported, not part of the rule): "
            + "; ".join(f"{label} {'✓' if ok else '✗'}" for label, ok in checks) + ". "
            + ("They agree with the verdict." if checks_pass == keep else "**They disagree with the verdict.**"), "",
+           "**The member alone:** in the replay bayes_regime scores " + "; ".join(
+               f"{mode.replace('_', ' ')} {a[2]:.3f} against bayes_own's {a[0]:.3f}" for mode, a in alone.items())
+           + ". Inside the ensemble the what-if moves from " + f"{alone['whatif'][4]:.3f} to {alone['whatif'][6]:.3f} with "
+           f"coverage {alone['whatif'][5]:.0%} → {alone['whatif'][7]:.0%}: where the member alone is worse, the ensemble's "
+           "gain comes from the mixture's wider spread, not a sharper member.", "",
            f"**How much evidence:** only fold(s) {regime_folds} have a disruption in training, so on the other folds "
            "bayes_regime is bayes_own and the fold comparison is a no-harm check; "
            f"{int((hot['whatif'] & in_regime_folds).sum())} what-if origins and "
