@@ -1004,20 +1004,9 @@ a.hz-src:hover { background: #163257; }
 .hz-tierkey { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--faint); }
 .hz-tierkey i { display: inline-block; width: 10px; height: 10px; margin-right: 5px; vertical-align: -1px; border: 2px solid; }
 
-/* "The shock" as an accordion (steps.js): a header per step, one step open at a time. */
-#world-stage .step.acc-step { gap: 0; }
-#world-stage .step .acc-head { cursor: pointer; user-select: none; min-height: 40px; padding: 4px 0; }
-#world-stage .step .acc-head:hover { color: var(--text); }
-#world-stage .step .acc-head:focus-visible { outline: 2px solid var(--oil); outline-offset: 2px; }
-#world-stage .step .acc-sum { margin-left: auto; font: 400 16px var(--mono); color: var(--oil-soft); white-space: nowrap; }
-#world-stage .step .acc-chev { margin-left: 8px; color: var(--muted); transition: transform .15s; display: inline-block; }
-#world-stage .step.acc-open .acc-chev { transform: rotate(90deg); color: var(--oil); }
-#world-stage .step .acc-body { display: flex; flex-direction: column; gap: 10px; padding-top: 8px; }
-#world-stage .step .acc-body[hidden] { display: none; }
-/* the hints ("drag the slider", "follows from the lost flow") and the long estimate note are left out of the card;
-   the flow estimate is in the Strait view */
+/* "The shock" card: all four steps stay open (the accordion is gone). The hints ("drag the slider", "follows from the
+   lost flow") and the long estimate note are left out of the card; the flow estimate is in the Strait view */
 #world-stage .step .stephead .hint, #world-stage #w-est { display: none !important; }
-@media (prefers-reduced-motion: reduce) { #world-stage .step .acc-chev { transition: none; } }
 
 /* Models page (models.py, models.js): one card per model, in the night-shift theme. Sized for a laptop projector. */
 .hz-mod { display: flex; flex-direction: column; flex-wrap: nowrap; gap: 14px; overflow-y: auto; padding-bottom: 16px; }
@@ -7392,81 +7381,6 @@ window.HZModels = (() => {
   try { saved = localStorage.getItem(KEY) || ""; } catch (e) {}
   if (location.hash === "#models" || (saved === "models" && !["#mandeb", "#households"].includes(location.hash))) show(true, true);
   return { show };
-})();
-
-</script>
-<script>
-// "The shock" card as an accordion: each numbered step opens on a click on its header and closes the one that was
-// open. A closed step keeps its header and shows its headline number, so the card stays short without hiding the result.
-(() => {
-  const $ = (id) => document.getElementById(id);
-  // headline shown on a closed step's header, read from the numbers the page already renders
-  const SUMMARY = [
-    () => ($("lost-v") ? `${$("lost-v").textContent.trim()} pts lost` : ""),
-    () => ($("brent-v") ? $("brent-v").textContent.trim() : ""),
-    () => ($("w-petrol") ? `fuel ${$("w-petrol").textContent.trim()}` : ""),
-    () => "",
-  ];
-  let open = 0;
-
-  function card() {
-    const c = [...document.querySelectorAll("#world-stage .card")].find((x) => x.querySelector(".step .stephead"));
-    return c || null;
-  }
-  function steps(c) { return [...c.querySelectorAll(":scope > .step")]; }
-
-  function wrap(step, i) {
-    const head = step.querySelector(":scope > .stephead");
-    if (!head || step.dataset.acc) return;
-    step.dataset.acc = "1";
-    step.classList.add("acc-step");
-    const body = document.createElement("div");
-    body.className = "acc-body";
-    body.id = `acc-body-${i}`;
-    [...step.children].filter((x) => x !== head).forEach((x) => body.appendChild(x));
-    step.appendChild(body);
-    head.classList.add("acc-head");
-    head.setAttribute("role", "button");
-    head.tabIndex = 0;
-    head.setAttribute("aria-controls", body.id);
-    const sum = document.createElement("span");
-    sum.className = "acc-sum";
-    const chev = document.createElement("span");
-    chev.className = "acc-chev";
-    chev.setAttribute("aria-hidden", "true");
-    chev.textContent = "▸";
-    head.append(sum, chev);
-    const toggle = () => { open = open === i ? -1 : i; render(); };
-    head.addEventListener("click", (e) => { if (!e.target.closest("button, a, input")) toggle(); });
-    head.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } });
-  }
-
-  function render() {
-    const c = card();
-    if (!c) return;
-    steps(c).forEach((st, i) => {
-      wrap(st, i);
-      const on = i === open, head = st.querySelector(".acc-head"), body = st.querySelector(".acc-body");
-      if (!head || !body) return;
-      st.classList.toggle("acc-open", on);
-      head.setAttribute("aria-expanded", String(on));
-      body.hidden = !on;
-      const s = head.querySelector(".acc-sum");
-      const txt = on ? "" : (SUMMARY[i] || (() => ""))();
-      if (s && s.textContent !== txt) s.textContent = txt;   // only on change, so the observer below doesn't loop
-    });
-  }
-
-  function start() {
-    const c = card();
-    if (!c) return setTimeout(start, 300);
-    render();
-    // step 4 is added by the Households layer, and the numbers change with the slider: keep headers in step
-    let busy = false;
-    new MutationObserver(() => { if (busy) return; busy = true; requestAnimationFrame(() => { render(); busy = false; }); })
-      .observe(c, { childList: true, subtree: true, characterData: true });
-  }
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();
 })();
 
 </script>
