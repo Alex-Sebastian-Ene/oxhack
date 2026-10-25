@@ -1,0 +1,161 @@
+/* Night shift: one pixel-art look for the whole app, from the landing page to the last info sheet.
+   A refinery at night: deep navy and steel panels with hard pixel edges and rivets, cream text under
+   sodium-lamp amber, a red valve for danger, and teal for gains. Display type is Pixelify Sans; numbers read
+   like control-room gauges in VT323. One deliberate dark look, so there is no light theme. */
+:root {
+  color-scheme: dark;
+  --bg: #0a0e1c; --panel: #121a2d; --panel2: #1a2439; --line: #27324c; --line2: #3a4867;
+  --text: #f1e8d2; --muted: #c4baa3; --faint: #a0978a;
+  --seen: #5aa9ff; --seen-soft: #8cc4ff; --oil: #ffa424; --oil-soft: #ffbf5c; --model: #c09bff; --ok: #6fe39a;
+  --sea: #0b2240; --land: #263150; --land-edge: #3d4c6e;
+  --hurt: #ff6b4d; --gain: #2fd8b5; --gain-soft: #45e3c1; --neutral: #2b3653; --harm: #ff6a4d; --ink-sel: #26324d;
+  --violet: #c09bff; --sea-ink: #8fbbe3;
+  --ink: #04060c; --steel: #5b6d95; --valve: #e0412e;
+  --pix: "Pixelify Sans", "Trebuchet MS", system-ui, sans-serif;
+  --mono: "VT323", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --frame: inset 0 0 0 2px var(--line2), 4px 4px 0 0 rgba(0, 0, 0, .55);
+}
+html { background: var(--bg); }
+body { background: var(--bg); color: var(--text); }
+::selection { background: var(--oil); color: var(--ink); }
+* { scrollbar-color: var(--line2) var(--panel); }
+
+/* faint scanlines over everything, like an old control-room monitor */
+body::after { content: ""; position: fixed; inset: 0; z-index: 60; pointer-events: none;
+  background: repeating-linear-gradient(to bottom, transparent 0 2px, rgba(0, 0, 0, .09) 2px 3px); }
+
+/* ---------------------------------------------------------------- type */
+h1, h2, .label, .tag, .pill, button, select, .stephead, .ptype, .legendbar .ttl, .mhead b, .tmat .th b,
+#world-stage .hud .label, .cpop .ph b, .ctitle h2, .sheet h2 { font-family: var(--pix); }
+h1 { font-size: 21px; font-weight: 700; letter-spacing: .5px; }
+#world-stage .hud .label, .label { color: var(--oil-soft); letter-spacing: 1px; }
+.label svg { color: var(--oil-soft); }
+.mono, .kpis b, .pprice, .pricebig b, .counters b, .globals b, .cpop .pk b, .pub .v, .rank .v, .pbars .v, .inds .lv,
+#est-p50, .pw-n, .cap-n, .stat b, #clock-label, .ichip { font-family: var(--mono); }
+.kpis b, #world-stage .kpis b { font-size: 30px; font-weight: 400; line-height: 1; }
+.pricebig b { font-size: 46px; font-weight: 400; }
+.pprice { font-size: 36px; font-weight: 400; }
+.cpop .pk b { font-size: 22px; font-weight: 400; }
+.rank button, .pbars button { font-size: 13.5px; }
+.rank .v, .pbars .v { font-size: 17px; }
+
+/* ---------------------------------------------------------------- pixel frames: square corners, an ink outline, a steel inner edge, a hard shadow */
+.card, .cpop, .popup, .sheet, .wtip, .legendbar, .timebar, .hsearch, .hsearch .mres, .radar-flag, .real-flag, .mapwrap {
+  border-radius: 0 !important; border: 2px solid var(--ink) !important; box-shadow: var(--frame) !important;
+}
+.card, .cpop, .popup, .sheet, .wtip, .legendbar, .timebar, .hsearch .mres, .radar-flag, .real-flag { background-color: var(--panel) !important; }
+.hsearch { background: var(--panel2) !important; box-shadow: inset 2px 2px 0 rgba(0, 0, 0, .35) !important; }
+.hsearch input { color: var(--text); }
+.hsearch input::placeholder { color: var(--faint); }
+/* rivets in the corners of every panel */
+.card, .sheet {
+  background-image: linear-gradient(var(--steel), var(--steel)), linear-gradient(var(--steel), var(--steel)), linear-gradient(var(--steel), var(--steel)), linear-gradient(var(--steel), var(--steel));
+  background-size: 3px 3px; background-repeat: no-repeat;
+  background-position: 6px 6px, calc(100% - 6px) 6px, 6px calc(100% - 6px), calc(100% - 6px) calc(100% - 6px);
+}
+.sheet { box-shadow: var(--frame), 0 0 0 9999px rgba(4, 6, 12, .35) !important; }
+
+/* ---------------------------------------------------------------- buttons: chunky steel keys that press in */
+button, select {
+  border-radius: 0 !important; border: 2px solid var(--ink) !important; background: var(--panel2); color: var(--text);
+  box-shadow: inset -2px -2px 0 rgba(0, 0, 0, .38), inset 2px 2px 0 rgba(255, 255, 255, .07);
+  transition: background .12s, transform .06s;
+}
+button:hover:not(:disabled), select:hover { background: #23304c; }
+button:active:not(:disabled) { transform: translate(1px, 1px); box-shadow: inset 2px 2px 0 rgba(0, 0, 0, .45); }
+button:focus-visible, select:focus-visible, input:focus-visible, canvas:focus-visible { outline: 2px solid var(--oil) !important; outline-offset: 2px; }
+.seg button + button { border-left-width: 0 !important; }
+.seg button[aria-pressed="true"], .viewseg button[aria-pressed="true"], .mseg button[aria-pressed="true"], .presets button[aria-pressed="true"],
+.eseg button[aria-pressed="true"], .ctabs button[aria-selected="true"], #pw-replay[aria-pressed="true"] {
+  background: var(--oil) !important; border-color: var(--ink) !important; color: #1a1206 !important; font-weight: 700;
+  box-shadow: inset -2px -2px 0 rgba(0, 0, 0, .25), inset 2px 2px 0 rgba(255, 255, 255, .35) !important;
+}
+.seg button[aria-pressed="true"] svg, .viewseg button[aria-pressed="true"] svg { color: #1a1206; }
+.fab, .zoom button, .zoomw button, .viewseg button, .mrail button { background: var(--panel) !important; }
+.mrail button { color: var(--muted); }
+.mrail button svg { color: var(--text) !important; }
+.mrail button[aria-pressed="true"] { background: var(--hue, var(--oil)) !important; color: #fff !important; }
+.mrail button[aria-pressed="true"] svg { color: #fff !important; }
+.mrail button[aria-pressed="true"] .d { color: #fff !important; }
+.mrail .d.up { color: var(--harm); } .mrail .d.dn { color: var(--gain-soft); }
+.ib { background: transparent !important; border-color: transparent !important; box-shadow: none !important; color: var(--muted); }
+.ib:hover { color: var(--oil-soft); background: transparent !important; }
+.pill.sim { background: transparent; border-style: dashed !important; border-color: var(--muted) !important; color: var(--muted); box-shadow: none; }
+.presets button { background: var(--panel2); }
+.pause-hint { background: var(--oil) !important; color: #1a1206 !important; }
+.more, .cpop .more { background: var(--panel2) !important; }
+
+/* ---------------------------------------------------------------- sliders: a pipe with a valve-handle thumb */
+input[type="range"] { -webkit-appearance: none; appearance: none; background: transparent; height: 24px; }
+input[type="range"]::-webkit-slider-runnable-track { height: 10px; border: 2px solid var(--ink); background: linear-gradient(#4a5a80 0 2px, #2b3550 2px 6px, #141a2c 6px); }
+input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 22px; margin-top: -8px; border: 2px solid var(--ink); border-radius: 0;
+  background: var(--valve); box-shadow: inset -2px -2px 0 rgba(0, 0, 0, .3), inset 2px 2px 0 rgba(255, 255, 255, .35); cursor: grab; }
+input[type="range"]::-moz-range-track { height: 6px; border: 2px solid var(--ink); background: linear-gradient(#4a5a80 0 2px, #2b3550 2px 4px, #141a2c 4px); }
+input[type="range"]::-moz-range-thumb { width: 12px; height: 18px; border: 2px solid var(--ink); border-radius: 0; background: var(--valve); cursor: grab; }
+#pw-day::-webkit-slider-thumb, #clock::-webkit-slider-thumb { background: var(--seen); }
+#pw-day::-moz-range-thumb, #clock::-moz-range-thumb { background: var(--seen); }
+.marks span { color: var(--faint); font-family: var(--mono); font-size: 14px; }
+
+/* ---------------------------------------------------------------- light colours from the day look, re-lit for night */
+.picons span { background: var(--panel2); }
+.picons span.warn { color: var(--oil-soft); background: #3a2a12; }
+#range-band, .pub .band { background: rgba(255, 164, 36, .38); }
+.mhead .mi { background: var(--panel2) !important; color: var(--oil-soft) !important; border: 2px solid var(--ink); }
+.pbars button[aria-current="true"], .rank button[aria-current="true"] { background: var(--ink-sel) !important; box-shadow: inset 3px 0 0 var(--oil) !important; }
+.pricebig .delta { background: var(--panel2); }
+.pricebig .delta.hurt { background: #3b1712; color: var(--harm); }
+.pricebig .delta.gain { background: #0f3029; color: var(--gain-soft); }
+.stephead .num { background: var(--panel2); border: 2px solid var(--ink); border-radius: 0; font-family: var(--mono); font-size: 15px; }
+.stephead.you .num { background: var(--oil); color: #1a1206; }
+.explain { background: var(--panel2); border-left: 4px solid var(--oil); }
+.gexp { background: #1b1534; border: 2px dashed #6d55b5; border-radius: 0; }
+.exp-ref { color: var(--violet); }
+.exp-warn { color: #ff8a7a; }
+.gexp .warn { color: var(--oil-soft) !important; }
+@keyframes bump { 0% { background: #4a3410; } 100% { background: var(--panel2); } }
+.chart .eco-scen { fill: rgba(255, 255, 255, .04); }
+.legend2 i.eco-sc { background: rgba(255, 255, 255, .12); }
+.chart .ax { font-family: var(--mono); font-size: 13px; }
+.ctip { font-family: var(--mono); font-size: 15px; border-radius: 0; border: 2px solid var(--ink); }
+.ichip { border-radius: 0 !important; background: var(--panel2); font-size: 15px; }
+#world-stage .ichip { font-family: var(--mono); font-size: 15px; }
+.tag { border-radius: 0; border-width: 2px; }
+.kpis div, .counters div, .globals div, .cpop .pk div, .chip, .calm { border-radius: 0 !important; box-shadow: inset 2px 2px 0 rgba(0, 0, 0, .3); }
+.flag { border-radius: 0; box-shadow: 0 0 0 1px var(--ink); }
+.popup .x, .sheet .x { box-shadow: none; border-color: transparent !important; background: transparent; }
+
+/* ---------------------------------------------------------------- maps */
+#world .grat { stroke: rgba(140, 180, 230, .08); }
+#world .ctry { stroke: #070b16; }
+#world .ctry.sel, #world .lift { stroke: var(--text) !important; }
+#world .hz { stroke: var(--text); }
+#world .cont { fill: var(--text); opacity: .55; stroke: rgba(4, 6, 12, .85); }
+#world .fl-bg, #world .fl-tip { fill: var(--ink); stroke: var(--oil); stroke-width: 1px; }
+.glabel { border-radius: 0; background: var(--ink); border: 2px solid var(--oil); font-family: var(--pix); }
+.legendbar .ticks { font-family: var(--mono); font-size: 14px; }
+.wtip { color: var(--text); }
+.wtip .mono { color: var(--oil-soft); font-size: 15px; }
+
+/* pixel icons are drawn as filled cells: the page's line-icon stroke must not reach them */
+svg.pxi { stroke: none !important; fill: none; overflow: visible; }
+/* ---------------------------------------------------------------- app chrome added by the shell: pipe strip and sound keys */
+.bar .brand .logo { display: none; }
+.hz-brand { display: inline-flex; width: 44px; height: 24px; color: var(--oil); }
+.hz-brand .pxi, .hz-key .pxi { width: 100%; height: 100%; }
+.hz-keys { display: inline-flex; gap: 6px; }
+.hz-key { width: 42px; min-height: 40px; padding: 7px; color: var(--text); }
+.hz-key[aria-pressed="false"] { color: var(--faint); }
+.hz-key.home { width: 52px; color: var(--oil); }
+.hz-pipe { position: relative; display: flex; align-items: center; gap: 10px; min-height: 22px; }
+.hz-tube { position: relative; flex: 1 1 auto; height: 14px; border: 2px solid var(--ink); overflow: hidden;
+  background: linear-gradient(#4a5a80 0 2px, #2b3550 2px 9px, #141a2c 9px); }
+.hz-tube::before { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(90deg, transparent 0 58px, #56688f 58px 62px); }
+.hz-oil { position: absolute; left: 0; right: 0; top: 3px; height: 4px; opacity: .95;
+  background: repeating-linear-gradient(90deg, var(--oil) 0 10px, transparent 10px 22px); background-size: 22px 4px;
+  animation: hz-flow var(--flow-dur, 1.6s) linear infinite; }
+@keyframes hz-flow { to { background-position: 22px 0; } }
+.hz-read { flex: none; font-family: var(--mono); font-size: 18px; color: var(--oil-soft); white-space: nowrap; letter-spacing: .5px; }
+.hz-read b { color: var(--text); font-weight: 400; }
+.hz-read .lost { color: var(--harm); }
+@media (max-width: 720px) { .hz-read { font-size: 15px; } .hz-key { width: 38px; min-height: 36px; padding: 6px; } .hz-brand { display: none; } }
+@media (prefers-reduced-motion: reduce) { .hz-oil { animation: none; } body::after { display: none; } }
