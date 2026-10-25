@@ -22,6 +22,7 @@ STEPS = [
     "patch_labels.py",   # mark the exposure score and the shortage premium as illustrative (hand-set; asked on OXH-3)
     "patch_straitui.py", # Strait panel: result first, labelled numbers, real vs simulated tags, link to the World view
     "patch_tidy.py",     # plain source lines and shorter info sheets for viewers (build notes stay in README and docs)
+    "patch_trends.py",   # Trends tab: a country's prices over time, forecast skill, and the industry model's oil effect
 ]
 for step in STEPS:
     r = subprocess.run([sys.executable, "-I", str(here / step)], capture_output=True, text=True)
