@@ -23,7 +23,9 @@ window.HZModels = (() => {
   // a headline number: the value, what it measures, its context, and the note it came from
   function stat(s) {
     const [v, pm] = s.v.split(" ± ");
-    return `<div class="st"><b class="v">${esc(v)}${pm ? `<small> ± ${esc(pm)}</small>` : ""}</b>
+    const zero = !/[1-9]/.test(v.replace(/[^\d.]/g, ""));   // −0.0000 is zero: no colour
+    const sign = zero ? "" : /^\+/.test(v) ? " pos" : /^[−-]/.test(v) ? " neg" : "";   // + in green, − in red
+    return `<div class="st"><b class="v${sign}">${esc(v)}${pm ? `<small> ± ${esc(pm)}</small>` : ""}</b>
       <span class="l">${esc(s.label)}</span>${s.note ? `<span class="n">${esc(s.note)}</span>` : ""}</div>`;
   }
   // the knock-on links and how they held up across folds
