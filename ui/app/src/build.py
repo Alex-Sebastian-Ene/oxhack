@@ -12,7 +12,7 @@ check, node on PATH.
 import base64, pathlib, re, shutil, subprocess, sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-import copy_text, gas, mandeb, world  # noqa: E402  (World view behaviour, gas lines, Bab el-Mandeb, shorter copy)
+import copy_text, flags, gas, households, mandeb, world  # noqa: E402  (World view, flags, gas lines, households, Bab el-Mandeb, copy)
 
 HERE = pathlib.Path(__file__).resolve().parent
 APP = HERE.parent
@@ -41,14 +41,15 @@ SWAPS = [
      '.range([d3.interpolateLab("#1a2439", h)(0.4), h, d3.hsl(h).brighter(0.75).formatHex()])', 1),
     ('if (!v) return "#eceff3";', 'if (!v) return "#243049";', 1),
     ('c.properties.name === st.sel ? "#aab5c2" : fillFor(c.properties.name)', 'c.properties.name === st.sel ? "#070b16" : fillFor(c.properties.name)', 1),
-    ('(n === st.sel ? "#14202e" : "var(--bg)")', '(n === st.sel ? "#f1e8d2" : "var(--bg)")', 1),
-    # 3D globe: a night sea, light labels, a cream outline and ring for the chosen country
+    ('(n === st.sel ? "#14202e" : "var(--bg)")', '(n === st.sel ? "#ffd27a" : "var(--bg)")', 1),
+    # 3D globe: a night sea, light labels, a gold edge and ring for the chosen country
     ('G3.globeMaterial().color.set("#a8d8f8"); G3.globeMaterial().emissive.set("#a8d8f8"); G3.globeMaterial().emissiveIntensity = 0.08;',
      'G3.globeMaterial().color.set("#0b2240"); G3.globeMaterial().emissive.set("#0b2a4f"); G3.globeMaterial().emissiveIntensity = 0.35;', 1),
     ('x.cont ? "rgba(20,32,46,0.75)"', 'x.cont ? "rgba(241,232,210,0.85)"', 1),
     ('"rgba(26,84,130,', '"rgba(143,187,227,', 2),
-    ('f.properties.name === st.sel ? "#14202e" : st.mat', 'f.properties.name === st.sel ? "#f1e8d2" : st.mat', 1),
-    ('color: "#14202e", max: 5', 'color: "#f1e8d2", max: 5', 1),
+    ('f.properties.name === st.sel ? "#14202e" : st.mat', 'f.properties.name === st.sel ? "#ffd27a" : st.mat', 1),
+    ('f.properties.name === st.sel ? "rgba(20,32,46,0.6)"', 'f.properties.name === st.sel ? "rgba(255,196,64,0.7)"', 1),
+    ('color: "#14202e", max: 5', 'color: "#ffd27a", max: 5', 1),
 ]
 # The exposure scale, re-lit: teal for gains, a dark slate for no change, and harm heating from rust to fire.
 STOPS_RE = re.compile(r"const STOPS = \[\[-40, [^;]*\]\];")
@@ -90,7 +91,7 @@ def mandeb_data() -> str:
 
 def main() -> None:
     page = SRC.read_text(encoding="utf-8")
-    for old, new, n in SWAPS + world.SWAPS + gas.SWAPS + mandeb.SWAPS + copy_text.SWAPS:
+    for old, new, n in SWAPS + world.SWAPS + gas.SWAPS + mandeb.SWAPS + copy_text.SWAPS + flags.SWAPS:
         got = page.count(old)
         if got != n:
             sys.exit(f"expected {n} of {old[:70]!r}, found {got}: the industry page changed, update SWAPS")
@@ -108,17 +109,19 @@ def main() -> None:
     first_style_end = body.index("</style>") + len("</style>")
     read = lambda f: (HERE / f).read_text(encoding="utf-8")
     early = (
-        f"\n<style>\n{font_css()}\n{read('theme.css')}\n{gas.CSS}\n{mandeb.CSS}\n{read('landing.css')}\n{read('ai.css')}</style>\n"
-        f"{gas_data()}{mandeb_data()}<script>\n{read('mandeb.js')}\n</script>\n"
+        f"\n<style>\n{font_css()}\n{read('theme.css')}\n{gas.CSS}\n{mandeb.CSS}\n{households.CSS}\n{flags.CSS}\n{read('landing.css')}\n{read('ai.css')}</style>\n"
+        f"{gas_data()}{mandeb_data()}{flags.script()}{households.script()}<script>\n{read('mandeb.js')}\n</script>\n"
         f"{read('landing.html')}"
         f"<script>\n{read('pixel.js')}\n</script>\n<script>\n{read('sound.js')}\n</script>\n<script>\n{read('landing.js')}\n</script>\n"
     )
     body = body[:first_style_end] + early + body[first_style_end:]
     body += f"\n<script>\n{read('shell.js')}\n</script>\n<script>\n{read('ai.js')}\n</script>\n"
+    if households.data() is not None:   # the Households page, from Seb's notes (OXH-8)
+        body += f"<script>\n{read('households.js')}\n</script>\n"
     fragment = '<title>Hormuz Flow</title>\n<meta name="claude:viewport-fit-sides" content="cover">\n' + body
 
     if shutil.which("node"):
-        for f in ("pixel.js", "sound.js", "landing.js", "shell.js", "ai.js", "mandeb.js"):
+        for f in ("pixel.js", "sound.js", "landing.js", "shell.js", "ai.js", "mandeb.js", "households.js"):
             r = subprocess.run(["node", "--check", str(HERE / f)], capture_output=True, text=True)
             if r.returncode:
                 sys.exit(f"{f}: {r.stderr.strip()}")

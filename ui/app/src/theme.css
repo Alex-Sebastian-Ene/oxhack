@@ -129,7 +129,9 @@ input[type="range"]::-moz-range-thumb { width: 12px; height: 18px; border: 2px s
 /* ---------------------------------------------------------------- maps */
 #world .grat { stroke: rgba(140, 180, 230, .08); }
 #world .ctry { stroke: #070b16; }
-#world .ctry.sel, #world .lift { stroke: var(--text) !important; }
+/* the selected country: a gold edge on the lifted shape, a faint gold outline where it was */
+#world .ctry.sel { stroke: rgba(255, 210, 122, .45) !important; }
+#world .lift { stroke: #ffd27a !important; stroke-width: 2.2px !important; filter: drop-shadow(0 0 2px rgba(255, 190, 60, .9)) drop-shadow(0 7px 6px rgba(0, 0, 0, .5)) !important; }
 #world .hz { stroke: var(--text); }
 #world .cont { fill: var(--text); opacity: .55; stroke: rgba(4, 6, 12, .85); }
 #world .fl-bg, #world .fl-tip { fill: var(--ink); stroke: var(--oil); stroke-width: 1px; }
