@@ -10,7 +10,7 @@ This page covers how they join, and what the joined chain gets right.
 | Code | What it does | Output |
 |---|---|---|
 | `experiments/oil_paths.py` | Monthly Brent paths from the daily GARCH-CGMY model, with an optional Hormuz flow scenario; backtest against the bootstrap paths | `notes/oil-paths-results.md` |
-| `experiments/macro_chain.py` | Every knock-on model on the same oil draws, the ensemble, the forward-chaining backtest, and the 2026 closure replay | `notes/macro-chain-results.md` (4 members, 5 seeds), `notes/macro-chain-results-s20.md` (20 seeds), `notes/chain-replay-2026-3m.md` and `notes/chain-scenarios-3m.csv` (the recommended 3 members), `notes/chain-replay-2026.md` and `notes/chain-scenarios.csv` (4 members) |
+| `experiments/macro_chain.py` | Every knock-on model on the same oil draws, the ensemble, the forward-chaining backtest, and the 2026 closure replay | `notes/macro-chain-results.md` (4 members, 5 seeds), `notes/macro-chain-results-s20.md` (20 seeds), `notes/chain-replay-2026-3m.md` and `notes/chain-scenarios-3m.csv` (the recommended 3 members), `notes/chain-replay-2026.md` and `notes/chain-scenarios.csv` (4 members), `notes/macro-chain-regime.md` (the supply-disruption terms) |
 | `experiments/flow_events.py` | Flow → Brent on other chokepoint events (Bab el-Mandeb 2023–24, Hormuz dips, attacks without lost flow), with placebo bands; the premium curve | `notes/flow-events.md`, `notes/flow-premium.csv` |
 | `experiments/reserves.py` | Emergency stocks as a buffer: the premium curve restated per net barrel missing after releases (2026 as it happened, none, or the maximum rate until the stocks run out); stock cover by country | `notes/reserves.md`, `notes/reserve-scenarios.csv` (inputs in `notes/reserves/`); the replay under each policy (`CHAIN_RELEASE=2026|none|max CHAIN_TAG=3m-d2000 BAYES_DRAWS=2000`, Iridis job 1973501) gives `notes/chain-scenarios-3m-d2000-margins*.csv`, which the app's release choice reads |
 | `experiments/macro_xattn.py` | Cross-series transformer member: one token per target series and per context series (VIX, credit spread, NASDAQ, breakevens, yields, FX), attention across them | `runs/macro/chain-*-xattn-v3.*` |
@@ -131,7 +131,7 @@ Run on Iridis: job 1972767 for the folds, 1972803 for the report, 1972768 for th
 - **So the copula makes the joint answers more coherent at no cost to any single series.** That matters for anything that adds series together, such as a household bill or a basket of costs.
 - **In the single 2026 replay** the joint scores are mixed: slightly worse at 1 and 3 months, better at 6. One event can't settle it; the folds do.
 
-**Recommended model now:** the 3-member equal ensemble (`bayes_own`, `global_lin`, `global`) with copula shocks, plus the margin member on the three fuel targets (`CHAIN_MARGINS=1`; see "Refined-product margins" below).
+**Recommended model now:** the 3-member equal ensemble (`bayes_own`, `global_lin`, `global`) with copula shocks, plus the margin member on the three fuel targets (`CHAIN_MARGINS=1`; see "Refined-product margins" below). The supply-disruption terms (`bayes_regime`) were tested and not adopted; see "Supply-disruption terms" below.
 
 ## Independent verification
 
@@ -237,6 +237,57 @@ Fuel targets on the 8 folds (skill against the v1 climatology, all horizons, the
   - The copula leaves each series' own distribution unchanged, so the cost-group numbers above hold for the recommended model with copula shocks too.
   - The margin member's draws carry their own shocks; they are not drawn through the copula.
 
+## Supply-disruption terms: tested, not adopted (`notes/macro-chain-regime.md`)
+
+The cost-of-living model (`docs/cost-of-living.md`) adds two terms in months of a physical supply disruption, D = 1 (2022-03..2022-12 and 2026-03..2026-12). `bayes_regime` adds them to `bayes_own`:
+- the oil term is multiplied by 1 + κ, with κ pooled by target group;
+- the error scale is multiplied by exp(ζ), so the band widens in disruption months only, the calm-versus-crisis gap that a single rescaling can't fix.
+
+After the origin, D is the calendar in the what-if, D at the origin carried on in the forecasts, and on in a flow scenario of 25 points lost or more (about 5 mb/d, more than Russia lost in 2022). It is only fitted when named, and a fit whose training holds no disruption leaves both terms out.
+
+**The test** compares `rec_regime` (`bayes_regime`, `global_lin`, `global`) with the recommended `rec`. All four members were refitted on Iridis with the same code and seeds. The keep rule was fixed before scoring: no group worse beyond 2 Newey–West errors on the folds (what-if and levy), and a better replay in the lost-82 run (lower mean scaled CRPS, coverage no lower). The cost-of-living session's extra checks are reported beside it: inflation and cost both better in lost 82, and the what-if row agreeing in sign.
+
+- **The folds can barely test it.** Only fold 7's training (to 2023-08) holds a disruption, so on folds 0–6 `bayes_regime` is `bayes_own`, draw for draw. On fold 7, 8 what-if origins and no forecast origin have D = 1 ahead. No group is worse (largest t +1.3, inflation, member alone); the ensemble differences are within ±0.005.
+- **The 2026 replay** (fitted to 2026-01, so κ and ζ come from 2022 alone), scaled CRPS over 65 published outcomes:
+
+  | Run | `rec` | `rec_regime` | Coverage |
+  |---|---|---|---|
+  | What-if (realised Brent, calendar D) | 0.636 | **0.598** | 89% → 94% |
+  | Lost 82 (Lévy paths + flow premium, scenario D) | 0.615 | **0.613** | 97% → 97% |
+  | Lost 0 (forecast, D = 0) | 1.174 | 1.171 | 58% → 58% |
+
+- **By group, the gain is all costs and unemployment.** Costs improve in both runs (−0.062 what-if, coverage 82% → 90%; −0.022 lost 82). Inflation improves slightly in the what-if (−0.010) but worsens in lost 82 (+0.068). Rates worsen in both (+0.018, +0.023): their disruption band factor is ×1.9–3.4, though oil doesn't drive rates.
+- **The member alone is worse in the replay:** `bayes_regime` scores 0.647 against `bayes_own`'s 0.641 in the what-if, and 0.685 against 0.602 in lost 82. So the ensemble's what-if gain, which comes with coverage rising from 89% to 94%, is the mixture's wider spread, not a sharper member.
+- **Why inflation overshoots:** learned from 2022, the CPI multiplier 1 + κ is 2.8–2.9. Like for like, the cost-of-living model's own fit to 2026-02 (κ from 2022 only) gives about 2.0–2.1 for headline CPI: 2.07 US, 1.99 UK, 2.04 euro area (`notes/cost-of-living.md` on branch `seb/col-split`, Iridis job 1973560; not yet on `main`). Its all-data fit, which includes 2026 (job 1973565), gives 1.51 / 1.50 / 1.58. Its 2022-only cost multipliers are close to the chain's: diesel 1.47, jet fuel 1.12, refineries 1.28. So both overshoot when they learn from 2022 alone, and the chain more. A likely reason: `macro_bayes.py` takes Brent alone, with no gas input, so its κ also absorbs 2022's gas-driven inflation, which the cost-of-living model gives to its gas terms. Over 12 months of a scenario, that overshoots 2026.
+- **Verdict: tested, not adopted (2026-10-25).** It passes the agreed rule narrowly (0.615 → 0.613 is within the noise of one replay), but fails the reviewer's inflation check. **The recommended model stays `rec`.** The code stays, off unless named (`bayes_regime`), as a documented result. Eight origins and one replay are thin evidence either way.
+### The cost-only variant: post hoc, not adopted until a recheck
+
+**Post hoc: chosen after seeing the 2026 replay above.** `bayes_regime_cost` puts κ and ζ on the cost group (the `ind_*` series) only, where `bayes_regime` helped in both runs and its fuel multipliers are close to the cost-of-living model's. Inflation, unemployment and rates are modelled as in `bayes_own`. It ran on Iridis on the same folds, seeds and replay (jobs 1973890 and 1973891).
+
+- **Folds:** on folds 0–6 its draws are `bayes_own`'s exactly. Fold 7 shows no harm in any group (all |t| ≤ 1.4).
+- **Replay, horizons 1–6** (the outcomes it was chosen from, so not a test), `rec` against `rec_regime_cost`:
+
+  | Run | `rec` | `rec_regime_cost` | Coverage |
+  |---|---|---|---|
+  | What-if | 0.636 | 0.603 | 89% → 94% |
+  | Lost 82 | 0.615 | 0.602 | 97% → 98% |
+  | Lost 0 (terms inactive) | 1.174 | 1.175 | 58% → 55% |
+
+- **By group:** costs improve in both runs (−0.056 what-if, coverage 82% → 90%; −0.023 lost 82). The other groups move by at most 0.008 (inflation +0.008 in both runs). Their model is unchanged, so that can only be Monte Carlo noise from a separate MCMC run. For the same reason the lost-0 row, where D = 0 and the terms can't act, moves by +0.001 in CRPS and 3 points in coverage (2 of 65 outcomes).
+- **The member alone, and accuracy against spread** (cost group; the median's absolute error and the 90% band's width, both divided by the training spread):
+
+  | Run | Model | Cost CRPS | Median error | Band width | Coverage |
+  |---|---|---|---|---|---|
+  | What-if | `bayes_own` → `bayes_regime_cost` | 0.898 → 0.762 | 1.219 → 1.048 | 3.19 → 4.33 | 69% → 82% |
+  | What-if | `rec` → `rec_regime_cost` | 0.874 → 0.818 | 1.195 → 1.169 | 3.56 → 4.07 | 82% → 90% |
+  | Lost 82 | `bayes_own` → `bayes_regime_cost` | 0.828 → 0.785 | 1.157 → 1.017 | 4.62 → 6.19 | 90% → 92% |
+  | Lost 82 | `rec` → `rec_regime_cost` | 0.826 → 0.803 | 1.161 → 1.138 | 5.10 → 5.69 | 95% → 97% |
+
+  Unlike `bayes_regime`, the member is better on its own: its median is 12–14% closer, as well as its band about 35% wider. So the gain is not only the mixture's. Inside the ensemble the median moves only 2% closer while the band widens 12–14%, so there most of the CRPS gain is the wider band.
+- **Multipliers** match `bayes_regime`'s on every cost series within 0.02 (diesel 1.55, jet fuel 1.14, refinery PPI 1.31).
+- **The recheck:** the chain's horizons are 1, 3, 6 and 12 months, so the next outcomes are the 12-month changes, complete with 2027-02 data. None are published yet. When they are, refresh the data and re-run `macro_chain.py regime`: it recomputes the replay's outcomes from the current data and scores horizons 1–6 and 12 apart. Those 12-month outcomes are the only test this variant can get.
+- **Status: not adopted.** `rec` stays recommended until that recheck.
+
 ## Reproduce
 
 ```bash
@@ -254,6 +305,7 @@ uv run experiments/margins.py replay                      # the 2026 replay (ref
 uv run experiments/margins.py report                      # notes/margins-results.md and the scenario CSVs
 uv run experiments/macro_chain.py fold 0 margins          # ... to 7: the margin member's draws (numpy only, seconds)
 CHAIN_MARGINS=1 CHAIN_MEMBERS=bayes_own,global_lin,global uv run experiments/macro_chain.py report   # -> -margins
+CHAIN_TAG=regime uv run experiments/macro_chain.py regime  # notes/macro-chain-regime.md, after the regime runs below
 ```
 
 On Iridis (`docs/iridis.md` for access). Copy `experiments/`, `cluster/`, `scripts/`, `data/raw/`, `notes/industry/` and `runs/levy/` to a fresh `/scratch/$USER/<folder>`, then:
@@ -267,12 +319,18 @@ sbatch --array=0-2 cluster/iridis/macro_replay.slurm                     # the r
 sbatch --array=0-8 cluster/iridis/margins.slurm                        # margins: folds 0-7, task 8 the replay
 MEMBERS=margins sbatch --array=0-7 cluster/iridis/macro_chain.slurm    # the margin member in the chain
 CHAIN_MARGINS=1 sbatch --array=0 cluster/iridis/macro_replay.slurm     # the 3-member replay with it
+MEMBERS="bayes_own bayes_regime" CHAIN_TAG=regime sbatch --array=0-7 cluster/iridis/macro_chain.slurm   # the regime test
+MEMBERS="global_lin global" CHAIN_TAG=regime sbatch --array=0-7 cluster/iridis/macro_chain.slurm
+CHAIN_MEMBERS=bayes_own,bayes_regime,global_lin,global CHAIN_TAG=regime sbatch --array=1 --time=03:00:00 cluster/iridis/macro_replay.slurm
+MEMBERS=bayes_regime_cost CHAIN_TAG=regime sbatch --array=0-7 cluster/iridis/macro_chain.slurm         # the cost-only variant
+CHAIN_MEMBERS=bayes_regime_cost CHAIN_TAG=regimecost sbatch --array=1 cluster/iridis/macro_replay.slurm
 ```
 
 The runs for this page are all on `amd_student`:
 - jobs 1972484 (`MEMBERS=global_tcn`) and 1972485 (20 seeds), 2026-10-24;
 - jobs 1972767 (v3 folds), 1972768 (replays) and 1972803 (v3 report), 2026-10-25;
-- the margin layer: 1972719 (`margins.py` folds and replay), 1972755 (`fold J margins`), 1972756 and, after the copula merge, 1972934 (the 3-member replay with `CHAIN_MARGINS=1`) and 1972757 (the `margins.py` replay with the premium curve), 2026-10-24/25.
+- the margin layer: 1972719 (`margins.py` folds and replay), 1972755 (`fold J margins`), 1972756 and, after the copula merge, 1972934 (the 3-member replay with `CHAIN_MARGINS=1`) and 1972757 (the `margins.py` replay with the premium curve), 2026-10-24/25;
+- the supply-disruption test: 1973498 (Bayesian folds), 1973499 (network folds) and 1973500 (replay), and the cost-only variant 1973890 (folds) and 1973891 (replay), 2026-10-25.
 
 **Files to copy up as well:**
 - `notes/industry/fred_series.csv`: `macro_data.py` reads the industry series list from it.
