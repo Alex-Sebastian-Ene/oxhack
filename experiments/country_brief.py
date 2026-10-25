@@ -9,9 +9,10 @@ for that country. This service adds the instructions, calls Gemini, and returns 
 pages Gemini cited. Every answer is labelled as AI-written on the page; it is never mixed into the
 sourced tables. Design and limits: docs/country-briefs.md.
 
-    GEMINI_API_KEY=... uv run experiments/country_brief.py      # serves http://127.0.0.1:8787
+    uv run experiments/country_brief.py      # serves http://127.0.0.1:8787
 
-The key is read from the environment only: never put it in git, Linear or the page. The service binds to
+The key comes from the GEMINI_API_KEY environment variable, or from a line GEMINI_API_KEY=... in the
+repo's .env (git-ignored). Never put it in git, Linear or the page. The service binds to
 127.0.0.1 and answers only pages opened from disk or from localhost, so other websites cannot spend the
 key. Answers are cached in data/raw/briefs/ (git-ignored) and shown as "cached" with their date.
 """
@@ -30,8 +31,22 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parent.parent
+
+
+def load_env(path: Path) -> None:
+    """KEY=value lines from a git-ignored .env, for keys the environment does not already set."""
+    if not path.exists():
+        return
+    for line in path.read_text().splitlines():
+        key, sep, value = line.strip().partition("=")
+        key = key.removeprefix("export ").strip()
+        if sep and key and not key.startswith("#") and key not in os.environ:
+            os.environ[key] = value.strip().strip("'\"")
+
+
+load_env(ROOT / ".env")
 CACHE = ROOT / "data" / "raw" / "briefs"
-MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.8-flash")  # gemini-2.5-* is deprecated (gemini-api-dev skill)
 API = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 PORT = int(os.environ.get("BRIEF_PORT", "8787"))
 MAX_FACTS = 40
@@ -54,7 +69,7 @@ def prompt(country: str, material: str, facts: list[str]) -> str:
 def request_body(country: str, material: str, facts: list[str]) -> dict:
     return {"contents": [{"role": "user", "parts": [{"text": prompt(country, material, facts)}]}],
             "tools": [{"google_search": {}}],
-            "generationConfig": {"temperature": 0.2, "maxOutputTokens": 600}}
+            "generationConfig": {"maxOutputTokens": 600}}
 
 
 def parse(resp: dict) -> dict:
@@ -106,7 +121,7 @@ def brief(payload: dict, key: str | None, refresh: bool = False) -> dict:
     if path.exists() and not refresh:
         return {**json.loads(path.read_text()), "cached": True}
     if not key:
-        raise PermissionError("GEMINI_API_KEY is not set on the machine running country_brief.py")
+        raise PermissionError("GEMINI_API_KEY is not set (environment or the repo's .env) on the machine running country_brief.py")
     out = {**parse(ask_gemini(request_body(country, material, facts), key)), "model": MODEL,
            "generated_at": datetime.now(UTC).isoformat(timespec="seconds"), "iso3": iso3, "material": material}
     CACHE.mkdir(parents=True, exist_ok=True)

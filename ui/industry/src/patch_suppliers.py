@@ -32,8 +32,8 @@ SUP_JS = r'''  // ------------------------------------------------------------ y
   let supRows = null, supMeta = null;
   const MIME_BY_EXT = { pdf: "application/pdf", png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", webp: "image/webp", csv: "text/csv", txt: "text/plain", tsv: "text/tab-separated-values" };
   (function buildSuppliers() {
-    const after = $("country-card");
-    if (!after || $("sup-card")) return;
+    const before = $("prod-card");   // after "The shock", before the product card
+    if (!before || $("sup-card")) return;
     const c = document.createElement("section");
     c.className = "card"; c.id = "sup-card";
     c.innerHTML = `<div class="row between"><span class="label">Your suppliers</span></div>
@@ -41,7 +41,7 @@ SUP_JS = r'''  // ------------------------------------------------------------ y
       <div class="sup-actions">${SUPSVC ? '<label class="sup-up" tabindex="0"><input type="file" id="sup-file" accept=".pdf,.png,.jpg,.jpeg,.webp,.csv,.txt,.tsv" hidden>Upload a supplier list</label>' : ""}<button type="button" id="sup-sample">Try a sample list</button><button type="button" id="sup-clear" hidden>Clear</button></div>
       <p class="fine" id="sup-hint">${SUPSVC ? "PDF, image, CSV or text, up to 8 MB. Gemini reads the file into items and countries; you can also drop a file here." : "Uploading your own list needs the Gemini reader service, which runs with the deployed version."}</p>
       <div id="sup-out" aria-live="polite"></div>`;
-    after.before(c);
+    before.before(c);
     $("sup-sample").addEventListener("click", () => { supRows = SAMPLE_ROWS; supMeta = { sample: true }; renderSuppliers(); });
     $("sup-clear").addEventListener("click", () => { supRows = null; supMeta = null; renderSuppliers(); });
     if (!SUPSVC) return;

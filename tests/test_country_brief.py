@@ -90,3 +90,16 @@ def test_server_refuses_other_origins(tmp_path, monkeypatch):
         assert code == 403
     finally:
         srv.shutdown()
+
+
+def test_load_env_reads_dotenv_without_overriding(tmp_path, monkeypatch):
+    env = tmp_path / ".env"
+    env.write_text("# comment\nexport BRIEF_TEST_A='one'\nBRIEF_TEST_B=two\nBRIEF_TEST_C=from-file\nnot a pair\n")
+    monkeypatch.delenv("BRIEF_TEST_A", raising=False)
+    monkeypatch.delenv("BRIEF_TEST_B", raising=False)
+    monkeypatch.setenv("BRIEF_TEST_C", "from-env")
+    cb.load_env(env)
+    assert cb.os.environ["BRIEF_TEST_A"] == "one" and cb.os.environ["BRIEF_TEST_B"] == "two"
+    assert cb.os.environ["BRIEF_TEST_C"] == "from-env"  # the environment wins
+    monkeypatch.delenv("BRIEF_TEST_A")
+    monkeypatch.delenv("BRIEF_TEST_B")

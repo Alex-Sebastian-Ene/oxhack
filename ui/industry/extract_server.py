@@ -9,9 +9,10 @@ instruction and a JSON schema, checks the rows it gets back, and returns them. G
 document: every price move, share and exposure the page then shows comes from our own sourced tables,
 never from Gemini. No Google Search tool is used, so it works on the plain free-tier quota.
 
-    $env:GEMINI_API_KEY = "..."; uv run ui/industry/extract_server.py      # serves http://127.0.0.1:8789
+    uv run ui/industry/extract_server.py      # serves http://127.0.0.1:8789
 
-The key is read from the environment only: never put it in git, Linear or the page. The service binds to
+The key comes from the GEMINI_API_KEY environment variable, or from a line GEMINI_API_KEY=... in the
+repo's .env (git-ignored). Never put it in git, Linear or the page. The service binds to
 127.0.0.1 and answers only pages opened from disk or from localhost (add more with EXTRACT_ORIGINS for a
 deployment), so other websites cannot spend the key. Answers are cached by file hash in
 data/raw/extract/ (git-ignored), so the same file costs one request.
@@ -32,8 +33,23 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+def load_env(path: Path) -> None:
+    """KEY=value lines from the repo's git-ignored .env, for keys the environment does not already set
+    (the same rule as experiments/country_brief.py, so one .env serves both)."""
+    if not path.exists():
+        return
+    for line in path.read_text(encoding="utf-8").splitlines():
+        key, sep, value = line.strip().partition("=")
+        key = key.removeprefix("export ").strip()
+        if sep and key and not key.startswith("#") and key not in os.environ:
+            os.environ[key] = value.strip().strip("'\"")
+
+
+load_env(ROOT / ".env")
 CACHE = ROOT / "data" / "raw" / "extract"
-MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.7-flash")
+MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.8-flash")  # gemini-2.5-* is deprecated (gemini-api-dev skill)
 API = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 PORT = int(os.environ.get("EXTRACT_PORT", "8789"))
 MAX_BYTES = 8_000_000
@@ -93,7 +109,7 @@ def request_body(mime: str, data: bytes) -> dict:
     else:
         raise ValueError(f"file type {mime or 'unknown'} is not supported: use PDF, PNG, JPG, WEBP, CSV or TXT")
     return {"contents": [{"role": "user", "parts": [{"text": INSTRUCTION}, part]}],
-            "generationConfig": {"temperature": 0, "maxOutputTokens": 4000,
+            "generationConfig": {"maxOutputTokens": 4000,
                                  "responseMimeType": "application/json", "responseSchema": SCHEMA}}
 
 
@@ -165,7 +181,7 @@ def extract(payload: dict, key: str | None) -> dict:
     if path.exists():
         return {**json.loads(path.read_text(encoding="utf-8")), "cached": True}
     if not key:
-        raise PermissionError("GEMINI_API_KEY is not set on the machine running extract_server.py")
+        raise PermissionError("GEMINI_API_KEY is not set (environment or the repo's .env) on the machine running extract_server.py")
     out = {"rows": parse(ask_gemini(body, key)), "model": MODEL, "file": name,
            "generated_at": datetime.now(UTC).isoformat(timespec="seconds")}
     CACHE.mkdir(parents=True, exist_ok=True)
