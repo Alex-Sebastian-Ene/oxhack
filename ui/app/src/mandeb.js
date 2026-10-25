@@ -22,6 +22,10 @@ window.HZStrait = (() => {
     seg.innerHTML = ["hormuz", "mandeb"].map((k) => `<button type="button" data-strait="${k}" aria-pressed="${k === id}">${NAME[k]}</button>`).join("");
     sel.before(seg);
     seg.addEventListener("click", (e) => { const b = e.target.closest("[data-strait]"); if (b) go(b.dataset.strait); });
+    // only on the Strait page: follow the strait stage's hidden flag, which the World / Strait switch sets
+    const stage = document.getElementById("strait-stage"), sync = () => { seg.hidden = !stage || stage.hidden; };
+    sync();
+    if (stage) new MutationObserver(sync).observe(stage, { attributes: true, attributeFilter: ["hidden"] });
     if (id === "mandeb") {
       const g = document.querySelector('#glob-card [title^="Missing compared"]');
       if (g) g.title = "Missing compared with 8.7 mb/d in 2023 (EIA)";

@@ -703,6 +703,7 @@ svg.pxi { stroke: none !important; fill: none; overflow: visible; }
 
 /* Bab el-Mandeb mode (mandeb.py, mandeb.js): Hormuz-only cards hidden, a strait switch in the header */
 body.hz-mandeb #link-card, body.hz-mandeb #pw-card, body.hz-mandeb #cap-card { display: none !important; }
+.hz-straitseg[hidden] { display: none !important; }
 .hz-straitseg button { white-space: nowrap; }
 @media (max-width: 720px) { .hz-straitseg button { padding: 0 8px; font-size: 12px; } }
 
@@ -2768,6 +2769,10 @@ window.HZStrait = (() => {
     seg.innerHTML = ["hormuz", "mandeb"].map((k) => `<button type="button" data-strait="${k}" aria-pressed="${k === id}">${NAME[k]}</button>`).join("");
     sel.before(seg);
     seg.addEventListener("click", (e) => { const b = e.target.closest("[data-strait]"); if (b) go(b.dataset.strait); });
+    // only on the Strait page: follow the strait stage's hidden flag, which the World / Strait switch sets
+    const stage = document.getElementById("strait-stage"), sync = () => { seg.hidden = !stage || stage.hidden; };
+    sync();
+    if (stage) new MutationObserver(sync).observe(stage, { attributes: true, attributeFilter: ["hidden"] });
     if (id === "mandeb") {
       const g = document.querySelector('#glob-card [title^="Missing compared"]');
       if (g) g.title = "Missing compared with 8.7 mb/d in 2023 (EIA)";
