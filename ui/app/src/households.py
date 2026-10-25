@@ -158,6 +158,13 @@ CSS = """/* Households page (households.py, households.js) */
 .hz-hh .hz-hl { margin: 0; font-size: 16px; line-height: 1.6; color: var(--text); text-wrap: pretty; }
 .hz-hh .hz-hl b { color: var(--oil-soft); }
 .hz-hh .hz-hlnums { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 8px; }
+/* one bar for the closure and the months: it sets the short version and cards 2 and 3 */
+.hz-hh .hz-bar { grid-column: 1 / -1; gap: 6px; }
+.hz-hh .hz-bar .ctrl { gap: 8px 18px; }
+.hz-hh .hz-bar .bg { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.hz-hh .hz-bar .bl { font: 600 11px var(--pix); letter-spacing: .8px; text-transform: uppercase; color: var(--oil-soft); }
+.hz-hh .hz-bar .hz-lostbg input[type="range"] { width: min(320px, 60vw); }
+.hz-hh .hz-bar #hh-lost-v { min-width: 56px; color: var(--text); }
 .hz-hh .hz-t { display: flex; flex-direction: column; gap: 3px; padding: 10px 12px; background: var(--panel2); border: 2px solid var(--ink); }
 .hz-hh .hz-t b { font: 400 30px/1 var(--mono); color: var(--text); }
 .hz-hh .hz-t.hurt b { color: var(--harm); }

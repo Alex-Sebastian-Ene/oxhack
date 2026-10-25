@@ -1,0 +1,162 @@
+{
+ "generated": "2026-10-25",
+ "source": "experiments/flow_events.py mandeb: IMF PortWatch daily tanker capacity through Bab el-Mandeb, the Strait of Hormuz and the Cape of Good Hope (AIS-derived, fetched 2026-10-24) to 2026-10-18, as a share of each chokepoint's 2019-2024 mean; PortWatch daily tanker exports at Yanbu (port570) and seven Gulf ports (fetched 2026-10-24). The events and the bypass are those of notes/flow-events.md. Nothing here is synthetic.",
+ "hormuz_per_mandeb_point": 0.3687,
+ "per_src": "one point of Bab el-Mandeb's normal tanker tonnage in points of Hormuz's: the 2019-2024 means, 0.885 and 2.400 million deadweight tonnes a day",
+ "diversion_2024": {
+  "label": "2024 Houthi diversion",
+  "day0": "2023-12-31",
+  "news": "2023-11-19: Houthis seize the Galaxy Leader; 2023-12-18: BP and the big container lines pause Red Sea transits; 2024-01-12: US and UK strikes on the Houthis",
+  "horizon": "+120 trading days",
+  "to": "2024-06-24",
+  "lost": 70.7,
+  "rerouted": 44.6,
+  "net": 26.1,
+  "rerouted_share": 0.631,
+  "rule": "lost: the pre-level (days -29..-7) minus the mean share from day 0 to +120 trading days; rerouted: the Cape of Good Hope's gain over the same window, in Bab el-Mandeb tonnage"
+ },
+ "blockade_2026": {
+  "label": "Sep 2026 Houthi blockade of Saudi shipping",
+  "declared": "2026-07-20",
+  "what": "Houthis declare a blockade of Saudi shipping",
+  "date_src": "docs/strait-live-data.md (news reports)",
+  "month": "2026-09",
+  "pre_level": 0.917,
+  "share": 0.454,
+  "lost": 46.2,
+  "cape_gain": -5.4,
+  "yanbu_lost": 1.0,
+  "rule": "lost: the pre-level before 2026-07-20 (days -29..-7) minus the mean share over 2026-09; cape_gain: the Cape's gain over the same, in Bab el-Mandeb tonnage; yanbu_lost: the share of Yanbu's extra exports since the closure began that was gone in 2026-09"
+ },
+ "yanbu_bypass": {
+  "closure_start": "2026-03-04",
+  "to": "2026-10-20",
+  "share": 0.179,
+  "share_before_blockade": 0.338,
+  "both_ports_share": 0.133,
+  "rule": "Yanbu's tanker exports above their pre-closure level, as a share of the seven Gulf ports' lost exports, over every observed day of the closure (the bypass the flow-premium curve, fitted to those days, has built in); share_before_blockade stops the day before the declared blockade"
+ },
+ "combined": "Hormuz-equivalent loss = Hormuz points lost + Bab el-Mandeb points lost × hormuz_per_mandeb_point × (1 − the 2024 diversion's rerouted share) + Hormuz points lost × yanbu_bypass.share × the share of the Yanbu bypass lost (by default the share of Bab el-Mandeb's flow lost). Brent's premium is per point lost, so it takes the whole sum; the chain's scenario tables stop at 100, so their numbers are read there (eq) and understate a larger loss. Assumptions: any Red Sea loss reroutes round the Cape as in 2024; Yanbu's extra exports all sail south through Bab el-Mandeb and are not rerouted; the bypass's barrels count one for one as Hormuz points, as the Net Hormuz points column of notes/flow-events.md does.",
+ "examples": [
+  {
+   "lost": 0,
+   "bab": 0,
+   "bypass_lost": null,
+   "red": 0.0,
+   "bypass": 0.0,
+   "raw": 0.0,
+   "eq": 0.0,
+   "capped": false
+  },
+  {
+   "lost": 0,
+   "bab": 70.7,
+   "bypass_lost": null,
+   "red": 9.6188,
+   "bypass": 0.0,
+   "raw": 9.6188,
+   "eq": 9.6188,
+   "capped": false
+  },
+  {
+   "lost": 0,
+   "bab": 46.2,
+   "bypass_lost": 1.0,
+   "red": 6.2855,
+   "bypass": 0.0,
+   "raw": 6.2855,
+   "eq": 6.2855,
+   "capped": false
+  },
+  {
+   "lost": 50,
+   "bab": 0,
+   "bypass_lost": null,
+   "red": 0.0,
+   "bypass": 0.0,
+   "raw": 50.0,
+   "eq": 50.0,
+   "capped": false
+  },
+  {
+   "lost": 50,
+   "bab": 70.7,
+   "bypass_lost": null,
+   "red": 9.6188,
+   "bypass": 6.3277,
+   "raw": 65.9464,
+   "eq": 65.9464,
+   "capped": false
+  },
+  {
+   "lost": 50,
+   "bab": 46.2,
+   "bypass_lost": 1.0,
+   "red": 6.2855,
+   "bypass": 8.95,
+   "raw": 65.2355,
+   "eq": 65.2355,
+   "capped": false
+  },
+  {
+   "lost": 82,
+   "bab": 0,
+   "bypass_lost": null,
+   "red": 0.0,
+   "bypass": 0.0,
+   "raw": 82.0,
+   "eq": 82.0,
+   "capped": false
+  },
+  {
+   "lost": 82,
+   "bab": 70.7,
+   "bypass_lost": null,
+   "red": 9.6188,
+   "bypass": 10.3773,
+   "raw": 101.9961,
+   "eq": 100.0,
+   "capped": true
+  },
+  {
+   "lost": 82,
+   "bab": 46.2,
+   "bypass_lost": 1.0,
+   "red": 6.2855,
+   "bypass": 14.678,
+   "raw": 102.9635,
+   "eq": 100.0,
+   "capped": true
+  },
+  {
+   "lost": 100,
+   "bab": 0,
+   "bypass_lost": null,
+   "red": 0.0,
+   "bypass": 0.0,
+   "raw": 100.0,
+   "eq": 100.0,
+   "capped": false
+  },
+  {
+   "lost": 100,
+   "bab": 70.7,
+   "bypass_lost": null,
+   "red": 9.6188,
+   "bypass": 12.6553,
+   "raw": 122.2741,
+   "eq": 100.0,
+   "capped": true
+  },
+  {
+   "lost": 100,
+   "bab": 46.2,
+   "bypass_lost": 1.0,
+   "red": 6.2855,
+   "bypass": 17.9,
+   "raw": 124.1855,
+   "eq": 100.0,
+   "capped": true
+  }
+ ]
+}

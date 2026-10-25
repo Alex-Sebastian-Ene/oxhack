@@ -52,10 +52,11 @@ SWAPS = [
     ('f.properties.name === st.sel ? "rgba(20,32,46,0.6)"', 'f.properties.name === st.sel ? "rgba(255,196,64,0.7)"', 1),
     ('color: "#14202e", max: 5', 'color: "#ffd27a", max: 5', 1),
 ]
-# The exposure scale, re-lit: teal for gains, a dark slate for no change, and harm heating from rust to fire.
+# The harm scale, re-lit: cyan for gains, a dark slate for no change, then yellow for mild harm, orange, and red
+# for the worst.
 STOPS_RE = re.compile(r"const STOPS = \[\[-40, [^;]*\]\];")
-STOPS_NEW = ('const STOPS = [[-40, "#3ff0c8"], [-15, "#1e9e88"], [0, "#2b3653"], [10, "#6e3a33"], [25, "#b8492e"], '
-             '[40, "#ff5a33"], [65, "#ffcf5a"]];')
+STOPS_NEW = ('const STOPS = [[-40, "#3ff0c8"], [-15, "#1e9e88"], [0, "#2b3653"], [8, "#e8c547"], [25, "#ff9a2e"], '
+             '[45, "#ff4a2e"], [65, "#d6141a"]];')
 
 HEAD = """<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
